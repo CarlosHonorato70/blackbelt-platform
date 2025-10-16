@@ -2,6 +2,9 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
+import { peopleRouter } from "./routers/people";
+import { sectorsRouter } from "./routers/sectors";
+import { tenantsRouter } from "./routers/tenants";
 
 export const appRouter = router({
   system: systemRouter,
@@ -17,12 +20,11 @@ export const appRouter = router({
     }),
   }),
 
-  // TODO: add feature routers here, e.g.
-  // todo: router({
-  //   list: protectedProcedure.query(({ ctx }) =>
-  //     db.getUserTodos(ctx.user.id)
-  //   ),
-  // }),
+  // Routers de negócio
+  tenants: tenantsRouter,
+  sectors: sectorsRouter,
+  people: peopleRouter,
 });
 
 export type AppRouter = typeof appRouter;
+
