@@ -32,7 +32,7 @@ const menuItems = [
   { icon: Building2, label: "Empresas", path: "/tenants", adminOnly: true },
   { icon: UserSquare2, label: "Setores", path: "/sectors" },
   { icon: Users, label: "Colaboradores", path: "/people" },
-  { icon: FileText, label: "Auditoria", path: "/audit" },
+  { icon: FileText, label: "Avaliações NR-01", path: "/risk-assessments" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

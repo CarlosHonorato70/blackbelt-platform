@@ -36,6 +36,9 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
+// Exportar schemas NR-01
+export * from "./schema_nr01";
+
 // ============================================================================
 // MULTI-TENANT: Empresas (Tenants)
 // ============================================================================

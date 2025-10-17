@@ -15,6 +15,13 @@
       "when": 1760641008263,
       "tag": "0001_woozy_blade",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1760700022525,
+      "tag": "0002_same_anita_blake",
+      "breakpoints": true
     }
   ]
 }

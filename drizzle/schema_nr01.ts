@@ -1,0 +1,195 @@
+import { mysqlEnum, mysqlTable, text, timestamp, varchar, int, boolean, json } from "drizzle-orm/mysql-core";
+import { tenants } from "./schema";
+
+/**
+ * Schema adicional para gestão de riscos psicossociais (NR-01)
+ */
+
+// Categorias de fatores de risco psicossociais
+export const riskCategories = mysqlTable("risk_categories", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  order: int("order").default(0),
+  createdAt: timestamp("createdAt").defaultNow(),
+});
+
+// Fatores de risco específicos
+export const riskFactors = mysqlTable("risk_factors", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  categoryId: varchar("categoryId", { length: 64 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  referenceNorm: varchar("referenceNorm", { length: 100 }), // Ex: "NR-01", "ISO 45003"
+  order: int("order").default(0),
+  createdAt: timestamp("createdAt").defaultNow(),
+});
+
+// Avaliações de riscos psicossociais por tenant
+export const riskAssessments = mysqlTable("risk_assessments", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  sectorId: varchar("sectorId", { length: 64 }),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  assessmentDate: timestamp("assessmentDate").notNull(),
+  assessor: varchar("assessor", { length: 255 }), // Nome do avaliador
+  status: mysqlEnum("status", ["draft", "in_progress", "completed", "reviewed"]).default("draft").notNull(),
+  methodology: text("methodology"), // Metodologia utilizada
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
+});
+
+// Itens individuais de avaliação de risco
+export const riskAssessmentItems = mysqlTable("risk_assessment_items", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  assessmentId: varchar("assessmentId", { length: 64 }).notNull(),
+  riskFactorId: varchar("riskFactorId", { length: 64 }).notNull(),
+  severity: mysqlEnum("severity", ["low", "medium", "high", "critical"]).notNull(), // Gravidade
+  probability: mysqlEnum("probability", ["rare", "unlikely", "possible", "likely", "certain"]).notNull(), // Probabilidade
+  riskLevel: mysqlEnum("riskLevel", ["low", "medium", "high", "critical"]).notNull(), // Nível de risco calculado
+  affectedPopulation: int("affectedPopulation"), // Número de pessoas afetadas
+  currentControls: text("currentControls"), // Controles existentes
+  observations: text("observations"),
+  createdAt: timestamp("createdAt").defaultNow(),
+});
+
+// Planos de ação para mitigação de riscos
+export const actionPlans = mysqlTable("action_plans", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  assessmentItemId: varchar("assessmentItemId", { length: 64 }),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  actionType: mysqlEnum("actionType", ["elimination", "substitution", "engineering", "administrative", "ppe"]).notNull(),
+  responsibleId: varchar("responsibleId", { length: 64 }), // ID do responsável
+  deadline: timestamp("deadline"),
+  status: mysqlEnum("status", ["pending", "in_progress", "completed", "cancelled"]).default("pending").notNull(),
+  priority: mysqlEnum("priority", ["low", "medium", "high", "urgent"]).default("medium").notNull(),
+  budget: int("budget"), // Orçamento estimado em centavos
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
+});
+
+// Questionários de avaliação psicossocial
+export const psychosocialSurveys = mysqlTable("psychosocial_surveys", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  surveyType: mysqlEnum("surveyType", ["climate", "stress", "burnout", "engagement", "custom"]).notNull(),
+  questions: json("questions"), // Array de perguntas
+  isActive: boolean("isActive").default(true),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
+});
+
+// Respostas aos questionários
+export const surveyResponses = mysqlTable("survey_responses", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  surveyId: varchar("surveyId", { length: 64 }).notNull(),
+  personId: varchar("personId", { length: 64 }).notNull(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  responses: json("responses"), // Objeto com respostas
+  score: int("score"), // Pontuação calculada
+  riskLevel: mysqlEnum("riskLevel", ["low", "medium", "high", "critical"]),
+  isAnonymous: boolean("isAnonymous").default(false),
+  completedAt: timestamp("completedAt").defaultNow(),
+  createdAt: timestamp("createdAt").defaultNow(),
+});
+
+// Programas de intervenção (treinamentos, mentorias, etc)
+export const interventionPrograms = mysqlTable("intervention_programs", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  programType: mysqlEnum("programType", ["training", "mentoring", "workshop", "therapy", "resilience", "leadership"]).notNull(),
+  targetAudience: text("targetAudience"),
+  duration: int("duration"), // Duração em horas
+  facilitator: varchar("facilitator", { length: 255 }), // Nome do facilitador
+  startDate: timestamp("startDate"),
+  endDate: timestamp("endDate"),
+  status: mysqlEnum("status", ["planned", "active", "completed", "cancelled"]).default("planned").notNull(),
+  maxParticipants: int("maxParticipants"),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
+});
+
+// Participantes dos programas
+export const programParticipants = mysqlTable("program_participants", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  programId: varchar("programId", { length: 64 }).notNull(),
+  personId: varchar("personId", { length: 64 }).notNull(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  enrolledAt: timestamp("enrolledAt").defaultNow(),
+  completedAt: timestamp("completedAt"),
+  attendance: int("attendance"), // Percentual de presença
+  feedback: text("feedback"),
+  rating: int("rating"), // Avaliação de 1 a 5
+});
+
+// Atendimentos individuais (psicológicos, mentorias)
+export const individualSessions = mysqlTable("individual_sessions", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  personId: varchar("personId", { length: 64 }).notNull(),
+  sessionType: mysqlEnum("sessionType", ["psychological", "mentoring", "coaching", "medical"]).notNull(),
+  professional: varchar("professional", { length: 255 }), // Nome do profissional
+  scheduledAt: timestamp("scheduledAt").notNull(),
+  duration: int("duration"), // Duração em minutos
+  status: mysqlEnum("status", ["scheduled", "completed", "cancelled", "no_show"]).default("scheduled").notNull(),
+  notes: text("notes"), // Notas confidenciais
+  followUp: text("followUp"), // Encaminhamentos
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow(),
+});
+
+// Indicadores de saúde mental organizacional
+export const mentalHealthIndicators = mysqlTable("mental_health_indicators", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  sectorId: varchar("sectorId", { length: 64 }),
+  period: varchar("period", { length: 20 }).notNull(), // Ex: "2025-01"
+  absenteeismRate: int("absenteeismRate"), // Taxa em centésimos de %
+  turnoverRate: int("turnoverRate"),
+  burnoutCases: int("burnoutCases"),
+  stressLevel: int("stressLevel"), // Nível médio de estresse (0-100)
+  engagementScore: int("engagementScore"), // Score de engajamento (0-100)
+  satisfactionScore: int("satisfactionScore"), // Score de satisfação (0-100)
+  incidentsReported: int("incidentsReported"), // Incidentes psicossociais reportados
+  createdAt: timestamp("createdAt").defaultNow(),
+});
+
+// Documentos de compliance NR-01
+export const complianceDocuments = mysqlTable("compliance_documents", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  documentType: mysqlEnum("documentType", ["gro", "inventory", "action_plan", "training_record", "audit_report"]).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  fileUrl: varchar("fileUrl", { length: 500 }), // URL do arquivo no S3
+  version: varchar("version", { length: 20 }).default("1.0"),
+  validFrom: timestamp("validFrom").notNull(),
+  validUntil: timestamp("validUntil"),
+  status: mysqlEnum("status", ["draft", "active", "expired", "archived"]).default("draft").notNull(),
+  signedBy: varchar("signedBy", { length: 255 }), // Nome do responsável
+  signedAt: timestamp("signedAt"),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
+});
+
+export type RiskCategory = typeof riskCategories.$inferSelect;
+export type RiskFactor = typeof riskFactors.$inferSelect;
+export type RiskAssessment = typeof riskAssessments.$inferSelect;
+export type RiskAssessmentItem = typeof riskAssessmentItems.$inferSelect;
+export type ActionPlan = typeof actionPlans.$inferSelect;
+export type PsychosocialSurvey = typeof psychosocialSurveys.$inferSelect;
+export type SurveyResponse = typeof surveyResponses.$inferSelect;
+export type InterventionProgram = typeof interventionPrograms.$inferSelect;
+export type ProgramParticipant = typeof programParticipants.$inferSelect;
+export type IndividualSession = typeof individualSessions.$inferSelect;
+export type MentalHealthIndicator = typeof mentalHealthIndicators.$inferSelect;
+export type ComplianceDocument = typeof complianceDocuments.$inferSelect;
+
