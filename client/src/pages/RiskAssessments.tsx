@@ -34,14 +34,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { useTenant } from "@/contexts/TenantContext";
+import { trpc } from "@/lib/trpc";
 import { AlertCircle, CheckCircle2, FileText, Plus, Shield } from "lucide-react";
 import { useState } from "react";
 
 export default function RiskAssessments() {
+  const { selectedTenant } = useTenant();
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Mock data - será substituído por tRPC queries
-  const assessments = [
+  // Mock data - será substituído por tRPC queries quando o backend estiver pronto
+  const assessments = selectedTenant ? [
     {
       id: "1",
       title: "Avaliação Inicial - Setor Administrativo",
@@ -62,7 +65,21 @@ export default function RiskAssessments() {
       riskLevel: "high",
       assessor: "Thyberê Mendes",
     },
-  ];
+  ] : [];
+
+  if (!selectedTenant) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-12">
+          <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold">Nenhuma empresa selecionada</h3>
+          <p className="text-sm text-muted-foreground mt-2">
+            Selecione uma empresa no menu lateral para visualizar e gerenciar avaliações de riscos
+          </p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   const getStatusBadge = (status: string) => {
     const styles = {

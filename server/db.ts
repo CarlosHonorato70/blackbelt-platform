@@ -341,7 +341,25 @@ export async function listPeople(
     }
   }
 
-  return await db.select().from(people).where(and(...conditions));
+  const results = await db
+    .select({
+      id: people.id,
+      tenantId: people.tenantId,
+      sectorId: people.sectorId,
+      name: people.name,
+      position: people.position,
+      email: people.email,
+      phone: people.phone,
+      employmentType: people.employmentType,
+      createdAt: people.createdAt,
+      updatedAt: people.updatedAt,
+      sectorName: sectors.name,
+    })
+    .from(people)
+    .leftJoin(sectors, eq(people.sectorId, sectors.id))
+    .where(and(...conditions));
+
+  return results;
 }
 
 export async function updatePerson(id: string, tenantId: string, data: Partial<InsertPerson>) {

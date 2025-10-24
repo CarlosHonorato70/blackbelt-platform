@@ -25,6 +25,7 @@ import { Building2, FileText, LayoutDashboard, LogOut, PanelLeft, Users, UserSqu
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
+import { TenantSelector } from "./TenantSelector";
 import { Button } from "./ui/button";
 
 const menuItems = [
@@ -210,6 +211,12 @@ function DashboardLayoutContent({
             </div>
           </SidebarHeader>
 
+          {!isCollapsed && (
+            <div className="px-3 py-2 border-b">
+              <TenantSelector />
+            </div>
+          )}
+
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
               {menuItems.filter(item => !item.adminOnly || user?.role === 'admin').map(item => {
@@ -286,6 +293,9 @@ function DashboardLayoutContent({
                   </span>
                 </div>
               </div>
+            </div>
+            <div className="flex-1 max-w-xs ml-4">
+              <TenantSelector />
             </div>
           </div>
         )}

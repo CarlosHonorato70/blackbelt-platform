@@ -52,8 +52,11 @@ export default function Tenants() {
   const createMutation = trpc.tenants.create.useMutation({
     onSuccess: () => {
       toast.success("Empresa criada com sucesso!");
-      setDialogOpen(false);
       utils.tenants.list.invalidate();
+      // Aguardar um pouco antes de fechar o dialog para evitar erro de removeChild
+      setTimeout(() => {
+        setDialogOpen(false);
+      }, 100);
     },
     onError: (error) => {
       toast.error(error.message || "Erro ao criar empresa");
@@ -63,6 +66,7 @@ export default function Tenants() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const form = e.currentTarget;
 
     createMutation.mutate({
       name: formData.get("name") as string,
