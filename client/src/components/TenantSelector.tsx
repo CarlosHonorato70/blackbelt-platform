@@ -39,10 +39,7 @@ export function TenantSelector() {
         <SelectContent>
           {tenants?.map((tenant) => (
             <SelectItem key={tenant.id} value={tenant.id}>
-              <div className="flex flex-col">
-                <span className="font-medium">{tenant.name}</span>
-                <span className="text-xs text-muted-foreground">{tenant.cnpj}</span>
-              </div>
+              {tenant.name}
             </SelectItem>
           ))}
         </SelectContent>
