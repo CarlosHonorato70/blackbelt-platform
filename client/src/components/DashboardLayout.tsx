@@ -26,6 +26,7 @@ import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { TenantSelector } from "./TenantSelector";
+import { TenantSelectionModal } from "./TenantSelectionModal";
 import { Button } from "./ui/button";
 
 const menuItems = [
@@ -213,7 +214,7 @@ function DashboardLayoutContent({
 
           {!isCollapsed && (
             <div className="px-3 py-2 border-b">
-              <TenantSelector />
+              <TenantSelectionModal />
             </div>
           )}
 
@@ -295,7 +296,7 @@ function DashboardLayoutContent({
               </div>
             </div>
             <div className="flex-1 max-w-xs ml-4">
-              <TenantSelector />
+              <TenantSelectionModal />
             </div>
           </div>
         )}
