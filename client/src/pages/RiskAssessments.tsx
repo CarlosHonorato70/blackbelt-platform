@@ -34,9 +34,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useTenant } from "@/contexts/TenantContext";
 import { trpc } from "@/lib/trpc";
-import { AlertCircle, CheckCircle2, FileText, Plus, Shield } from "lucide-react";
+import { AlertCircle, CheckCircle2, Download, Edit2, Eye, FileText, MoreVertical, Plus, Shield, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 export default function RiskAssessments() {
@@ -319,9 +325,31 @@ export default function RiskAssessments() {
                       <TableCell>{getStatusBadge(assessment.status)}</TableCell>
                       <TableCell>{getRiskLevelBadge(assessment.riskLevel)}</TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm">
-                          <FileText className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Eye className="h-4 w-4 mr-2" />
+                              Visualizar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Edit2 className="h-4 w-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Download className="h-4 w-4 mr-2" />
+                              Exportar PDF
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-red-600">
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}

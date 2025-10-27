@@ -13,9 +13,9 @@
 - [x] Página inicial com serviços
 - [x] Avaliações NR-01 (estrutura)
 - [x] Correção de erro removeChild
+- [x] Botão destacado para seleção de empresa (modal/dialog)
 
 ## Funcionalidades em Desenvolvimento
-- [ ] Botão destacado para seleção de empresa (modal/dialog)
 - [ ] Página de Avaliações NR-01 completa
 - [ ] Formulário de avaliação de riscos psicossociais
 - [ ] Dashboard de indicadores
@@ -29,4 +29,7 @@
 ## Bugs Corrigidos
 - [x] Erro NotFoundError: removeChild
 - [x] Join de setores na listagem de colaboradores
+
+## Bugs em Investigação
+- [ ] Botão "Ações" não funciona na página de Avaliações de Risco Psicossocial
 
