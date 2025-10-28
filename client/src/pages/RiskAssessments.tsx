@@ -44,9 +44,11 @@ import { useTenant } from "@/contexts/TenantContext";
 import { trpc } from "@/lib/trpc";
 import { AlertCircle, CheckCircle2, Download, Edit2, Eye, FileText, MoreVertical, Plus, Shield, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useLocation } from "wouter";
 
 export default function RiskAssessments() {
   const { selectedTenant } = useTenant();
+  const [, setLocation] = useLocation();
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // Mock data - será substituído por tRPC queries quando o backend estiver pronto
@@ -141,8 +143,15 @@ export default function RiskAssessments() {
             </p>
           </div>
 
+          <Button
+            onClick={() => setLocation("/risk-assessments/new")}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Nova Avaliação
+          </Button>
+
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
+            <DialogTrigger asChild style={{ display: "none" }}>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
                 Nova Avaliação
