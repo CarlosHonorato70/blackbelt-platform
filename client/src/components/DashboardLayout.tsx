@@ -21,12 +21,13 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Building2, FileText, LayoutDashboard, LogOut, PanelLeft, Users, UserSquare2 } from "lucide-react";
+import { Building2, Download, Eye, FileText, LayoutDashboard, Lock, LogOut, Mail, PanelLeft, Users, UserSquare2 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { TenantSelector } from "./TenantSelector";
 import { TenantSelectionModal } from "./TenantSelectionModal";
+import { NotificationCenter } from "./NotificationCenter";
 import { Button } from "./ui/button";
 
 const menuItems = [
@@ -35,6 +36,11 @@ const menuItems = [
   { icon: UserSquare2, label: "Setores", path: "/sectors" },
   { icon: Users, label: "Colaboradores", path: "/people" },
   { icon: FileText, label: "Avaliações NR-01", path: "/risk-assessments" },
+  { icon: FileText, label: "Relatórios Compliance", path: "/compliance-reports" },
+  { icon: Mail, label: "Convites de Usuários", path: "/user-invites" },
+  { icon: Lock, label: "Perfis e Permissões", path: "/roles-permissions", adminOnly: true },
+  { icon: Eye, label: "Auditoria", path: "/audit-logs", adminOnly: true },
+  { icon: Download, label: "Exportação LGPD", path: "/data-export", adminOnly: true },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -295,8 +301,9 @@ function DashboardLayoutContent({
                 </div>
               </div>
             </div>
-            <div className="flex-1 max-w-xs ml-4">
+            <div className="flex-1 max-w-xs ml-4 flex items-center gap-2">
               <TenantSelectionModal />
+              <NotificationCenter />
             </div>
           </div>
         )}

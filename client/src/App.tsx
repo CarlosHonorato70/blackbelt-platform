@@ -11,12 +11,22 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
+import ComplianceReports from "./pages/ComplianceReports";
+import UserInvites from "./pages/UserInvites";
+import RolesPermissions from "./pages/RolesPermissions";
+import AuditLogs from "./pages/AuditLogs";
+import DataExport from "./pages/DataExport";
 
 function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/dashboard"} component={Dashboard} />
+      <Route path={"/compliance-reports"} component={ComplianceReports} />
+      <Route path={"/user-invites"} component={UserInvites} />
+      <Route path={"/roles-permissions"} component={RolesPermissions} />
+      <Route path={"/audit-logs"} component={AuditLogs} />
+      <Route path={"/data-export"} component={DataExport} />
       <Route path={"/tenants"} component={Tenants} />
       <Route path={"/sectors"} component={Sectors} />
       <Route path={"/people"} component={People} />

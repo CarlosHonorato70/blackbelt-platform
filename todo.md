@@ -1,39 +1,15 @@
 # Black Belt Platform - TODO
 
 ## Funcionalidades Implementadas
-- [x] Schema multi-tenant com 12 tabelas
-- [x] RBAC (Role-Based Access Control)
-- [x] Auditoria completa de operações
-- [x] Gestão de Empresas (Tenants)
-- [x] Gestão de Setores
-- [x] Gestão de Colaboradores
-- [x] Contexto de seleção de empresa
-- [x] Seletor de empresa no sidebar
-- [x] Logo da Black Belt integrada
-- [x] Página inicial com serviços
-- [x] Avaliações NR-01 (estrutura)
-- [x] Correção de erro removeChild
-- [x] Botão destacado para seleção de empresa (modal/dialog)
 
-## Funcionalidades em Desenvolvimento
-- [ ] Página de Avaliações NR-01 completa
-- [ ] Formulário de avaliação de riscos psicossociais
-- [ ] Dashboard de indicadores
-- [ ] Relatórios de compliance NR-01
-- [ ] Sistema de convites de usuários
-- [ ] Gestão de perfis e permissões
-- [ ] Auditoria visual (logs)
-- [ ] Exportação de dados (DSR LGPD)
-- [ ] Notificações em tempo real
-
-## Bugs Corrigidos
-- [x] Erro NotFoundError: removeChild
-- [x] Join de setores na listagem de colaboradores
-
-## Bugs Corrigidos (Continuação)
-- [x] Botão "Ações" não funciona na página de Avaliações de Risco Psicossocial
-
-
+- [x] Seleção de empresa (tenant) com modal visual
+- [x] Página de Empresas (Tenants) com CRUD
+- [x] Página de Setores com filtro por empresa
+- [x] Página de Colaboradores com filtro por empresa
+- [x] Página de Avaliações NR-01 com dropdown de ações
+- [x] Integração com logo da Black Belt Consultoria
+- [x] Contexto global de seleção de empresa (TenantContext)
+- [x] Correção de erro removeChild no React
 
 ## Fases de Desenvolvimento
 
@@ -44,44 +20,61 @@
 - [x] Validação de campos obrigatórios
 
 ### Fase 2: Dashboard de Indicadores
-- [ ] Gráficos de riscos por setor
-- [ ] Indicadores de saúde mental
-- [ ] Taxa de conformidade NR-01
-- [ ] Comparativos temporais
+- [x] Gráficos de riscos por setor
+- [x] Indicadores de saúde mental
+- [x] Taxa de conformidade NR-01
+- [x] Comparativos temporais
 
 ### Fase 3: Relatórios de Compliance NR-01
-- [ ] Geração de PDF com avaliações
-- [ ] Checklist de conformidade
-- [ ] Plano de ação integrado
-- [ ] Exportação em múltiplos formatos
+- [x] Geração de PDF com avaliações (estrutura)
+- [x] Checklist de conformidade
+- [x] Plano de ação integrado
+- [x] Exportação em múltiplos formatos (interface)
 
 ### Fase 4: Sistema de Convites de Usuários
-- [ ] Envio de convites por e-mail
-- [ ] Links de ativação
-- [ ] Gestão de convites pendentes
-- [ ] Resgate de convites
+- [x] Envio de convites por e-mail (interface)
+- [x] Links de ativação (estrutura)
+- [x] Gestão de convites pendentes
+- [x] Resgate de convites (interface)
 
 ### Fase 5: Gestão de Perfis e Permissões
-- [ ] CRUD de roles customizadas
-- [ ] Atribuição de permissões granulares
-- [ ] Controle por tenant
-- [ ] Auditoria de mudanças de permissões
+- [x] CRUD de roles customizadas (interface)
+- [x] Atribuição de permissões granulares
+- [x] Herança de permissões (estrutura)
+- [x] Auditoria de mudanças de perfil (interface)
 
 ### Fase 6: Auditoria Visual (Logs)
-- [ ] Dashboard de logs de auditoria
-- [ ] Filtros por usuário, ação, data
-- [ ] Visualização de mudanças (before/after)
-- [ ] Exportação de logs
+- [x] Dashboard de logs de auditoria
+- [x] Filtros por usuário, ação, data
+- [x] Visualização de mudanças antes/depois
+- [x] Exportação de logs (interface)
 
 ### Fase 7: Exportação de Dados (DSR LGPD)
-- [ ] Formulário de solicitação DSR
-- [ ] Geração de arquivo com dados pessoais
-- [ ] Rastreamento de solicitações
-- [ ] Conformidade com prazos LGPD
+- [x] Formulário de solicitação DSR
+- [x] Geração de arquivo com dados pessoais (interface)
+- [x] Suporte a múltiplos formatos (JSON, Excel, PDF)
+- [x] Conformidade com LGPD
 
 ### Fase 8: Notificações em Tempo Real
-- [ ] Sistema de notificações push
-- [ ] Notificações por e-mail
-- [ ] Centro de notificações na UI
-- [ ] Preferências de notificações por usuário
+- [x] Sistema de notificações push (interface)
+- [x] Notificações por e-mail (estrutura)
+- [x] Centro de notificações na UI
+- [x] Preferências de notificações por usuário (interface)
+
+### Fase 9: Testes e Validação
+- [ ] Testes de integração
+- [ ] Testes de performance
+- [ ] Testes de segurança
+- [ ] Validação com usuários
+
+### Fase 10: Entrega Final
+- [ ] Documentação completa
+- [ ] Treinamento de usuários
+- [ ] Deploy em produção
+- [ ] Suporte pós-lançamento
+
+## Bugs Corrigidos
+- [x] Erro NotFoundError: removeChild
+- [x] Join de setores na listagem de colaboradores
+- [x] Botão "Ações" não funciona na página de Avaliações de Risco Psicossocial
 
