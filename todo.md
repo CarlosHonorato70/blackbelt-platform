@@ -78,3 +78,10 @@
 - [x] Join de setores na listagem de colaboradores
 - [x] Botão "Ações" não funciona na página de Avaliações de Risco Psicossocial
 
+
+
+
+## Novas Funcionalidades Solicitadas
+
+- [x] Guia interativo para novos usuários
+

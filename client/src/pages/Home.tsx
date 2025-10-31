@@ -2,9 +2,13 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
-import { Activity, Award, Building2, FileText, Heart, Shield, TrendingUp, Users, UserSquare2 } from "lucide-react";
+import { Activity, Award, Building2, FileText, Heart, HelpCircle, Shield, TrendingUp, Users, UserSquare2 } from "lucide-react";
+import { OnboardingGuide } from "@/components/OnboardingGuide";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 export default function Home() {
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const { user } = useAuth();
   const { data: tenants } = trpc.tenants.list.useQuery(undefined, {
     enabled: user?.role === "admin",
@@ -77,9 +81,19 @@ export default function Home() {
       <div className="space-y-8">
         {/* Header */}
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-amber-600 to-amber-800 bg-clip-text text-transparent">
-            Black Belt Consultoria
-          </h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-amber-600 to-amber-800 bg-clip-text text-transparent">
+              Black Belt Consultoria
+            </h1>
+            <Button
+              onClick={() => setShowOnboarding(true)}
+              variant="outline"
+              className="gap-2"
+            >
+              <HelpCircle className="h-4 w-4" />
+              Guia
+            </Button>
+          </div>
           <p className="text-lg text-muted-foreground">
             Plataforma de Gestão de Riscos Psicossociais e Desenvolvimento Humano
           </p>
@@ -227,6 +241,8 @@ export default function Home() {
           </CardContent>
         </Card>
       </div>
+
+      <OnboardingGuide open={showOnboarding} onOpenChange={setShowOnboarding} />
     </DashboardLayout>
   );
 }
