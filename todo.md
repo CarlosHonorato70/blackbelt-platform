@@ -85,3 +85,6 @@
 
 - [x] Guia interativo para novos usuários
 
+
+- [x] Implementar exportação de dados em JSON, Excel e PDF com download
+

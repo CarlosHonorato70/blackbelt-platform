@@ -28,6 +28,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
+import { exportToJSON, exportToExcel, exportToCSV, generateAuditReport, exportToPDF } from "@/lib/exportUtils";
 
 export default function AuditLogs() {
   const { selectedTenant } = useTenant();
@@ -309,9 +310,32 @@ export default function AuditLogs() {
                   <X className="h-4 w-4 mr-2" />
                   Limpar Filtros
                 </Button>
-                <Button>
+                <Button
+                  onClick={() => {
+                    const report = generateAuditReport(filteredLogs);
+                    exportToPDF(report, `auditoria_${new Date().toISOString().split('T')[0]}.txt`);
+                  }}
+                >
                   <Download className="h-4 w-4 mr-2" />
-                  Exportar
+                  Exportar Texto
+                </Button>
+                <Button
+                  onClick={() => {
+                    exportToJSON(filteredLogs, `auditoria_${new Date().toISOString().split('T')[0]}.json`);
+                  }}
+                  variant="outline"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar JSON
+                </Button>
+                <Button
+                  onClick={() => {
+                    exportToExcel(filteredLogs, `auditoria_${new Date().toISOString().split('T')[0]}.xlsx`, 'Auditoria');
+                  }}
+                  variant="outline"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar Excel
                 </Button>
               </div>
             </CardContent>

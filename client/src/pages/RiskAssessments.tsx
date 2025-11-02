@@ -45,6 +45,7 @@ import { trpc } from "@/lib/trpc";
 import { AlertCircle, CheckCircle2, Download, Edit2, Eye, FileText, MoreVertical, Plus, Shield, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { exportToJSON, exportToExcel, generateAssessmentReport, exportToPDF } from "@/lib/exportUtils";
 
 export default function RiskAssessments() {
   const { selectedTenant } = useTenant();
@@ -349,9 +350,30 @@ export default function RiskAssessments() {
                               <Edit2 className="h-4 w-4 mr-2" />
                               Editar
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                const report = generateAssessmentReport([assessment]);
+                                exportToPDF(report, `avaliacao_${assessment.id}_${new Date().toISOString().split('T')[0]}.txt`);
+                              }}
+                            >
                               <Download className="h-4 w-4 mr-2" />
-                              Exportar PDF
+                              Exportar Texto
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                exportToJSON([assessment], `avaliacao_${assessment.id}_${new Date().toISOString().split('T')[0]}.json`);
+                              }}
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Exportar JSON
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                exportToExcel([assessment], `avaliacao_${assessment.id}_${new Date().toISOString().split('T')[0]}.xlsx`, 'Avaliação');
+                              }}
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Exportar Excel
                             </DropdownMenuItem>
                             <DropdownMenuItem className="text-red-600">
                               <Trash2 className="h-4 w-4 mr-2" />

@@ -33,6 +33,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useState } from "react";
+import { exportToJSON, exportToExcel, generateComplianceReport, exportToPDF } from "@/lib/exportUtils";
 
 export default function ComplianceReports() {
   const { selectedTenant } = useTenant();
@@ -293,13 +294,30 @@ export default function ComplianceReports() {
                           <Eye className="h-4 w-4 mr-2" />
                           Visualizar
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            const reportText = generateComplianceReport([report]);
+                            exportToPDF(reportText, `compliance_${report.id}_${new Date().toISOString().split('T')[0]}.txt`);
+                          }}
+                        >
                           <Download className="h-4 w-4 mr-2" />
-                          Exportar PDF
+                          Exportar Texto
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <FileText className="h-4 w-4 mr-2" />
-                          Imprimir
+                        <DropdownMenuItem
+                          onClick={() => {
+                            exportToJSON([report], `compliance_${report.id}_${new Date().toISOString().split('T')[0]}.json`);
+                          }}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Exportar JSON
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            exportToExcel([report], `compliance_${report.id}_${new Date().toISOString().split('T')[0]}.xlsx`, 'Compliance');
+                          }}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Exportar Excel
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
