@@ -2,7 +2,9 @@ import { and, desc, eq, like, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
+  assessmentProposals,
   auditLogs,
+  clients,
   dataConsents,
   InsertAuditLog,
   InsertDataConsent,
@@ -16,9 +18,13 @@ import {
   InsertUserInvite,
   InsertUserRole,
   people,
+  pricingParameters,
+  proposalItems,
+  proposals,
   rolePermissions,
   roles,
   sectors,
+  services,
   tenantSettings,
   tenants,
   userInvites,
@@ -630,5 +636,423 @@ export async function cancelInvite(id: string) {
   if (!db) throw new Error("Database not available");
 
   await db.update(userInvites).set({ status: "cancelled" }).where(eq(userInvites.id, id));
+}
+
+
+
+
+// ============================================================================
+// PRECIFICAÇÃO: CLIENTS
+// ============================================================================
+
+export async function createClient(data: {
+  tenantId: string;
+  name: string;
+  cnpj?: string;
+  industry?: string;
+  companySize?: "micro" | "small" | "medium" | "large";
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const clientId = nanoid();
+  await db.insert(clients).values({
+    id: clientId,
+    ...data,
+  } as any);
+
+  return clientId;
+}
+
+export async function listClients(tenantId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db
+    .select()
+    .from(clients)
+    .where(eq(clients.tenantId, tenantId));
+}
+
+export async function getClient(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db
+    .select()
+    .from(clients)
+    .where(eq(clients.id, id))
+    .limit(1);
+
+  return result[0] || null;
+}
+
+export async function updateClient(id: string, data: Partial<typeof clients.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .update(clients)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(clients.id, id));
+}
+
+export async function deleteClient(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(clients).where(eq(clients.id, id));
+}
+
+// ============================================================================
+// PRECIFICAÇÃO: SERVICES
+// ============================================================================
+
+export async function createService(data: {
+  tenantId: string;
+  name: string;
+  description?: string;
+  category: string;
+  unit: "hour" | "day" | "project" | "month";
+  minPrice: number;
+  maxPrice: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const serviceId = nanoid();
+  await db.insert(services).values({
+    id: serviceId,
+    ...data,
+  } as any);
+
+  return serviceId;
+}
+
+export async function listServices(tenantId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db
+    .select()
+    .from(services)
+    .where(eq(services.tenantId, tenantId));
+}
+
+export async function getService(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db
+    .select()
+    .from(services)
+    .where(eq(services.id, id))
+    .limit(1);
+
+  return result[0] || null;
+}
+
+export async function updateService(id: string, data: Partial<typeof services.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .update(services)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(services.id, id));
+}
+
+export async function deleteService(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(services).where(eq(services.id, id));
+}
+
+// ============================================================================
+// PRECIFICAÇÃO: PRICING PARAMETERS
+// ============================================================================
+
+export async function createPricingParameters(data: {
+  tenantId: string;
+  monthlyFixedCost: number;
+  laborCost: number;
+  productiveHoursPerMonth: number;
+  defaultTaxRegime?: "MEI" | "SN" | "LP" | "autonomous";
+  volumeDiscounts?: Record<string, number>;
+  riskAdjustment?: number;
+  seniorityAdjustment?: number;
+  taxRates?: Record<string, number>;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const paramId = nanoid();
+  await db.insert(pricingParameters).values({
+    id: paramId,
+    ...data,
+  } as any);
+
+  return paramId;
+}
+
+export async function getPricingParameters(tenantId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db
+    .select()
+    .from(pricingParameters)
+    .where(eq(pricingParameters.tenantId, tenantId))
+    .limit(1);
+
+  return result[0] || null;
+}
+
+export async function updatePricingParameters(tenantId: string, data: Partial<typeof pricingParameters.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .update(pricingParameters)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(pricingParameters.tenantId, tenantId));
+}
+
+// ============================================================================
+// PRECIFICAÇÃO: PROPOSALS
+// ============================================================================
+
+export async function createProposal(data: {
+  tenantId: string;
+  clientId: string;
+  title: string;
+  description?: string;
+  status?: "draft" | "sent" | "accepted" | "rejected" | "expired";
+  subtotal: number;
+  discount?: number;
+  discountPercent?: number;
+  taxes?: number;
+  totalValue: number;
+  taxRegime: "MEI" | "SN" | "LP" | "autonomous";
+  validUntil?: Date;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const proposalId = nanoid();
+  await db.insert(proposals).values({
+    id: proposalId,
+    ...data,
+  } as any);
+
+  return proposalId;
+}
+
+export async function listProposals(tenantId: string, clientId?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const conditions = [eq(proposals.tenantId, tenantId)];
+  if (clientId) {
+    conditions.push(eq(proposals.clientId, clientId));
+  }
+
+  return await db
+    .select()
+    .from(proposals)
+    .where(and(...conditions));
+}
+
+export async function getProposal(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db
+    .select()
+    .from(proposals)
+    .where(eq(proposals.id, id))
+    .limit(1);
+
+  return result[0] || null;
+}
+
+export async function updateProposal(id: string, data: Partial<typeof proposals.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .update(proposals)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(proposals.id, id));
+}
+
+export async function deleteProposal(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(proposals).where(eq(proposals.id, id));
+}
+
+// ============================================================================
+// PRECIFICAÇÃO: PROPOSAL ITEMS
+// ============================================================================
+
+export async function createProposalItem(data: {
+  proposalId: string;
+  serviceId: string;
+  serviceName: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+  technicalHours?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const itemId = nanoid();
+  await db.insert(proposalItems).values({
+    id: itemId,
+    ...data,
+  } as any);
+
+  return itemId;
+}
+
+export async function listProposalItems(proposalId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db
+    .select()
+    .from(proposalItems)
+    .where(eq(proposalItems.proposalId, proposalId));
+}
+
+export async function deleteProposalItem(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(proposalItems).where(eq(proposalItems.id, id));
+}
+
+// ============================================================================
+// PRECIFICAÇÃO: CÁLCULOS
+// ============================================================================
+
+interface TechnicalHourCalculation {
+  monthlyFixedCost: number;
+  laborCost: number;
+  productiveHoursPerMonth: number;
+  taxRegime: "MEI" | "SN" | "LP" | "autonomous";
+  taxRates?: Record<string, number>;
+  riskAdjustment?: number;
+  seniorityAdjustment?: number;
+}
+
+export function calculateTechnicalHour(params: TechnicalHourCalculation): number {
+  const {
+    monthlyFixedCost,
+    laborCost,
+    productiveHoursPerMonth,
+    taxRegime,
+    taxRates = {},
+    riskAdjustment = 100,
+    seniorityAdjustment = 100,
+  } = params;
+
+  // Cálculo base: (Custo Fixo + Custo MO) / Horas Produtivas
+  const baseTechnicalHour = (monthlyFixedCost + laborCost) / productiveHoursPerMonth;
+
+  // Aplicar ajustes
+  const adjustedHour = baseTechnicalHour * (riskAdjustment / 100) * (seniorityAdjustment / 100);
+
+  // Aplicar impostos
+  const taxRate = taxRates[taxRegime] || 0;
+  const technicalHourWithTax = adjustedHour * (1 + taxRate);
+
+  return Math.round(technicalHourWithTax * 100); // Retornar em centavos
+}
+
+interface ProposalCalculation {
+  items: Array<{
+    quantity: number;
+    unitPrice: number;
+  }>;
+  discountPercent?: number;
+  taxRegime: "MEI" | "SN" | "LP" | "autonomous";
+  taxRates?: Record<string, number>;
+}
+
+export function calculateProposal(params: ProposalCalculation): {
+  subtotal: number;
+  discount: number;
+  taxes: number;
+  totalValue: number;
+} {
+  const { items, discountPercent = 0, taxRegime, taxRates = {} } = params;
+
+  // Calcular subtotal
+  const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+
+  // Calcular desconto
+  const discount = Math.round(subtotal * (discountPercent / 100));
+
+  // Calcular impostos
+  const taxRate = taxRates[taxRegime] || 0;
+  const taxes = Math.round((subtotal - discount) * taxRate);
+
+  // Calcular total
+  const totalValue = subtotal - discount + taxes;
+
+  return {
+    subtotal,
+    discount,
+    taxes,
+    totalValue,
+  };
+}
+
+// ============================================================================
+// PRECIFICAÇÃO: ASSESSMENT PROPOSALS (Vinculação)
+// ============================================================================
+
+export async function createAssessmentProposal(data: {
+  tenantId: string;
+  assessmentId: string;
+  proposalId: string;
+  recommendedServices?: any[];
+  riskLevel: "low" | "medium" | "high";
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const linkId = nanoid();
+  await db.insert(assessmentProposals).values({
+    id: linkId,
+    ...data,
+  } as any);
+
+  return linkId;
+}
+
+export async function getAssessmentProposals(assessmentId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db
+    .select()
+    .from(assessmentProposals)
+    .where(eq(assessmentProposals.assessmentId, assessmentId));
 }
 

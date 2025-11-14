@@ -6,6 +6,7 @@ export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
   res: CreateExpressContextOptions["res"];
   user: User | null;
+  tenantId: string;
 };
 
 export async function createContext(
@@ -20,9 +21,13 @@ export async function createContext(
     user = null;
   }
 
+  // Extrair tenantId do header ou usar um padrão
+  const tenantId = opts.req.headers["x-tenant-id"] as string || "default";
+
   return {
     req: opts.req,
     res: opts.res,
     user,
+    tenantId,
   };
 }
