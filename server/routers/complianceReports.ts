@@ -8,7 +8,16 @@ import { eq, and, desc } from "drizzle-orm";
 
 export const complianceReportsRouter = router({
   // Listar documentos de compliance
-
+  list: publicProcedure
+    .input(
+      z.object({
+        tenantId: z.string(),
+        documentType: z.string().optional(),
+        status: z.string().optional(),
+        limit: z.number().default(50),
+        offset: z.number().default(0),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return [];
@@ -37,7 +46,13 @@ export const complianceReportsRouter = router({
     }),
 
   // Obter documento por ID
-
+  get: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        tenantId: z.string(),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db)
@@ -67,7 +82,21 @@ export const complianceReportsRouter = router({
     }),
 
   // Criar novo documento
-
+  create: publicProcedure
+    .input(
+      z.object({
+        tenantId: z.string(),
+        documentType: z.string(),
+        title: z.string(),
+        description: z.string().optional(),
+        fileUrl: z.string().optional(),
+        version: z.string(),
+        validFrom: z.date(),
+        validUntil: z.date().optional(),
+        signedBy: z.string().optional(),
+        signedAt: z.date().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db)
@@ -99,7 +128,13 @@ export const complianceReportsRouter = router({
     }),
 
   // Atualizar documento
-
+  update: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        tenantId: z.string(),
+      }).passthrough()
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db)
@@ -127,7 +162,13 @@ export const complianceReportsRouter = router({
     }),
 
   // Deletar documento
-
+  delete: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        tenantId: z.string(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db)
@@ -149,7 +190,14 @@ export const complianceReportsRouter = router({
     }),
 
   // Assinar documento
-ain
+  sign: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        tenantId: z.string(),
+        signedBy: z.string(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db)
@@ -177,7 +225,13 @@ ain
     }),
 
   // Arquivar documento
-
+  archive: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        tenantId: z.string(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db)

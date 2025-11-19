@@ -14,7 +14,14 @@ import { eq, and, desc, isNull } from "drizzle-orm";
 
 export const riskAssessmentsRouter = router({
   // Listar avaliações por tenant
-
+  list: publicProcedure
+    .input(
+      z.object({
+        tenantId: z.string(),
+        limit: z.number().default(50),
+        offset: z.number().default(0),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return [];
@@ -31,7 +38,13 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Obter avaliação por ID
-
+  get: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        tenantId: z.string(),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db)
@@ -70,7 +83,18 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Criar nova avaliação
-
+  create: publicProcedure
+    .input(
+      z.object({
+        tenantId: z.string(),
+        sectorId: z.string().optional(),
+        title: z.string(),
+        description: z.string().optional(),
+        assessmentDate: z.date(),
+        assessor: z.string().optional(),
+        methodology: z.string().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db)
@@ -99,7 +123,13 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Atualizar avaliação
-
+  update: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        tenantId: z.string(),
+      }).passthrough()
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db)
@@ -127,7 +157,13 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Deletar avaliação
-
+  delete: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        tenantId: z.string(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db)
@@ -155,7 +191,18 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Adicionar item de risco à avaliação
-
+  addItem: publicProcedure
+    .input(
+      z.object({
+        assessmentId: z.string(),
+        riskFactorId: z.string(),
+        severity: z.enum(["low", "medium", "high", "critical"]),
+        probability: z.enum(["rare", "unlikely", "possible", "likely", "certain"]),
+        affectedPopulation: z.string().optional(),
+        currentControls: z.string().optional(),
+        observations: z.string().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db)
@@ -202,18 +249,27 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Listar categorias de risco
+  listCategories: publicProcedure
+    .input(z.object({}))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [];
 
+      const categories = await db
+        .select()
+        .from(riskCategories)
+        .orderBy(riskCategories.order);
 
-    const categories = await db
-      .select()
-      .from(riskCategories)
-      .orderBy(riskCategories.order);
-
-    return categories;
-  }),
+      return categories;
+    }),
 
   // Listar fatores de risco por categoria
-
+  listFactors: publicProcedure
+    .input(
+      z.object({
+        categoryId: z.string().optional(),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return [];
@@ -231,7 +287,13 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Listar planos de ação por tenant
-
+  listActionPlans: publicProcedure
+    .input(
+      z.object({
+        tenantId: z.string(),
+        assessmentItemId: z.string().optional(),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return [];
@@ -254,7 +316,20 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Criar plano de ação
-
+  createActionPlan: publicProcedure
+    .input(
+      z.object({
+        tenantId: z.string(),
+        assessmentItemId: z.string().optional(),
+        title: z.string(),
+        description: z.string().optional(),
+        actionType: z.string(),
+        responsibleId: z.string().optional(),
+        deadline: z.date().optional(),
+        priority: z.string(),
+        budget: z.number().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db)
