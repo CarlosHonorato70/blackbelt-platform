@@ -122,11 +122,11 @@ export default function DataExport() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleRequestTypeChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, requestType: value }));
+    setFormData(prev => ({ ...prev, requestType: value }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -189,7 +189,10 @@ export default function DataExport() {
               Exportação de Dados (LGPD)
             </h1>
             <p className="text-muted-foreground">
-              Gerencie solicitações de Direitos do Titular de Dados - {typeof selectedTenant === 'string' ? selectedTenant : selectedTenant?.name}
+              Gerencie solicitações de Direitos do Titular de Dados -{" "}
+              {typeof selectedTenant === "string"
+                ? selectedTenant
+                : selectedTenant?.name}
             </p>
           </div>
 
@@ -289,7 +292,9 @@ export default function DataExport() {
         <div className="grid md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Total de Solicitações</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total de Solicitações
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold">{dsrRequests.length}</p>
@@ -302,7 +307,7 @@ export default function DataExport() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-green-600">
-                {dsrRequests.filter((r) => r.status === "completo").length}
+                {dsrRequests.filter(r => r.status === "completo").length}
               </p>
             </CardContent>
           </Card>
@@ -313,7 +318,7 @@ export default function DataExport() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-yellow-600">
-                {dsrRequests.filter((r) => r.status === "processando").length}
+                {dsrRequests.filter(r => r.status === "processando").length}
               </p>
             </CardContent>
           </Card>
@@ -324,7 +329,7 @@ export default function DataExport() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-gray-600">
-                {dsrRequests.filter((r) => r.status === "pendente").length}
+                {dsrRequests.filter(r => r.status === "pendente").length}
               </p>
             </CardContent>
           </Card>
@@ -334,13 +339,11 @@ export default function DataExport() {
         <Card>
           <CardHeader>
             <CardTitle>Solicitações de Direitos do Titular</CardTitle>
-            <CardDescription>
-              Histórico de solicitações LGPD
-            </CardDescription>
+            <CardDescription>Histórico de solicitações LGPD</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {dsrRequests.map((request) => (
+              {dsrRequests.map(request => (
                 <div
                   key={request.id}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
@@ -469,16 +472,19 @@ export default function DataExport() {
           </CardHeader>
           <CardContent className="text-sm text-blue-800 space-y-2">
             <p>
-              • Direito de Acesso: Você pode solicitar cópia de seus dados pessoais
+              • Direito de Acesso: Você pode solicitar cópia de seus dados
+              pessoais
             </p>
             <p>
               • Direito à Portabilidade: Dados fornecidos em formato estruturado
             </p>
             <p>
-              • Direito ao Esquecimento: Solicitação de exclusão de dados pessoais
+              • Direito ao Esquecimento: Solicitação de exclusão de dados
+              pessoais
             </p>
             <p>
-              • Direito de Retificação: Correção de dados incorretos ou incompletos
+              • Direito de Retificação: Correção de dados incorretos ou
+              incompletos
             </p>
             <p>
               • Prazo de Resposta: Até 15 dias úteis para atender solicitações
@@ -492,4 +498,3 @@ export default function DataExport() {
     </DashboardLayout>
   );
 }
-

@@ -83,7 +83,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       values.lastSignedIn = user.lastSignedIn;
       updateSet.lastSignedIn = user.lastSignedIn;
     }
-    
+
     if (user.role === undefined) {
       if (user.id === ENV.ownerId) {
         user.role = "admin";
@@ -120,7 +120,11 @@ export async function getUserByEmail(email: string) {
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -128,7 +132,9 @@ export async function getUserByEmail(email: string) {
 // TENANTS
 // ============================================================================
 
-export async function createTenant(data: Omit<InsertTenant, "id" | "createdAt" | "updatedAt">) {
+export async function createTenant(
+  data: Omit<InsertTenant, "id" | "createdAt" | "updatedAt">
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -145,7 +151,11 @@ export async function getTenant(id: string) {
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await db.select().from(tenants).where(eq(tenants.id, id)).limit(1);
+  const result = await db
+    .select()
+    .from(tenants)
+    .where(eq(tenants.id, id))
+    .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -153,11 +163,18 @@ export async function getTenantByCNPJ(cnpj: string) {
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await db.select().from(tenants).where(eq(tenants.cnpj, cnpj)).limit(1);
+  const result = await db
+    .select()
+    .from(tenants)
+    .where(eq(tenants.cnpj, cnpj))
+    .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function listTenants(filters?: { status?: string; search?: string }) {
+export async function listTenants(filters?: {
+  status?: string;
+  search?: string;
+}) {
   const db = await getDb();
   if (!db) return [];
 
@@ -204,13 +221,22 @@ export async function getTenantSetting(tenantId: string, key: string) {
   const result = await db
     .select()
     .from(tenantSettings)
-    .where(and(eq(tenantSettings.tenantId, tenantId), eq(tenantSettings.settingKey, key)))
+    .where(
+      and(
+        eq(tenantSettings.tenantId, tenantId),
+        eq(tenantSettings.settingKey, key)
+      )
+    )
     .limit(1);
 
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function setTenantSetting(tenantId: string, key: string, value: any) {
+export async function setTenantSetting(
+  tenantId: string,
+  key: string,
+  value: any
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -235,7 +261,9 @@ export async function setTenantSetting(tenantId: string, key: string, value: any
 // SECTORS
 // ============================================================================
 
-export async function createSector(data: Omit<InsertSector, "id" | "createdAt" | "updatedAt">) {
+export async function createSector(
+  data: Omit<InsertSector, "id" | "createdAt" | "updatedAt">
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -271,10 +299,17 @@ export async function listSectors(tenantId: string, search?: string) {
     conditions.push(like(sectors.name, `%${search}%`));
   }
 
-  return await db.select().from(sectors).where(and(...conditions));
+  return await db
+    .select()
+    .from(sectors)
+    .where(and(...conditions));
 }
 
-export async function updateSector(id: string, tenantId: string, data: Partial<InsertSector>) {
+export async function updateSector(
+  id: string,
+  tenantId: string,
+  data: Partial<InsertSector>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -288,14 +323,18 @@ export async function deleteSector(id: string, tenantId: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  await db.delete(sectors).where(and(eq(sectors.id, id), eq(sectors.tenantId, tenantId)));
+  await db
+    .delete(sectors)
+    .where(and(eq(sectors.id, id), eq(sectors.tenantId, tenantId)));
 }
 
 // ============================================================================
 // PEOPLE (Colaboradores)
 // ============================================================================
 
-export async function createPerson(data: Omit<InsertPerson, "id" | "createdAt" | "updatedAt">) {
+export async function createPerson(
+  data: Omit<InsertPerson, "id" | "createdAt" | "updatedAt">
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -368,7 +407,11 @@ export async function listPeople(
   return results;
 }
 
-export async function updatePerson(id: string, tenantId: string, data: Partial<InsertPerson>) {
+export async function updatePerson(
+  id: string,
+  tenantId: string,
+  data: Partial<InsertPerson>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -382,7 +425,9 @@ export async function deletePerson(id: string, tenantId: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  await db.delete(people).where(and(eq(people.id, id), eq(people.tenantId, tenantId)));
+  await db
+    .delete(people)
+    .where(and(eq(people.id, id), eq(people.tenantId, tenantId)));
 }
 
 // ============================================================================
@@ -414,7 +459,11 @@ export async function getRoleBySystemName(systemName: string) {
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await db.select().from(roles).where(eq(roles.systemName, systemName)).limit(1);
+  const result = await db
+    .select()
+    .from(roles)
+    .where(eq(roles.systemName, systemName))
+    .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -432,7 +481,9 @@ export async function listRoles(scope?: "global" | "tenant") {
 // USER ROLES
 // ============================================================================
 
-export async function assignUserRole(data: Omit<InsertUserRole, "id" | "createdAt">) {
+export async function assignUserRole(
+  data: Omit<InsertUserRole, "id" | "createdAt">
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -454,14 +505,24 @@ export async function getUserRoles(userId: string, tenantId?: string) {
     conditions.push(eq(userRoles.tenantId, tenantId));
   }
 
-  return await db.select().from(userRoles).where(and(...conditions));
+  return await db
+    .select()
+    .from(userRoles)
+    .where(and(...conditions));
 }
 
-export async function removeUserRole(userId: string, roleId: string, tenantId?: string) {
+export async function removeUserRole(
+  userId: string,
+  roleId: string,
+  tenantId?: string
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const conditions = [eq(userRoles.userId, userId), eq(userRoles.roleId, roleId)];
+  const conditions = [
+    eq(userRoles.userId, userId),
+    eq(userRoles.roleId, roleId),
+  ];
   if (tenantId !== undefined) {
     conditions.push(eq(userRoles.tenantId, tenantId));
   }
@@ -473,7 +534,9 @@ export async function removeUserRole(userId: string, roleId: string, tenantId?: 
 // AUDIT LOGS
 // ============================================================================
 
-export async function createAuditLog(data: Omit<InsertAuditLog, "id" | "timestamp">) {
+export async function createAuditLog(
+  data: Omit<InsertAuditLog, "id" | "timestamp">
+) {
   const db = await getDb();
   if (!db) {
     console.warn("[Audit] Database not available, skipping audit log");
@@ -492,15 +555,13 @@ export async function createAuditLog(data: Omit<InsertAuditLog, "id" | "timestam
   }
 }
 
-export async function getAuditLogs(
-  filters: {
-    tenantId?: string;
-    userId?: string;
-    entityType?: string;
-    entityId?: string;
-    limit?: number;
-  }
-) {
+export async function getAuditLogs(filters: {
+  tenantId?: string;
+  userId?: string;
+  entityType?: string;
+  entityId?: string;
+  limit?: number;
+}) {
   const db = await getDb();
   if (!db) return [];
 
@@ -537,7 +598,9 @@ export async function getAuditLogs(
 // DATA CONSENTS (LGPD)
 // ============================================================================
 
-export async function createDataConsent(data: Omit<InsertDataConsent, "id" | "createdAt">) {
+export async function createDataConsent(
+  data: Omit<InsertDataConsent, "id" | "createdAt">
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -550,7 +613,10 @@ export async function createDataConsent(data: Omit<InsertDataConsent, "id" | "cr
   return consent;
 }
 
-export async function getPersonConsents(personId: string, consentType?: string) {
+export async function getPersonConsents(
+  personId: string,
+  consentType?: string
+) {
   const db = await getDb();
   if (!db) return [];
 
@@ -559,7 +625,10 @@ export async function getPersonConsents(personId: string, consentType?: string) 
     conditions.push(eq(dataConsents.consentType, consentType));
   }
 
-  return await db.select().from(dataConsents).where(and(...conditions));
+  return await db
+    .select()
+    .from(dataConsents)
+    .where(and(...conditions));
 }
 
 export async function revokeConsent(id: string) {
@@ -596,7 +665,11 @@ export async function getInviteByToken(token: string) {
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await db.select().from(userInvites).where(eq(userInvites.token, token)).limit(1);
+  const result = await db
+    .select()
+    .from(userInvites)
+    .where(eq(userInvites.token, token))
+    .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -635,11 +708,11 @@ export async function cancelInvite(id: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  await db.update(userInvites).set({ status: "cancelled" }).where(eq(userInvites.id, id));
+  await db
+    .update(userInvites)
+    .set({ status: "cancelled" })
+    .where(eq(userInvites.id, id));
 }
-
-
-
 
 // ============================================================================
 // PRECIFICAÇÃO: CLIENTS
@@ -678,10 +751,7 @@ export async function listClients(tenantId: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return await db
-    .select()
-    .from(clients)
-    .where(eq(clients.tenantId, tenantId));
+  return await db.select().from(clients).where(eq(clients.tenantId, tenantId));
 }
 
 export async function getClient(id: string) {
@@ -697,7 +767,10 @@ export async function getClient(id: string) {
   return result[0] || null;
 }
 
-export async function updateClient(id: string, data: Partial<typeof clients.$inferInsert>) {
+export async function updateClient(
+  id: string,
+  data: Partial<typeof clients.$inferInsert>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -762,7 +835,10 @@ export async function getService(id: string) {
   return result[0] || null;
 }
 
-export async function updateService(id: string, data: Partial<typeof services.$inferInsert>) {
+export async function updateService(
+  id: string,
+  data: Partial<typeof services.$inferInsert>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -819,7 +895,10 @@ export async function getPricingParameters(tenantId: string) {
   return result[0] || null;
 }
 
-export async function updatePricingParameters(tenantId: string, data: Partial<typeof pricingParameters.$inferInsert>) {
+export async function updatePricingParameters(
+  tenantId: string,
+  data: Partial<typeof pricingParameters.$inferInsert>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -887,7 +966,10 @@ export async function getProposal(id: string) {
   return result[0] || null;
 }
 
-export async function updateProposal(id: string, data: Partial<typeof proposals.$inferInsert>) {
+export async function updateProposal(
+  id: string,
+  data: Partial<typeof proposals.$inferInsert>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -960,7 +1042,9 @@ interface TechnicalHourCalculation {
   seniorityAdjustment?: number;
 }
 
-export function calculateTechnicalHour(params: TechnicalHourCalculation): number {
+export function calculateTechnicalHour(
+  params: TechnicalHourCalculation
+): number {
   const {
     monthlyFixedCost,
     laborCost,
@@ -972,10 +1056,12 @@ export function calculateTechnicalHour(params: TechnicalHourCalculation): number
   } = params;
 
   // Cálculo base: (Custo Fixo + Custo MO) / Horas Produtivas
-  const baseTechnicalHour = (monthlyFixedCost + laborCost) / productiveHoursPerMonth;
+  const baseTechnicalHour =
+    (monthlyFixedCost + laborCost) / productiveHoursPerMonth;
 
   // Aplicar ajustes
-  const adjustedHour = baseTechnicalHour * (riskAdjustment / 100) * (seniorityAdjustment / 100);
+  const adjustedHour =
+    baseTechnicalHour * (riskAdjustment / 100) * (seniorityAdjustment / 100);
 
   // Aplicar impostos
   const taxRate = taxRates[taxRegime] || 0;
@@ -1003,7 +1089,10 @@ export function calculateProposal(params: ProposalCalculation): {
   const { items, discountPercent = 0, taxRegime, taxRates = {} } = params;
 
   // Calcular subtotal
-  const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+  const subtotal = items.reduce(
+    (sum, item) => sum + item.quantity * item.unitPrice,
+    0
+  );
 
   // Calcular desconto
   const discount = Math.round(subtotal * (discountPercent / 100));
@@ -1055,4 +1144,3 @@ export async function getAssessmentProposals(assessmentId: string) {
     .from(assessmentProposals)
     .where(eq(assessmentProposals.assessmentId, assessmentId));
 }
-

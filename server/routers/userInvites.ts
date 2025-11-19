@@ -9,12 +9,16 @@ import { eq, and, desc, isNull } from "drizzle-orm";
 export const userInvitesRouter = router({
   // Listar convites
   list: protectedProcedure
-    .input(z.object({
-      tenantId: z.string().optional(),
-      status: z.enum(["pending", "accepted", "expired", "cancelled"]).optional(),
-      limit: z.number().min(1).max(100).default(50),
-      offset: z.number().min(0).default(0),
-    }))
+    .input(
+      z.object({
+        tenantId: z.string().optional(),
+        status: z
+          .enum(["pending", "accepted", "expired", "cancelled"])
+          .optional(),
+        limit: z.number().min(1).max(100).default(50),
+        offset: z.number().min(0).default(0),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return [];
@@ -49,12 +53,18 @@ export const userInvitesRouter = router({
 
   // Obter convite por ID
   getById: protectedProcedure
-    .input(z.object({
-      id: z.string(),
-    }))
+    .input(
+      z.object({
+        id: z.string(),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
 
       const [invite] = await db
         .select()
@@ -70,12 +80,18 @@ export const userInvitesRouter = router({
 
   // Obter convite por token
   getByToken: protectedProcedure
-    .input(z.object({
-      token: z.string(),
-    }))
+    .input(
+      z.object({
+        token: z.string(),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
 
       const [invite] = await db
         .select()
@@ -94,7 +110,10 @@ export const userInvitesRouter = router({
           .set({ status: "expired" })
           .where(eq(userInvites.id, invite.id));
 
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Invite has expired" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invite has expired",
+        });
       }
 
       return invite;
@@ -102,20 +121,26 @@ export const userInvitesRouter = router({
 
   // Criar novo convite
   create: protectedProcedure
-    .input(z.object({
-      tenantId: z.string().optional(),
-      email: z.string().email(),
-      roleId: z.string(),
-      invitedBy: z.string(),
-      expiresInDays: z.number().min(1).max(30).default(7),
-    }))
+    .input(
+      z.object({
+        tenantId: z.string().optional(),
+        email: z.string().email(),
+        roleId: z.string(),
+        invitedBy: z.string(),
+        expiresInDays: z.number().min(1).max(30).default(7),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
 
       const id = nanoid();
       const token = nanoid(32);
-      
+
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + input.expiresInDays);
 
@@ -131,22 +156,28 @@ export const userInvitesRouter = router({
         createdAt: new Date(),
       });
 
-      return { 
-        id, 
+      return {
+        id,
         token,
-        inviteUrl: `${process.env.VITE_APP_URL || 'http://localhost:3000'}/accept-invite?token=${token}`
+        inviteUrl: `${process.env.VITE_APP_URL || "http://localhost:3000"}/accept-invite?token=${token}`,
       };
     }),
 
   // Aceitar convite
   accept: protectedProcedure
-    .input(z.object({
-      token: z.string(),
-      userId: z.string(),
-    }))
+    .input(
+      z.object({
+        token: z.string(),
+        userId: z.string(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
 
       const [invite] = await db
         .select()
@@ -158,7 +189,10 @@ export const userInvitesRouter = router({
       }
 
       if (invite.status !== "pending") {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Invite is not pending" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invite is not pending",
+        });
       }
 
       if (invite.expiresAt < new Date()) {
@@ -167,7 +201,10 @@ export const userInvitesRouter = router({
           .set({ status: "expired" })
           .where(eq(userInvites.id, invite.id));
 
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Invite has expired" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invite has expired",
+        });
       }
 
       // Atualizar status do convite
@@ -179,7 +216,7 @@ export const userInvitesRouter = router({
         })
         .where(eq(userInvites.id, invite.id));
 
-      return { 
+      return {
         success: true,
         tenantId: invite.tenantId,
         roleId: invite.roleId,
@@ -188,12 +225,18 @@ export const userInvitesRouter = router({
 
   // Cancelar convite
   cancel: protectedProcedure
-    .input(z.object({
-      id: z.string(),
-    }))
+    .input(
+      z.object({
+        id: z.string(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
 
       await db
         .update(userInvites)
@@ -205,13 +248,19 @@ export const userInvitesRouter = router({
 
   // Reenviar convite
   resend: protectedProcedure
-    .input(z.object({
-      id: z.string(),
-      expiresInDays: z.number().min(1).max(30).default(7),
-    }))
+    .input(
+      z.object({
+        id: z.string(),
+        expiresInDays: z.number().min(1).max(30).default(7),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
 
       const [invite] = await db
         .select()
@@ -236,25 +285,29 @@ export const userInvitesRouter = router({
         })
         .where(eq(userInvites.id, input.id));
 
-      return { 
+      return {
         success: true,
         token: newToken,
-        inviteUrl: `${process.env.VITE_APP_URL || 'http://localhost:3000'}/accept-invite?token=${newToken}`
+        inviteUrl: `${process.env.VITE_APP_URL || "http://localhost:3000"}/accept-invite?token=${newToken}`,
       };
     }),
 
   // Deletar convite
   delete: protectedProcedure
-    .input(z.object({
-      id: z.string(),
-    }))
+    .input(
+      z.object({
+        id: z.string(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
 
-      await db
-        .delete(userInvites)
-        .where(eq(userInvites.id, input.id));
+      await db.delete(userInvites).where(eq(userInvites.id, input.id));
 
       return { success: true };
     }),

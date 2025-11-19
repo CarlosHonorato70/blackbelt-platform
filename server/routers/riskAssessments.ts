@@ -3,23 +3,25 @@ import { z } from "zod";
 import { nanoid } from "nanoid";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { 
-  riskAssessments, 
+import {
+  riskAssessments,
   riskAssessmentItems,
   riskCategories,
   riskFactors,
-  actionPlans 
+  actionPlans,
 } from "../../drizzle/schema_nr01";
 import { eq, and, desc, isNull } from "drizzle-orm";
 
 export const riskAssessmentsRouter = router({
   // Listar avaliações por tenant
   list: protectedProcedure
-    .input(z.object({
-      tenantId: z.string(),
-      limit: z.number().min(1).max(100).default(50),
-      offset: z.number().min(0).default(0),
-    }))
+    .input(
+      z.object({
+        tenantId: z.string(),
+        limit: z.number().min(1).max(100).default(50),
+        offset: z.number().min(0).default(0),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return [];
@@ -37,13 +39,19 @@ export const riskAssessmentsRouter = router({
 
   // Obter avaliação por ID
   getById: protectedProcedure
-    .input(z.object({
-      id: z.string(),
-      tenantId: z.string(),
-    }))
+    .input(
+      z.object({
+        id: z.string(),
+        tenantId: z.string(),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
 
       const [assessment] = await db
         .select()
@@ -56,7 +64,10 @@ export const riskAssessmentsRouter = router({
         );
 
       if (!assessment) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Assessment not found" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Assessment not found",
+        });
       }
 
       // Buscar itens da avaliação
@@ -73,21 +84,27 @@ export const riskAssessmentsRouter = router({
 
   // Criar nova avaliação
   create: protectedProcedure
-    .input(z.object({
-      tenantId: z.string(),
-      sectorId: z.string().optional(),
-      title: z.string().min(1).max(255),
-      description: z.string().optional(),
-      assessmentDate: z.date(),
-      assessor: z.string().optional(),
-      methodology: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        tenantId: z.string(),
+        sectorId: z.string().optional(),
+        title: z.string().min(1).max(255),
+        description: z.string().optional(),
+        assessmentDate: z.date(),
+        assessor: z.string().optional(),
+        methodology: z.string().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
 
       const id = nanoid();
-      
+
       await db.insert(riskAssessments).values({
         id,
         tenantId: input.tenantId,
@@ -107,20 +124,28 @@ export const riskAssessmentsRouter = router({
 
   // Atualizar avaliação
   update: protectedProcedure
-    .input(z.object({
-      id: z.string(),
-      tenantId: z.string(),
-      sectorId: z.string().optional(),
-      title: z.string().min(1).max(255).optional(),
-      description: z.string().optional(),
-      assessmentDate: z.date().optional(),
-      assessor: z.string().optional(),
-      status: z.enum(["draft", "in_progress", "completed", "reviewed"]).optional(),
-      methodology: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        id: z.string(),
+        tenantId: z.string(),
+        sectorId: z.string().optional(),
+        title: z.string().min(1).max(255).optional(),
+        description: z.string().optional(),
+        assessmentDate: z.date().optional(),
+        assessor: z.string().optional(),
+        status: z
+          .enum(["draft", "in_progress", "completed", "reviewed"])
+          .optional(),
+        methodology: z.string().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
 
       const { id, tenantId, ...updates } = input;
 
@@ -142,13 +167,19 @@ export const riskAssessmentsRouter = router({
 
   // Deletar avaliação
   delete: protectedProcedure
-    .input(z.object({
-      id: z.string(),
-      tenantId: z.string(),
-    }))
+    .input(
+      z.object({
+        id: z.string(),
+        tenantId: z.string(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
 
       // Primeiro deletar itens relacionados
       await db
@@ -170,24 +201,44 @@ export const riskAssessmentsRouter = router({
 
   // Adicionar item de risco à avaliação
   addItem: protectedProcedure
-    .input(z.object({
-      assessmentId: z.string(),
-      riskFactorId: z.string(),
-      severity: z.enum(["low", "medium", "high", "critical"]),
-      probability: z.enum(["rare", "unlikely", "possible", "likely", "certain"]),
-      affectedPopulation: z.number().optional(),
-      currentControls: z.string().optional(),
-      observations: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        assessmentId: z.string(),
+        riskFactorId: z.string(),
+        severity: z.enum(["low", "medium", "high", "critical"]),
+        probability: z.enum([
+          "rare",
+          "unlikely",
+          "possible",
+          "likely",
+          "certain",
+        ]),
+        affectedPopulation: z.number().optional(),
+        currentControls: z.string().optional(),
+        observations: z.string().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
 
       const id = nanoid();
 
       // Calcular nível de risco baseado em severidade e probabilidade
-      const severityScore = { low: 1, medium: 2, high: 3, critical: 4 }[input.severity];
-      const probabilityScore = { rare: 1, unlikely: 2, possible: 3, likely: 4, certain: 5 }[input.probability];
+      const severityScore = { low: 1, medium: 2, high: 3, critical: 4 }[
+        input.severity
+      ];
+      const probabilityScore = {
+        rare: 1,
+        unlikely: 2,
+        possible: 3,
+        likely: 4,
+        certain: 5,
+      }[input.probability];
       const riskScore = severityScore * probabilityScore;
 
       let riskLevel: "low" | "medium" | "high" | "critical";
@@ -213,24 +264,25 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Listar categorias de risco
-  listCategories: protectedProcedure
-    .query(async () => {
-      const db = await getDb();
-      if (!db) return [];
+  listCategories: protectedProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return [];
 
-      const categories = await db
-        .select()
-        .from(riskCategories)
-        .orderBy(riskCategories.order);
+    const categories = await db
+      .select()
+      .from(riskCategories)
+      .orderBy(riskCategories.order);
 
-      return categories;
-    }),
+    return categories;
+  }),
 
   // Listar fatores de risco por categoria
   listFactors: protectedProcedure
-    .input(z.object({
-      categoryId: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        categoryId: z.string().optional(),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return [];
@@ -238,7 +290,9 @@ export const riskAssessmentsRouter = router({
       let query = db.select().from(riskFactors);
 
       if (input.categoryId) {
-        query = query.where(eq(riskFactors.categoryId, input.categoryId)) as any;
+        query = query.where(
+          eq(riskFactors.categoryId, input.categoryId)
+        ) as any;
       }
 
       const factors = await query.orderBy(riskFactors.order);
@@ -247,10 +301,12 @@ export const riskAssessmentsRouter = router({
 
   // Listar planos de ação por tenant
   listActionPlans: protectedProcedure
-    .input(z.object({
-      tenantId: z.string(),
-      assessmentItemId: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        tenantId: z.string(),
+        assessmentItemId: z.string().optional(),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return [];
@@ -258,7 +314,9 @@ export const riskAssessmentsRouter = router({
       const conditions = [eq(actionPlans.tenantId, input.tenantId)];
 
       if (input.assessmentItemId) {
-        conditions.push(eq(actionPlans.assessmentItemId, input.assessmentItemId));
+        conditions.push(
+          eq(actionPlans.assessmentItemId, input.assessmentItemId)
+        );
       }
 
       const plans = await db
@@ -272,20 +330,32 @@ export const riskAssessmentsRouter = router({
 
   // Criar plano de ação
   createActionPlan: protectedProcedure
-    .input(z.object({
-      tenantId: z.string(),
-      assessmentItemId: z.string().optional(),
-      title: z.string().min(1).max(255),
-      description: z.string().optional(),
-      actionType: z.enum(["elimination", "substitution", "engineering", "administrative", "ppe"]),
-      responsibleId: z.string().optional(),
-      deadline: z.date().optional(),
-      priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
-      budget: z.number().optional(),
-    }))
+    .input(
+      z.object({
+        tenantId: z.string(),
+        assessmentItemId: z.string().optional(),
+        title: z.string().min(1).max(255),
+        description: z.string().optional(),
+        actionType: z.enum([
+          "elimination",
+          "substitution",
+          "engineering",
+          "administrative",
+          "ppe",
+        ]),
+        responsibleId: z.string().optional(),
+        deadline: z.date().optional(),
+        priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
+        budget: z.number().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
 
       const id = nanoid();
 

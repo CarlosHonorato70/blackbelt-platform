@@ -18,9 +18,11 @@ export const rolesPermissionsRouter = router({
 
   roles: router({
     list: protectedProcedure
-      .input(z.object({
-        scope: z.enum(["global", "tenant"]).optional(),
-      }))
+      .input(
+        z.object({
+          scope: z.enum(["global", "tenant"]).optional(),
+        })
+      )
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return [];
@@ -36,12 +38,18 @@ export const rolesPermissionsRouter = router({
       }),
 
     getById: protectedProcedure
-      .input(z.object({
-        id: z.string(),
-      }))
+      .input(
+        z.object({
+          id: z.string(),
+        })
+      )
       .query(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         const [role] = await db
           .select()
@@ -65,15 +73,21 @@ export const rolesPermissionsRouter = router({
       }),
 
     create: protectedProcedure
-      .input(z.object({
-        systemName: z.string().min(1).max(100),
-        displayName: z.string().min(1).max(100),
-        description: z.string().optional(),
-        scope: z.enum(["global", "tenant"]).default("tenant"),
-      }))
+      .input(
+        z.object({
+          systemName: z.string().min(1).max(100),
+          displayName: z.string().min(1).max(100),
+          description: z.string().optional(),
+          scope: z.enum(["global", "tenant"]).default("tenant"),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         const id = nanoid();
 
@@ -90,48 +104,53 @@ export const rolesPermissionsRouter = router({
       }),
 
     update: protectedProcedure
-      .input(z.object({
-        id: z.string(),
-        systemName: z.string().min(1).max(100).optional(),
-        displayName: z.string().min(1).max(100).optional(),
-        description: z.string().optional(),
-        scope: z.enum(["global", "tenant"]).optional(),
-      }))
+      .input(
+        z.object({
+          id: z.string(),
+          systemName: z.string().min(1).max(100).optional(),
+          displayName: z.string().min(1).max(100).optional(),
+          description: z.string().optional(),
+          scope: z.enum(["global", "tenant"]).optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         const { id, ...updates } = input;
 
-        await db
-          .update(roles)
-          .set(updates)
-          .where(eq(roles.id, id));
+        await db.update(roles).set(updates).where(eq(roles.id, id));
 
         return { success: true };
       }),
 
     delete: protectedProcedure
-      .input(z.object({
-        id: z.string(),
-      }))
+      .input(
+        z.object({
+          id: z.string(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         // Deletar associações primeiro
         await db
           .delete(rolePermissions)
           .where(eq(rolePermissions.roleId, input.id));
 
-        await db
-          .delete(userRoles)
-          .where(eq(userRoles.roleId, input.id));
+        await db.delete(userRoles).where(eq(userRoles.roleId, input.id));
 
         // Deletar role
-        await db
-          .delete(roles)
-          .where(eq(roles.id, input.id));
+        await db.delete(roles).where(eq(roles.id, input.id));
 
         return { success: true };
       }),
@@ -143,9 +162,11 @@ export const rolesPermissionsRouter = router({
 
   permissions: router({
     list: protectedProcedure
-      .input(z.object({
-        resource: z.string().optional(),
-      }))
+      .input(
+        z.object({
+          resource: z.string().optional(),
+        })
+      )
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return [];
@@ -161,12 +182,18 @@ export const rolesPermissionsRouter = router({
       }),
 
     getById: protectedProcedure
-      .input(z.object({
-        id: z.string(),
-      }))
+      .input(
+        z.object({
+          id: z.string(),
+        })
+      )
       .query(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         const [permission] = await db
           .select()
@@ -174,22 +201,31 @@ export const rolesPermissionsRouter = router({
           .where(eq(permissions.id, input.id));
 
         if (!permission) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Permission not found" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Permission not found",
+          });
         }
 
         return permission;
       }),
 
     create: protectedProcedure
-      .input(z.object({
-        name: z.string().min(1).max(100),
-        resource: z.string().min(1).max(50),
-        action: z.string().min(1).max(50),
-        description: z.string().optional(),
-      }))
+      .input(
+        z.object({
+          name: z.string().min(1).max(100),
+          resource: z.string().min(1).max(50),
+          action: z.string().min(1).max(50),
+          description: z.string().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         const id = nanoid();
 
@@ -206,34 +242,43 @@ export const rolesPermissionsRouter = router({
       }),
 
     update: protectedProcedure
-      .input(z.object({
-        id: z.string(),
-        name: z.string().min(1).max(100).optional(),
-        resource: z.string().min(1).max(50).optional(),
-        action: z.string().min(1).max(50).optional(),
-        description: z.string().optional(),
-      }))
+      .input(
+        z.object({
+          id: z.string(),
+          name: z.string().min(1).max(100).optional(),
+          resource: z.string().min(1).max(50).optional(),
+          action: z.string().min(1).max(50).optional(),
+          description: z.string().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         const { id, ...updates } = input;
 
-        await db
-          .update(permissions)
-          .set(updates)
-          .where(eq(permissions.id, id));
+        await db.update(permissions).set(updates).where(eq(permissions.id, id));
 
         return { success: true };
       }),
 
     delete: protectedProcedure
-      .input(z.object({
-        id: z.string(),
-      }))
+      .input(
+        z.object({
+          id: z.string(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         // Deletar associações primeiro
         await db
@@ -241,9 +286,7 @@ export const rolesPermissionsRouter = router({
           .where(eq(rolePermissions.permissionId, input.id));
 
         // Deletar permissão
-        await db
-          .delete(permissions)
-          .where(eq(permissions.id, input.id));
+        await db.delete(permissions).where(eq(permissions.id, input.id));
 
         return { success: true };
       }),
@@ -255,10 +298,12 @@ export const rolesPermissionsRouter = router({
 
   rolePermissions: router({
     list: protectedProcedure
-      .input(z.object({
-        roleId: z.string().optional(),
-        tenantId: z.string().optional(),
-      }))
+      .input(
+        z.object({
+          roleId: z.string().optional(),
+          tenantId: z.string().optional(),
+        })
+      )
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return [];
@@ -288,15 +333,21 @@ export const rolesPermissionsRouter = router({
       }),
 
     assign: protectedProcedure
-      .input(z.object({
-        roleId: z.string(),
-        permissionId: z.string(),
-        tenantId: z.string().optional(),
-        conditions: z.any().optional(),
-      }))
+      .input(
+        z.object({
+          roleId: z.string(),
+          permissionId: z.string(),
+          tenantId: z.string().optional(),
+          conditions: z.any().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         const id = nanoid();
 
@@ -313,12 +364,18 @@ export const rolesPermissionsRouter = router({
       }),
 
     revoke: protectedProcedure
-      .input(z.object({
-        id: z.string(),
-      }))
+      .input(
+        z.object({
+          id: z.string(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         await db
           .delete(rolePermissions)
@@ -334,10 +391,12 @@ export const rolesPermissionsRouter = router({
 
   userRoles: router({
     list: protectedProcedure
-      .input(z.object({
-        userId: z.string().optional(),
-        tenantId: z.string().optional(),
-      }))
+      .input(
+        z.object({
+          userId: z.string().optional(),
+          tenantId: z.string().optional(),
+        })
+      )
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return [];
@@ -367,14 +426,20 @@ export const rolesPermissionsRouter = router({
       }),
 
     assign: protectedProcedure
-      .input(z.object({
-        userId: z.string(),
-        roleId: z.string(),
-        tenantId: z.string().optional(),
-      }))
+      .input(
+        z.object({
+          userId: z.string(),
+          roleId: z.string(),
+          tenantId: z.string().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         const id = nanoid();
 
@@ -390,16 +455,20 @@ export const rolesPermissionsRouter = router({
       }),
 
     revoke: protectedProcedure
-      .input(z.object({
-        id: z.string(),
-      }))
+      .input(
+        z.object({
+          id: z.string(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
-        await db
-          .delete(userRoles)
-          .where(eq(userRoles.id, input.id));
+        await db.delete(userRoles).where(eq(userRoles.id, input.id));
 
         return { success: true };
       }),

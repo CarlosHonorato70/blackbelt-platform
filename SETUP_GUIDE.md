@@ -22,6 +22,7 @@ mysql --version   # Deve mostrar 8.0 ou superior
 ### Instalar Node.js e pnpm
 
 Se não tiver Node.js instalado:
+
 ```bash
 # Via nvm (recomendado)
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
@@ -32,6 +33,7 @@ nvm use 22
 ```
 
 Instalar pnpm:
+
 ```bash
 npm install -g pnpm@10.4.1
 ```
@@ -50,6 +52,7 @@ pnpm install
 ```
 
 Este comando irá:
+
 - Instalar todas as dependências do projeto
 - Configurar patches necessários
 - Preparar o ambiente de desenvolvimento
@@ -67,6 +70,7 @@ mysql -u root -p
 ```
 
 No console MySQL:
+
 ```sql
 CREATE DATABASE blackbelt CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER 'blackbelt_user'@'localhost' IDENTIFIED BY 'senha_segura_aqui';
@@ -150,6 +154,7 @@ pnpm db:push
 ```
 
 Este comando irá:
+
 - Gerar o schema do banco de dados
 - Criar todas as tabelas necessárias (30+ tabelas)
 - Configurar índices e relacionamentos
@@ -163,6 +168,7 @@ mysql -u blackbelt_user -p blackbelt -e "SHOW TABLES;"
 ```
 
 Você deve ver tabelas como:
+
 - users
 - tenants
 - sectors
@@ -180,12 +186,14 @@ pnpm dev
 ```
 
 Este comando irá:
+
 - Iniciar o servidor backend (Express + tRPC)
 - Iniciar o servidor frontend (Vite + React)
 - Habilitar hot-reload para desenvolvimento
 - Abrir a aplicação em http://localhost:3000
 
 **Output esperado:**
+
 ```
 VITE v7.1.9  ready in 1234 ms
 
@@ -211,6 +219,7 @@ pnpm test
 ```
 
 **Output esperado:**
+
 ```
 ✓ server/__tests__/pricing-calculations.test.ts (23 tests)
 ✓ server/__tests__/data-validation.test.ts (57 tests)
@@ -231,6 +240,7 @@ Este comando deve compilar a aplicação sem erros.
 ## 🔧 Comandos Úteis
 
 ### Desenvolvimento
+
 ```bash
 pnpm dev          # Iniciar servidor de desenvolvimento
 pnpm build        # Build para produção
@@ -239,12 +249,14 @@ pnpm check        # Verificar tipos TypeScript
 ```
 
 ### Banco de Dados
+
 ```bash
 pnpm db:push      # Executar migrations
 pnpm db:generate  # Gerar migrations
 ```
 
 ### Testes e Qualidade
+
 ```bash
 pnpm test              # Executar testes
 pnpm test --watch      # Modo watch
@@ -259,7 +271,9 @@ pnpm format            # Formatar código
 **Problema:** Não consegue conectar ao MySQL.
 
 **Soluções:**
+
 1. Verifique se o MySQL está rodando:
+
    ```bash
    sudo systemctl status mysql  # Linux
    brew services list           # macOS
@@ -276,6 +290,7 @@ pnpm format            # Formatar código
 **Problema:** pnpm não está instalado.
 
 **Solução:**
+
 ```bash
 npm install -g pnpm@10.4.1
 ```
@@ -285,11 +300,13 @@ npm install -g pnpm@10.4.1
 **Problema:** A porta 3000 já está em uso.
 
 **Soluções:**
+
 1. Parar o processo que está usando a porta:
+
    ```bash
    # Linux/macOS
    lsof -ti:3000 | xargs kill -9
-   
+
    # Windows
    netstat -ano | findstr :3000
    taskkill /PID <PID> /F
@@ -305,6 +322,7 @@ npm install -g pnpm@10.4.1
 **Problema:** Dependências não instaladas corretamente.
 
 **Solução:**
+
 ```bash
 rm -rf node_modules pnpm-lock.yaml
 pnpm install
@@ -315,6 +333,7 @@ pnpm install
 **Problema:** Erro ao executar `pnpm db:push`.
 
 **Soluções:**
+
 1. Verificar se o banco de dados existe
 2. Verificar permissões do usuário MySQL
 3. Limpar e recriar o banco:
@@ -329,6 +348,7 @@ pnpm install
 **Problema:** Limite de watchers do sistema (Linux).
 
 **Solução:**
+
 ```bash
 echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
 sudo sysctl -p
@@ -400,4 +420,4 @@ Se você chegou até aqui e completou todos os passos, parabéns! A Black Belt P
 
 **Desenvolvido com ❤️ pela Black Belt Consultoria**
 
-*Última atualização: Novembro 2024*
+_Última atualização: Novembro 2024_

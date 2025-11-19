@@ -57,6 +57,7 @@ A plataforma é **multi-tenant**, **type-safe**, e construída com as melhores p
 ### Stack Tecnológico
 
 **Frontend:**
+
 - React 19 + TypeScript
 - Tailwind CSS 4
 - shadcn/ui (componentes)
@@ -65,6 +66,7 @@ A plataforma é **multi-tenant**, **type-safe**, e construída com as melhores p
 - Wouter (roteamento)
 
 **Backend:**
+
 - Express 4
 - tRPC 11 (type-safe RPC)
 - Drizzle ORM
@@ -72,12 +74,14 @@ A plataforma é **multi-tenant**, **type-safe**, e construída com as melhores p
 - SuperJSON (serialização)
 
 **Database:**
+
 - MySQL 8.0+
 - 30+ tabelas
 - Row-Level Security (RLS)
 - Índices otimizados
 
 **DevOps:**
+
 - Node.js 22.13.0
 - pnpm (gerenciador de pacotes)
 - Docker (containerização)
@@ -197,6 +201,7 @@ pnpm dev                        # Iniciar servidor
 A aplicação estará disponível em `http://localhost:3000`
 
 📖 **Para instruções detalhadas, consulte:**
+
 - [SETUP_GUIDE.md](SETUP_GUIDE.md) - Guia completo de instalação passo a passo
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Solução de problemas comuns
 
@@ -206,18 +211,18 @@ A aplicação estará disponível em `http://localhost:3000`
 
 A documentação completa está disponível nos seguintes arquivos:
 
-| Arquivo | Descrição |
-|---------|-----------|
-| **SETUP_GUIDE.md** | 🚀 Guia completo de instalação e configuração |
-| **TROUBLESHOOTING.md** | 🔧 Solução de problemas e debugging |
-| **TESTING.md** | 🧪 Documentação completa de testes |
-| **TESTING_QUICKSTART.md** | ⚡ Guia rápido de testes |
-| **DOCUMENTACAO_TECNICA.md** | Documentação técnica completa (30+ páginas) |
-| **CODIGO_CONSOLIDADO.md** | Código-fonte consolidado com anotações |
-| **DFD_ARQUITETURA.md** | 16 diagramas de fluxo de dados |
-| **PLANO_TESTES_E2E.md** | Plano de testes E2E com 21 casos de teste |
-| **PROJETO_PLATAFORMA_UNIFICADA.md** | Projeto estratégico de integração |
-| **CODIGO_FONTE_EMPRESAS.md** | Análise detalhada da página de Empresas |
+| Arquivo                             | Descrição                                     |
+| ----------------------------------- | --------------------------------------------- |
+| **SETUP_GUIDE.md**                  | 🚀 Guia completo de instalação e configuração |
+| **TROUBLESHOOTING.md**              | 🔧 Solução de problemas e debugging           |
+| **TESTING.md**                      | 🧪 Documentação completa de testes            |
+| **TESTING_QUICKSTART.md**           | ⚡ Guia rápido de testes                      |
+| **DOCUMENTACAO_TECNICA.md**         | Documentação técnica completa (30+ páginas)   |
+| **CODIGO_CONSOLIDADO.md**           | Código-fonte consolidado com anotações        |
+| **DFD_ARQUITETURA.md**              | 16 diagramas de fluxo de dados                |
+| **PLANO_TESTES_E2E.md**             | Plano de testes E2E com 21 casos de teste     |
+| **PROJETO_PLATAFORMA_UNIFICADA.md** | Projeto estratégico de integração             |
+| **CODIGO_FONTE_EMPRESAS.md**        | Análise detalhada da página de Empresas       |
 
 ---
 
@@ -254,21 +259,25 @@ A documentação completa está disponível nos seguintes arquivos:
 ### Tabelas Principais
 
 **Core:**
+
 - `users` - Usuários do sistema
 - `roles` - Papéis (admin, consultant, etc)
 - `permissions` - Permissões granulares
 
 **Multi-Tenant:**
+
 - `tenants` - Empresas clientes
 - `sectors` - Setores das empresas
 - `people` - Colaboradores
 
 **Conformidade NR-01:**
+
 - `riskAssessments` - Avaliações de risco
 - `riskFactors` - Fatores de risco
 - `complianceReports` - Relatórios de compliance
 
 **Precificação:**
+
 - `clients` - Clientes para propostas
 - `services` - Serviços oferecidos
 - `pricingParameters` - Parâmetros de precificação
@@ -276,6 +285,7 @@ A documentação completa está disponível nos seguintes arquivos:
 - `proposalItems` - Itens das propostas
 
 **Auditoria:**
+
 - `auditLogs` - Log de todas as ações
 - `dataConsents` - Consentimentos LGPD
 
@@ -346,13 +356,13 @@ npx playwright show-report
 
 ### Métricas de Sucesso
 
-| Métrica | Meta | Status |
-|---------|------|--------|
-| Cobertura de Código | 80%+ | ✅ |
-| Testes Passando | 100% | ✅ |
-| Disponibilidade | 99.9% | ✅ |
-| Tempo de Resposta P95 | < 1s | ✅ |
-| Taxa de Erro | < 0.1% | ✅ |
+| Métrica               | Meta   | Status |
+| --------------------- | ------ | ------ |
+| Cobertura de Código   | 80%+   | ✅     |
+| Testes Passando       | 100%   | ✅     |
+| Disponibilidade       | 99.9%  | ✅     |
+| Tempo de Resposta P95 | < 1s   | ✅     |
+| Taxa de Erro          | < 0.1% | ✅     |
 
 ### Otimizações
 
@@ -462,18 +472,21 @@ VITE_APP_LOGO=https://...
 ## 📝 Roadmap
 
 ### Fase 1 ✅ (Concluída)
+
 - [x] Gestão de Riscos NR-01
 - [x] Sistema de Precificação
 - [x] Multi-tenant
 - [x] Autenticação OAuth
 
 ### Fase 2 📋 (Em Progresso)
+
 - [ ] Dashboard de Testes E2E
 - [ ] Integração Avaliação → Proposta
 - [ ] Exportação de Propostas (PDF)
 - [ ] Notificações em Tempo Real
 
 ### Fase 3 🔮 (Planejado)
+
 - [ ] Mobile App (React Native)
 - [ ] API Pública (REST)
 - [ ] Webhooks
@@ -519,6 +532,7 @@ Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICE
 ## 🙏 Agradecimentos
 
 Agradecimentos especiais a:
+
 - Equipe Manus por infraestrutura e suporte
 - Comunidade React e Node.js
 - Todos os contribuidores
@@ -527,11 +541,10 @@ Agradecimentos especiais a:
 
 **Desenvolvido com ❤️ pela Black Belt Consultoria**
 
-*Maestria se alcança através de técnica apurada, disciplina rigorosa e uma busca incansável por ir além do óbvio e reinventar.*
+_Maestria se alcança através de técnica apurada, disciplina rigorosa e uma busca incansável por ir além do óbvio e reinventar._
 
 ---
 
 **Última atualização:** Novembro 2025  
 **Versão:** 1.0.0  
 **Status:** Production Ready ✅
-

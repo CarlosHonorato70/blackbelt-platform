@@ -20,11 +20,13 @@ Este guia ajuda a resolver problemas comuns ao configurar e executar a plataform
 **Causa:** pnpm não está instalado globalmente.
 
 **Solução:**
+
 ```bash
 npm install -g pnpm@10.4.1
 ```
 
 Verificar instalação:
+
 ```bash
 pnpm --version
 ```
@@ -36,6 +38,7 @@ pnpm --version
 **Causa:** Permissões insuficientes para instalação global.
 
 **Solução (Linux/macOS):**
+
 ```bash
 # Opção 1: Usar sudo
 sudo npm install -g pnpm@10.4.1
@@ -58,6 +61,7 @@ Execute o terminal como Administrador.
 **Causa:** Instalação incompleta ou cache corrompido.
 
 **Solução:**
+
 ```bash
 # Limpar cache e reinstalar
 rm -rf node_modules
@@ -72,6 +76,7 @@ pnpm install
 **Causa:** Conflitos de versões de dependências.
 
 **Solução:**
+
 ```bash
 # Forçar resolução
 pnpm install --force
@@ -90,6 +95,7 @@ pnpm install
 **Causa:** MySQL não está rodando ou credenciais incorretas.
 
 **Diagnóstico:**
+
 ```bash
 # Verificar se MySQL está rodando
 # Linux
@@ -105,28 +111,31 @@ net start | findstr MySQL
 **Soluções:**
 
 1. **Iniciar MySQL:**
+
    ```bash
    # Linux
    sudo systemctl start mysql
-   
+
    # macOS
    brew services start mysql
-   
+
    # Windows
    net start MySQL80
    ```
 
 2. **Verificar credenciais:**
+
    ```bash
    mysql -u blackbelt_user -p
    # Deve conectar sem erros
    ```
 
 3. **Verificar DATABASE_URL no .env:**
+
    ```env
    # Formato correto:
    DATABASE_URL=mysql://usuario:senha@host:porta/database
-   
+
    # Exemplo:
    DATABASE_URL=mysql://blackbelt_user:senha123@localhost:3306/blackbelt
    ```
@@ -153,6 +162,7 @@ net start | findstr MySQL
 **Causa:** Usuário não tem permissões ou senha incorreta.
 
 **Solução:**
+
 ```sql
 -- Conectar como root
 mysql -u root -p
@@ -174,6 +184,7 @@ Atualizar .env com a nova senha.
 **Causa:** Banco de dados não foi criado.
 
 **Solução:**
+
 ```bash
 mysql -u root -p -e "CREATE DATABASE blackbelt CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 ```
@@ -185,6 +196,7 @@ mysql -u root -p -e "CREATE DATABASE blackbelt CHARACTER SET utf8mb4 COLLATE utf
 **Causa:** Schema incompatível ou banco corrompido.
 
 **Solução:**
+
 ```bash
 # Opção 1: Resetar banco de dados
 mysql -u root -p -e "DROP DATABASE IF EXISTS blackbelt; CREATE DATABASE blackbelt CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
@@ -202,6 +214,7 @@ pnpm db:push
 **Causa:** Tentativa de criar tabelas que já existem.
 
 **Solução:**
+
 ```bash
 # Ver tabelas existentes
 mysql -u blackbelt_user -p blackbelt -e "SHOW TABLES;"
@@ -220,6 +233,7 @@ pnpm db:push
 **Causa:** Outra aplicação está usando a porta 3000.
 
 **Solução 1 - Matar processo:**
+
 ```bash
 # Linux/macOS
 lsof -ti:3000 | xargs kill -9
@@ -233,6 +247,7 @@ taskkill /PID <PID> /F
 ```
 
 **Solução 2 - Usar outra porta:**
+
 ```env
 # No arquivo .env
 PORT=3001
@@ -250,6 +265,7 @@ pnpm dev
 **Causa:** Servidor anterior não foi encerrado.
 
 **Solução:**
+
 ```bash
 # Parar todos os processos Node
 pkill -f "node.*tsx"
@@ -266,6 +282,7 @@ pnpm dev
 **Causa:** Build desatualizado ou módulos faltando.
 
 **Solução:**
+
 ```bash
 # Reinstalar dependências
 rm -rf node_modules
@@ -286,11 +303,13 @@ pnpm dev
 **Causa:** Erro no JavaScript do frontend.
 
 **Diagnóstico:**
+
 1. Abrir DevTools (F12)
 2. Ver aba Console para erros
 3. Ver aba Network para problemas de requisição
 
 **Solução:**
+
 ```bash
 # Limpar cache do navegador
 # Ou forçar refresh: Ctrl+Shift+R (Windows/Linux) ou Cmd+Shift+R (macOS)
@@ -312,6 +331,7 @@ pnpm dev
 **Causa:** Dependências de teste ou configuração incorreta.
 
 **Solução:**
+
 ```bash
 # Limpar cache de testes
 rm -rf node_modules/.vitest
@@ -328,6 +348,7 @@ pnpm test
 **Causa:** Paths ou imports incorretos.
 
 **Solução:**
+
 ```bash
 # Verificar tsconfig.json
 # Verificar vitest.config.ts
@@ -343,6 +364,7 @@ pnpm test --reporter=verbose
 **Causa:** Muitos testes ou recursos insuficientes.
 
 **Solução:**
+
 ```bash
 # Executar testes em paralelo (padrão)
 pnpm test
@@ -361,6 +383,7 @@ pnpm test --testTimeout=10000
 ### 🐌 Aplicação lenta
 
 **Diagnóstico:**
+
 ```bash
 # Verificar uso de CPU/memória
 top
@@ -371,6 +394,7 @@ ps aux | grep node
 ```
 
 **Soluções:**
+
 1. Verificar queries lentas no banco
 2. Adicionar índices nas tabelas
 3. Otimizar imports de componentes
@@ -381,6 +405,7 @@ ps aux | grep node
 ### 🐌 Banco de dados lento
 
 **Solução:**
+
 ```sql
 -- Ver queries lentas
 SHOW PROCESSLIST;
@@ -414,6 +439,7 @@ NODE_ENV=development pnpm dev 2>&1 | grep -i error
 ### 🔍 Debugging com VS Code
 
 **launch.json:**
+
 ```json
 {
   "version": "0.2.0",
@@ -452,6 +478,7 @@ tail -f /var/log/mysql/query.log
 ### Passos de Diagnóstico Completo
 
 1. **Verificar versões:**
+
    ```bash
    node --version    # 20.0+
    pnpm --version    # 9.0+
@@ -459,6 +486,7 @@ tail -f /var/log/mysql/query.log
    ```
 
 2. **Limpar tudo e recomeçar:**
+
    ```bash
    rm -rf node_modules
    rm pnpm-lock.yaml
@@ -468,30 +496,33 @@ tail -f /var/log/mysql/query.log
    ```
 
 3. **Verificar configuração:**
+
    ```bash
    cat .env | grep -v "^#"
    ```
 
 4. **Testar componentes:**
+
    ```bash
    # Testar conexão DB
    mysql -u blackbelt_user -p blackbelt -e "SELECT 1;"
-   
+
    # Testar servidor
    curl http://localhost:3000
-   
+
    # Testar testes
    pnpm test
    ```
 
 5. **Coletar informações:**
+
    ```bash
    # Sistema operacional
    uname -a
-   
+
    # Memória disponível
    free -h
-   
+
    # Espaço em disco
    df -h
    ```

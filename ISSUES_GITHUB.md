@@ -11,14 +11,14 @@
 
 ### 🏥 Módulo de Conformidade NR-01 (6 issues)
 
-| # | Título | Status |
-|---|--------|--------|
-| #1 | feat: Avaliações de Riscos Psicossociais | Open |
-| #2 | feat: Matriz de Probabilidade × Gravidade | Open |
-| #3 | feat: Planos de Ação | Open |
-| #4 | feat: Relatórios de Compliance | Open |
-| #5 | feat: Auditoria Completa | Open |
-| #6 | feat: Exportação LGPD | Open |
+| #   | Título                                    | Status |
+| --- | ----------------------------------------- | ------ |
+| #1  | feat: Avaliações de Riscos Psicossociais  | Open   |
+| #2  | feat: Matriz de Probabilidade × Gravidade | Open   |
+| #3  | feat: Planos de Ação                      | Open   |
+| #4  | feat: Relatórios de Compliance            | Open   |
+| #5  | feat: Auditoria Completa                  | Open   |
+| #6  | feat: Exportação LGPD                     | Open   |
 
 **Descrição:** Funcionalidades para conformidade com Portaria MTE nº 1.419/2024, incluindo avaliações, cálculos de risco, planos de ação e relatórios.
 
@@ -26,14 +26,14 @@
 
 ### 💰 Módulo de Precificação (6 issues)
 
-| # | Título | Status |
-|---|--------|--------|
-| #7 | feat: Gestão de Clientes | Open |
-| #8 | feat: Catálogo de Serviços | Open |
-| #9 | feat: Parâmetros de Precificação | Open |
-| #10 | feat: Cálculo de Hora Técnica | Open |
-| #11 | feat: Geração de Propostas | Open |
-| #12 | feat: Integração Avaliação → Proposta | Open |
+| #   | Título                                | Status |
+| --- | ------------------------------------- | ------ |
+| #7  | feat: Gestão de Clientes              | Open   |
+| #8  | feat: Catálogo de Serviços            | Open   |
+| #9  | feat: Parâmetros de Precificação      | Open   |
+| #10 | feat: Cálculo de Hora Técnica         | Open   |
+| #11 | feat: Geração de Propostas            | Open   |
+| #12 | feat: Integração Avaliação → Proposta | Open   |
 
 **Descrição:** Sistema completo de precificação com gestão de clientes, serviços, cálculos tributários e geração de propostas.
 
@@ -41,16 +41,16 @@
 
 ### 🔐 Funcionalidades Transversais (8 issues)
 
-| # | Título | Status |
-|---|--------|--------|
-| #13 | feat: Autenticação OAuth 2.0 | Open |
-| #14 | feat: Multi-Tenant | Open |
-| #15 | feat: RBAC + ABAC | Open |
-| #16 | feat: Convites de Usuários | Open |
-| #17 | feat: Perfis e Permissões | Open |
-| #18 | feat: Dashboard em Tempo Real | Open |
-| #19 | feat: Guia Interativo | Open |
-| #20 | feat: Notificações em Tempo Real | Open |
+| #   | Título                           | Status |
+| --- | -------------------------------- | ------ |
+| #13 | feat: Autenticação OAuth 2.0     | Open   |
+| #14 | feat: Multi-Tenant               | Open   |
+| #15 | feat: RBAC + ABAC                | Open   |
+| #16 | feat: Convites de Usuários       | Open   |
+| #17 | feat: Perfis e Permissões        | Open   |
+| #18 | feat: Dashboard em Tempo Real    | Open   |
+| #19 | feat: Guia Interativo            | Open   |
+| #20 | feat: Notificações em Tempo Real | Open   |
 
 **Descrição:** Funcionalidades de segurança, acesso, gestão de usuários e experiência do usuário.
 
@@ -58,15 +58,15 @@
 
 ### 🚀 Roadmap - Fase 2 (7 issues)
 
-| # | Título | Status |
-|---|--------|--------|
-| #21 | feat: Dashboard de Testes E2E Avançado | Open |
-| #22 | feat: Exportação de Propostas em PDF | Open |
-| #23 | feat: Integração com CRM | Open |
-| #24 | feat: API Pública REST | Open |
-| #25 | feat: Webhooks | Open |
-| #26 | feat: Analytics Avançado | Open |
-| #27 | feat: Machine Learning - Previsão de Riscos | Open |
+| #   | Título                                      | Status |
+| --- | ------------------------------------------- | ------ |
+| #21 | feat: Dashboard de Testes E2E Avançado      | Open   |
+| #22 | feat: Exportação de Propostas em PDF        | Open   |
+| #23 | feat: Integração com CRM                    | Open   |
+| #24 | feat: API Pública REST                      | Open   |
+| #25 | feat: Webhooks                              | Open   |
+| #26 | feat: Analytics Avançado                    | Open   |
+| #27 | feat: Machine Learning - Previsão de Riscos | Open   |
 
 **Descrição:** Funcionalidades planejadas para futuras versões, incluindo integrações, APIs e machine learning.
 
@@ -82,6 +82,7 @@
 Implementar formulário completo com 30+ fatores de risco para avaliações NR-01 conforme Portaria MTE nº 1.419/2024. Incluir validação, cálculo automático de níveis e exportação de dados.
 
 **Tarefas Sugeridas:**
+
 - [ ] Criar formulário com 30+ campos de fatores de risco
 - [ ] Implementar validação de entrada
 - [ ] Adicionar cálculo automático de níveis
@@ -98,6 +99,7 @@ Implementar formulário completo com 30+ fatores de risco para avaliações NR-0
 Cálculo automático de níveis de risco baseado em probabilidade e gravidade. Implementar matriz 5x5 com cores visuais e recomendações automáticas de ações.
 
 **Tarefas Sugeridas:**
+
 - [ ] Criar matriz 5x5 visual
 - [ ] Implementar cálculo de risco
 - [ ] Adicionar cores por nível
@@ -114,6 +116,7 @@ Cálculo automático de níveis de risco baseado em probabilidade e gravidade. I
 Sistema de rastreamento de ações corretivas com status, prazos, responsáveis e evidências. Incluir notificações de vencimento e relatórios de progresso.
 
 **Tarefas Sugeridas:**
+
 - [ ] Criar CRUD de planos de ação
 - [ ] Implementar rastreamento de status
 - [ ] Adicionar notificações de vencimento
@@ -130,6 +133,7 @@ Sistema de rastreamento de ações corretivas com status, prazos, responsáveis 
 Geração automática de relatórios de compliance NR-01 em PDF com gráficos, tabelas e recomendações. Incluir assinatura digital e data de geração.
 
 **Tarefas Sugeridas:**
+
 - [ ] Criar template de relatório
 - [ ] Implementar geração de PDF
 - [ ] Adicionar gráficos e tabelas
@@ -146,6 +150,7 @@ Geração automática de relatórios de compliance NR-01 em PDF com gráficos, t
 Log de todas as ações do sistema com rastreabilidade completa. Incluir usuário, timestamp, IP, ação, valores antigos/novos e contexto.
 
 **Tarefas Sugeridas:**
+
 - [ ] Criar tabela de auditoria
 - [ ] Implementar logging middleware
 - [ ] Adicionar rastreamento de mudanças
@@ -162,6 +167,7 @@ Log de todas as ações do sistema com rastreabilidade completa. Incluir usuári
 Implementar Data Subject Requests (DSR) para conformidade LGPD. Permitir exportação de todos os dados pessoais em formato estruturado.
 
 **Tarefas Sugeridas:**
+
 - [ ] Criar endpoint de DSR
 - [ ] Implementar coleta de dados pessoais
 - [ ] Gerar arquivo estruturado (JSON/CSV)
@@ -178,6 +184,7 @@ Implementar Data Subject Requests (DSR) para conformidade LGPD. Permitir exporta
 CRUD completo de clientes para propostas comerciais. Incluir campos de contato, endereço, histórico de propostas e status.
 
 **Tarefas Sugeridas:**
+
 - [ ] Criar formulário de cliente
 - [ ] Implementar CRUD (Create, Read, Update, Delete)
 - [ ] Adicionar histórico de propostas
@@ -194,6 +201,7 @@ CRUD completo de clientes para propostas comerciais. Incluir campos de contato, 
 Gestão de serviços oferecidos com preços base, descrição, duração estimada e categorias. Permitir ativação/desativação de serviços.
 
 **Tarefas Sugeridas:**
+
 - [ ] Criar tabela de serviços
 - [ ] Implementar CRUD
 - [ ] Adicionar categorias
@@ -210,6 +218,7 @@ Gestão de serviços oferecidos com preços base, descrição, duração estimad
 Configuração de regimes tributários (MEI, SN, LP, Autônomo) com alíquotas e cálculos específicos. Permitir ajustes por tenant.
 
 **Tarefas Sugeridas:**
+
 - [ ] Criar tabela de parâmetros
 - [ ] Implementar 4 regimes tributários
 - [ ] Adicionar configuração por tenant
@@ -226,6 +235,7 @@ Configuração de regimes tributários (MEI, SN, LP, Autônomo) com alíquotas e
 Cálculo automático com 4 regimes tributários diferentes. Incluir margem, impostos, encargos e gerar valor final com precisão.
 
 **Tarefas Sugeridas:**
+
 - [ ] Implementar cálculo para MEI
 - [ ] Implementar cálculo para SN
 - [ ] Implementar cálculo para LP
@@ -242,6 +252,7 @@ Cálculo automático com 4 regimes tributários diferentes. Incluir margem, impo
 Propostas comerciais com descontos, impostos e cálculos automáticos. Incluir versionamento, histórico e rastreamento de aceitação.
 
 **Tarefas Sugeridas:**
+
 - [ ] Criar formulário de proposta
 - [ ] Implementar cálculos automáticos
 - [ ] Adicionar versionamento
@@ -258,6 +269,7 @@ Propostas comerciais com descontos, impostos e cálculos automáticos. Incluir v
 Recomendação automática de serviços baseada em avaliação NR-01. Pré-popular proposta com dados da avaliação.
 
 **Tarefas Sugeridas:**
+
 - [ ] Criar lógica de recomendação
 - [ ] Implementar pré-população de dados
 - [ ] Adicionar sugestões de serviços
@@ -274,6 +286,7 @@ Recomendação automática de serviços baseada em avaliação NR-01. Pré-popul
 Integração com Manus OAuth para autenticação segura. Incluir login, logout, refresh token e gestão de sessão.
 
 **Tarefas Sugeridas:**
+
 - [ ] Configurar OAuth 2.0
 - [ ] Implementar login
 - [ ] Implementar logout
@@ -290,6 +303,7 @@ Integração com Manus OAuth para autenticação segura. Incluir login, logout, 
 Isolamento completo de dados por empresa com Row-Level Security (RLS). Garantir que cada tenant veja apenas seus dados.
 
 **Tarefas Sugeridas:**
+
 - [ ] Implementar RLS no banco
 - [ ] Adicionar tenantId a todas as tabelas
 - [ ] Criar middleware de tenant
@@ -306,6 +320,7 @@ Isolamento completo de dados por empresa com Row-Level Security (RLS). Garantir 
 Controle de acesso granular com Role-Based (admin, consultant, viewer) e Attribute-Based (tenant, department). Implementar middleware de autorização.
 
 **Tarefas Sugeridas:**
+
 - [ ] Criar tabela de roles
 - [ ] Criar tabela de permissions
 - [ ] Implementar RBAC
@@ -322,6 +337,7 @@ Controle de acesso granular com Role-Based (admin, consultant, viewer) e Attribu
 Sistema de onboarding de novos usuários via email. Incluir tokens de convite, expiração e gestão de permissões iniciais.
 
 **Tarefas Sugeridas:**
+
 - [ ] Criar sistema de convites
 - [ ] Implementar email de convite
 - [ ] Adicionar tokens com expiração
@@ -338,6 +354,7 @@ Sistema de onboarding de novos usuários via email. Incluir tokens de convite, e
 Gestão de papéis (roles) e permissões granulares. Permitir criar papéis customizados com permissões específicas.
 
 **Tarefas Sugeridas:**
+
 - [ ] Criar interface de gestão
 - [ ] Implementar CRUD de roles
 - [ ] Adicionar permissões granulares
@@ -354,6 +371,7 @@ Gestão de papéis (roles) e permissões granulares. Permitir criar papéis cust
 Monitoramento de testes E2E com gráficos, métricas e status. Incluir filtros, exportação e alertas de falhas.
 
 **Tarefas Sugeridas:**
+
 - [ ] Criar dashboard visual
 - [ ] Implementar gráficos em tempo real
 - [ ] Adicionar filtros
@@ -370,6 +388,7 @@ Monitoramento de testes E2E com gráficos, métricas e status. Incluir filtros, 
 Tutorial com 12 passos para onboarding de novos usuários. Incluir tooltips, highlights e progresso visual.
 
 **Tarefas Sugeridas:**
+
 - [ ] Criar 12 passos do tutorial
 - [ ] Implementar tooltips
 - [ ] Adicionar highlights
@@ -386,6 +405,7 @@ Tutorial com 12 passos para onboarding de novos usuários. Incluir tooltips, hig
 Sistema de notificações para eventos importantes (propostas, convites, alertas). Incluir email, push e in-app.
 
 **Tarefas Sugeridas:**
+
 - [ ] Criar sistema de notificações
 - [ ] Implementar email
 - [ ] Implementar push notifications
@@ -402,6 +422,7 @@ Sistema de notificações para eventos importantes (propostas, convites, alertas
 Expandir dashboard com filtros avançados, histórico de testes e exportação de relatórios em PDF/Excel.
 
 **Tarefas Sugeridas:**
+
 - [ ] Adicionar filtros avançados
 - [ ] Implementar histórico
 - [ ] Adicionar exportação PDF
@@ -418,6 +439,7 @@ Expandir dashboard com filtros avançados, histórico de testes e exportação d
 Gerar propostas em PDF com logo, formatação profissional, assinatura digital e código QR.
 
 **Tarefas Sugeridas:**
+
 - [ ] Criar template PDF
 - [ ] Implementar geração de PDF
 - [ ] Adicionar logo
@@ -434,6 +456,7 @@ Gerar propostas em PDF com logo, formatação profissional, assinatura digital e
 Sincronizar dados com sistemas CRM populares (Salesforce, HubSpot, Pipedrive). Bidirecional com webhooks.
 
 **Tarefas Sugeridas:**
+
 - [ ] Integrar Salesforce
 - [ ] Integrar HubSpot
 - [ ] Integrar Pipedrive
@@ -450,6 +473,7 @@ Sincronizar dados com sistemas CRM populares (Salesforce, HubSpot, Pipedrive). B
 Expor endpoints REST para integração externa. Incluir autenticação, rate limiting e documentação OpenAPI.
 
 **Tarefas Sugeridas:**
+
 - [ ] Criar endpoints REST
 - [ ] Implementar autenticação
 - [ ] Adicionar rate limiting
@@ -466,6 +490,7 @@ Expor endpoints REST para integração externa. Incluir autenticação, rate lim
 Implementar webhooks para eventos do sistema (proposta criada, avaliação concluída, etc). Permitir retry automático.
 
 **Tarefas Sugeridas:**
+
 - [ ] Criar sistema de webhooks
 - [ ] Implementar eventos
 - [ ] Adicionar retry automático
@@ -482,6 +507,7 @@ Implementar webhooks para eventos do sistema (proposta criada, avaliação concl
 Dashboard com métricas e KPIs detalhados (conversão, valor médio, tempo médio). Incluir previsões e tendências.
 
 **Tarefas Sugeridas:**
+
 - [ ] Criar dashboard de analytics
 - [ ] Implementar cálculo de KPIs
 - [ ] Adicionar gráficos de tendências
@@ -498,6 +524,7 @@ Dashboard com métricas e KPIs detalhados (conversão, valor médio, tempo médi
 Usar ML para prever riscos baseado em histórico de avaliações. Incluir recomendações automáticas.
 
 **Tarefas Sugeridas:**
+
 - [ ] Coletar dados de treinamento
 - [ ] Treinar modelo ML
 - [ ] Implementar previsões
@@ -517,13 +544,13 @@ Usar ML para prever riscos baseado em histórico de avaliações. Incluir recome
 
 ## 📊 Estatísticas
 
-| Métrica | Valor |
-|---------|-------|
-| Total de Issues | 27 |
-| Issues Abertas | 27 |
-| Issues Fechadas | 0 |
-| Issues por Categoria | 6-8 |
-| Média de Descrição | 150+ palavras |
+| Métrica              | Valor         |
+| -------------------- | ------------- |
+| Total de Issues      | 27            |
+| Issues Abertas       | 27            |
+| Issues Fechadas      | 0             |
+| Issues por Categoria | 6-8           |
+| Média de Descrição   | 150+ palavras |
 
 ---
 
@@ -540,4 +567,3 @@ Usar ML para prever riscos baseado em histórico de avaliações. Incluir recome
 
 **Última atualização:** Novembro 2025  
 **Status:** Todas as issues criadas com sucesso ✅
-

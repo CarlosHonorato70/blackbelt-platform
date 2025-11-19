@@ -16,14 +16,16 @@ export const pricingRouter = router({
   // ============================================================================
   // CLIENTES
   // ============================================================================
-  
+
   clients: router({
     list: protectedProcedure
-      .input(z.object({
-        tenantId: z.string(),
-        limit: z.number().min(1).max(100).default(50),
-        offset: z.number().min(0).default(0),
-      }))
+      .input(
+        z.object({
+          tenantId: z.string(),
+          limit: z.number().min(1).max(100).default(50),
+          offset: z.number().min(0).default(0),
+        })
+      )
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return [];
@@ -40,52 +42,64 @@ export const pricingRouter = router({
       }),
 
     getById: protectedProcedure
-      .input(z.object({
-        id: z.string(),
-        tenantId: z.string(),
-      }))
+      .input(
+        z.object({
+          id: z.string(),
+          tenantId: z.string(),
+        })
+      )
       .query(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         const [client] = await db
           .select()
           .from(clients)
           .where(
-            and(
-              eq(clients.id, input.id),
-              eq(clients.tenantId, input.tenantId)
-            )
+            and(eq(clients.id, input.id), eq(clients.tenantId, input.tenantId))
           );
 
         if (!client) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Client not found" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Client not found",
+          });
         }
 
         return client;
       }),
 
     create: protectedProcedure
-      .input(z.object({
-        tenantId: z.string(),
-        name: z.string().min(1).max(255),
-        cnpj: z.string().optional(),
-        industry: z.string().optional(),
-        companySize: z.enum(["micro", "small", "medium", "large"]).optional(),
-        contactName: z.string().optional(),
-        contactEmail: z.string().email().optional(),
-        contactPhone: z.string().optional(),
-        street: z.string().optional(),
-        number: z.string().optional(),
-        complement: z.string().optional(),
-        neighborhood: z.string().optional(),
-        city: z.string().optional(),
-        state: z.string().length(2).optional(),
-        zipCode: z.string().optional(),
-      }))
+      .input(
+        z.object({
+          tenantId: z.string(),
+          name: z.string().min(1).max(255),
+          cnpj: z.string().optional(),
+          industry: z.string().optional(),
+          companySize: z.enum(["micro", "small", "medium", "large"]).optional(),
+          contactName: z.string().optional(),
+          contactEmail: z.string().email().optional(),
+          contactPhone: z.string().optional(),
+          street: z.string().optional(),
+          number: z.string().optional(),
+          complement: z.string().optional(),
+          neighborhood: z.string().optional(),
+          city: z.string().optional(),
+          state: z.string().length(2).optional(),
+          zipCode: z.string().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         const id = nanoid();
 
@@ -115,28 +129,34 @@ export const pricingRouter = router({
       }),
 
     update: protectedProcedure
-      .input(z.object({
-        id: z.string(),
-        tenantId: z.string(),
-        name: z.string().min(1).max(255).optional(),
-        cnpj: z.string().optional(),
-        industry: z.string().optional(),
-        companySize: z.enum(["micro", "small", "medium", "large"]).optional(),
-        contactName: z.string().optional(),
-        contactEmail: z.string().email().optional(),
-        contactPhone: z.string().optional(),
-        street: z.string().optional(),
-        number: z.string().optional(),
-        complement: z.string().optional(),
-        neighborhood: z.string().optional(),
-        city: z.string().optional(),
-        state: z.string().length(2).optional(),
-        zipCode: z.string().optional(),
-        status: z.enum(["active", "inactive"]).optional(),
-      }))
+      .input(
+        z.object({
+          id: z.string(),
+          tenantId: z.string(),
+          name: z.string().min(1).max(255).optional(),
+          cnpj: z.string().optional(),
+          industry: z.string().optional(),
+          companySize: z.enum(["micro", "small", "medium", "large"]).optional(),
+          contactName: z.string().optional(),
+          contactEmail: z.string().email().optional(),
+          contactPhone: z.string().optional(),
+          street: z.string().optional(),
+          number: z.string().optional(),
+          complement: z.string().optional(),
+          neighborhood: z.string().optional(),
+          city: z.string().optional(),
+          state: z.string().length(2).optional(),
+          zipCode: z.string().optional(),
+          status: z.enum(["active", "inactive"]).optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         const { id, tenantId, ...updates } = input;
 
@@ -146,32 +166,30 @@ export const pricingRouter = router({
             ...updates,
             updatedAt: new Date(),
           })
-          .where(
-            and(
-              eq(clients.id, id),
-              eq(clients.tenantId, tenantId)
-            )
-          );
+          .where(and(eq(clients.id, id), eq(clients.tenantId, tenantId)));
 
         return { success: true };
       }),
 
     delete: protectedProcedure
-      .input(z.object({
-        id: z.string(),
-        tenantId: z.string(),
-      }))
+      .input(
+        z.object({
+          id: z.string(),
+          tenantId: z.string(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         await db
           .delete(clients)
           .where(
-            and(
-              eq(clients.id, input.id),
-              eq(clients.tenantId, input.tenantId)
-            )
+            and(eq(clients.id, input.id), eq(clients.tenantId, input.tenantId))
           );
 
         return { success: true };
@@ -184,12 +202,14 @@ export const pricingRouter = router({
 
   services: router({
     list: protectedProcedure
-      .input(z.object({
-        tenantId: z.string(),
-        category: z.string().optional(),
-        limit: z.number().min(1).max(100).default(50),
-        offset: z.number().min(0).default(0),
-      }))
+      .input(
+        z.object({
+          tenantId: z.string(),
+          category: z.string().optional(),
+          limit: z.number().min(1).max(100).default(50),
+          offset: z.number().min(0).default(0),
+        })
+      )
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return [];
@@ -212,13 +232,19 @@ export const pricingRouter = router({
       }),
 
     getById: protectedProcedure
-      .input(z.object({
-        id: z.string(),
-        tenantId: z.string(),
-      }))
+      .input(
+        z.object({
+          id: z.string(),
+          tenantId: z.string(),
+        })
+      )
       .query(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         const [service] = await db
           .select()
@@ -231,25 +257,34 @@ export const pricingRouter = router({
           );
 
         if (!service) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Service not found" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Service not found",
+          });
         }
 
         return service;
       }),
 
     create: protectedProcedure
-      .input(z.object({
-        tenantId: z.string(),
-        name: z.string().min(1).max(255),
-        description: z.string().optional(),
-        category: z.string().min(1).max(100),
-        unit: z.enum(["hour", "day", "project", "month"]).default("hour"),
-        minPrice: z.number().int().min(0),
-        maxPrice: z.number().int().min(0),
-      }))
+      .input(
+        z.object({
+          tenantId: z.string(),
+          name: z.string().min(1).max(255),
+          description: z.string().optional(),
+          category: z.string().min(1).max(100),
+          unit: z.enum(["hour", "day", "project", "month"]).default("hour"),
+          minPrice: z.number().int().min(0),
+          maxPrice: z.number().int().min(0),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         const id = nanoid();
 
@@ -271,20 +306,26 @@ export const pricingRouter = router({
       }),
 
     update: protectedProcedure
-      .input(z.object({
-        id: z.string(),
-        tenantId: z.string(),
-        name: z.string().min(1).max(255).optional(),
-        description: z.string().optional(),
-        category: z.string().min(1).max(100).optional(),
-        unit: z.enum(["hour", "day", "project", "month"]).optional(),
-        minPrice: z.number().int().min(0).optional(),
-        maxPrice: z.number().int().min(0).optional(),
-        isActive: z.boolean().optional(),
-      }))
+      .input(
+        z.object({
+          id: z.string(),
+          tenantId: z.string(),
+          name: z.string().min(1).max(255).optional(),
+          description: z.string().optional(),
+          category: z.string().min(1).max(100).optional(),
+          unit: z.enum(["hour", "day", "project", "month"]).optional(),
+          minPrice: z.number().int().min(0).optional(),
+          maxPrice: z.number().int().min(0).optional(),
+          isActive: z.boolean().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         const { id, tenantId, ...updates } = input;
 
@@ -294,24 +335,25 @@ export const pricingRouter = router({
             ...updates,
             updatedAt: new Date(),
           })
-          .where(
-            and(
-              eq(services.id, id),
-              eq(services.tenantId, tenantId)
-            )
-          );
+          .where(and(eq(services.id, id), eq(services.tenantId, tenantId)));
 
         return { success: true };
       }),
 
     delete: protectedProcedure
-      .input(z.object({
-        id: z.string(),
-        tenantId: z.string(),
-      }))
+      .input(
+        z.object({
+          id: z.string(),
+          tenantId: z.string(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         await db
           .delete(services)
@@ -332,9 +374,11 @@ export const pricingRouter = router({
 
   parameters: router({
     get: protectedProcedure
-      .input(z.object({
-        tenantId: z.string(),
-      }))
+      .input(
+        z.object({
+          tenantId: z.string(),
+        })
+      )
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return null;
@@ -348,20 +392,28 @@ export const pricingRouter = router({
       }),
 
     upsert: protectedProcedure
-      .input(z.object({
-        tenantId: z.string(),
-        monthlyFixedCost: z.number().int().min(0),
-        laborCost: z.number().int().min(0),
-        productiveHoursPerMonth: z.number().int().min(1),
-        defaultTaxRegime: z.enum(["MEI", "SN", "LP", "autonomous"]).default("SN"),
-        volumeDiscounts: z.any().optional(),
-        riskAdjustment: z.number().int().min(0).default(100),
-        seniorityAdjustment: z.number().int().min(0).default(100),
-        taxRates: z.any().optional(),
-      }))
+      .input(
+        z.object({
+          tenantId: z.string(),
+          monthlyFixedCost: z.number().int().min(0),
+          laborCost: z.number().int().min(0),
+          productiveHoursPerMonth: z.number().int().min(1),
+          defaultTaxRegime: z
+            .enum(["MEI", "SN", "LP", "autonomous"])
+            .default("SN"),
+          volumeDiscounts: z.any().optional(),
+          riskAdjustment: z.number().int().min(0).default(100),
+          seniorityAdjustment: z.number().int().min(0).default(100),
+          taxRates: z.any().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         const existing = await db
           .select()
@@ -413,13 +465,17 @@ export const pricingRouter = router({
 
   proposals: router({
     list: protectedProcedure
-      .input(z.object({
-        tenantId: z.string(),
-        clientId: z.string().optional(),
-        status: z.enum(["draft", "sent", "accepted", "rejected", "expired"]).optional(),
-        limit: z.number().min(1).max(100).default(50),
-        offset: z.number().min(0).default(0),
-      }))
+      .input(
+        z.object({
+          tenantId: z.string(),
+          clientId: z.string().optional(),
+          status: z
+            .enum(["draft", "sent", "accepted", "rejected", "expired"])
+            .optional(),
+          limit: z.number().min(1).max(100).default(50),
+          offset: z.number().min(0).default(0),
+        })
+      )
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return [];
@@ -446,13 +502,19 @@ export const pricingRouter = router({
       }),
 
     getById: protectedProcedure
-      .input(z.object({
-        id: z.string(),
-        tenantId: z.string(),
-      }))
+      .input(
+        z.object({
+          id: z.string(),
+          tenantId: z.string(),
+        })
+      )
       .query(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         const [proposal] = await db
           .select()
@@ -465,7 +527,10 @@ export const pricingRouter = router({
           );
 
         if (!proposal) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Proposal not found" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Proposal not found",
+          });
         }
 
         // Buscar itens da proposta
@@ -481,29 +546,37 @@ export const pricingRouter = router({
       }),
 
     create: protectedProcedure
-      .input(z.object({
-        tenantId: z.string(),
-        clientId: z.string(),
-        title: z.string().min(1).max(255),
-        description: z.string().optional(),
-        taxRegime: z.enum(["MEI", "SN", "LP", "autonomous"]),
-        validUntil: z.date().optional(),
-        items: z.array(z.object({
-          serviceId: z.string(),
-          serviceName: z.string(),
-          quantity: z.number().int().min(1),
-          unitPrice: z.number().int().min(0),
-        })),
-      }))
+      .input(
+        z.object({
+          tenantId: z.string(),
+          clientId: z.string(),
+          title: z.string().min(1).max(255),
+          description: z.string().optional(),
+          taxRegime: z.enum(["MEI", "SN", "LP", "autonomous"]),
+          validUntil: z.date().optional(),
+          items: z.array(
+            z.object({
+              serviceId: z.string(),
+              serviceName: z.string(),
+              quantity: z.number().int().min(1),
+              unitPrice: z.number().int().min(0),
+            })
+          ),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         const id = nanoid();
 
         // Calcular subtotal
         const subtotal = input.items.reduce((sum, item) => {
-          return sum + (item.quantity * item.unitPrice);
+          return sum + item.quantity * item.unitPrice;
         }, 0);
 
         // Calcular impostos (simplificado - 8% para SN)
@@ -511,7 +584,7 @@ export const pricingRouter = router({
           MEI: 0.05,
           SN: 0.08,
           LP: 0.15,
-          autonomous: 0.20,
+          autonomous: 0.2,
         };
         const taxRate = taxRates[input.taxRegime];
         const taxes = Math.round(subtotal * taxRate);
@@ -559,17 +632,25 @@ export const pricingRouter = router({
       }),
 
     update: protectedProcedure
-      .input(z.object({
-        id: z.string(),
-        tenantId: z.string(),
-        title: z.string().min(1).max(255).optional(),
-        description: z.string().optional(),
-        status: z.enum(["draft", "sent", "accepted", "rejected", "expired"]).optional(),
-        validUntil: z.date().optional(),
-      }))
+      .input(
+        z.object({
+          id: z.string(),
+          tenantId: z.string(),
+          title: z.string().min(1).max(255).optional(),
+          description: z.string().optional(),
+          status: z
+            .enum(["draft", "sent", "accepted", "rejected", "expired"])
+            .optional(),
+          validUntil: z.date().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         const { id, tenantId, ...updates } = input;
 
@@ -579,24 +660,25 @@ export const pricingRouter = router({
             ...updates,
             updatedAt: new Date(),
           })
-          .where(
-            and(
-              eq(proposals.id, id),
-              eq(proposals.tenantId, tenantId)
-            )
-          );
+          .where(and(eq(proposals.id, id), eq(proposals.tenantId, tenantId)));
 
         return { success: true };
       }),
 
     delete: protectedProcedure
-      .input(z.object({
-        id: z.string(),
-        tenantId: z.string(),
-      }))
+      .input(
+        z.object({
+          id: z.string(),
+          tenantId: z.string(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         // Deletar itens primeiro
         await db
@@ -623,13 +705,19 @@ export const pricingRouter = router({
 
   calculate: router({
     technicalHour: protectedProcedure
-      .input(z.object({
-        tenantId: z.string(),
-        taxRegime: z.enum(["MEI", "SN", "LP", "autonomous"]),
-      }))
+      .input(
+        z.object({
+          tenantId: z.string(),
+          taxRegime: z.enum(["MEI", "SN", "LP", "autonomous"]),
+        })
+      )
       .query(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
         const [params] = await db
           .select()
@@ -637,19 +725,23 @@ export const pricingRouter = router({
           .where(eq(pricingParameters.tenantId, input.tenantId));
 
         if (!params) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Pricing parameters not configured" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Pricing parameters not configured",
+          });
         }
 
         const { monthlyFixedCost, laborCost, productiveHoursPerMonth } = params;
 
         // Cálculo simplificado da hora técnica
-        const baseCost = (monthlyFixedCost + laborCost) / productiveHoursPerMonth;
+        const baseCost =
+          (monthlyFixedCost + laborCost) / productiveHoursPerMonth;
 
         // Aplicar margem de lucro e impostos
         const taxRates = {
-          MEI: 1.30, // 30% margem
-          SN: 1.40,  // 40% margem
-          LP: 1.50,  // 50% margem
+          MEI: 1.3, // 30% margem
+          SN: 1.4, // 40% margem
+          LP: 1.5, // 50% margem
           autonomous: 1.35, // 35% margem
         };
 

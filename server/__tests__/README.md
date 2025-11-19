@@ -29,12 +29,14 @@ pnpm test --coverage
 The test suite covers:
 
 ✅ **Pricing Calculations**
+
 - Technical hour calculation (4 tax regimes)
 - Discount tiers and application
 - Proposal total calculation
 - Currency rounding and edge cases
 
 ✅ **Data Validation**
+
 - CNPJ (Brazilian company ID)
 - Email, phone, names
 - Enums and status codes
@@ -42,6 +44,7 @@ The test suite covers:
 - Address validation
 
 ✅ **Business Logic**
+
 - Entity management (tenants, sectors, people, clients, services)
 - Multi-tenant data isolation
 - Risk assessment calculations
@@ -64,6 +67,7 @@ it("should create tenant", () => {
 ## Documentation
 
 See [TESTING.md](../TESTING.md) for comprehensive documentation including:
+
 - Detailed test descriptions
 - Running tests
 - Adding new tests
