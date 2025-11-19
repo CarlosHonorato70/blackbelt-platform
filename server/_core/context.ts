@@ -15,7 +15,7 @@ export async function createContext(
   let user: User | null = null;
 
   // Ignorar autenticação e usar o mock user
-  user = mockUser as unknown as User;
+
 
   return {
     req: opts.req,

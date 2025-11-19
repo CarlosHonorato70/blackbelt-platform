@@ -327,13 +327,7 @@ Você deve ver o IP em todos os servidores DNS
 
 ## 📊 Comparação de Provedores
 
-| Provedor         | Dificuldade    | Tempo  | Custo     | Suporte   |
-| ---------------- | -------------- | ------ | --------- | --------- |
-| **Manus**        | ⭐ Fácil       | 5 min  | Incluído  | Excelente |
-| **AWS Route 53** | ⭐⭐⭐ Difícil | 30 min | $0.50/mês | Bom       |
-| **GoDaddy**      | ⭐⭐ Médio     | 15 min | Incluído  | Bom       |
-| **Namecheap**    | ⭐⭐ Médio     | 15 min | Incluído  | Bom       |
-| **Cloudflare**   | ⭐⭐ Médio     | 20 min | Grátis    | Excelente |
+
 
 ---
 
@@ -402,3 +396,4 @@ Se tiver dúvidas:
 **Última atualização:** Novembro 2025  
 **Versão:** 1.0  
 **Status:** Pronto para uso ✅
+

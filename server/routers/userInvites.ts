@@ -1,24 +1,14 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { protectedProcedure, router } from "../_core/trpc";
+import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { userInvites } from "../../drizzle/schema";
 import { eq, and, desc, isNull } from "drizzle-orm";
 
 export const userInvitesRouter = router({
   // Listar convites
-  list: protectedProcedure
-    .input(
-      z.object({
-        tenantId: z.string().optional(),
-        status: z
-          .enum(["pending", "accepted", "expired", "cancelled"])
-          .optional(),
-        limit: z.number().min(1).max(100).default(50),
-        offset: z.number().min(0).default(0),
-      })
-    )
+
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return [];
@@ -52,12 +42,7 @@ export const userInvitesRouter = router({
     }),
 
   // Obter convite por ID
-  getById: protectedProcedure
-    .input(
-      z.object({
-        id: z.string(),
-      })
-    )
+
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db)
@@ -79,12 +64,7 @@ export const userInvitesRouter = router({
     }),
 
   // Obter convite por token
-  getByToken: protectedProcedure
-    .input(
-      z.object({
-        token: z.string(),
-      })
-    )
+
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db)
@@ -120,16 +100,7 @@ export const userInvitesRouter = router({
     }),
 
   // Criar novo convite
-  create: protectedProcedure
-    .input(
-      z.object({
-        tenantId: z.string().optional(),
-        email: z.string().email(),
-        roleId: z.string(),
-        invitedBy: z.string(),
-        expiresInDays: z.number().min(1).max(30).default(7),
-      })
-    )
+
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db)
@@ -164,13 +135,7 @@ export const userInvitesRouter = router({
     }),
 
   // Aceitar convite
-  accept: protectedProcedure
-    .input(
-      z.object({
-        token: z.string(),
-        userId: z.string(),
-      })
-    )
+
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db)
@@ -224,12 +189,7 @@ export const userInvitesRouter = router({
     }),
 
   // Cancelar convite
-  cancel: protectedProcedure
-    .input(
-      z.object({
-        id: z.string(),
-      })
-    )
+
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db)
@@ -247,13 +207,7 @@ export const userInvitesRouter = router({
     }),
 
   // Reenviar convite
-  resend: protectedProcedure
-    .input(
-      z.object({
-        id: z.string(),
-        expiresInDays: z.number().min(1).max(30).default(7),
-      })
-    )
+
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db)
@@ -293,12 +247,7 @@ export const userInvitesRouter = router({
     }),
 
   // Deletar convite
-  delete: protectedProcedure
-    .input(
-      z.object({
-        id: z.string(),
-      })
-    )
+
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db)

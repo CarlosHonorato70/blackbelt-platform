@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { protectedProcedure, router } from "../_core/trpc";
+import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   roles,
@@ -17,12 +17,7 @@ export const rolesPermissionsRouter = router({
   // ============================================================================
 
   roles: router({
-    list: protectedProcedure
-      .input(
-        z.object({
-          scope: z.enum(["global", "tenant"]).optional(),
-        })
-      )
+
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return [];
@@ -37,12 +32,7 @@ export const rolesPermissionsRouter = router({
         return rolesList;
       }),
 
-    getById: protectedProcedure
-      .input(
-        z.object({
-          id: z.string(),
-        })
-      )
+
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -72,15 +62,7 @@ export const rolesPermissionsRouter = router({
         };
       }),
 
-    create: protectedProcedure
-      .input(
-        z.object({
-          systemName: z.string().min(1).max(100),
-          displayName: z.string().min(1).max(100),
-          description: z.string().optional(),
-          scope: z.enum(["global", "tenant"]).default("tenant"),
-        })
-      )
+
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -103,16 +85,7 @@ export const rolesPermissionsRouter = router({
         return { id };
       }),
 
-    update: protectedProcedure
-      .input(
-        z.object({
-          id: z.string(),
-          systemName: z.string().min(1).max(100).optional(),
-          displayName: z.string().min(1).max(100).optional(),
-          description: z.string().optional(),
-          scope: z.enum(["global", "tenant"]).optional(),
-        })
-      )
+
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -128,12 +101,7 @@ export const rolesPermissionsRouter = router({
         return { success: true };
       }),
 
-    delete: protectedProcedure
-      .input(
-        z.object({
-          id: z.string(),
-        })
-      )
+
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -161,12 +129,7 @@ export const rolesPermissionsRouter = router({
   // ============================================================================
 
   permissions: router({
-    list: protectedProcedure
-      .input(
-        z.object({
-          resource: z.string().optional(),
-        })
-      )
+
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return [];
@@ -181,12 +144,7 @@ export const rolesPermissionsRouter = router({
         return permsList;
       }),
 
-    getById: protectedProcedure
-      .input(
-        z.object({
-          id: z.string(),
-        })
-      )
+
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -210,15 +168,7 @@ export const rolesPermissionsRouter = router({
         return permission;
       }),
 
-    create: protectedProcedure
-      .input(
-        z.object({
-          name: z.string().min(1).max(100),
-          resource: z.string().min(1).max(50),
-          action: z.string().min(1).max(50),
-          description: z.string().optional(),
-        })
-      )
+
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -241,16 +191,7 @@ export const rolesPermissionsRouter = router({
         return { id };
       }),
 
-    update: protectedProcedure
-      .input(
-        z.object({
-          id: z.string(),
-          name: z.string().min(1).max(100).optional(),
-          resource: z.string().min(1).max(50).optional(),
-          action: z.string().min(1).max(50).optional(),
-          description: z.string().optional(),
-        })
-      )
+
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -266,12 +207,7 @@ export const rolesPermissionsRouter = router({
         return { success: true };
       }),
 
-    delete: protectedProcedure
-      .input(
-        z.object({
-          id: z.string(),
-        })
-      )
+
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -297,13 +233,7 @@ export const rolesPermissionsRouter = router({
   // ============================================================================
 
   rolePermissions: router({
-    list: protectedProcedure
-      .input(
-        z.object({
-          roleId: z.string().optional(),
-          tenantId: z.string().optional(),
-        })
-      )
+
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return [];
@@ -332,15 +262,7 @@ export const rolesPermissionsRouter = router({
         return assocs;
       }),
 
-    assign: protectedProcedure
-      .input(
-        z.object({
-          roleId: z.string(),
-          permissionId: z.string(),
-          tenantId: z.string().optional(),
-          conditions: z.any().optional(),
-        })
-      )
+
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -363,12 +285,7 @@ export const rolesPermissionsRouter = router({
         return { id };
       }),
 
-    revoke: protectedProcedure
-      .input(
-        z.object({
-          id: z.string(),
-        })
-      )
+
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -390,13 +307,7 @@ export const rolesPermissionsRouter = router({
   // ============================================================================
 
   userRoles: router({
-    list: protectedProcedure
-      .input(
-        z.object({
-          userId: z.string().optional(),
-          tenantId: z.string().optional(),
-        })
-      )
+
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return [];
@@ -425,14 +336,7 @@ export const rolesPermissionsRouter = router({
         return assocs;
       }),
 
-    assign: protectedProcedure
-      .input(
-        z.object({
-          userId: z.string(),
-          roleId: z.string(),
-          tenantId: z.string().optional(),
-        })
-      )
+
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -454,12 +358,7 @@ export const rolesPermissionsRouter = router({
         return { id };
       }),
 
-    revoke: protectedProcedure
-      .input(
-        z.object({
-          id: z.string(),
-        })
-      )
+
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db)
