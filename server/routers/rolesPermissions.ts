@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { protectedProcedure, router } from "../_core/trpc";
+import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   roles,
@@ -17,7 +17,7 @@ export const rolesPermissionsRouter = router({
   // ============================================================================
 
   roles: router({
-    list: protectedProcedure
+    list: publicProcedure
       .input(z.object({
         scope: z.enum(["global", "tenant"]).optional(),
       }))
@@ -35,7 +35,7 @@ export const rolesPermissionsRouter = router({
         return rolesList;
       }),
 
-    getById: protectedProcedure
+    getById: publicProcedure
       .input(z.object({
         id: z.string(),
       }))
@@ -64,7 +64,7 @@ export const rolesPermissionsRouter = router({
         };
       }),
 
-    create: protectedProcedure
+    create: publicProcedure
       .input(z.object({
         systemName: z.string().min(1).max(100),
         displayName: z.string().min(1).max(100),
@@ -89,7 +89,7 @@ export const rolesPermissionsRouter = router({
         return { id };
       }),
 
-    update: protectedProcedure
+    update: publicProcedure
       .input(z.object({
         id: z.string(),
         systemName: z.string().min(1).max(100).optional(),
@@ -111,7 +111,7 @@ export const rolesPermissionsRouter = router({
         return { success: true };
       }),
 
-    delete: protectedProcedure
+    delete: publicProcedure
       .input(z.object({
         id: z.string(),
       }))
@@ -142,7 +142,7 @@ export const rolesPermissionsRouter = router({
   // ============================================================================
 
   permissions: router({
-    list: protectedProcedure
+    list: publicProcedure
       .input(z.object({
         resource: z.string().optional(),
       }))
@@ -160,7 +160,7 @@ export const rolesPermissionsRouter = router({
         return permsList;
       }),
 
-    getById: protectedProcedure
+    getById: publicProcedure
       .input(z.object({
         id: z.string(),
       }))
@@ -180,7 +180,7 @@ export const rolesPermissionsRouter = router({
         return permission;
       }),
 
-    create: protectedProcedure
+    create: publicProcedure
       .input(z.object({
         name: z.string().min(1).max(100),
         resource: z.string().min(1).max(50),
@@ -205,7 +205,7 @@ export const rolesPermissionsRouter = router({
         return { id };
       }),
 
-    update: protectedProcedure
+    update: publicProcedure
       .input(z.object({
         id: z.string(),
         name: z.string().min(1).max(100).optional(),
@@ -227,7 +227,7 @@ export const rolesPermissionsRouter = router({
         return { success: true };
       }),
 
-    delete: protectedProcedure
+    delete: publicProcedure
       .input(z.object({
         id: z.string(),
       }))
@@ -254,7 +254,7 @@ export const rolesPermissionsRouter = router({
   // ============================================================================
 
   rolePermissions: router({
-    list: protectedProcedure
+    list: publicProcedure
       .input(z.object({
         roleId: z.string().optional(),
         tenantId: z.string().optional(),
@@ -287,7 +287,7 @@ export const rolesPermissionsRouter = router({
         return assocs;
       }),
 
-    assign: protectedProcedure
+    assign: publicProcedure
       .input(z.object({
         roleId: z.string(),
         permissionId: z.string(),
@@ -312,7 +312,7 @@ export const rolesPermissionsRouter = router({
         return { id };
       }),
 
-    revoke: protectedProcedure
+    revoke: publicProcedure
       .input(z.object({
         id: z.string(),
       }))
@@ -333,7 +333,7 @@ export const rolesPermissionsRouter = router({
   // ============================================================================
 
   userRoles: router({
-    list: protectedProcedure
+    list: publicProcedure
       .input(z.object({
         userId: z.string().optional(),
         tenantId: z.string().optional(),
@@ -366,7 +366,7 @@ export const rolesPermissionsRouter = router({
         return assocs;
       }),
 
-    assign: protectedProcedure
+    assign: publicProcedure
       .input(z.object({
         userId: z.string(),
         roleId: z.string(),
@@ -389,7 +389,7 @@ export const rolesPermissionsRouter = router({
         return { id };
       }),
 
-    revoke: protectedProcedure
+    revoke: publicProcedure
       .input(z.object({
         id: z.string(),
       }))

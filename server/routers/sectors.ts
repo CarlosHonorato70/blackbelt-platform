@@ -1,11 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { publicProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 
 export const sectorsRouter = router({
   // Listar setores de um tenant
-  list: protectedProcedure
+  list: publicProcedure
     .input(
       z.object({
         tenantId: z.string(),
@@ -33,7 +33,7 @@ export const sectorsRouter = router({
     }),
 
   // Obter um setor específico
-  get: protectedProcedure
+  get: publicProcedure
     .input(
       z.object({
         id: z.string(),
@@ -63,7 +63,7 @@ export const sectorsRouter = router({
     }),
 
   // Criar novo setor
-  create: protectedProcedure
+  create: publicProcedure
     .input(
       z.object({
         tenantId: z.string(),
@@ -101,7 +101,7 @@ export const sectorsRouter = router({
     }),
 
   // Atualizar setor
-  update: protectedProcedure
+  update: publicProcedure
     .input(
       z.object({
         id: z.string(),
@@ -141,7 +141,7 @@ export const sectorsRouter = router({
     }),
 
   // Deletar setor
-  delete: protectedProcedure
+  delete: publicProcedure
     .input(
       z.object({
         id: z.string(),

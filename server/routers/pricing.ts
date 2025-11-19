@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { protectedProcedure, router } from "../_core/trpc";
+import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   clients,
@@ -18,7 +18,7 @@ export const pricingRouter = router({
   // ============================================================================
   
   clients: router({
-    list: protectedProcedure
+    list: publicProcedure
       .input(z.object({
         tenantId: z.string(),
         limit: z.number().min(1).max(100).default(50),
@@ -39,7 +39,7 @@ export const pricingRouter = router({
         return clientsList;
       }),
 
-    getById: protectedProcedure
+    getById: publicProcedure
       .input(z.object({
         id: z.string(),
         tenantId: z.string(),
@@ -65,7 +65,7 @@ export const pricingRouter = router({
         return client;
       }),
 
-    create: protectedProcedure
+    create: publicProcedure
       .input(z.object({
         tenantId: z.string(),
         name: z.string().min(1).max(255),
@@ -114,7 +114,7 @@ export const pricingRouter = router({
         return { id };
       }),
 
-    update: protectedProcedure
+    update: publicProcedure
       .input(z.object({
         id: z.string(),
         tenantId: z.string(),
@@ -156,7 +156,7 @@ export const pricingRouter = router({
         return { success: true };
       }),
 
-    delete: protectedProcedure
+    delete: publicProcedure
       .input(z.object({
         id: z.string(),
         tenantId: z.string(),
@@ -183,7 +183,7 @@ export const pricingRouter = router({
   // ============================================================================
 
   services: router({
-    list: protectedProcedure
+    list: publicProcedure
       .input(z.object({
         tenantId: z.string(),
         category: z.string().optional(),
@@ -211,7 +211,7 @@ export const pricingRouter = router({
         return servicesList;
       }),
 
-    getById: protectedProcedure
+    getById: publicProcedure
       .input(z.object({
         id: z.string(),
         tenantId: z.string(),
@@ -237,7 +237,7 @@ export const pricingRouter = router({
         return service;
       }),
 
-    create: protectedProcedure
+    create: publicProcedure
       .input(z.object({
         tenantId: z.string(),
         name: z.string().min(1).max(255),
@@ -270,7 +270,7 @@ export const pricingRouter = router({
         return { id };
       }),
 
-    update: protectedProcedure
+    update: publicProcedure
       .input(z.object({
         id: z.string(),
         tenantId: z.string(),
@@ -304,7 +304,7 @@ export const pricingRouter = router({
         return { success: true };
       }),
 
-    delete: protectedProcedure
+    delete: publicProcedure
       .input(z.object({
         id: z.string(),
         tenantId: z.string(),
@@ -331,7 +331,7 @@ export const pricingRouter = router({
   // ============================================================================
 
   parameters: router({
-    get: protectedProcedure
+    get: publicProcedure
       .input(z.object({
         tenantId: z.string(),
       }))
@@ -347,7 +347,7 @@ export const pricingRouter = router({
         return params || null;
       }),
 
-    upsert: protectedProcedure
+    upsert: publicProcedure
       .input(z.object({
         tenantId: z.string(),
         monthlyFixedCost: z.number().int().min(0),
@@ -412,7 +412,7 @@ export const pricingRouter = router({
   // ============================================================================
 
   proposals: router({
-    list: protectedProcedure
+    list: publicProcedure
       .input(z.object({
         tenantId: z.string(),
         clientId: z.string().optional(),
@@ -445,7 +445,7 @@ export const pricingRouter = router({
         return proposalsList;
       }),
 
-    getById: protectedProcedure
+    getById: publicProcedure
       .input(z.object({
         id: z.string(),
         tenantId: z.string(),
@@ -480,7 +480,7 @@ export const pricingRouter = router({
         };
       }),
 
-    create: protectedProcedure
+    create: publicProcedure
       .input(z.object({
         tenantId: z.string(),
         clientId: z.string(),
@@ -558,7 +558,7 @@ export const pricingRouter = router({
         return { id };
       }),
 
-    update: protectedProcedure
+    update: publicProcedure
       .input(z.object({
         id: z.string(),
         tenantId: z.string(),
@@ -589,7 +589,7 @@ export const pricingRouter = router({
         return { success: true };
       }),
 
-    delete: protectedProcedure
+    delete: publicProcedure
       .input(z.object({
         id: z.string(),
         tenantId: z.string(),
@@ -622,7 +622,7 @@ export const pricingRouter = router({
   // ============================================================================
 
   calculate: router({
-    technicalHour: protectedProcedure
+    technicalHour: publicProcedure
       .input(z.object({
         tenantId: z.string(),
         taxRegime: z.enum(["MEI", "SN", "LP", "autonomous"]),

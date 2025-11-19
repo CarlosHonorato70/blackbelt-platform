@@ -1,11 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { publicProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 
 export const peopleRouter = router({
   // Listar colaboradores de um tenant
-  list: protectedProcedure
+  list: publicProcedure
     .input(
       z.object({
         tenantId: z.string(),
@@ -36,7 +36,7 @@ export const peopleRouter = router({
     }),
 
   // Obter um colaborador específico
-  get: protectedProcedure
+  get: publicProcedure
     .input(
       z.object({
         id: z.string(),
@@ -66,7 +66,7 @@ export const peopleRouter = router({
     }),
 
   // Criar novo colaborador
-  create: protectedProcedure
+  create: publicProcedure
     .input(
       z.object({
         tenantId: z.string(),
@@ -113,7 +113,7 @@ export const peopleRouter = router({
     }),
 
   // Atualizar colaborador
-  update: protectedProcedure
+  update: publicProcedure
     .input(
       z.object({
         id: z.string(),
@@ -162,7 +162,7 @@ export const peopleRouter = router({
     }),
 
   // Deletar colaborador
-  delete: protectedProcedure
+  delete: publicProcedure
     .input(
       z.object({
         id: z.string(),
@@ -196,7 +196,7 @@ export const peopleRouter = router({
     }),
 
   // Exportar dados pessoais (LGPD - Direito de Acesso)
-  exportPersonalData: protectedProcedure
+  exportPersonalData: publicProcedure
     .input(
       z.object({
         id: z.string(),

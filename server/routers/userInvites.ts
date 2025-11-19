@@ -1,14 +1,14 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { protectedProcedure, router } from "../_core/trpc";
+import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { userInvites } from "../../drizzle/schema";
 import { eq, and, desc, isNull } from "drizzle-orm";
 
 export const userInvitesRouter = router({
   // Listar convites
-  list: protectedProcedure
+  list: publicProcedure
     .input(z.object({
       tenantId: z.string().optional(),
       status: z.enum(["pending", "accepted", "expired", "cancelled"]).optional(),
@@ -48,7 +48,7 @@ export const userInvitesRouter = router({
     }),
 
   // Obter convite por ID
-  getById: protectedProcedure
+  getById: publicProcedure
     .input(z.object({
       id: z.string(),
     }))
@@ -69,7 +69,7 @@ export const userInvitesRouter = router({
     }),
 
   // Obter convite por token
-  getByToken: protectedProcedure
+  getByToken: publicProcedure
     .input(z.object({
       token: z.string(),
     }))
@@ -101,7 +101,7 @@ export const userInvitesRouter = router({
     }),
 
   // Criar novo convite
-  create: protectedProcedure
+  create: publicProcedure
     .input(z.object({
       tenantId: z.string().optional(),
       email: z.string().email(),
@@ -139,7 +139,7 @@ export const userInvitesRouter = router({
     }),
 
   // Aceitar convite
-  accept: protectedProcedure
+  accept: publicProcedure
     .input(z.object({
       token: z.string(),
       userId: z.string(),
@@ -187,7 +187,7 @@ export const userInvitesRouter = router({
     }),
 
   // Cancelar convite
-  cancel: protectedProcedure
+  cancel: publicProcedure
     .input(z.object({
       id: z.string(),
     }))
@@ -204,7 +204,7 @@ export const userInvitesRouter = router({
     }),
 
   // Reenviar convite
-  resend: protectedProcedure
+  resend: publicProcedure
     .input(z.object({
       id: z.string(),
       expiresInDays: z.number().min(1).max(30).default(7),
@@ -244,7 +244,7 @@ export const userInvitesRouter = router({
     }),
 
   // Deletar convite
-  delete: protectedProcedure
+  delete: publicProcedure
     .input(z.object({
       id: z.string(),
     }))
