@@ -404,7 +404,7 @@ export const pricingRouter = router({
               monthlyFixedCost: input.monthlyFixedCost,
               laborCost: input.laborCost,
               productiveHoursPerMonth: input.productiveHoursPerMonth,
-              defaultTaxRegime: input.defaultTaxRegime,
+              defaultTaxRegime: input.defaultTaxRegime as any,
               volumeDiscounts: input.volumeDiscounts || null,
               riskAdjustment: input.riskAdjustment,
               seniorityAdjustment: input.seniorityAdjustment,
@@ -421,7 +421,7 @@ export const pricingRouter = router({
             monthlyFixedCost: input.monthlyFixedCost,
             laborCost: input.laborCost,
             productiveHoursPerMonth: input.productiveHoursPerMonth,
-            defaultTaxRegime: input.defaultTaxRegime,
+            defaultTaxRegime: input.defaultTaxRegime as any,
             volumeDiscounts: input.volumeDiscounts || null,
             riskAdjustment: input.riskAdjustment,
             seniorityAdjustment: input.seniorityAdjustment,
@@ -461,7 +461,7 @@ export const pricingRouter = router({
         }
 
         if (input.status) {
-          conditions.push(eq(proposals.status, input.status));
+          conditions.push(eq(proposals.status, input.status as any));
         }
 
         const proposalsList = await db

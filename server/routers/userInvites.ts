@@ -8,7 +8,15 @@ import { eq, and, desc, isNull } from "drizzle-orm";
 
 export const userInvitesRouter = router({
   // Listar convites
-
+  list: publicProcedure
+    .input(
+      z.object({
+        tenantId: z.string().optional(),
+        status: z.string().optional(),
+        limit: z.number().default(50),
+        offset: z.number().default(0),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return [];
@@ -24,7 +32,7 @@ export const userInvitesRouter = router({
       }
 
       if (input.status) {
-        conditions.push(eq(userInvites.status, input.status));
+        conditions.push(eq(userInvites.status, input.status as any));
       }
 
       let query = db.select().from(userInvites);
@@ -42,7 +50,12 @@ export const userInvitesRouter = router({
     }),
 
   // Obter convite por ID
-
+  get: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db)
@@ -64,7 +77,12 @@ export const userInvitesRouter = router({
     }),
 
   // Obter convite por token
-
+  getByToken: publicProcedure
+    .input(
+      z.object({
+        token: z.string(),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db)
@@ -100,7 +118,16 @@ export const userInvitesRouter = router({
     }),
 
   // Criar novo convite
-
+  create: publicProcedure
+    .input(
+      z.object({
+        tenantId: z.string().optional(),
+        email: z.string().email(),
+        roleId: z.string(),
+        invitedBy: z.string().optional(),
+        expiresInDays: z.number().default(7),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db)
@@ -122,7 +149,7 @@ export const userInvitesRouter = router({
         roleId: input.roleId,
         token,
         status: "pending",
-        invitedBy: input.invitedBy || ctx.user.id,
+        invitedBy: input.invitedBy || ctx.user?.id || "system",
         expiresAt,
         createdAt: new Date(),
       });
@@ -135,7 +162,12 @@ export const userInvitesRouter = router({
     }),
 
   // Aceitar convite
-
+  accept: publicProcedure
+    .input(
+      z.object({
+        token: z.string(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db)
@@ -189,7 +221,12 @@ export const userInvitesRouter = router({
     }),
 
   // Cancelar convite
-
+  cancel: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db)
@@ -207,7 +244,13 @@ export const userInvitesRouter = router({
     }),
 
   // Reenviar convite
-
+  resend: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        expiresInDays: z.number().default(7),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db)
@@ -247,7 +290,12 @@ export const userInvitesRouter = router({
     }),
 
   // Deletar convite
-
+  delete: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db)
