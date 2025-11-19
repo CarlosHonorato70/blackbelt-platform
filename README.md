@@ -176,28 +176,29 @@ blackbelt-platform/
 - MySQL 8.0+
 - Git
 
-### Instalação
+### Instalação Rápida
 
 ```bash
 # Clone o repositório
 git clone https://github.com/CarlosHonorato70/blackbelt-platform.git
 cd blackbelt-platform
 
-# Instale as dependências
-pnpm install
+# Opção 1: Setup Automatizado (Recomendado)
+./setup.sh
 
-# Configure as variáveis de ambiente
-cp .env.example .env.local
-# Edite .env.local com suas credenciais
-
-# Execute as migrations do banco de dados
-pnpm db:push
-
-# Inicie o servidor de desenvolvimento
-pnpm dev
+# Opção 2: Setup Manual
+pnpm install                    # Instalar dependências
+cp .env.example .env            # Copiar configuração
+# Edite .env com suas credenciais
+pnpm db:push                    # Executar migrations
+pnpm dev                        # Iniciar servidor
 ```
 
 A aplicação estará disponível em `http://localhost:3000`
+
+📖 **Para instruções detalhadas, consulte:**
+- [SETUP_GUIDE.md](SETUP_GUIDE.md) - Guia completo de instalação passo a passo
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Solução de problemas comuns
 
 ---
 
@@ -207,6 +208,10 @@ A documentação completa está disponível nos seguintes arquivos:
 
 | Arquivo | Descrição |
 |---------|-----------|
+| **SETUP_GUIDE.md** | 🚀 Guia completo de instalação e configuração |
+| **TROUBLESHOOTING.md** | 🔧 Solução de problemas e debugging |
+| **TESTING.md** | 🧪 Documentação completa de testes |
+| **TESTING_QUICKSTART.md** | ⚡ Guia rápido de testes |
 | **DOCUMENTACAO_TECNICA.md** | Documentação técnica completa (30+ páginas) |
 | **CODIGO_CONSOLIDADO.md** | Código-fonte consolidado com anotações |
 | **DFD_ARQUITETURA.md** | 16 diagramas de fluxo de dados |
