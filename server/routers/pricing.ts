@@ -109,7 +109,7 @@ export const pricingRouter = router({
           name: input.name,
           cnpj: input.cnpj || null,
           industry: input.industry || null,
-          companySize: input.companySize || null,
+          companySize: (input.companySize as any) || null,
           contactName: input.contactName || null,
           contactEmail: input.contactEmail || null,
           contactPhone: input.contactPhone || null,
@@ -279,7 +279,7 @@ export const pricingRouter = router({
           name: input.name,
           description: input.description || null,
           category: input.category,
-          unit: input.unit,
+          unit: input.unit as any,
           minPrice: input.minPrice,
           maxPrice: input.maxPrice,
           isActive: true,
@@ -712,7 +712,7 @@ export const pricingRouter = router({
           autonomous: 1.35, // 35% margem
         };
 
-        const multiplier = taxRates[input.taxRegime];
+        const multiplier = taxRates[input.taxRegime as keyof typeof taxRates];
         const technicalHour = Math.round(baseCost * multiplier);
 
         return {

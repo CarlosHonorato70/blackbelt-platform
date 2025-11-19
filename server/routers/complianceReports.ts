@@ -26,12 +26,12 @@ export const complianceReportsRouter = router({
 
       if (input.documentType) {
         conditions.push(
-          eq(complianceDocuments.documentType, input.documentType)
+          eq(complianceDocuments.documentType, input.documentType as any)
         );
       }
 
       if (input.status) {
-        conditions.push(eq(complianceDocuments.status, input.status));
+        conditions.push(eq(complianceDocuments.status, input.status as any));
       }
 
       const documents = await db
@@ -110,7 +110,7 @@ export const complianceReportsRouter = router({
       await db.insert(complianceDocuments).values({
         id,
         tenantId: input.tenantId,
-        documentType: input.documentType,
+        documentType: input.documentType as any,
         title: input.title,
         description: input.description || null,
         fileUrl: input.fileUrl || null,
