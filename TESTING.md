@@ -13,6 +13,7 @@ The test suite is organized into three main categories:
 Tests for pricing and financial calculations across different tax regimes.
 
 **Coverage:**
+
 - Technical hour calculation for 4 tax regimes (MEI, Simples Nacional, Lucro Presumido, Autonomous)
 - Discount calculations based on quantity tiers
 - Proposal total calculations with multiple items
@@ -20,6 +21,7 @@ Tests for pricing and financial calculations across different tax regimes.
 - Edge cases handling (large numbers, small decimals, rounding)
 
 **Key Tests:**
+
 - `should calculate technical hour for MEI regime` - Validates MEI pricing formula
 - `should calculate technical hour for Simples Nacional regime` - Validates SN pricing with tax considerations
 - `should apply tier 1/2/3 discount` - Validates discount application at different quantity levels
@@ -33,6 +35,7 @@ Tests for pricing and financial calculations across different tax regimes.
 Tests for input validation and data integrity across all entities.
 
 **Coverage:**
+
 - CNPJ validation (Brazilian company identifier)
 - Email validation
 - Phone number validation (Brazilian format)
@@ -43,6 +46,7 @@ Tests for input validation and data integrity across all entities.
 - Address validation (ZIP code, state codes)
 
 **Key Tests:**
+
 - `should validate correct CNPJ format` - Validates Brazilian company ID
 - `should validate email with subdomain` - Email validation with complex formats
 - `should validate Brazilian phone` - Phone validation with Brazilian format
@@ -57,6 +61,7 @@ Tests for input validation and data integrity across all entities.
 Tests for core business rules and entity relationships.
 
 **Coverage:**
+
 - Tenant management (creation, status, multi-tenant isolation)
 - Sector management (association with tenants)
 - People management (employees, contractors)
@@ -68,6 +73,7 @@ Tests for core business rules and entity relationships.
 - Service recommendations based on risk
 
 **Key Tests:**
+
 - `should create tenant with required fields` - Basic entity creation
 - `should isolate data by tenant ID` - Multi-tenant data isolation
 - `should calculate risk level from probability and severity` - Risk assessment logic
@@ -80,21 +86,25 @@ Tests for core business rules and entity relationships.
 ## Running Tests
 
 ### Run All Tests
+
 ```bash
 pnpm test
 ```
 
 ### Run Tests in Watch Mode
+
 ```bash
 pnpm test --watch
 ```
 
 ### Run Tests with Coverage
+
 ```bash
 pnpm test --coverage
 ```
 
 ### Run Specific Test File
+
 ```bash
 pnpm test pricing-calculations
 pnpm test data-validation
@@ -106,6 +116,7 @@ pnpm test business-logic
 The test suite includes a comprehensive set of utilities in `test-utils.ts`:
 
 ### Mock Data Generators
+
 - `createMockTenant()` - Generate test tenant
 - `createMockSector()` - Generate test sector
 - `createMockPerson()` - Generate test employee/contractor
@@ -115,10 +126,12 @@ The test suite includes a comprehensive set of utilities in `test-utils.ts`:
 - `createMockUser()` - Generate test user
 
 ### Validation Helpers
+
 - `isValidCNPJ()` - Validate Brazilian company ID
 - `isValidEmail()` - Validate email format
 
 ### Mock Database
+
 - `createMockDb()` - In-memory mock database for testing
 
 ## Test Statistics
@@ -129,6 +142,7 @@ The test suite includes a comprehensive set of utilities in `test-utils.ts`:
 **Pass Rate:** 100%
 
 ### Breakdown by Category
+
 - Pricing Calculations: 23 tests (20%)
 - Data Validation: 57 tests (50%)
 - Business Logic: 33 tests (30%)
@@ -136,6 +150,7 @@ The test suite includes a comprehensive set of utilities in `test-utils.ts`:
 ## Test Coverage Areas
 
 ### ✅ Fully Covered
+
 - Pricing calculations (all 4 tax regimes)
 - Discount tier logic
 - Data validation (CNPJ, email, phone, etc.)
@@ -145,6 +160,7 @@ The test suite includes a comprehensive set of utilities in `test-utils.ts`:
 - Service recommendations
 
 ### 🔄 Partially Covered
+
 - Database operations (using mocks)
 - API endpoints (tRPC routers)
 - Authentication/authorization
@@ -152,6 +168,7 @@ The test suite includes a comprehensive set of utilities in `test-utils.ts`:
 - Report generation
 
 ### ❌ Not Covered (Future Work)
+
 - End-to-end UI tests
 - Performance tests
 - Load tests
@@ -161,6 +178,7 @@ The test suite includes a comprehensive set of utilities in `test-utils.ts`:
 ## Adding New Tests
 
 ### 1. Create Test File
+
 Create a new file in `server/__tests__/` with the `.test.ts` extension:
 
 ```typescript
@@ -174,6 +192,7 @@ describe("Feature Name", () => {
 ```
 
 ### 2. Use Test Utilities
+
 Import and use mock data generators:
 
 ```typescript
@@ -186,17 +205,19 @@ it("should create tenant", () => {
 ```
 
 ### 3. Follow Naming Conventions
+
 - Test files: `feature-name.test.ts`
 - Test suites: `describe("Feature Name", ...)`
 - Test cases: `it("should do something specific", ...)`
 
 ### 4. Test Structure
+
 ```typescript
 describe("Feature", () => {
   describe("Sub-feature", () => {
-    it("should handle normal case", () => { });
-    it("should handle edge case", () => { });
-    it("should handle error case", () => { });
+    it("should handle normal case", () => {});
+    it("should handle edge case", () => {});
+    it("should handle error case", () => {});
   });
 });
 ```
@@ -226,14 +247,17 @@ Tests can be integrated into CI/CD pipelines:
 ## Troubleshooting
 
 ### Tests Fail Due to Database Connection
+
 - Ensure `DATABASE_URL` is not set when running unit tests
 - Unit tests use mocks and don't require a real database
 
 ### Import Errors
+
 - Ensure all dependencies are installed: `pnpm install`
 - Check TypeScript configuration in `vitest.config.ts`
 
 ### Test Timeout
+
 - Increase timeout in test: `it("test", async () => { ... }, 10000)`
 - Check for infinite loops or blocking operations
 
@@ -255,6 +279,7 @@ Tests can be integrated into CI/CD pipelines:
 ## Maintenance
 
 Tests should be reviewed and updated:
+
 - When adding new features
 - When modifying existing features
 - When fixing bugs

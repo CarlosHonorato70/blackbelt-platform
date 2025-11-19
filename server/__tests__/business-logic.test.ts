@@ -1,6 +1,6 @@
 /**
  * Tests for Business Logic
- * 
+ *
  * These tests verify core business rules and logic
  * for the Black Belt Platform.
  */
@@ -79,7 +79,9 @@ describe("Business Logic", () => {
         description: "Engineering team responsible for product development",
       });
 
-      expect(sector.description).toBe("Engineering team responsible for product development");
+      expect(sector.description).toBe(
+        "Engineering team responsible for product development"
+      );
     });
   });
 
@@ -240,8 +242,12 @@ describe("Business Logic", () => {
       const tenant = createMockTenant();
       const params = createMockPricingParameters(tenant.id);
 
-      expect(params.discountTier2Rate).toBeGreaterThan(params.discountTier1Rate);
-      expect(params.discountTier3Rate).toBeGreaterThan(params.discountTier2Rate);
+      expect(params.discountTier2Rate).toBeGreaterThan(
+        params.discountTier1Rate
+      );
+      expect(params.discountTier3Rate).toBeGreaterThan(
+        params.discountTier2Rate
+      );
     });
   });
 
@@ -282,7 +288,10 @@ describe("Business Logic", () => {
 
   describe("Risk Level Calculation", () => {
     it("should calculate risk level from probability and severity", () => {
-      function calculateRiskLevel(probability: number, severity: number): string {
+      function calculateRiskLevel(
+        probability: number,
+        severity: number
+      ): string {
         const score = probability * severity;
         if (score >= 15) return "critical";
         if (score >= 10) return "high";
@@ -297,7 +306,10 @@ describe("Business Logic", () => {
     });
 
     it("should handle edge cases in risk calculation", () => {
-      function calculateRiskLevel(probability: number, severity: number): string {
+      function calculateRiskLevel(
+        probability: number,
+        severity: number
+      ): string {
         const score = probability * severity;
         if (score >= 15) return "critical";
         if (score >= 10) return "high";
@@ -316,7 +328,12 @@ describe("Business Logic", () => {
     it("should recommend services based on risk level", () => {
       function recommendServices(riskLevel: string): string[] {
         const recommendations: Record<string, string[]> = {
-          critical: ["Full Risk Assessment", "Urgent Training", "Policy Review", "Emergency Action Plan"],
+          critical: [
+            "Full Risk Assessment",
+            "Urgent Training",
+            "Policy Review",
+            "Emergency Action Plan",
+          ],
           high: ["Risk Assessment", "Training Program", "Policy Update"],
           medium: ["Basic Assessment", "Awareness Training"],
           low: ["Monitoring", "Documentation"],
@@ -333,7 +350,12 @@ describe("Business Logic", () => {
     it("should recommend appropriate services for critical risk", () => {
       function recommendServices(riskLevel: string): string[] {
         const recommendations: Record<string, string[]> = {
-          critical: ["Full Risk Assessment", "Urgent Training", "Policy Review", "Emergency Action Plan"],
+          critical: [
+            "Full Risk Assessment",
+            "Urgent Training",
+            "Policy Review",
+            "Emergency Action Plan",
+          ],
           high: ["Risk Assessment", "Training Program", "Policy Update"],
           medium: ["Basic Assessment", "Awareness Training"],
           low: ["Monitoring", "Documentation"],

@@ -30,14 +30,14 @@ export const appRouter = router({
   tenants: tenantsRouter,
   sectors: sectorsRouter,
   people: peopleRouter,
-  
+
   // Routers de conformidade NR-01
   riskAssessments: riskAssessmentsRouter,
   complianceReports: complianceReportsRouter,
-  
+
   // Routers de precificação
   pricing: pricingRouter,
-  
+
   // Routers de gestão
   auditLogs: auditLogsRouter,
   userInvites: userInvitesRouter,
@@ -45,4 +45,3 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
-

@@ -7,17 +7,7 @@ import { eq, and, desc, gte, lte, isNull } from "drizzle-orm";
 
 export const auditLogsRouter = router({
   // Listar logs de auditoria
-  list: publicProcedure
-    .input(z.object({
-      tenantId: z.string().optional(),
-      userId: z.string().optional(),
-      entityType: z.string().optional(),
-      action: z.string().optional(),
-      startDate: z.date().optional(),
-      endDate: z.date().optional(),
-      limit: z.number().min(1).max(100).default(50),
-      offset: z.number().min(0).default(0),
-    }))
+
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return [];
@@ -67,13 +57,14 @@ export const auditLogsRouter = router({
     }),
 
   // Obter log específico
-  getById: publicProcedure
-    .input(z.object({
-      id: z.string(),
-    }))
+
     .query(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
 
       const [log] = await db
         .select()
@@ -81,27 +72,26 @@ export const auditLogsRouter = router({
         .where(eq(auditLogs.id, input.id));
 
       if (!log) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Audit log not found" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Audit log not found",
+        });
       }
 
       return log;
     }),
 
   // Estatísticas de auditoria
-  stats: publicProcedure
-    .input(z.object({
-      tenantId: z.string().optional(),
-      startDate: z.date().optional(),
-      endDate: z.date().optional(),
-    }))
+
     .query(async ({ input }) => {
       const db = await getDb();
-      if (!db) return {
-        total: 0,
-        byAction: {},
-        byEntityType: {},
-        byUser: {},
-      };
+      if (!db)
+        return {
+          total: 0,
+          byAction: {},
+          byEntityType: {},
+          byUser: {},
+        };
 
       const conditions = [];
 
@@ -142,7 +132,8 @@ export const auditLogsRouter = router({
         stats.byAction[log.action] = (stats.byAction[log.action] || 0) + 1;
 
         // Por tipo de entidade
-        stats.byEntityType[log.entityType] = (stats.byEntityType[log.entityType] || 0) + 1;
+        stats.byEntityType[log.entityType] =
+          (stats.byEntityType[log.entityType] || 0) + 1;
 
         // Por usuário
         stats.byUser[log.userId] = (stats.byUser[log.userId] || 0) + 1;

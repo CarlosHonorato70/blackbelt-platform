@@ -51,7 +51,7 @@ export default function Sectors() {
         setDialogOpen(false);
       }, 100);
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(error.message || "Erro ao criar setor");
     },
   });
@@ -79,7 +79,8 @@ export default function Sectors() {
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold">Nenhuma empresa selecionada</h3>
           <p className="text-sm text-muted-foreground mt-2">
-            Selecione uma empresa no menu lateral para visualizar e gerenciar seus setores
+            Selecione uma empresa no menu lateral para visualizar e gerenciar
+            seus setores
           </p>
         </div>
       </DashboardLayout>
@@ -93,7 +94,8 @@ export default function Sectors() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Setores</h1>
             <p className="text-muted-foreground">
-              Gerencie os setores de <span className="font-semibold">{selectedTenant.name}</span>
+              Gerencie os setores de{" "}
+              <span className="font-semibold">{selectedTenant.name}</span>
             </p>
           </div>
 
@@ -135,7 +137,9 @@ export default function Sectors() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label htmlFor="responsibleName">Responsável pelo Setor</Label>
+                    <Label htmlFor="responsibleName">
+                      Responsável pelo Setor
+                    </Label>
                     <Input
                       id="responsibleName"
                       name="responsibleName"
@@ -145,7 +149,11 @@ export default function Sectors() {
                 </div>
 
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDialogOpen(false)}
+                  >
                     Cancelar
                   </Button>
                   <Button type="submit" disabled={createMutation.isPending}>
@@ -161,12 +169,16 @@ export default function Sectors() {
           <CardHeader>
             <CardTitle>Setores Cadastrados</CardTitle>
             <CardDescription>
-              {isLoading ? "Carregando..." : `${sectors?.length || 0} setor(es) encontrado(s)`}
+              {isLoading
+                ? "Carregando..."
+                : `${sectors?.length || 0} setor(es) encontrado(s)`}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Carregando...</div>
+              <div className="text-center py-8 text-muted-foreground">
+                Carregando...
+              </div>
             ) : sectors && sectors.length > 0 ? (
               <Table>
                 <TableHeader>
@@ -179,14 +191,22 @@ export default function Sectors() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sectors.map((sector) => (
+                  {sectors.map(sector => (
                     <TableRow key={sector.id}>
-                      <TableCell className="font-medium">{sector.name}</TableCell>
-                      <TableCell className="max-w-xs truncate">{sector.description || "-"}</TableCell>
+                      <TableCell className="font-medium">
+                        {sector.name}
+                      </TableCell>
+                      <TableCell className="max-w-xs truncate">
+                        {sector.description || "-"}
+                      </TableCell>
                       <TableCell>{sector.responsibleName || "-"}</TableCell>
                       <TableCell>-</TableCell>
                       <TableCell>
-                        {sector.createdAt ? new Date(sector.createdAt).toLocaleDateString("pt-BR") : "-"}
+                        {sector.createdAt
+                          ? new Date(sector.createdAt).toLocaleDateString(
+                              "pt-BR"
+                            )
+                          : "-"}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -195,7 +215,9 @@ export default function Sectors() {
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <UserSquare2 className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold">Nenhum setor cadastrado</h3>
+                <h3 className="text-lg font-semibold">
+                  Nenhum setor cadastrado
+                </h3>
                 <p className="text-sm text-muted-foreground mt-2">
                   Comece criando o primeiro setor para {selectedTenant.name}
                 </p>
@@ -207,4 +229,3 @@ export default function Sectors() {
     </DashboardLayout>
   );
 }
-

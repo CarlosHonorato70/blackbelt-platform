@@ -290,6 +290,7 @@ Você deve ver o IP em todos os servidores DNS
 
 **Causa:** DNS ainda não foi propagado  
 **Solução:**
+
 1. Aguarde 15-30 minutos
 2. Limpe o cache do navegador (Ctrl+Shift+Del)
 3. Use navegador privado para testar
@@ -299,6 +300,7 @@ Você deve ver o IP em todos os servidores DNS
 
 **Causa:** Certificado SSL não configurado  
 **Solução:**
+
 1. Verifique se SSL está ativado no servidor
 2. Regenere certificado SSL
 3. Aguarde 5-10 minutos para ativação
@@ -307,6 +309,7 @@ Você deve ver o IP em todos os servidores DNS
 
 **Causa:** Servidor não está respondendo  
 **Solução:**
+
 1. Verifique se a aplicação está rodando
 2. Verifique firewall e portas abertas
 3. Verifique logs do servidor
@@ -315,6 +318,7 @@ Você deve ver o IP em todos os servidores DNS
 
 **Causa:** Redirecionamento infinito  
 **Solução:**
+
 1. Verifique configuração de SSL/TLS
 2. Remova redirecionamentos duplicados
 3. Verifique regras de rewrite
@@ -323,13 +327,7 @@ Você deve ver o IP em todos os servidores DNS
 
 ## 📊 Comparação de Provedores
 
-| Provedor | Dificuldade | Tempo | Custo | Suporte |
-|----------|-------------|-------|-------|---------|
-| **Manus** | ⭐ Fácil | 5 min | Incluído | Excelente |
-| **AWS Route 53** | ⭐⭐⭐ Difícil | 30 min | $0.50/mês | Bom |
-| **GoDaddy** | ⭐⭐ Médio | 15 min | Incluído | Bom |
-| **Namecheap** | ⭐⭐ Médio | 15 min | Incluído | Bom |
-| **Cloudflare** | ⭐⭐ Médio | 20 min | Grátis | Excelente |
+
 
 ---
 

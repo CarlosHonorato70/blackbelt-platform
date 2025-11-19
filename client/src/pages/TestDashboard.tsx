@@ -1,9 +1,15 @@
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   BarChart,
   Bar,
@@ -18,7 +24,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-} from 'recharts';
+} from "recharts";
 import {
   CheckCircle2,
   AlertCircle,
@@ -28,13 +34,13 @@ import {
   Download,
   Filter,
   Play,
-} from 'lucide-react';
-import DashboardLayout from '@/components/DashboardLayout';
+} from "lucide-react";
+import DashboardLayout from "@/components/DashboardLayout";
 
 interface TestResult {
   id: string;
   name: string;
-  status: 'passed' | 'failed' | 'skipped' | 'running';
+  status: "passed" | "failed" | "skipped" | "running";
   duration: number;
   category: string;
   timestamp: string;
@@ -81,7 +87,7 @@ export default function TestDashboard() {
   useEffect(() => {
     const mockTestData: TestSuite[] = [
       {
-        name: 'Autenticação',
+        name: "Autenticação",
         total: 3,
         passed: 3,
         failed: 0,
@@ -90,33 +96,33 @@ export default function TestDashboard() {
         timestamp: new Date().toISOString(),
         results: [
           {
-            id: 'auth-001',
-            name: 'TC-001: Login com sucesso',
-            status: 'passed',
+            id: "auth-001",
+            name: "TC-001: Login com sucesso",
+            status: "passed",
             duration: 4200,
-            category: 'Autenticação',
+            category: "Autenticação",
             timestamp: new Date().toISOString(),
           },
           {
-            id: 'auth-002',
-            name: 'TC-002: Login com falha',
-            status: 'passed',
+            id: "auth-002",
+            name: "TC-002: Login com falha",
+            status: "passed",
             duration: 3800,
-            category: 'Autenticação',
+            category: "Autenticação",
             timestamp: new Date().toISOString(),
           },
           {
-            id: 'auth-003',
-            name: 'TC-003: Logout',
-            status: 'passed',
+            id: "auth-003",
+            name: "TC-003: Logout",
+            status: "passed",
             duration: 4500,
-            category: 'Autenticação',
+            category: "Autenticação",
             timestamp: new Date().toISOString(),
           },
         ],
       },
       {
-        name: 'Multi-Tenant',
+        name: "Multi-Tenant",
         total: 2,
         passed: 2,
         failed: 0,
@@ -125,25 +131,25 @@ export default function TestDashboard() {
         timestamp: new Date().toISOString(),
         results: [
           {
-            id: 'tenant-001',
-            name: 'TC-004: Selecionar empresa',
-            status: 'passed',
+            id: "tenant-001",
+            name: "TC-004: Selecionar empresa",
+            status: "passed",
             duration: 4200,
-            category: 'Multi-Tenant',
+            category: "Multi-Tenant",
             timestamp: new Date().toISOString(),
           },
           {
-            id: 'tenant-002',
-            name: 'TC-005: Isolamento de dados',
-            status: 'passed',
+            id: "tenant-002",
+            name: "TC-005: Isolamento de dados",
+            status: "passed",
             duration: 4700,
-            category: 'Multi-Tenant',
+            category: "Multi-Tenant",
             timestamp: new Date().toISOString(),
           },
         ],
       },
       {
-        name: 'Avaliação NR-01',
+        name: "Avaliação NR-01",
         total: 6,
         passed: 5,
         failed: 1,
@@ -152,50 +158,50 @@ export default function TestDashboard() {
         timestamp: new Date().toISOString(),
         results: [
           {
-            id: 'risk-001',
-            name: 'TC-006: Criar avaliação',
-            status: 'passed',
+            id: "risk-001",
+            name: "TC-006: Criar avaliação",
+            status: "passed",
             duration: 5200,
-            category: 'Avaliação NR-01',
+            category: "Avaliação NR-01",
             timestamp: new Date().toISOString(),
           },
           {
-            id: 'risk-003',
-            name: 'TC-008: Adicionar fatores',
-            status: 'failed',
+            id: "risk-003",
+            name: "TC-008: Adicionar fatores",
+            status: "failed",
             duration: 6200,
-            category: 'Avaliação NR-01',
+            category: "Avaliação NR-01",
             timestamp: new Date().toISOString(),
-            error: 'Timeout ao adicionar fator de risco',
+            error: "Timeout ao adicionar fator de risco",
           },
           {
-            id: 'risk-004',
-            name: 'TC-009: Calcular risco',
-            status: 'passed',
+            id: "risk-004",
+            name: "TC-009: Calcular risco",
+            status: "passed",
             duration: 4100,
-            category: 'Avaliação NR-01',
+            category: "Avaliação NR-01",
             timestamp: new Date().toISOString(),
           },
           {
-            id: 'risk-005',
-            name: 'TC-010: Editar avaliação',
-            status: 'passed',
+            id: "risk-005",
+            name: "TC-010: Editar avaliação",
+            status: "passed",
             duration: 5000,
-            category: 'Avaliação NR-01',
+            category: "Avaliação NR-01",
             timestamp: new Date().toISOString(),
           },
           {
-            id: 'risk-006',
-            name: 'TC-011: Finalizar avaliação',
-            status: 'passed',
+            id: "risk-006",
+            name: "TC-011: Finalizar avaliação",
+            status: "passed",
             duration: 4100,
-            category: 'Avaliação NR-01',
+            category: "Avaliação NR-01",
             timestamp: new Date().toISOString(),
           },
         ],
       },
       {
-        name: 'Relatórios',
+        name: "Relatórios",
         total: 3,
         passed: 3,
         failed: 0,
@@ -204,33 +210,33 @@ export default function TestDashboard() {
         timestamp: new Date().toISOString(),
         results: [
           {
-            id: 'report-001',
-            name: 'TC-012: Gerar relatório',
-            status: 'passed',
+            id: "report-001",
+            name: "TC-012: Gerar relatório",
+            status: "passed",
             duration: 5200,
-            category: 'Relatórios',
+            category: "Relatórios",
             timestamp: new Date().toISOString(),
           },
           {
-            id: 'report-002',
-            name: 'TC-013: Validar conformidade',
-            status: 'passed',
+            id: "report-002",
+            name: "TC-013: Validar conformidade",
+            status: "passed",
             duration: 5100,
-            category: 'Relatórios',
+            category: "Relatórios",
             timestamp: new Date().toISOString(),
           },
           {
-            id: 'report-003',
-            name: 'TC-014: Visualizar relatório',
-            status: 'passed',
+            id: "report-003",
+            name: "TC-014: Visualizar relatório",
+            status: "passed",
             duration: 5300,
-            category: 'Relatórios',
+            category: "Relatórios",
             timestamp: new Date().toISOString(),
           },
         ],
       },
       {
-        name: 'Exportação',
+        name: "Exportação",
         total: 4,
         passed: 4,
         failed: 0,
@@ -239,41 +245,41 @@ export default function TestDashboard() {
         timestamp: new Date().toISOString(),
         results: [
           {
-            id: 'export-001',
-            name: 'TC-015: Exportar Texto',
-            status: 'passed',
+            id: "export-001",
+            name: "TC-015: Exportar Texto",
+            status: "passed",
             duration: 4200,
-            category: 'Exportação',
+            category: "Exportação",
             timestamp: new Date().toISOString(),
           },
           {
-            id: 'export-002',
-            name: 'TC-016: Exportar JSON',
-            status: 'passed',
+            id: "export-002",
+            name: "TC-016: Exportar JSON",
+            status: "passed",
             duration: 4500,
-            category: 'Exportação',
+            category: "Exportação",
             timestamp: new Date().toISOString(),
           },
           {
-            id: 'export-003',
-            name: 'TC-017: Exportar Excel',
-            status: 'passed',
+            id: "export-003",
+            name: "TC-017: Exportar Excel",
+            status: "passed",
             duration: 4800,
-            category: 'Exportação',
+            category: "Exportação",
             timestamp: new Date().toISOString(),
           },
           {
-            id: 'export-004',
-            name: 'TC-018: Exportar múltiplos',
-            status: 'passed',
+            id: "export-004",
+            name: "TC-018: Exportar múltiplos",
+            status: "passed",
             duration: 4700,
-            category: 'Exportação',
+            category: "Exportação",
             timestamp: new Date().toISOString(),
           },
         ],
       },
       {
-        name: 'Auditoria',
+        name: "Auditoria",
         total: 3,
         passed: 3,
         failed: 0,
@@ -282,27 +288,27 @@ export default function TestDashboard() {
         timestamp: new Date().toISOString(),
         results: [
           {
-            id: 'audit-001',
-            name: 'TC-019: Registrar log',
-            status: 'passed',
+            id: "audit-001",
+            name: "TC-019: Registrar log",
+            status: "passed",
             duration: 4200,
-            category: 'Auditoria',
+            category: "Auditoria",
             timestamp: new Date().toISOString(),
           },
           {
-            id: 'audit-002',
-            name: 'TC-020: Visualizar logs',
-            status: 'passed',
+            id: "audit-002",
+            name: "TC-020: Visualizar logs",
+            status: "passed",
             duration: 5000,
-            category: 'Auditoria',
+            category: "Auditoria",
             timestamp: new Date().toISOString(),
           },
           {
-            id: 'audit-003',
-            name: 'TC-021: Exportar logs',
-            status: 'passed',
+            id: "audit-003",
+            name: "TC-021: Exportar logs",
+            status: "passed",
             duration: 5000,
-            category: 'Auditoria',
+            category: "Auditoria",
             timestamp: new Date().toISOString(),
           },
         ],
@@ -311,12 +317,15 @@ export default function TestDashboard() {
 
     setTestSuites(mockTestData);
 
-    const allResults = mockTestData.flatMap((suite) => suite.results);
-    const passed = allResults.filter((r) => r.status === 'passed').length;
-    const failed = allResults.filter((r) => r.status === 'failed').length;
-    const skipped = allResults.filter((r) => r.status === 'skipped').length;
+    const allResults = mockTestData.flatMap(suite => suite.results);
+    const passed = allResults.filter(r => r.status === "passed").length;
+    const failed = allResults.filter(r => r.status === "failed").length;
+    const skipped = allResults.filter(r => r.status === "skipped").length;
     const total = allResults.length;
-    const totalDuration = mockTestData.reduce((sum, suite) => sum + suite.duration, 0);
+    const totalDuration = mockTestData.reduce(
+      (sum, suite) => sum + suite.duration,
+      0
+    );
     const averageDuration = totalDuration / total;
 
     setStats({
@@ -336,28 +345,28 @@ export default function TestDashboard() {
   useEffect(() => {
     if (!autoRefresh) return;
     const interval = setInterval(() => {
-      console.log('Refreshing test results...');
+      console.log("Refreshing test results...");
     }, 30000);
     return () => clearInterval(interval);
   }, [autoRefresh]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'passed':
+      case "passed":
         return (
           <Badge className="bg-green-100 text-green-800">
             <CheckCircle2 className="w-3 h-3 mr-1" />
             Passou
           </Badge>
         );
-      case 'failed':
+      case "failed":
         return (
           <Badge className="bg-red-100 text-red-800">
             <AlertCircle className="w-3 h-3 mr-1" />
             Falhou
           </Badge>
         );
-      case 'skipped':
+      case "skipped":
         return (
           <Badge className="bg-gray-100 text-gray-800">
             <Clock className="w-3 h-3 mr-1" />
@@ -369,24 +378,24 @@ export default function TestDashboard() {
     }
   };
 
-  const categoryData = testSuites.map((suite) => ({
+  const categoryData = testSuites.map(suite => ({
     name: suite.name,
     passed: suite.passed,
     failed: suite.failed,
     skipped: suite.skipped,
   }));
 
-  const successRateData = testSuites.map((suite) => ({
+  const successRateData = testSuites.map(suite => ({
     name: suite.name,
     rate: ((suite.passed / suite.total) * 100).toFixed(1),
   }));
 
-  const durationData = testSuites.map((suite) => ({
+  const durationData = testSuites.map(suite => ({
     name: suite.name,
     duration: (suite.duration / 1000).toFixed(2),
   }));
 
-  const allResults = testSuites.flatMap((suite) => suite.results);
+  const allResults = testSuites.flatMap(suite => suite.results);
 
   if (loading) {
     return (
@@ -407,7 +416,9 @@ export default function TestDashboard() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard de Testes E2E</h1>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Dashboard de Testes E2E
+            </h1>
             <p className="text-gray-600 mt-1">
               Acompanhamento em tempo real dos testes automatizados
             </p>
@@ -417,10 +428,10 @@ export default function TestDashboard() {
               variant="outline"
               size="sm"
               onClick={() => setAutoRefresh(!autoRefresh)}
-              className={autoRefresh ? 'bg-blue-50' : ''}
+              className={autoRefresh ? "bg-blue-50" : ""}
             >
               <RefreshCw className="w-4 h-4 mr-2" />
-              {autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}
+              {autoRefresh ? "Auto-refresh ON" : "Auto-refresh OFF"}
             </Button>
             <Button variant="outline" size="sm">
               <Play className="w-4 h-4 mr-2" />
@@ -437,38 +448,54 @@ export default function TestDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total de Testes</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">
+                Total de Testes
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-900">{stats.totalTests}</div>
+              <div className="text-3xl font-bold text-gray-900">
+                {stats.totalTests}
+              </div>
               <p className="text-xs text-gray-500 mt-1">Testes cadastrados</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-green-600">Testes Passando</CardTitle>
+              <CardTitle className="text-sm font-medium text-green-600">
+                Testes Passando
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-green-600">{stats.passedTests}</div>
+              <div className="text-3xl font-bold text-green-600">
+                {stats.passedTests}
+              </div>
               <Progress value={stats.successRate} className="mt-2" />
-              <p className="text-xs text-gray-500 mt-1">{stats.successRate.toFixed(1)}% de sucesso</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {stats.successRate.toFixed(1)}% de sucesso
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-red-600">Testes Falhando</CardTitle>
+              <CardTitle className="text-sm font-medium text-red-600">
+                Testes Falhando
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-red-600">{stats.failedTests}</div>
+              <div className="text-3xl font-bold text-red-600">
+                {stats.failedTests}
+              </div>
               <p className="text-xs text-gray-500 mt-1">Requer atenção</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Duração Média</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">
+                Duração Média
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-gray-900">
@@ -480,7 +507,9 @@ export default function TestDashboard() {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Duração Total</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">
+                Duração Total
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-gray-900">
@@ -497,13 +526,20 @@ export default function TestDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Testes por Categoria</CardTitle>
-              <CardDescription>Distribuição de testes por suite</CardDescription>
+              <CardDescription>
+                Distribuição de testes por suite
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={categoryData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                  <XAxis
+                    dataKey="name"
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                  />
                   <YAxis />
                   <Tooltip />
                   <Legend />
@@ -519,21 +555,28 @@ export default function TestDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Taxa de Sucesso</CardTitle>
-              <CardDescription>Percentual de sucesso por categoria</CardDescription>
+              <CardDescription>
+                Percentual de sucesso por categoria
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={successRateData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                  <XAxis
+                    dataKey="name"
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                  />
                   <YAxis domain={[0, 100]} />
-                  <Tooltip formatter={(value) => `${value}%`} />
+                  <Tooltip formatter={value => `${value}%`} />
                   <Line
                     type="monotone"
                     dataKey="rate"
                     stroke="#3b82f6"
                     strokeWidth={2}
-                    dot={{ fill: '#3b82f6', r: 4 }}
+                    dot={{ fill: "#3b82f6", r: 4 }}
                     activeDot={{ r: 6 }}
                   />
                 </LineChart>
@@ -551,9 +594,14 @@ export default function TestDashboard() {
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={durationData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                  <XAxis
+                    dataKey="name"
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                  />
                   <YAxis />
-                  <Tooltip formatter={(value) => `${value}s`} />
+                  <Tooltip formatter={value => `${value}s`} />
                   <Bar dataKey="duration" fill="#8b5cf6" name="Duração (s)" />
                 </BarChart>
               </ResponsiveContainer>
@@ -571,9 +619,21 @@ export default function TestDashboard() {
                 <PieChart>
                   <Pie
                     data={[
-                      { name: 'Passou', value: stats.passedTests, color: '#10b981' },
-                      { name: 'Falhou', value: stats.failedTests, color: '#ef4444' },
-                      { name: 'Ignorado', value: stats.skippedTests, color: '#6b7280' },
+                      {
+                        name: "Passou",
+                        value: stats.passedTests,
+                        color: "#10b981",
+                      },
+                      {
+                        name: "Falhou",
+                        value: stats.failedTests,
+                        color: "#ef4444",
+                      },
+                      {
+                        name: "Ignorado",
+                        value: stats.skippedTests,
+                        color: "#6b7280",
+                      },
                     ]}
                     cx="50%"
                     cy="50%"
@@ -584,9 +644,21 @@ export default function TestDashboard() {
                     dataKey="value"
                   >
                     {[
-                      { name: 'Passou', value: stats.passedTests, color: '#10b981' },
-                      { name: 'Falhou', value: stats.failedTests, color: '#ef4444' },
-                      { name: 'Ignorado', value: stats.skippedTests, color: '#6b7280' },
+                      {
+                        name: "Passou",
+                        value: stats.passedTests,
+                        color: "#10b981",
+                      },
+                      {
+                        name: "Falhou",
+                        value: stats.failedTests,
+                        color: "#ef4444",
+                      },
+                      {
+                        name: "Ignorado",
+                        value: stats.skippedTests,
+                        color: "#6b7280",
+                      },
                     ].map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
@@ -604,7 +676,9 @@ export default function TestDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Resultados dos Testes</CardTitle>
-                <CardDescription>Detalhes de cada teste executado</CardDescription>
+                <CardDescription>
+                  Detalhes de cada teste executado
+                </CardDescription>
               </div>
               <Button variant="outline" size="sm">
                 <Filter className="w-4 h-4 mr-2" />
@@ -619,29 +693,40 @@ export default function TestDashboard() {
                   Todos ({allResults.length})
                 </TabsTrigger>
                 <TabsTrigger value="passed">
-                  Passou ({allResults.filter((r) => r.status === 'passed').length})
+                  Passou ({allResults.filter(r => r.status === "passed").length}
+                  )
                 </TabsTrigger>
                 <TabsTrigger value="failed">
-                  Falhou ({allResults.filter((r) => r.status === 'failed').length})
+                  Falhou ({allResults.filter(r => r.status === "failed").length}
+                  )
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="all" className="space-y-2 mt-4">
-                {allResults.map((result) => (
-                  <div key={result.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                {allResults.map(result => (
+                  <div
+                    key={result.id}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                  >
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         {getStatusBadge(result.status)}
-                        <span className="font-medium text-sm">{result.name}</span>
+                        <span className="font-medium text-sm">
+                          {result.name}
+                        </span>
                       </div>
                       {result.error && (
-                        <p className="text-xs text-red-600 mt-1 ml-20">{result.error}</p>
+                        <p className="text-xs text-red-600 mt-1 ml-20">
+                          {result.error}
+                        </p>
                       )}
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="text-xs text-gray-500">{(result.duration / 1000).toFixed(2)}s</span>
+                      <span className="text-xs text-gray-500">
+                        {(result.duration / 1000).toFixed(2)}s
+                      </span>
                       <span className="text-xs text-gray-400">
-                        {new Date(result.timestamp).toLocaleTimeString('pt-BR')}
+                        {new Date(result.timestamp).toLocaleTimeString("pt-BR")}
                       </span>
                     </div>
                   </div>
@@ -650,17 +735,24 @@ export default function TestDashboard() {
 
               <TabsContent value="passed" className="space-y-2 mt-4">
                 {allResults
-                  .filter((r) => r.status === 'passed')
-                  .map((result) => (
-                    <div key={result.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                  .filter(r => r.status === "passed")
+                  .map(result => (
+                    <div
+                      key={result.id}
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                    >
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           {getStatusBadge(result.status)}
-                          <span className="font-medium text-sm">{result.name}</span>
+                          <span className="font-medium text-sm">
+                            {result.name}
+                          </span>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
-                        <span className="text-xs text-gray-500">{(result.duration / 1000).toFixed(2)}s</span>
+                        <span className="text-xs text-gray-500">
+                          {(result.duration / 1000).toFixed(2)}s
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -668,20 +760,29 @@ export default function TestDashboard() {
 
               <TabsContent value="failed" className="space-y-2 mt-4">
                 {allResults
-                  .filter((r) => r.status === 'failed')
-                  .map((result) => (
-                    <div key={result.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-red-50">
+                  .filter(r => r.status === "failed")
+                  .map(result => (
+                    <div
+                      key={result.id}
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-red-50"
+                    >
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           {getStatusBadge(result.status)}
-                          <span className="font-medium text-sm">{result.name}</span>
+                          <span className="font-medium text-sm">
+                            {result.name}
+                          </span>
                         </div>
                         {result.error && (
-                          <p className="text-xs text-red-600 mt-1 ml-20">{result.error}</p>
+                          <p className="text-xs text-red-600 mt-1 ml-20">
+                            {result.error}
+                          </p>
                         )}
                       </div>
                       <div className="flex items-center gap-4">
-                        <span className="text-xs text-gray-500">{(result.duration / 1000).toFixed(2)}s</span>
+                        <span className="text-xs text-gray-500">
+                          {(result.duration / 1000).toFixed(2)}s
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -694,21 +795,31 @@ export default function TestDashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Resumo por Suite de Testes</CardTitle>
-            <CardDescription>Estatísticas detalhadas de cada suite</CardDescription>
+            <CardDescription>
+              Estatísticas detalhadas de cada suite
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {testSuites.map((suite) => (
+              {testSuites.map(suite => (
                 <div key={suite.name} className="border rounded-lg p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-gray-900">{suite.name}</h3>
+                    <h3 className="font-semibold text-gray-900">
+                      {suite.name}
+                    </h3>
                     <div className="flex gap-2">
-                      <Badge className="bg-green-100 text-green-800">{suite.passed} Passou</Badge>
+                      <Badge className="bg-green-100 text-green-800">
+                        {suite.passed} Passou
+                      </Badge>
                       {suite.failed > 0 && (
-                        <Badge className="bg-red-100 text-red-800">{suite.failed} Falhou</Badge>
+                        <Badge className="bg-red-100 text-red-800">
+                          {suite.failed} Falhou
+                        </Badge>
                       )}
                       {suite.skipped > 0 && (
-                        <Badge className="bg-gray-100 text-gray-800">{suite.skipped} Ignorado</Badge>
+                        <Badge className="bg-gray-100 text-gray-800">
+                          {suite.skipped} Ignorado
+                        </Badge>
                       )}
                     </div>
                   </div>
@@ -720,7 +831,9 @@ export default function TestDashboard() {
                       <p className="text-sm font-medium text-gray-900">
                         {((suite.passed / suite.total) * 100).toFixed(1)}%
                       </p>
-                      <p className="text-xs text-gray-500">{(suite.duration / 1000).toFixed(2)}s</p>
+                      <p className="text-xs text-gray-500">
+                        {(suite.duration / 1000).toFixed(2)}s
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -732,4 +845,3 @@ export default function TestDashboard() {
     </DashboardLayout>
   );
 }
-

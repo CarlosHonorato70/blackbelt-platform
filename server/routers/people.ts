@@ -22,7 +22,7 @@ export const peopleRouter = router({
 
       await db.createAuditLog({
         tenantId,
-        userId: ctx.user.id,
+        userId: ctx.user!.id,
         action: "READ",
         entityType: "people",
         entityId: null,
@@ -47,12 +47,15 @@ export const peopleRouter = router({
       const person = await db.getPerson(input.id, input.tenantId);
 
       if (!person) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Colaborador não encontrado" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Colaborador não encontrado",
+        });
       }
 
       await db.createAuditLog({
         tenantId: input.tenantId,
-        userId: ctx.user.id,
+        userId: ctx.user!.id,
         action: "READ",
         entityType: "people",
         entityId: input.id,
@@ -84,14 +87,20 @@ export const peopleRouter = router({
       // Verificar se tenant existe
       const tenant = await db.getTenant(input.tenantId);
       if (!tenant) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Empresa não encontrada" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Empresa não encontrada",
+        });
       }
 
       // Verificar se setor existe (se informado)
       if (input.sectorId) {
         const sector = await db.getSector(input.sectorId, input.tenantId);
         if (!sector) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Setor não encontrado" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Setor não encontrado",
+          });
         }
       }
 
@@ -99,7 +108,7 @@ export const peopleRouter = router({
 
       await db.createAuditLog({
         tenantId: input.tenantId,
-        userId: ctx.user.id,
+        userId: ctx.user!.id,
         action: "CREATE",
         entityType: "people",
         entityId: person.id,
@@ -131,14 +140,20 @@ export const peopleRouter = router({
 
       const person = await db.getPerson(id, tenantId);
       if (!person) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Colaborador não encontrado" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Colaborador não encontrado",
+        });
       }
 
       // Verificar se setor existe (se informado)
       if (data.sectorId) {
         const sector = await db.getSector(data.sectorId, tenantId);
         if (!sector) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Setor não encontrado" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Setor não encontrado",
+          });
         }
       }
 
@@ -148,7 +163,7 @@ export const peopleRouter = router({
 
       await db.createAuditLog({
         tenantId,
-        userId: ctx.user.id,
+        userId: ctx.user!.id,
         action: "UPDATE",
         entityType: "people",
         entityId: id,
@@ -172,7 +187,10 @@ export const peopleRouter = router({
     .mutation(async ({ ctx, input }) => {
       const person = await db.getPerson(input.id, input.tenantId);
       if (!person) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Colaborador não encontrado" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Colaborador não encontrado",
+        });
       }
 
       // TODO: Verificar permissões
@@ -182,7 +200,7 @@ export const peopleRouter = router({
 
       await db.createAuditLog({
         tenantId: input.tenantId,
-        userId: ctx.user.id,
+        userId: ctx.user!.id,
         action: "DELETE",
         entityType: "people",
         entityId: input.id,
@@ -206,7 +224,10 @@ export const peopleRouter = router({
     .query(async ({ ctx, input }) => {
       const person = await db.getPerson(input.id, input.tenantId);
       if (!person) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Colaborador não encontrado" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Colaborador não encontrado",
+        });
       }
 
       // Buscar consentimentos
@@ -222,7 +243,7 @@ export const peopleRouter = router({
 
       await db.createAuditLog({
         tenantId: input.tenantId,
-        userId: ctx.user.id,
+        userId: ctx.user!.id,
         action: "READ",
         entityType: "people",
         entityId: input.id,
@@ -240,4 +261,3 @@ export const peopleRouter = router({
       };
     }),
 });
-

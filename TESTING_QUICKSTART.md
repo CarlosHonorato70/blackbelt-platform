@@ -7,11 +7,13 @@ The Black Belt Platform now has a comprehensive test suite with **113 tests** co
 ## Running Tests
 
 ### Run All Tests
+
 ```bash
 pnpm test
 ```
 
 **Expected Output:**
+
 ```
 ✓ server/__tests__/pricing-calculations.test.ts (23 tests)
 ✓ server/__tests__/data-validation.test.ts (57 tests)
@@ -22,12 +24,15 @@ Tests  113 passed (113)
 ```
 
 ### Run Tests in Watch Mode
+
 ```bash
 pnpm test --watch
 ```
+
 This will re-run tests automatically when you change files.
 
 ### Run Specific Test File
+
 ```bash
 pnpm test pricing-calculations
 pnpm test data-validation
@@ -35,6 +40,7 @@ pnpm test business-logic
 ```
 
 ### Run with Coverage Report
+
 ```bash
 pnpm test --coverage
 ```
@@ -42,7 +48,9 @@ pnpm test --coverage
 ## What's Being Tested?
 
 ### 1. Pricing Calculations (23 tests)
+
 Validates financial calculations:
+
 - ✅ Technical hour calculation (MEI, Simples Nacional, Lucro Presumido, Autonomous)
 - ✅ Discount tiers (5%, 10%, 15% based on quantity)
 - ✅ Proposal totals with multiple items
@@ -50,7 +58,9 @@ Validates financial calculations:
 - ✅ Currency rounding
 
 ### 2. Data Validation (57 tests)
+
 Ensures data integrity:
+
 - ✅ CNPJ validation (Brazilian company ID)
 - ✅ Email validation
 - ✅ Phone validation (Brazilian format)
@@ -60,7 +70,9 @@ Ensures data integrity:
 - ✅ Address validation (ZIP code, states)
 
 ### 3. Business Logic (33 tests)
+
 Verifies business rules:
+
 - ✅ Tenant management
 - ✅ Sector management
 - ✅ People (employees) management
@@ -97,24 +109,29 @@ pnpm test
 ## Understanding Test Output
 
 ### ✅ All Tests Passing
+
 ```
 ✓ server/__tests__/pricing-calculations.test.ts (23 tests)
 Test Files  3 passed (3)
 Tests  113 passed (113)
 ```
+
 This means everything is working correctly!
 
 ### ❌ Test Failure
+
 ```
 × server/__tests__/pricing-calculations.test.ts > should calculate price
   Expected: 100
   Received: 90
 ```
+
 This indicates a bug that needs to be fixed.
 
 ## Common Testing Scenarios
 
 ### Test a New Feature
+
 ```typescript
 import { describe, it, expect } from "vitest";
 import { createMockTenant } from "./test-utils";
@@ -128,6 +145,7 @@ describe("New Feature", () => {
 ```
 
 ### Test Data Validation
+
 ```typescript
 it("should validate email", () => {
   const email = "test@example.com";
@@ -136,6 +154,7 @@ it("should validate email", () => {
 ```
 
 ### Test Calculations
+
 ```typescript
 it("should calculate total", () => {
   const price = 100;
@@ -148,15 +167,18 @@ it("should calculate total", () => {
 ## Troubleshooting
 
 ### Tests Don't Run
+
 - Check if dependencies are installed: `pnpm install`
 - Verify Node.js version: `node --version` (should be 20+)
 
 ### Tests Fail Unexpectedly
+
 - Check if you have local changes
 - Try: `git status` to see modified files
 - Reset if needed: `git checkout .`
 
 ### Slow Test Execution
+
 - Close unnecessary applications
 - Tests should run in ~400ms
 - If slower, check system resources
@@ -175,17 +197,18 @@ it("should calculate total", () => {
 ✅ **Fast Feedback**: Tests run in under 1 second  
 ✅ **Documentation**: Tests show how the code should work  
 ✅ **Regression Prevention**: Catch bugs before production  
-✅ **Refactoring Safety**: Change code with confidence  
+✅ **Refactoring Safety**: Change code with confidence
 
 ## Resources
 
 - **Full Documentation**: [TESTING.md](TESTING.md)
-- **Test Directory**: [server/__tests__/README.md](server/__tests__/README.md)
+- **Test Directory**: [server/**tests**/README.md](server/__tests__/README.md)
 - **Vitest Docs**: https://vitest.dev/
 
 ## Getting Help
 
 If you encounter issues:
+
 1. Check the error message carefully
 2. Review the test file that's failing
 3. Read the documentation

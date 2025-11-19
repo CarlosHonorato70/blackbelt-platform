@@ -8,14 +8,7 @@ import { eq, and, desc } from "drizzle-orm";
 
 export const complianceReportsRouter = router({
   // Listar documentos de compliance
-  list: publicProcedure
-    .input(z.object({
-      tenantId: z.string(),
-      documentType: z.enum(["gro", "inventory", "action_plan", "training_record", "audit_report"]).optional(),
-      status: z.enum(["draft", "active", "expired", "archived"]).optional(),
-      limit: z.number().min(1).max(100).default(50),
-      offset: z.number().min(0).default(0),
-    }))
+
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return [];
@@ -23,7 +16,9 @@ export const complianceReportsRouter = router({
       const conditions = [eq(complianceDocuments.tenantId, input.tenantId)];
 
       if (input.documentType) {
-        conditions.push(eq(complianceDocuments.documentType, input.documentType));
+        conditions.push(
+          eq(complianceDocuments.documentType, input.documentType)
+        );
       }
 
       if (input.status) {
@@ -42,14 +37,14 @@ export const complianceReportsRouter = router({
     }),
 
   // Obter documento por ID
-  getById: publicProcedure
-    .input(z.object({
-      id: z.string(),
-      tenantId: z.string(),
-    }))
+
     .query(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
 
       const [document] = await db
         .select()
@@ -62,29 +57,24 @@ export const complianceReportsRouter = router({
         );
 
       if (!document) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Compliance document not found" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Compliance document not found",
+        });
       }
 
       return document;
     }),
 
   // Criar novo documento
-  create: publicProcedure
-    .input(z.object({
-      tenantId: z.string(),
-      documentType: z.enum(["gro", "inventory", "action_plan", "training_record", "audit_report"]),
-      title: z.string().min(1).max(255),
-      description: z.string().optional(),
-      fileUrl: z.string().optional(),
-      version: z.string().default("1.0"),
-      validFrom: z.date(),
-      validUntil: z.date().optional(),
-      signedBy: z.string().optional(),
-      signedAt: z.date().optional(),
-    }))
+
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
 
       const id = nanoid();
 
@@ -109,24 +99,14 @@ export const complianceReportsRouter = router({
     }),
 
   // Atualizar documento
-  update: publicProcedure
-    .input(z.object({
-      id: z.string(),
-      tenantId: z.string(),
-      documentType: z.enum(["gro", "inventory", "action_plan", "training_record", "audit_report"]).optional(),
-      title: z.string().min(1).max(255).optional(),
-      description: z.string().optional(),
-      fileUrl: z.string().optional(),
-      version: z.string().optional(),
-      validFrom: z.date().optional(),
-      validUntil: z.date().optional(),
-      status: z.enum(["draft", "active", "expired", "archived"]).optional(),
-      signedBy: z.string().optional(),
-      signedAt: z.date().optional(),
-    }))
+
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
 
       const { id, tenantId, ...updates } = input;
 
@@ -147,14 +127,14 @@ export const complianceReportsRouter = router({
     }),
 
   // Deletar documento
-  delete: publicProcedure
-    .input(z.object({
-      id: z.string(),
-      tenantId: z.string(),
-    }))
+
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
 
       await db
         .delete(complianceDocuments)
@@ -169,15 +149,14 @@ export const complianceReportsRouter = router({
     }),
 
   // Assinar documento
-  sign: publicProcedure
-    .input(z.object({
-      id: z.string(),
-      tenantId: z.string(),
-      signedBy: z.string(),
-    }))
+ain
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
 
       await db
         .update(complianceDocuments)
@@ -198,14 +177,14 @@ export const complianceReportsRouter = router({
     }),
 
   // Arquivar documento
-  archive: publicProcedure
-    .input(z.object({
-      id: z.string(),
-      tenantId: z.string(),
-    }))
+
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
 
       await db
         .update(complianceDocuments)

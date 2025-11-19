@@ -1,6 +1,6 @@
 /**
  * Test Utilities for Black Belt Platform
- * 
+ *
  * This file contains helper functions and fixtures for testing.
  */
 
@@ -33,7 +33,10 @@ export function createMockTenant(overrides: Partial<any> = {}) {
 /**
  * Create a mock sector for testing
  */
-export function createMockSector(tenantId: string, overrides: Partial<any> = {}) {
+export function createMockSector(
+  tenantId: string,
+  overrides: Partial<any> = {}
+) {
   return {
     id: nanoid(),
     tenantId,
@@ -49,7 +52,11 @@ export function createMockSector(tenantId: string, overrides: Partial<any> = {})
 /**
  * Create a mock person for testing
  */
-export function createMockPerson(tenantId: string, sectorId: string | null = null, overrides: Partial<any> = {}) {
+export function createMockPerson(
+  tenantId: string,
+  sectorId: string | null = null,
+  overrides: Partial<any> = {}
+) {
   return {
     id: nanoid(),
     tenantId,
@@ -68,7 +75,10 @@ export function createMockPerson(tenantId: string, sectorId: string | null = nul
 /**
  * Create a mock client for pricing
  */
-export function createMockClient(tenantId: string, overrides: Partial<any> = {}) {
+export function createMockClient(
+  tenantId: string,
+  overrides: Partial<any> = {}
+) {
   return {
     id: nanoid(),
     tenantId,
@@ -93,7 +103,10 @@ export function createMockClient(tenantId: string, overrides: Partial<any> = {})
 /**
  * Create a mock service for pricing
  */
-export function createMockService(tenantId: string, overrides: Partial<any> = {}) {
+export function createMockService(
+  tenantId: string,
+  overrides: Partial<any> = {}
+) {
   return {
     id: nanoid(),
     tenantId,
@@ -101,7 +114,7 @@ export function createMockService(tenantId: string, overrides: Partial<any> = {}
     description: "Complete psychosocial risk assessment according to NR-01",
     category: "compliance",
     unitType: "hours" as const,
-    basePrice: 150.00,
+    basePrice: 150.0,
     estimatedDuration: 8,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -112,21 +125,24 @@ export function createMockService(tenantId: string, overrides: Partial<any> = {}
 /**
  * Create a mock pricing parameters
  */
-export function createMockPricingParameters(tenantId: string, overrides: Partial<any> = {}) {
+export function createMockPricingParameters(
+  tenantId: string,
+  overrides: Partial<any> = {}
+) {
   return {
     id: nanoid(),
     tenantId,
     taxRegime: "simples_nacional" as const,
-    fixedCosts: 5000.00,
-    laborCosts: 3000.00,
+    fixedCosts: 5000.0,
+    laborCosts: 3000.0,
     productiveHoursPerMonth: 160,
-    profitMargin: 30.00,
+    profitMargin: 30.0,
     discountTier1Min: 10,
-    discountTier1Rate: 5.00,
+    discountTier1Rate: 5.0,
     discountTier2Min: 20,
-    discountTier2Rate: 10.00,
+    discountTier2Rate: 10.0,
     discountTier3Min: 50,
-    discountTier3Rate: 15.00,
+    discountTier3Rate: 15.0,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -170,7 +186,8 @@ export function createMockDb() {
         where: (condition: any) => ({
           orderBy: (order: any) => ({
             limit: (limit: number) => ({
-              offset: (offset: number) => Promise.resolve(mockData[table._.name] || []),
+              offset: (offset: number) =>
+                Promise.resolve(mockData[table._.name] || []),
             }),
           }),
         }),

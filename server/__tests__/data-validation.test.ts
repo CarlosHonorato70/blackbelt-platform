@@ -1,6 +1,6 @@
 /**
  * Tests for Data Validation
- * 
+ *
  * These tests verify input validation for various entities
  * like tenants, clients, and services.
  */
@@ -183,7 +183,12 @@ describe("Data Validation", () => {
   });
 
   describe("Tax Regime Validation", () => {
-    const validRegimes = ["mei", "simples_nacional", "lucro_presumido", "autonomous"];
+    const validRegimes = [
+      "mei",
+      "simples_nacional",
+      "lucro_presumido",
+      "autonomous",
+    ];
 
     it("should accept MEI regime", () => {
       const regime = "mei";
@@ -339,9 +344,33 @@ describe("Data Validation", () => {
 
   describe("State Code Validation", () => {
     const validStates = [
-      "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
-      "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
-      "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+      "AC",
+      "AL",
+      "AP",
+      "AM",
+      "BA",
+      "CE",
+      "DF",
+      "ES",
+      "GO",
+      "MA",
+      "MT",
+      "MS",
+      "MG",
+      "PA",
+      "PB",
+      "PR",
+      "PE",
+      "PI",
+      "RJ",
+      "RN",
+      "RS",
+      "RO",
+      "RR",
+      "SC",
+      "SP",
+      "SE",
+      "TO",
     ];
 
     it("should accept valid state codes", () => {

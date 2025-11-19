@@ -6,10 +6,10 @@ import * as db from "../db";
 // Validação de CNPJ
 function validateCNPJ(cnpj: string): boolean {
   const cleaned = cnpj.replace(/[^\d]/g, "");
-  
+
   if (cleaned.length !== 14) return false;
   if (/^(\d)\1+$/.test(cleaned)) return false; // Todos dígitos iguais
-  
+
   // Validação dos dígitos verificadores
   let sum = 0;
   let weight = 5;
@@ -19,7 +19,7 @@ function validateCNPJ(cnpj: string): boolean {
   }
   let digit = sum % 11 < 2 ? 0 : 11 - (sum % 11);
   if (digit !== parseInt(cleaned[12])) return false;
-  
+
   sum = 0;
   weight = 6;
   for (let i = 0; i < 13; i++) {
@@ -28,7 +28,7 @@ function validateCNPJ(cnpj: string): boolean {
   }
   digit = sum % 11 < 2 ? 0 : 11 - (sum % 11);
   if (digit !== parseInt(cleaned[13])) return false;
-  
+
   return true;
 }
 
@@ -36,10 +36,12 @@ export const tenantsRouter = router({
   // Listar tenants (apenas admin ou consultor BB)
   list: publicProcedure
     .input(
-      z.object({
-        status: z.enum(["active", "inactive", "suspended"]).optional(),
-        search: z.string().optional(),
-      }).optional()
+      z
+        .object({
+          status: z.enum(["active", "inactive", "suspended"]).optional(),
+          search: z.string().optional(),
+        })
+        .optional()
     )
     .query(async ({ ctx, input }) => {
       // TODO: Verificar se usuário tem permissão (admin ou consultor BB)
@@ -47,11 +49,11 @@ export const tenantsRouter = router({
       // O mock user tem role 'admin', então a verificação será ignorada.
 
       const tenants = await db.listTenants(input);
-      
+
       // Criar audit log
       await db.createAuditLog({
         tenantId: null,
-        userId: ctx.user.id,
+        userId: ctx.user!.id,
         action: "READ",
         entityType: "tenants",
         entityId: null,
@@ -69,16 +71,19 @@ export const tenantsRouter = router({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const tenant = await db.getTenant(input.id);
-      
+
       if (!tenant) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Empresa não encontrada" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Empresa não encontrada",
+        });
       }
 
       // TODO: Verificar se usuário tem acesso a este tenant
-      
+
       await db.createAuditLog({
         tenantId: tenant.id,
-        userId: ctx.user.id,
+        userId: ctx.user!.id,
         action: "READ",
         entityType: "tenants",
         entityId: tenant.id,
@@ -107,12 +112,14 @@ export const tenantsRouter = router({
         contactName: z.string().optional(),
         contactEmail: z.string().email().optional(),
         contactPhone: z.string().optional(),
-        strategy: z.enum(["shared_rls", "dedicated_schema"]).default("shared_rls"),
+        strategy: z
+          .enum(["shared_rls", "dedicated_schema"])
+          .default("shared_rls"),
       })
     )
     .mutation(async ({ ctx, input }) => {
       // Apenas admin pode criar tenants
-      if (ctx.user.role !== "admin") {
+      if (ctx.user!.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
       }
 
@@ -124,18 +131,24 @@ export const tenantsRouter = router({
       // Verificar se CNPJ já existe
       const existing = await db.getTenantByCNPJ(input.cnpj);
       if (existing) {
-        throw new TRPCError({ code: "CONFLICT", message: "CNPJ já cadastrado" });
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "CNPJ já cadastrado",
+        });
       }
 
       const tenant = await db.createTenant(input);
 
       // Criar configurações padrão
       await db.setTenantSetting(tenant.id, "max_users", 100);
-      await db.setTenantSetting(tenant.id, "features", ["nr01", "psicossocial"]);
+      await db.setTenantSetting(tenant.id, "features", [
+        "nr01",
+        "psicossocial",
+      ]);
 
       await db.createAuditLog({
         tenantId: tenant.id,
-        userId: ctx.user.id,
+        userId: ctx.user!.id,
         action: "CREATE",
         entityType: "tenants",
         entityId: tenant.id,
@@ -172,7 +185,10 @@ export const tenantsRouter = router({
 
       const tenant = await db.getTenant(id);
       if (!tenant) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Empresa não encontrada" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Empresa não encontrada",
+        });
       }
 
       // TODO: Verificar permissões (admin ou admin da empresa)
@@ -181,7 +197,7 @@ export const tenantsRouter = router({
 
       await db.createAuditLog({
         tenantId: id,
-        userId: ctx.user.id,
+        userId: ctx.user!.id,
         action: "UPDATE",
         entityType: "tenants",
         entityId: id,
@@ -199,16 +215,16 @@ export const tenantsRouter = router({
     .input(z.object({ tenantId: z.string() }))
     .query(async ({ ctx, input }) => {
       // TODO: Verificar permissões
-      
+
       const settings: Record<string, any> = {};
-      
+
       // Buscar todas as configurações (simplificado)
       const maxUsers = await db.getTenantSetting(input.tenantId, "max_users");
       const features = await db.getTenantSetting(input.tenantId, "features");
-      
+
       if (maxUsers) settings.max_users = maxUsers.settingValue;
       if (features) settings.features = features.settingValue;
-      
+
       return settings;
     }),
 
@@ -223,7 +239,7 @@ export const tenantsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       // Apenas admin pode alterar configurações
-      if (ctx.user.role !== "admin") {
+      if (ctx.user!.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
       }
 
@@ -231,7 +247,7 @@ export const tenantsRouter = router({
 
       await db.createAuditLog({
         tenantId: input.tenantId,
-        userId: ctx.user.id,
+        userId: ctx.user!.id,
         action: "UPDATE",
         entityType: "tenant_settings",
         entityId: input.tenantId,
@@ -244,4 +260,3 @@ export const tenantsRouter = router({
       return { success: true };
     }),
 });
-
