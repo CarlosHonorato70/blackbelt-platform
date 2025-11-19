@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { publicProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 
 // Validação de CNPJ
@@ -34,7 +34,7 @@ function validateCNPJ(cnpj: string): boolean {
 
 export const tenantsRouter = router({
   // Listar tenants (apenas admin ou consultor BB)
-  list: protectedProcedure
+  list: publicProcedure
     .input(
       z
         .object({
@@ -45,17 +45,15 @@ export const tenantsRouter = router({
     )
     .query(async ({ ctx, input }) => {
       // TODO: Verificar se usuário tem permissão (admin ou consultor BB)
-      // Por enquanto, apenas admin
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
-      }
+      // A autenticação foi desabilitada, permitindo acesso livre.
+      // O mock user tem role 'admin', então a verificação será ignorada.
 
       const tenants = await db.listTenants(input);
 
       // Criar audit log
       await db.createAuditLog({
         tenantId: null,
-        userId: ctx.user.id,
+        userId: ctx.user!.id,
         action: "READ",
         entityType: "tenants",
         entityId: null,
@@ -69,7 +67,7 @@ export const tenantsRouter = router({
     }),
 
   // Obter um tenant específico
-  get: protectedProcedure
+  get: publicProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const tenant = await db.getTenant(input.id);
@@ -85,7 +83,7 @@ export const tenantsRouter = router({
 
       await db.createAuditLog({
         tenantId: tenant.id,
-        userId: ctx.user.id,
+        userId: ctx.user!.id,
         action: "READ",
         entityType: "tenants",
         entityId: tenant.id,
@@ -99,7 +97,7 @@ export const tenantsRouter = router({
     }),
 
   // Criar novo tenant
-  create: protectedProcedure
+  create: publicProcedure
     .input(
       z.object({
         name: z.string().min(1, "Nome é obrigatório"),
@@ -121,7 +119,7 @@ export const tenantsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       // Apenas admin pode criar tenants
-      if (ctx.user.role !== "admin") {
+      if (ctx.user!.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
       }
 
@@ -150,7 +148,7 @@ export const tenantsRouter = router({
 
       await db.createAuditLog({
         tenantId: tenant.id,
-        userId: ctx.user.id,
+        userId: ctx.user!.id,
         action: "CREATE",
         entityType: "tenants",
         entityId: tenant.id,
@@ -164,7 +162,7 @@ export const tenantsRouter = router({
     }),
 
   // Atualizar tenant
-  update: protectedProcedure
+  update: publicProcedure
     .input(
       z.object({
         id: z.string(),
@@ -199,7 +197,7 @@ export const tenantsRouter = router({
 
       await db.createAuditLog({
         tenantId: id,
-        userId: ctx.user.id,
+        userId: ctx.user!.id,
         action: "UPDATE",
         entityType: "tenants",
         entityId: id,
@@ -213,7 +211,7 @@ export const tenantsRouter = router({
     }),
 
   // Obter configurações do tenant
-  getSettings: protectedProcedure
+  getSettings: publicProcedure
     .input(z.object({ tenantId: z.string() }))
     .query(async ({ ctx, input }) => {
       // TODO: Verificar permissões
@@ -231,7 +229,7 @@ export const tenantsRouter = router({
     }),
 
   // Atualizar configuração do tenant
-  updateSetting: protectedProcedure
+  updateSetting: publicProcedure
     .input(
       z.object({
         tenantId: z.string(),
@@ -241,7 +239,7 @@ export const tenantsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       // Apenas admin pode alterar configurações
-      if (ctx.user.role !== "admin") {
+      if (ctx.user!.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
       }
 
@@ -249,7 +247,7 @@ export const tenantsRouter = router({
 
       await db.createAuditLog({
         tenantId: input.tenantId,
-        userId: ctx.user.id,
+        userId: ctx.user!.id,
         action: "UPDATE",
         entityType: "tenant_settings",
         entityId: input.tenantId,

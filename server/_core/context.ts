@@ -1,5 +1,6 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
+import { mockUser } from "./trpc"; // Importar o mock user do trpc.ts
 import { sdk } from "./sdk";
 
 export type TrpcContext = {
@@ -13,12 +14,8 @@ export async function createContext(
 ): Promise<TrpcContext> {
   let user: User | null = null;
 
-  try {
-    user = await sdk.authenticateRequest(opts.req);
-  } catch (error) {
-    // Authentication is optional for public procedures.
-    user = null;
-  }
+  // Ignorar autenticação e usar o mock user
+  user = mockUser as unknown as User;
 
   return {
     req: opts.req,
