@@ -17,6 +17,8 @@
 
 A plataforma é **multi-tenant**, **type-safe**, e construída com as melhores práticas modernas de desenvolvimento web.
 
+> 🚀 **NOVO!** Quer fazer a plataforma rodar rapidamente? Veja o [**Guia Prático: Como Rodar**](COMO_RODAR.md)
+
 ---
 
 ## 🎯 Funcionalidades Principais
@@ -187,6 +189,9 @@ blackbelt-platform/
 git clone https://github.com/CarlosHonorato70/blackbelt-platform.git
 cd blackbelt-platform
 
+# Verificar pré-requisitos (opcional)
+./verificar-requisitos.sh
+
 # Opção 1: Setup Automatizado (Recomendado)
 ./setup.sh
 
@@ -202,6 +207,7 @@ A aplicação estará disponível em `http://localhost:3000`
 
 📖 **Para instruções detalhadas, consulte:**
 
+- [**COMO_RODAR.md**](COMO_RODAR.md) - 🚀 **Guia prático e direto** (RECOMENDADO para iniciantes)
 - [SETUP_GUIDE.md](SETUP_GUIDE.md) - Guia completo de instalação passo a passo
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Solução de problemas comuns
 
@@ -213,7 +219,8 @@ A documentação completa está disponível nos seguintes arquivos:
 
 | Arquivo                             | Descrição                                     |
 | ----------------------------------- | --------------------------------------------- |
-| **SETUP_GUIDE.md**                  | 🚀 Guia completo de instalação e configuração |
+| **COMO_RODAR.md**                   | 🚀 **Guia prático: Como fazer a plataforma rodar** (NOVO!) |
+| **SETUP_GUIDE.md**                  | 📖 Guia completo de instalação e configuração |
 | **TROUBLESHOOTING.md**              | 🔧 Solução de problemas e debugging           |
 | **TESTING.md**                      | 🧪 Documentação completa de testes            |
 | **TESTING_QUICKSTART.md**           | ⚡ Guia rápido de testes                      |
