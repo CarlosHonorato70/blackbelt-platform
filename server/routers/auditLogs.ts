@@ -1,13 +1,13 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { auditLogs } from "../../drizzle/schema";
 import { eq, and, desc, gte, lte, isNull } from "drizzle-orm";
 
 export const auditLogsRouter = router({
   // Listar logs de auditoria
-  list: protectedProcedure
+  list: publicProcedure
     .input(z.object({
       tenantId: z.string().optional(),
       userId: z.string().optional(),
@@ -67,7 +67,7 @@ export const auditLogsRouter = router({
     }),
 
   // Obter log específico
-  getById: protectedProcedure
+  getById: publicProcedure
     .input(z.object({
       id: z.string(),
     }))
@@ -88,7 +88,7 @@ export const auditLogsRouter = router({
     }),
 
   // Estatísticas de auditoria
-  stats: protectedProcedure
+  stats: publicProcedure
     .input(z.object({
       tenantId: z.string().optional(),
       startDate: z.date().optional(),

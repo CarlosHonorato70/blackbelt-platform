@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { protectedProcedure, router } from "../_core/trpc";
+import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { 
   riskAssessments, 
@@ -14,7 +14,7 @@ import { eq, and, desc, isNull } from "drizzle-orm";
 
 export const riskAssessmentsRouter = router({
   // Listar avaliações por tenant
-  list: protectedProcedure
+  list: publicProcedure
     .input(z.object({
       tenantId: z.string(),
       limit: z.number().min(1).max(100).default(50),
@@ -36,7 +36,7 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Obter avaliação por ID
-  getById: protectedProcedure
+  getById: publicProcedure
     .input(z.object({
       id: z.string(),
       tenantId: z.string(),
@@ -72,7 +72,7 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Criar nova avaliação
-  create: protectedProcedure
+  create: publicProcedure
     .input(z.object({
       tenantId: z.string(),
       sectorId: z.string().optional(),
@@ -106,7 +106,7 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Atualizar avaliação
-  update: protectedProcedure
+  update: publicProcedure
     .input(z.object({
       id: z.string(),
       tenantId: z.string(),
@@ -141,7 +141,7 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Deletar avaliação
-  delete: protectedProcedure
+  delete: publicProcedure
     .input(z.object({
       id: z.string(),
       tenantId: z.string(),
@@ -169,7 +169,7 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Adicionar item de risco à avaliação
-  addItem: protectedProcedure
+  addItem: publicProcedure
     .input(z.object({
       assessmentId: z.string(),
       riskFactorId: z.string(),
@@ -213,7 +213,7 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Listar categorias de risco
-  listCategories: protectedProcedure
+  listCategories: publicProcedure
     .query(async () => {
       const db = await getDb();
       if (!db) return [];
@@ -227,7 +227,7 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Listar fatores de risco por categoria
-  listFactors: protectedProcedure
+  listFactors: publicProcedure
     .input(z.object({
       categoryId: z.string().optional(),
     }))
@@ -246,7 +246,7 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Listar planos de ação por tenant
-  listActionPlans: protectedProcedure
+  listActionPlans: publicProcedure
     .input(z.object({
       tenantId: z.string(),
       assessmentItemId: z.string().optional(),
@@ -271,7 +271,7 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Criar plano de ação
-  createActionPlan: protectedProcedure
+  createActionPlan: publicProcedure
     .input(z.object({
       tenantId: z.string(),
       assessmentItemId: z.string().optional(),
