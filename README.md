@@ -208,6 +208,7 @@ A aplicação estará disponível em `http://localhost:3000`
 📖 **Para instruções detalhadas, consulte:**
 
 - [**COMO_RODAR.md**](COMO_RODAR.md) - 🚀 **Guia prático e direto** (RECOMENDADO para iniciantes)
+- [**DOCKER_SETUP.md**](DOCKER_SETUP.md) - 🐳 **Guia Docker Desktop** (charset utf8mb4 configurado)
 - [SETUP_GUIDE.md](SETUP_GUIDE.md) - Guia completo de instalação passo a passo
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Solução de problemas comuns
 

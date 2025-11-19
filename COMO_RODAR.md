@@ -2,6 +2,8 @@
 
 Este é o guia mais rápido e direto para você colocar a **Black Belt Platform** para rodar no seu computador.
 
+> 🐳 **Usando Docker Desktop?** Veja o [**Guia Docker**](DOCKER_SETUP.md) para instruções específicas com configuração de charset otimizada.
+
 ## ⚡ Início Rápido (3 Passos)
 
 Se você já tem Node.js, pnpm e MySQL instalados, execute:
