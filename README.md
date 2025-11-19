@@ -278,7 +278,44 @@ A documentação completa está disponível nos seguintes arquivos:
 
 ## 🧪 Testes
 
-### Executar Testes E2E
+### Executar Testes Unitários
+
+```bash
+# Executar todos os testes
+pnpm test
+
+# Executar em modo watch
+pnpm test --watch
+
+# Executar com cobertura
+pnpm test --coverage
+```
+
+### Suite de Testes Disponível
+
+A plataforma conta com **113 testes automatizados** cobrindo:
+
+- ✅ **Cálculos de Precificação** (23 testes)
+  - Cálculo de hora técnica (4 regimes tributários)
+  - Aplicação de descontos por volume
+  - Totais de propostas
+  - Validações financeiras
+
+- ✅ **Validação de Dados** (57 testes)
+  - CNPJ, email, telefone
+  - Status e enums
+  - Preços e quantidades
+  - Datas e endereços
+
+- ✅ **Lógica de Negócio** (33 testes)
+  - Gestão de tenants, setores, pessoas
+  - Isolamento multi-tenant
+  - Cálculo de nível de risco
+  - Recomendação de serviços
+
+📚 **Documentação Completa**: Ver [TESTING.md](TESTING.md) e [TESTING_QUICKSTART.md](TESTING_QUICKSTART.md)
+
+### Executar Testes E2E (Futuro)
 
 ```bash
 # Instalar Playwright
@@ -293,10 +330,10 @@ npx playwright show-report
 
 ### Cobertura de Testes
 
-- **21 casos de teste** cobrindo fluxos críticos
-- **80%+ cobertura** de código
+- **113 testes unitários** cobrindo funcionalidades críticas
+- **100% taxa de sucesso** nos testes atuais
 - **Testes de integração** multi-tenant
-- **Testes de segurança** (autenticação, autorização)
+- **Validação de segurança** via CodeQL
 
 ---
 
