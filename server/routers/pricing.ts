@@ -18,7 +18,14 @@ export const pricingRouter = router({
   // ============================================================================
 
   clients: router({
-
+    list: publicProcedure
+      .input(
+        z.object({
+          tenantId: z.string(),
+          limit: z.number().default(50),
+          offset: z.number().default(0),
+        })
+      )
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return [];
@@ -34,7 +41,13 @@ export const pricingRouter = router({
         return clientsList;
       }),
 
-
+    get: publicProcedure
+      .input(
+        z.object({
+          id: z.string(),
+          tenantId: z.string(),
+        })
+      )
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -60,7 +73,26 @@ export const pricingRouter = router({
         return client;
       }),
 
-
+    create: publicProcedure
+      .input(
+        z.object({
+          tenantId: z.string(),
+          name: z.string(),
+          cnpj: z.string().optional(),
+          industry: z.string().optional(),
+          companySize: z.string().optional(),
+          contactName: z.string().optional(),
+          contactEmail: z.string().optional(),
+          contactPhone: z.string().optional(),
+          street: z.string().optional(),
+          number: z.string().optional(),
+          complement: z.string().optional(),
+          neighborhood: z.string().optional(),
+          city: z.string().optional(),
+          state: z.string().optional(),
+          zipCode: z.string().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -77,7 +109,7 @@ export const pricingRouter = router({
           name: input.name,
           cnpj: input.cnpj || null,
           industry: input.industry || null,
-          companySize: input.companySize || null,
+          companySize: (input.companySize as any) || null,
           contactName: input.contactName || null,
           contactEmail: input.contactEmail || null,
           contactPhone: input.contactPhone || null,
@@ -96,7 +128,13 @@ export const pricingRouter = router({
         return { id };
       }),
 
-
+    update: publicProcedure
+      .input(
+        z.object({
+          id: z.string(),
+          tenantId: z.string(),
+        }).passthrough()
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -118,7 +156,13 @@ export const pricingRouter = router({
         return { success: true };
       }),
 
-
+    delete: publicProcedure
+      .input(
+        z.object({
+          id: z.string(),
+          tenantId: z.string(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -142,7 +186,15 @@ export const pricingRouter = router({
   // ============================================================================
 
   services: router({
-
+    list: publicProcedure
+      .input(
+        z.object({
+          tenantId: z.string(),
+          category: z.string().optional(),
+          limit: z.number().default(50),
+          offset: z.number().default(0),
+        })
+      )
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return [];
@@ -164,7 +216,13 @@ export const pricingRouter = router({
         return servicesList;
       }),
 
-
+    get: publicProcedure
+      .input(
+        z.object({
+          id: z.string(),
+          tenantId: z.string(),
+        })
+      )
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -193,7 +251,18 @@ export const pricingRouter = router({
         return service;
       }),
 
-
+    create: publicProcedure
+      .input(
+        z.object({
+          tenantId: z.string(),
+          name: z.string(),
+          description: z.string().optional(),
+          category: z.string(),
+          unit: z.string(),
+          minPrice: z.number(),
+          maxPrice: z.number(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -210,7 +279,7 @@ export const pricingRouter = router({
           name: input.name,
           description: input.description || null,
           category: input.category,
-          unit: input.unit,
+          unit: input.unit as any,
           minPrice: input.minPrice,
           maxPrice: input.maxPrice,
           isActive: true,
@@ -221,7 +290,13 @@ export const pricingRouter = router({
         return { id };
       }),
 
-
+    update: publicProcedure
+      .input(
+        z.object({
+          id: z.string(),
+          tenantId: z.string(),
+        }).passthrough()
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -243,7 +318,13 @@ export const pricingRouter = router({
         return { success: true };
       }),
 
-
+    delete: publicProcedure
+      .input(
+        z.object({
+          id: z.string(),
+          tenantId: z.string(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -270,7 +351,12 @@ export const pricingRouter = router({
   // ============================================================================
 
   parameters: router({
-
+    get: publicProcedure
+      .input(
+        z.object({
+          tenantId: z.string(),
+        })
+      )
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return null;
@@ -283,7 +369,20 @@ export const pricingRouter = router({
         return params || null;
       }),
 
-
+    upsert: publicProcedure
+      .input(
+        z.object({
+          tenantId: z.string(),
+          monthlyFixedCost: z.number(),
+          laborCost: z.number(),
+          productiveHoursPerMonth: z.number(),
+          defaultTaxRegime: z.string(),
+          volumeDiscounts: z.any().optional(),
+          riskAdjustment: z.number(),
+          seniorityAdjustment: z.any(),
+          taxRates: z.any().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -305,7 +404,7 @@ export const pricingRouter = router({
               monthlyFixedCost: input.monthlyFixedCost,
               laborCost: input.laborCost,
               productiveHoursPerMonth: input.productiveHoursPerMonth,
-              defaultTaxRegime: input.defaultTaxRegime,
+              defaultTaxRegime: input.defaultTaxRegime as any,
               volumeDiscounts: input.volumeDiscounts || null,
               riskAdjustment: input.riskAdjustment,
               seniorityAdjustment: input.seniorityAdjustment,
@@ -322,7 +421,7 @@ export const pricingRouter = router({
             monthlyFixedCost: input.monthlyFixedCost,
             laborCost: input.laborCost,
             productiveHoursPerMonth: input.productiveHoursPerMonth,
-            defaultTaxRegime: input.defaultTaxRegime,
+            defaultTaxRegime: input.defaultTaxRegime as any,
             volumeDiscounts: input.volumeDiscounts || null,
             riskAdjustment: input.riskAdjustment,
             seniorityAdjustment: input.seniorityAdjustment,
@@ -341,7 +440,16 @@ export const pricingRouter = router({
   // ============================================================================
 
   proposals: router({
-
+    list: publicProcedure
+      .input(
+        z.object({
+          tenantId: z.string(),
+          clientId: z.string().optional(),
+          status: z.string().optional(),
+          limit: z.number().default(50),
+          offset: z.number().default(0),
+        })
+      )
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return [];
@@ -353,7 +461,7 @@ export const pricingRouter = router({
         }
 
         if (input.status) {
-          conditions.push(eq(proposals.status, input.status));
+          conditions.push(eq(proposals.status, input.status as any));
         }
 
         const proposalsList = await db
@@ -367,7 +475,13 @@ export const pricingRouter = router({
         return proposalsList;
       }),
 
-
+    get: publicProcedure
+      .input(
+        z.object({
+          id: z.string(),
+          tenantId: z.string(),
+        })
+      )
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -405,7 +519,25 @@ export const pricingRouter = router({
         };
       }),
 
-
+    create: publicProcedure
+      .input(
+        z.object({
+          tenantId: z.string(),
+          clientId: z.string(),
+          title: z.string(),
+          description: z.string().optional(),
+          taxRegime: z.enum(["MEI", "SN", "LP", "autonomous"]),
+          validUntil: z.date().optional(),
+          items: z.array(
+            z.object({
+              serviceId: z.string(),
+              serviceName: z.string(),
+              quantity: z.number(),
+              unitPrice: z.number(),
+            })
+          ),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -473,7 +605,13 @@ export const pricingRouter = router({
         return { id };
       }),
 
-
+    update: publicProcedure
+      .input(
+        z.object({
+          id: z.string(),
+          tenantId: z.string(),
+        }).passthrough()
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -495,7 +633,13 @@ export const pricingRouter = router({
         return { success: true };
       }),
 
-
+    delete: publicProcedure
+      .input(
+        z.object({
+          id: z.string(),
+          tenantId: z.string(),
+        })
+      )
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -528,7 +672,12 @@ export const pricingRouter = router({
   // ============================================================================
 
   calculate: router({
-
+    servicePrice: publicProcedure
+      .input(
+        z.object({
+          tenantId: z.string(),
+        }).passthrough()
+      )
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db)
@@ -563,7 +712,7 @@ export const pricingRouter = router({
           autonomous: 1.35, // 35% margem
         };
 
-        const multiplier = taxRates[input.taxRegime];
+        const multiplier = taxRates[input.taxRegime as keyof typeof taxRates];
         const technicalHour = Math.round(baseCost * multiplier);
 
         return {

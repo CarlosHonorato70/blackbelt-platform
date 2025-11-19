@@ -7,7 +7,19 @@ import { eq, and, desc, gte, lte, isNull } from "drizzle-orm";
 
 export const auditLogsRouter = router({
   // Listar logs de auditoria
-
+  list: publicProcedure
+    .input(
+      z.object({
+        tenantId: z.string().optional(),
+        userId: z.string().optional(),
+        entityType: z.string().optional(),
+        action: z.string().optional(),
+        startDate: z.date().optional(),
+        endDate: z.date().optional(),
+        limit: z.number().default(50),
+        offset: z.number().default(0),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return [];
@@ -57,7 +69,12 @@ export const auditLogsRouter = router({
     }),
 
   // Obter log específico
-
+  get: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db)
@@ -82,7 +99,14 @@ export const auditLogsRouter = router({
     }),
 
   // Estatísticas de auditoria
-
+  stats: publicProcedure
+    .input(
+      z.object({
+        tenantId: z.string().optional(),
+        startDate: z.date().optional(),
+        endDate: z.date().optional(),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db)
