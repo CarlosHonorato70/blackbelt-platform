@@ -2,7 +2,29 @@
 
 Este é o guia mais rápido e direto para você colocar a **Black Belt Platform** para rodar no seu computador.
 
-> 🐳 **Usando Docker Desktop?** Veja o [**Guia Docker**](DOCKER_SETUP.md) para instruções específicas com configuração de charset otimizada.
+> 🐳 **RECOMENDADO: Docker Desktop** - Setup em 1 comando! Veja o [**Guia Docker**](DOCKER_SETUP.md) ou use `./setup-docker.sh`
+>
+> ⚡ **Referência Rápida:** [**DOCKER_QUICK_REFERENCE.md**](DOCKER_QUICK_REFERENCE.md) - Todos os comandos Docker
+
+---
+
+## 🐳 Opção 1: Com Docker (Recomendado)
+
+**Vantagens:** MySQL automático, charset pré-configurado, sem instalação manual.
+
+```bash
+# Setup completo em um comando
+git clone https://github.com/CarlosHonorato70/blackbelt-platform.git
+cd blackbelt-platform
+./setup-docker.sh
+```
+
+📖 **Guia completo:** [DOCKER_SETUP.md](DOCKER_SETUP.md)  
+⚡ **Comandos úteis:** [DOCKER_QUICK_REFERENCE.md](DOCKER_QUICK_REFERENCE.md)
+
+---
+
+## 🔧 Opção 2: Instalação Tradicional (MySQL Local)
 
 ## ⚡ Início Rápido (3 Passos)
 

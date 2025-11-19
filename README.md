@@ -192,10 +192,13 @@ cd blackbelt-platform
 # Verificar pré-requisitos (opcional)
 ./verificar-requisitos.sh
 
-# Opção 1: Setup Automatizado (Recomendado)
+# Opção 1: Setup com Docker (Recomendado - MySQL automático)
+./setup-docker.sh
+
+# Opção 2: Setup Tradicional (MySQL local)
 ./setup.sh
 
-# Opção 2: Setup Manual
+# Opção 3: Setup Manual
 pnpm install                    # Instalar dependências
 cp .env.example .env            # Copiar configuração
 # Edite .env com suas credenciais
@@ -207,8 +210,9 @@ A aplicação estará disponível em `http://localhost:3000`
 
 📖 **Para instruções detalhadas, consulte:**
 
-- [**COMO_RODAR.md**](COMO_RODAR.md) - 🚀 **Guia prático e direto** (RECOMENDADO para iniciantes)
-- [**DOCKER_SETUP.md**](DOCKER_SETUP.md) - 🐳 **Guia Docker Desktop** (charset utf8mb4 configurado)
+- [**DOCKER_SETUP.md**](DOCKER_SETUP.md) - 🐳 **Guia Docker Desktop** (recomendado, MySQL automático)
+- [**DOCKER_QUICK_REFERENCE.md**](DOCKER_QUICK_REFERENCE.md) - ⚡ **Referência rápida Docker** (comandos úteis)
+- [**COMO_RODAR.md**](COMO_RODAR.md) - 🚀 **Guia prático tradicional** (MySQL local)
 - [SETUP_GUIDE.md](SETUP_GUIDE.md) - Guia completo de instalação passo a passo
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Solução de problemas comuns
 
