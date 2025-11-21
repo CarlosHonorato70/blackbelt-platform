@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 
 interface Tenant {
   id: string;
@@ -17,18 +23,20 @@ const TenantContext = createContext<TenantContextType | undefined>(undefined);
 const STORAGE_KEY = "blackbelt_selected_tenant";
 
 export function TenantProvider({ children }: { children: ReactNode }) {
-  const [selectedTenant, setSelectedTenantState] = useState<Tenant | null>(() => {
-    // Recuperar tenant selecionado do localStorage
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch {
-        return null;
+  const [selectedTenant, setSelectedTenantState] = useState<Tenant | null>(
+    () => {
+      // Recuperar tenant selecionado do localStorage
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch {
+          return null;
+        }
       }
+      return null;
     }
-    return null;
-  });
+  );
 
   const setSelectedTenant = (tenant: Tenant | null) => {
     setSelectedTenantState(tenant);
@@ -63,4 +71,3 @@ export function useTenant() {
   }
   return context;
 }
-

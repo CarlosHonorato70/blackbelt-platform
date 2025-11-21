@@ -42,10 +42,26 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTenant } from "@/contexts/TenantContext";
 import { trpc } from "@/lib/trpc";
-import { AlertCircle, CheckCircle2, Download, Edit2, Eye, FileText, MoreVertical, Plus, Shield, Trash2 } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Download,
+  Edit2,
+  Eye,
+  FileText,
+  MoreVertical,
+  Plus,
+  Shield,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { exportToJSON, exportToExcel, generateAssessmentReport, exportToPDF } from "@/lib/exportUtils";
+import {
+  exportToJSON,
+  exportToExcel,
+  generateAssessmentReport,
+  exportToPDF,
+} from "@/lib/exportUtils";
 
 export default function RiskAssessments() {
   const { selectedTenant } = useTenant();
@@ -53,28 +69,30 @@ export default function RiskAssessments() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // Mock data - será substituído por tRPC queries quando o backend estiver pronto
-  const assessments = selectedTenant ? [
-    {
-      id: "1",
-      title: "Avaliação Inicial - Setor Administrativo",
-      tenant: "Empresa XYZ Ltda",
-      sector: "Administrativo",
-      date: "2025-01-15",
-      status: "completed",
-      riskLevel: "medium",
-      assessor: "Carlos Honorato",
-    },
-    {
-      id: "2",
-      title: "Reavaliação Anual - Produção",
-      tenant: "Indústria ABC S.A.",
-      sector: "Produção",
-      date: "2025-01-10",
-      status: "in_progress",
-      riskLevel: "high",
-      assessor: "Thyberê Mendes",
-    },
-  ] : [];
+  const assessments = selectedTenant
+    ? [
+        {
+          id: "1",
+          title: "Avaliação Inicial - Setor Administrativo",
+          tenant: "Empresa XYZ Ltda",
+          sector: "Administrativo",
+          date: "2025-01-15",
+          status: "completed",
+          riskLevel: "medium",
+          assessor: "Carlos Honorato",
+        },
+        {
+          id: "2",
+          title: "Reavaliação Anual - Produção",
+          tenant: "Indústria ABC S.A.",
+          sector: "Produção",
+          date: "2025-01-10",
+          status: "in_progress",
+          riskLevel: "high",
+          assessor: "Thyberê Mendes",
+        },
+      ]
+    : [];
 
   if (!selectedTenant) {
     return (
@@ -83,7 +101,8 @@ export default function RiskAssessments() {
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold">Nenhuma empresa selecionada</h3>
           <p className="text-sm text-muted-foreground mt-2">
-            Selecione uma empresa no menu lateral para visualizar e gerenciar avaliações de riscos
+            Selecione uma empresa no menu lateral para visualizar e gerenciar
+            avaliações de riscos
           </p>
         </div>
       </DashboardLayout>
@@ -104,7 +123,9 @@ export default function RiskAssessments() {
       reviewed: "Revisada",
     };
     return (
-      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[status as keyof typeof styles]}`}>
+      <span
+        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[status as keyof typeof styles]}`}
+      >
         {labels[status as keyof typeof labels]}
       </span>
     );
@@ -113,7 +134,11 @@ export default function RiskAssessments() {
   const getRiskLevelBadge = (level: string) => {
     const styles = {
       low: { bg: "bg-green-100", text: "text-green-800", icon: CheckCircle2 },
-      medium: { bg: "bg-yellow-100", text: "text-yellow-800", icon: AlertCircle },
+      medium: {
+        bg: "bg-yellow-100",
+        text: "text-yellow-800",
+        icon: AlertCircle,
+      },
       high: { bg: "bg-orange-100", text: "text-orange-800", icon: AlertCircle },
       critical: { bg: "bg-red-100", text: "text-red-800", icon: AlertCircle },
     };
@@ -126,7 +151,9 @@ export default function RiskAssessments() {
     const style = styles[level as keyof typeof styles];
     const Icon = style.icon;
     return (
-      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${style.bg} ${style.text}`}>
+      <span
+        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${style.bg} ${style.text}`}
+      >
         <Icon className="h-3 w-3" />
         {labels[level as keyof typeof labels]}
       </span>
@@ -138,15 +165,15 @@ export default function RiskAssessments() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Avaliações de Riscos Psicossociais</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Avaliações de Riscos Psicossociais
+            </h1>
             <p className="text-muted-foreground">
               Gestão de riscos conforme NR-01 (Portaria MTE nº 1.419/2024)
             </p>
           </div>
 
-          <Button
-            onClick={() => setLocation("/risk-assessments/new")}
-          >
+          <Button onClick={() => setLocation("/risk-assessments/new")}>
             <Plus className="mr-2 h-4 w-4" />
             Nova Avaliação
           </Button>
@@ -159,11 +186,19 @@ export default function RiskAssessments() {
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <form onSubmit={(e) => { e.preventDefault(); setDialogOpen(false); }}>
+              <form
+                onSubmit={e => {
+                  e.preventDefault();
+                  setDialogOpen(false);
+                }}
+              >
                 <DialogHeader>
-                  <DialogTitle>Nova Avaliação de Riscos Psicossociais</DialogTitle>
+                  <DialogTitle>
+                    Nova Avaliação de Riscos Psicossociais
+                  </DialogTitle>
                   <DialogDescription>
-                    Inicie uma nova avaliação de fatores de risco psicossociais relacionados ao trabalho
+                    Inicie uma nova avaliação de fatores de risco psicossociais
+                    relacionados ao trabalho
                   </DialogDescription>
                 </DialogHeader>
 
@@ -218,11 +253,7 @@ export default function RiskAssessments() {
 
                   <div className="grid gap-2">
                     <Label htmlFor="assessmentDate">Data da Avaliação *</Label>
-                    <Input
-                      id="assessmentDate"
-                      type="date"
-                      required
-                    />
+                    <Input id="assessmentDate" type="date" required />
                   </div>
 
                   <div className="grid gap-2">
@@ -243,7 +274,9 @@ export default function RiskAssessments() {
                       <SelectContent>
                         <SelectItem value="iso45003">ISO 45003</SelectItem>
                         <SelectItem value="whsq">WHSQ (WHO)</SelectItem>
-                        <SelectItem value="blackbelt">Método Black Belt</SelectItem>
+                        <SelectItem value="blackbelt">
+                          Método Black Belt
+                        </SelectItem>
                         <SelectItem value="custom">Personalizada</SelectItem>
                       </SelectContent>
                     </Select>
@@ -251,12 +284,14 @@ export default function RiskAssessments() {
                 </div>
 
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDialogOpen(false)}
+                  >
                     Cancelar
                   </Button>
-                  <Button type="submit">
-                    Criar Avaliação
-                  </Button>
+                  <Button type="submit">Criar Avaliação</Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -321,19 +356,27 @@ export default function RiskAssessments() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {assessments.map((assessment) => (
+                  {assessments.map(assessment => (
                     <TableRow key={assessment.id}>
-                      <TableCell className="font-medium">{assessment.title}</TableCell>
+                      <TableCell className="font-medium">
+                        {assessment.title}
+                      </TableCell>
                       <TableCell>
                         <div className="space-y-1">
                           <div className="text-sm">{assessment.tenant}</div>
-                          <div className="text-xs text-muted-foreground">{assessment.sector}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {assessment.sector}
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell>{new Date(assessment.date).toLocaleDateString("pt-BR")}</TableCell>
+                      <TableCell>
+                        {new Date(assessment.date).toLocaleDateString("pt-BR")}
+                      </TableCell>
                       <TableCell>{assessment.assessor}</TableCell>
                       <TableCell>{getStatusBadge(assessment.status)}</TableCell>
-                      <TableCell>{getRiskLevelBadge(assessment.riskLevel)}</TableCell>
+                      <TableCell>
+                        {getRiskLevelBadge(assessment.riskLevel)}
+                      </TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -352,8 +395,13 @@ export default function RiskAssessments() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {
-                                const report = generateAssessmentReport([assessment]);
-                                exportToPDF(report, `avaliacao_${assessment.id}_${new Date().toISOString().split('T')[0]}.txt`);
+                                const report = generateAssessmentReport([
+                                  assessment,
+                                ]);
+                                exportToPDF(
+                                  report,
+                                  `avaliacao_${assessment.id}_${new Date().toISOString().split("T")[0]}.txt`
+                                );
                               }}
                             >
                               <Download className="h-4 w-4 mr-2" />
@@ -361,7 +409,10 @@ export default function RiskAssessments() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {
-                                exportToJSON([assessment], `avaliacao_${assessment.id}_${new Date().toISOString().split('T')[0]}.json`);
+                                exportToJSON(
+                                  [assessment],
+                                  `avaliacao_${assessment.id}_${new Date().toISOString().split("T")[0]}.json`
+                                );
                               }}
                             >
                               <Download className="h-4 w-4 mr-2" />
@@ -369,7 +420,11 @@ export default function RiskAssessments() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {
-                                exportToExcel([assessment], `avaliacao_${assessment.id}_${new Date().toISOString().split('T')[0]}.xlsx`, 'Avaliação');
+                                exportToExcel(
+                                  [assessment],
+                                  `avaliacao_${assessment.id}_${new Date().toISOString().split("T")[0]}.xlsx`,
+                                  "Avaliação"
+                                );
                               }}
                             >
                               <Download className="h-4 w-4 mr-2" />
@@ -389,7 +444,9 @@ export default function RiskAssessments() {
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Shield className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold">Nenhuma avaliação encontrada</h3>
+                <h3 className="text-lg font-semibold">
+                  Nenhuma avaliação encontrada
+                </h3>
                 <p className="text-sm text-muted-foreground mt-2">
                   Comece criando uma nova avaliação de riscos psicossociais
                 </p>
@@ -401,4 +458,3 @@ export default function RiskAssessments() {
     </DashboardLayout>
   );
 }
-

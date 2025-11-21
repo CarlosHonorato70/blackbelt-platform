@@ -63,14 +63,16 @@ export default function RiskAssessmentForm() {
   }
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -100,7 +102,10 @@ export default function RiskAssessmentForm() {
               Nova Avaliação de Riscos Psicossociais
             </h1>
             <p className="text-muted-foreground">
-              Empresa: {typeof selectedTenant === 'string' ? selectedTenant : selectedTenant?.name}
+              Empresa:{" "}
+              {typeof selectedTenant === "string"
+                ? selectedTenant
+                : selectedTenant?.name}
             </p>
           </div>
         </div>
@@ -148,9 +153,7 @@ export default function RiskAssessmentForm() {
                   <Label htmlFor="sector">Setor (Opcional)</Label>
                   <Select
                     value={formData.sector}
-                    onValueChange={(value) =>
-                      handleSelectChange("sector", value)
-                    }
+                    onValueChange={value => handleSelectChange("sector", value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o setor" />
@@ -195,7 +198,7 @@ export default function RiskAssessmentForm() {
                   <Label htmlFor="methodology">Metodologia *</Label>
                   <Select
                     value={formData.methodology}
-                    onValueChange={(value) =>
+                    onValueChange={value =>
                       handleSelectChange("methodology", value)
                     }
                   >
@@ -205,7 +208,9 @@ export default function RiskAssessmentForm() {
                     <SelectContent>
                       <SelectItem value="iso45003">ISO 45003</SelectItem>
                       <SelectItem value="whsq">WHSQ (WHO)</SelectItem>
-                      <SelectItem value="blackbelt">Método Black Belt</SelectItem>
+                      <SelectItem value="blackbelt">
+                        Método Black Belt
+                      </SelectItem>
                       <SelectItem value="custom">Personalizada</SelectItem>
                     </SelectContent>
                   </Select>
@@ -229,7 +234,9 @@ export default function RiskAssessmentForm() {
           {/* Seção 2: Identificação de Fatores de Risco */}
           <Card>
             <CardHeader>
-              <CardTitle>2. Identificação de Fatores de Risco Psicossociais</CardTitle>
+              <CardTitle>
+                2. Identificação de Fatores de Risco Psicossociais
+              </CardTitle>
               <CardDescription>
                 Conforme Guia de Fatores de Riscos Psicossociais (MTE)
               </CardDescription>
@@ -253,7 +260,9 @@ export default function RiskAssessmentForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="workloadFactors">Fatores de Carga de Trabalho</Label>
+                <Label htmlFor="workloadFactors">
+                  Fatores de Carga de Trabalho
+                </Label>
                 <Textarea
                   id="workloadFactors"
                   name="workloadFactors"
@@ -317,7 +326,7 @@ export default function RiskAssessmentForm() {
                   <Label htmlFor="riskLevel">Nível de Risco *</Label>
                   <Select
                     value={formData.riskLevel}
-                    onValueChange={(value) =>
+                    onValueChange={value =>
                       handleSelectChange("riskLevel", value)
                     }
                   >
@@ -429,4 +438,3 @@ export default function RiskAssessmentForm() {
     </DashboardLayout>
   );
 }
-

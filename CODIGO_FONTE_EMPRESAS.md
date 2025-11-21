@@ -80,7 +80,7 @@ import { toast } from "sonner";
 
 /**
  * Componente Tenants - Página de Gerenciamento de Empresas
- * 
+ *
  * Funcionalidades:
  * - Listar todas as empresas cadastradas
  * - Criar nova empresa via modal dialog
@@ -92,30 +92,30 @@ export default function Tenants() {
   // ============================================================================
   // ESTADO LOCAL
   // ============================================================================
-  
+
   // Campo de busca por nome ou CNPJ
   const [search, setSearch] = useState("");
-  
+
   // Filtro de status (all, active, inactive, suspended)
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  
+
   // Controla abertura/fechamento do modal de criar empresa
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // ============================================================================
   // tRPC HOOKS - QUERIES E MUTATIONS
   // ============================================================================
-  
+
   // Acesso ao utilitário de cache do React Query
   const utils = trpc.useUtils();
-  
+
   /**
    * Query: Listar todas as empresas (tenants)
-   * 
+   *
    * Entrada:
    *   - search: string para filtrar por nome/CNPJ
    *   - status: filtro de status
-   * 
+   *
    * Saída:
    *   - data: array de empresas
    *   - isLoading: boolean indicando carregamento
@@ -127,7 +127,7 @@ export default function Tenants() {
 
   /**
    * Mutation: Criar nova empresa
-   * 
+   *
    * Callbacks:
    *   - onSuccess: Invalida cache e fecha modal
    *   - onError: Mostra erro em toast
@@ -136,10 +136,10 @@ export default function Tenants() {
     onSuccess: () => {
       // Mostra notificação de sucesso
       toast.success("Empresa criada com sucesso!");
-      
+
       // Invalida o cache da query de listagem para refetch automático
       utils.tenants.list.invalidate();
-      
+
       // Aguarda um pouco antes de fechar para evitar erro de removeChild
       setTimeout(() => {
         setDialogOpen(false);
@@ -157,7 +157,7 @@ export default function Tenants() {
 
   /**
    * Handler: Submissão do formulário de criar empresa
-   * 
+   *
    * Fluxo:
    * 1. Previne comportamento padrão do form
    * 2. Extrai dados do FormData
@@ -192,11 +192,11 @@ export default function Tenants() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        
+
         {/* ====================================================================
             SEÇÃO 1: HEADER COM TÍTULO E BOTÃO
             ==================================================================== */}
-        
+
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Empresas</h1>
@@ -208,7 +208,7 @@ export default function Tenants() {
           {/* ================================================================
               MODAL DIALOG - CRIAR NOVA EMPRESA
               ================================================================ */}
-          
+
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             {/* Trigger: Botão que abre o modal */}
             <DialogTrigger asChild>
@@ -217,11 +217,11 @@ export default function Tenants() {
                 Nova Empresa
               </Button>
             </DialogTrigger>
-            
+
             {/* Conteúdo do Modal */}
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <form onSubmit={handleSubmit}>
-                
+
                 {/* Header do Modal */}
                 <DialogHeader>
                   <DialogTitle>Nova Empresa</DialogTitle>
@@ -232,7 +232,7 @@ export default function Tenants() {
 
                 {/* Campos do Formulário */}
                 <div className="grid gap-4 py-4">
-                  
+
                   {/* Campo: Nome da Empresa (Obrigatório) */}
                   <div className="grid gap-2">
                     <Label htmlFor="name">Nome da Empresa *</Label>
@@ -308,15 +308,15 @@ export default function Tenants() {
 
                 {/* Footer do Modal com Botões */}
                 <DialogFooter>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                  <Button
+                    type="button"
+                    variant="outline"
                     onClick={() => setDialogOpen(false)}
                   >
                     Cancelar
                   </Button>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     disabled={createMutation.isPending}
                   >
                     {createMutation.isPending ? "Criando..." : "Criar Empresa"}
@@ -330,7 +330,7 @@ export default function Tenants() {
         {/* ====================================================================
             SEÇÃO 2: CARD DE FILTROS
             ==================================================================== */}
-        
+
         <Card>
           <CardHeader>
             <CardTitle>Filtros</CardTitle>
@@ -338,7 +338,7 @@ export default function Tenants() {
           </CardHeader>
           <CardContent>
             <div className="flex gap-4">
-              
+
               {/* Filtro 1: Busca por Nome ou CNPJ */}
               <div className="flex-1">
                 <div className="relative">
@@ -351,7 +351,7 @@ export default function Tenants() {
                   />
                 </div>
               </div>
-              
+
               {/* Filtro 2: Status */}
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[180px]">
@@ -371,7 +371,7 @@ export default function Tenants() {
         {/* ====================================================================
             SEÇÃO 3: CARD COM TABELA DE EMPRESAS
             ==================================================================== */}
-        
+
         <Card>
           <CardHeader>
             <CardTitle>Empresas Cadastradas</CardTitle>
@@ -380,18 +380,18 @@ export default function Tenants() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            
+
             {/* Estado 1: Carregando */}
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
               </div>
-            ) 
-            
+            )
+
             /* Estado 2: Com dados */
             : tenants && tenants.length > 0 ? (
               <Table>
-                
+
                 {/* Cabeçalho da Tabela */}
                 <TableHeader>
                   <TableRow>
@@ -402,34 +402,34 @@ export default function Tenants() {
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
-                
+
                 {/* Corpo da Tabela */}
                 <TableBody>
                   {tenants.map((tenant) => (
                     <TableRow key={tenant.id}>
-                      
+
                       {/* Coluna: Nome da Empresa */}
                       <TableCell className="font-medium">
                         {tenant.name}
                       </TableCell>
-                      
+
                       {/* Coluna: CNPJ */}
                       <TableCell>
                         {tenant.cnpj}
                       </TableCell>
-                      
+
                       {/* Coluna: Cidade/UF */}
                       <TableCell>
                         {tenant.city && tenant.state
                           ? `${tenant.city}/${tenant.state}`
                           : "-"}
                       </TableCell>
-                      
+
                       {/* Coluna: Contato */}
                       <TableCell>
                         {tenant.contactName || tenant.contactEmail || "-"}
                       </TableCell>
-                      
+
                       {/* Coluna: Status com Badge Colorido */}
                       <TableCell>
                         <span
@@ -452,8 +452,8 @@ export default function Tenants() {
                   ))}
                 </TableBody>
               </Table>
-            ) 
-            
+            )
+
             /* Estado 3: Sem dados */
             : (
               <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -553,16 +553,16 @@ Tabela atualiza com nova empresa
 
 ## 🎨 Componentes shadcn/ui Utilizados
 
-| Componente | Uso | Linha |
-|-----------|-----|-------|
-| `DashboardLayout` | Layout com sidebar | 1 |
-| `Button` | Botões (Nova Empresa, Cancelar, Criar) | 2 |
-| `Card` | Cards para Filtros e Tabela | 4-8 |
-| `Dialog` | Modal para criar empresa | 11-17 |
-| `Input` | Campos de texto (nome, CNPJ, etc) | 19 |
-| `Label` | Labels dos campos | 20 |
-| `Select` | Dropdown de status | 22-27 |
-| `Table` | Tabela de empresas | 29-35 |
+| Componente        | Uso                                    | Linha |
+| ----------------- | -------------------------------------- | ----- |
+| `DashboardLayout` | Layout com sidebar                     | 1     |
+| `Button`          | Botões (Nova Empresa, Cancelar, Criar) | 2     |
+| `Card`            | Cards para Filtros e Tabela            | 4-8   |
+| `Dialog`          | Modal para criar empresa               | 11-17 |
+| `Input`           | Campos de texto (nome, CNPJ, etc)      | 19    |
+| `Label`           | Labels dos campos                      | 20    |
+| `Select`          | Dropdown de status                     | 22-27 |
+| `Table`           | Tabela de empresas                     | 29-35 |
 
 ---
 
@@ -586,12 +586,13 @@ Tabela atualiza com nova empresa
 ### Backend (server/routers/tenants.ts)
 
 1. **Validação com Zod:**
+
    ```typescript
    z.object({
      name: z.string().min(1),
      cnpj: z.string().regex(/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/),
      // ... outros campos
-   })
+   });
    ```
 
 2. **Autenticação:**
@@ -677,6 +678,7 @@ Tabela atualiza com nova empresa
 ## 🔧 Extensões Futuras
 
 1. **Adicionar Ações por Linha:**
+
    ```typescript
    <TableCell>
      <DropdownMenu>
@@ -691,6 +693,7 @@ Tabela atualiza com nova empresa
    ```
 
 2. **Paginação:**
+
    ```typescript
    const [page, setPage] = useState(1);
    const { data: tenants } = trpc.tenants.list.useQuery({
@@ -700,12 +703,16 @@ Tabela atualiza com nova empresa
    ```
 
 3. **Ordenação:**
+
    ```typescript
-   const [sortBy, setSortBy] = useState<'name' | 'status' | 'createdAt'>('name');
-   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+   const [sortBy, setSortBy] = useState<"name" | "status" | "createdAt">(
+     "name"
+   );
+   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
    ```
 
 4. **Edição Inline:**
+
    ```typescript
    const [editingId, setEditingId] = useState<string | null>(null);
    // Renderizar input em vez de texto quando editingId === tenant.id
@@ -715,7 +722,7 @@ Tabela atualiza com nova empresa
    ```typescript
    const handleExport = () => {
      const csv = convertToCSV(tenants);
-     downloadCSV(csv, 'empresas.csv');
+     downloadCSV(csv, "empresas.csv");
    };
    ```
 
@@ -724,20 +731,24 @@ Tabela atualiza com nova empresa
 ## 📚 Referências de Componentes
 
 ### DashboardLayout
+
 - **Arquivo:** `client/src/components/DashboardLayout.tsx`
 - **Função:** Fornece sidebar e layout padrão
 - **Props:** `children` (React.ReactNode)
 
 ### Button
+
 - **Arquivo:** `client/src/components/ui/button.tsx`
 - **Variantes:** default, outline, ghost, destructive
 - **Sizes:** sm, md, lg
 
 ### Dialog
+
 - **Arquivo:** `client/src/components/ui/dialog.tsx`
 - **Componentes:** Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
 
 ### Table
+
 - **Arquivo:** `client/src/components/ui/table.tsx`
 - **Componentes:** Table, TableHeader, TableBody, TableRow, TableHead, TableCell
 
@@ -764,4 +775,3 @@ Tabela atualiza com nova empresa
 ---
 
 **Fim do Código-Fonte da Página de Empresas**
-

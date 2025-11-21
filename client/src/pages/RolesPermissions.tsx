@@ -168,7 +168,7 @@ export default function RolesPermissions() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -180,11 +180,11 @@ export default function RolesPermissions() {
   };
 
   const getPermissionsByCategory = (roleId: string) => {
-    const role = roles.find((r) => r.id === roleId);
+    const role = roles.find(r => r.id === roleId);
     if (!role) return {};
 
     const grouped: Record<string, any[]> = {};
-    allPermissions.forEach((perm) => {
+    allPermissions.forEach(perm => {
       if (!grouped[perm.category]) {
         grouped[perm.category] = [];
       }
@@ -205,7 +205,10 @@ export default function RolesPermissions() {
               Perfis e Permissões
             </h1>
             <p className="text-muted-foreground">
-              Gerencie roles e controle de acesso - {typeof selectedTenant === 'string' ? selectedTenant : selectedTenant?.name}
+              Gerencie roles e controle de acesso -{" "}
+              {typeof selectedTenant === "string"
+                ? selectedTenant
+                : selectedTenant?.name}
             </p>
           </div>
 
@@ -267,7 +270,7 @@ export default function RolesPermissions() {
 
         {/* Lista de Perfis */}
         <div className="space-y-4">
-          {roles.map((role) => (
+          {roles.map(role => (
             <Card key={role.id}>
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -315,7 +318,9 @@ export default function RolesPermissions() {
                 {/* Informações do Perfil */}
                 <div className="grid md:grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-muted-foreground">Usuários com este perfil</p>
+                    <p className="text-muted-foreground">
+                      Usuários com este perfil
+                    </p>
                     <p className="font-semibold">{role.users}</p>
                   </div>
                   <div>
@@ -335,7 +340,7 @@ export default function RolesPermissions() {
                             {category}
                           </p>
                           <div className="space-y-1 ml-2">
-                            {(perms as any[]).map((perm) => (
+                            {(perms as any[]).map(perm => (
                               <div
                                 key={perm.id}
                                 className="flex items-center gap-2 text-sm"
@@ -377,24 +382,19 @@ export default function RolesPermissions() {
           </CardHeader>
           <CardContent className="text-sm text-blue-800 space-y-2">
             <p>
-              • Cada usuário tem um perfil que define suas permissões na plataforma
+              • Cada usuário tem um perfil que define suas permissões na
+              plataforma
             </p>
+            <p>• Perfis de sistema (Administrador) não podem ser deletados</p>
             <p>
-              • Perfis de sistema (Administrador) não podem ser deletados
+              • Perfis customizados podem ser criados e editados conforme
+              necessário
             </p>
-            <p>
-              • Perfis customizados podem ser criados e editados conforme necessário
-            </p>
-            <p>
-              • As permissões são verificadas em tempo real para cada ação
-            </p>
-            <p>
-              • Todas as mudanças de perfil são registradas na auditoria
-            </p>
+            <p>• As permissões são verificadas em tempo real para cada ação</p>
+            <p>• Todas as mudanças de perfil são registradas na auditoria</p>
           </CardContent>
         </Card>
       </div>
     </DashboardLayout>
   );
 }
-

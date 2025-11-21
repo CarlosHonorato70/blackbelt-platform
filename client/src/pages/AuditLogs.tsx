@@ -28,7 +28,13 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import { exportToJSON, exportToExcel, exportToCSV, generateAuditReport, exportToPDF } from "@/lib/exportUtils";
+import {
+  exportToJSON,
+  exportToExcel,
+  exportToCSV,
+  generateAuditReport,
+  exportToPDF,
+} from "@/lib/exportUtils";
 
 export default function AuditLogs() {
   const { selectedTenant } = useTenant();
@@ -199,21 +205,21 @@ export default function AuditLogs() {
     }
   };
 
-  const filteredLogs = auditLogs.filter((log) => {
-    if (
-      filters.action !== "todos" &&
-      log.action !== filters.action
-    ) {
+  const filteredLogs = auditLogs.filter(log => {
+    if (filters.action !== "todos" && log.action !== filters.action) {
       return false;
     }
-    if (filters.user && !log.user.toLowerCase().includes(filters.user.toLowerCase())) {
+    if (
+      filters.user &&
+      !log.user.toLowerCase().includes(filters.user.toLowerCase())
+    ) {
       return false;
     }
     return true;
   });
 
   const handleFilterChange = (key: string, value: string) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
+    setFilters(prev => ({ ...prev, [key]: value }));
   };
 
   const handleClearFilters = () => {
@@ -232,11 +238,17 @@ export default function AuditLogs() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Auditoria</h1>
             <p className="text-muted-foreground">
-              Logs de todas as ações na plataforma - {typeof selectedTenant === 'string' ? selectedTenant : selectedTenant?.name}
+              Logs de todas as ações na plataforma -{" "}
+              {typeof selectedTenant === "string"
+                ? selectedTenant
+                : selectedTenant?.name}
             </p>
           </div>
 
-          <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+          >
             <Filter className="h-4 w-4 mr-2" />
             Filtros
           </Button>
@@ -251,9 +263,7 @@ export default function AuditLogs() {
                   <label className="text-sm font-medium">Ação</label>
                   <Select
                     value={filters.action}
-                    onValueChange={(value) =>
-                      handleFilterChange("action", value)
-                    }
+                    onValueChange={value => handleFilterChange("action", value)}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -273,9 +283,7 @@ export default function AuditLogs() {
                   <Input
                     placeholder="Filtrar por usuário..."
                     value={filters.user}
-                    onChange={(e) =>
-                      handleFilterChange("user", e.target.value)
-                    }
+                    onChange={e => handleFilterChange("user", e.target.value)}
                   />
                 </div>
 
@@ -284,7 +292,7 @@ export default function AuditLogs() {
                   <Input
                     type="date"
                     value={filters.dateFrom}
-                    onChange={(e) =>
+                    onChange={e =>
                       handleFilterChange("dateFrom", e.target.value)
                     }
                   />
@@ -295,25 +303,23 @@ export default function AuditLogs() {
                   <Input
                     type="date"
                     value={filters.dateTo}
-                    onChange={(e) =>
-                      handleFilterChange("dateTo", e.target.value)
-                    }
+                    onChange={e => handleFilterChange("dateTo", e.target.value)}
                   />
                 </div>
               </div>
 
               <div className="flex gap-2 justify-end mt-4">
-                <Button
-                  variant="outline"
-                  onClick={handleClearFilters}
-                >
+                <Button variant="outline" onClick={handleClearFilters}>
                   <X className="h-4 w-4 mr-2" />
                   Limpar Filtros
                 </Button>
                 <Button
                   onClick={() => {
                     const report = generateAuditReport(filteredLogs);
-                    exportToPDF(report, `auditoria_${new Date().toISOString().split('T')[0]}.txt`);
+                    exportToPDF(
+                      report,
+                      `auditoria_${new Date().toISOString().split("T")[0]}.txt`
+                    );
                   }}
                 >
                   <Download className="h-4 w-4 mr-2" />
@@ -321,7 +327,10 @@ export default function AuditLogs() {
                 </Button>
                 <Button
                   onClick={() => {
-                    exportToJSON(filteredLogs, `auditoria_${new Date().toISOString().split('T')[0]}.json`);
+                    exportToJSON(
+                      filteredLogs,
+                      `auditoria_${new Date().toISOString().split("T")[0]}.json`
+                    );
                   }}
                   variant="outline"
                 >
@@ -330,7 +339,11 @@ export default function AuditLogs() {
                 </Button>
                 <Button
                   onClick={() => {
-                    exportToExcel(filteredLogs, `auditoria_${new Date().toISOString().split('T')[0]}.xlsx`, 'Auditoria');
+                    exportToExcel(
+                      filteredLogs,
+                      `auditoria_${new Date().toISOString().split("T")[0]}.xlsx`,
+                      "Auditoria"
+                    );
                   }}
                   variant="outline"
                 >
@@ -346,7 +359,9 @@ export default function AuditLogs() {
         <div className="grid md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Total de Ações</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total de Ações
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold">{auditLogs.length}</p>
@@ -359,7 +374,7 @@ export default function AuditLogs() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-green-600">
-                {auditLogs.filter((l) => l.action === "criar").length}
+                {auditLogs.filter(l => l.action === "criar").length}
               </p>
             </CardContent>
           </Card>
@@ -370,7 +385,7 @@ export default function AuditLogs() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-blue-600">
-                {auditLogs.filter((l) => l.action === "editar").length}
+                {auditLogs.filter(l => l.action === "editar").length}
               </p>
             </CardContent>
           </Card>
@@ -381,7 +396,7 @@ export default function AuditLogs() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-red-600">
-                {auditLogs.filter((l) => l.action === "deletar").length}
+                {auditLogs.filter(l => l.action === "deletar").length}
               </p>
             </CardContent>
           </Card>
@@ -397,7 +412,7 @@ export default function AuditLogs() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {filteredLogs.map((log) => (
+              {filteredLogs.map(log => (
                 <div
                   key={log.id}
                   className="flex items-start gap-4 p-4 border rounded-lg hover:bg-gray-50"
@@ -428,7 +443,9 @@ export default function AuditLogs() {
                         <span className="text-xs">IP: {log.ipAddress}</span>
                       </div>
                       <div>
-                        <span className="text-xs truncate">{log.userAgent}</span>
+                        <span className="text-xs truncate">
+                          {log.userAgent}
+                        </span>
                       </div>
                     </div>
 
@@ -464,30 +481,22 @@ export default function AuditLogs() {
         {/* Informações sobre Auditoria */}
         <Card className="border-blue-200 bg-blue-50">
           <CardHeader>
-            <CardTitle className="text-blue-900">
-              Sobre a Auditoria
-            </CardTitle>
+            <CardTitle className="text-blue-900">Sobre a Auditoria</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-blue-800 space-y-2">
             <p>
               • Todas as ações na plataforma são registradas automaticamente
             </p>
             <p>
-              • Os logs incluem informações do usuário, IP, navegador e timestamp
+              • Os logs incluem informações do usuário, IP, navegador e
+              timestamp
             </p>
-            <p>
-              • Mudanças de dados mostram valores antes e depois
-            </p>
-            <p>
-              • Os logs são mantidos por 2 anos para conformidade legal
-            </p>
-            <p>
-              • Você pode filtrar e exportar logs para análise
-            </p>
+            <p>• Mudanças de dados mostram valores antes e depois</p>
+            <p>• Os logs são mantidos por 2 anos para conformidade legal</p>
+            <p>• Você pode filtrar e exportar logs para análise</p>
           </CardContent>
         </Card>
       </div>
     </DashboardLayout>
   );
 }
-

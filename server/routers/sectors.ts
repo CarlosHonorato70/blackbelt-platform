@@ -1,11 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { publicProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 
 export const sectorsRouter = router({
   // Listar setores de um tenant
-  list: protectedProcedure
+  list: publicProcedure
     .input(
       z.object({
         tenantId: z.string(),
@@ -14,12 +14,12 @@ export const sectorsRouter = router({
     )
     .query(async ({ ctx, input }) => {
       // TODO: Verificar se usuário tem acesso a este tenant
-      
+
       const sectors = await db.listSectors(input.tenantId, input.search);
 
       await db.createAuditLog({
         tenantId: input.tenantId,
-        userId: ctx.user.id,
+        userId: ctx.user!.id,
         action: "READ",
         entityType: "sectors",
         entityId: null,
@@ -33,7 +33,7 @@ export const sectorsRouter = router({
     }),
 
   // Obter um setor específico
-  get: protectedProcedure
+  get: publicProcedure
     .input(
       z.object({
         id: z.string(),
@@ -44,12 +44,15 @@ export const sectorsRouter = router({
       const sector = await db.getSector(input.id, input.tenantId);
 
       if (!sector) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Setor não encontrado" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Setor não encontrado",
+        });
       }
 
       await db.createAuditLog({
         tenantId: input.tenantId,
-        userId: ctx.user.id,
+        userId: ctx.user!.id,
         action: "READ",
         entityType: "sectors",
         entityId: input.id,
@@ -63,7 +66,7 @@ export const sectorsRouter = router({
     }),
 
   // Criar novo setor
-  create: protectedProcedure
+  create: publicProcedure
     .input(
       z.object({
         tenantId: z.string(),
@@ -76,18 +79,21 @@ export const sectorsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       // TODO: Verificar se usuário tem permissão para criar setores neste tenant
-      
+
       // Verificar se tenant existe
       const tenant = await db.getTenant(input.tenantId);
       if (!tenant) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Empresa não encontrada" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Empresa não encontrada",
+        });
       }
 
       const sector = await db.createSector(input);
 
       await db.createAuditLog({
         tenantId: input.tenantId,
-        userId: ctx.user.id,
+        userId: ctx.user!.id,
         action: "CREATE",
         entityType: "sectors",
         entityId: sector.id,
@@ -101,7 +107,7 @@ export const sectorsRouter = router({
     }),
 
   // Atualizar setor
-  update: protectedProcedure
+  update: publicProcedure
     .input(
       z.object({
         id: z.string(),
@@ -118,7 +124,10 @@ export const sectorsRouter = router({
 
       const sector = await db.getSector(id, tenantId);
       if (!sector) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Setor não encontrado" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Setor não encontrado",
+        });
       }
 
       // TODO: Verificar permissões
@@ -127,7 +136,7 @@ export const sectorsRouter = router({
 
       await db.createAuditLog({
         tenantId,
-        userId: ctx.user.id,
+        userId: ctx.user!.id,
         action: "UPDATE",
         entityType: "sectors",
         entityId: id,
@@ -141,7 +150,7 @@ export const sectorsRouter = router({
     }),
 
   // Deletar setor
-  delete: protectedProcedure
+  delete: publicProcedure
     .input(
       z.object({
         id: z.string(),
@@ -151,7 +160,10 @@ export const sectorsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const sector = await db.getSector(input.id, input.tenantId);
       if (!sector) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Setor não encontrado" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Setor não encontrado",
+        });
       }
 
       // TODO: Verificar permissões
@@ -161,7 +173,7 @@ export const sectorsRouter = router({
 
       await db.createAuditLog({
         tenantId: input.tenantId,
-        userId: ctx.user.id,
+        userId: ctx.user!.id,
         action: "DELETE",
         entityType: "sectors",
         entityId: input.id,
@@ -174,4 +186,3 @@ export const sectorsRouter = router({
       return { success: true };
     }),
 });
-

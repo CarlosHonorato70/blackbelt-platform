@@ -33,12 +33,12 @@ Criar uma **plataforma SaaS unificada** que integre:
 
 ### Públicos-Alvo
 
-| Público | Necessidade | Solução |
-|---------|------------|---------|
-| **Consultores Black Belt** | Gerenciar múltiplos clientes e avaliar riscos | Dashboard centralizado com acesso a todas as avaliações |
-| **Empresas Clientes** | Cumprir NR-01 e gerenciar riscos | Portal de visualização de avaliações e ações corretivas |
-| **Gestores Administrativos** | Gerar propostas e controlar preços | Compositor de propostas com cálculos automáticos |
-| **Administradores** | Conformidade regulatória e auditoria | Sistema completo de logs e rastreabilidade |
+| Público                      | Necessidade                                   | Solução                                                 |
+| ---------------------------- | --------------------------------------------- | ------------------------------------------------------- |
+| **Consultores Black Belt**   | Gerenciar múltiplos clientes e avaliar riscos | Dashboard centralizado com acesso a todas as avaliações |
+| **Empresas Clientes**        | Cumprir NR-01 e gerenciar riscos              | Portal de visualização de avaliações e ações corretivas |
+| **Gestores Administrativos** | Gerar propostas e controlar preços            | Compositor de propostas com cálculos automáticos        |
+| **Administradores**          | Conformidade regulatória e auditoria          | Sistema completo de logs e rastreabilidade              |
 
 ### Diferenciais Competitivos
 
@@ -57,6 +57,7 @@ Criar uma **plataforma SaaS unificada** que integre:
 ### Plataforma 1: Black Belt Platform (Gestão de Riscos)
 
 **Funcionalidades Principais:**
+
 - ✅ Avaliações NR-01 com formulários completos
 - ✅ Cálculo automático de níveis de risco
 - ✅ Relatórios de compliance
@@ -68,12 +69,14 @@ Criar uma **plataforma SaaS unificada** que integre:
 - ✅ Exportação em múltiplos formatos
 
 **Stack Tecnológico:**
+
 - Frontend: React 19 + Tailwind CSS 4 + TypeScript
 - Backend: Express 4 + tRPC 11
 - Database: MySQL 8+ com Drizzle ORM
 - Auth: OAuth 2.0 (Manus)
 
 **Limitações:**
+
 - ❌ Sem sistema de precificação
 - ❌ Sem gestão de propostas comerciais
 - ❌ Sem cálculo de hora técnica
@@ -84,6 +87,7 @@ Criar uma **plataforma SaaS unificada** que integre:
 ### Plataforma 2: Black Belt Pricing SaaS (Precificação)
 
 **Funcionalidades Principais:**
+
 - ✅ Cálculo automático de hora técnica (4 regimes tributários)
 - ✅ Descontos por volume configuráveis
 - ✅ Gestão de clientes com CRUD completo
@@ -94,12 +98,14 @@ Criar uma **plataforma SaaS unificada** que integre:
 - ✅ Gestão de parâmetros de precificação
 
 **Stack Tecnológico:**
+
 - Frontend: React 19 + Tailwind CSS 4 + TypeScript
 - Backend: Express 4 + tRPC 11
 - Database: MySQL 8+ com Drizzle ORM
 - Auth: OAuth 2.0 (Manus)
 
 **Limitações:**
+
 - ❌ Sem avaliações de riscos psicossociais
 - ❌ Sem conformidade NR-01
 - ❌ Sem auditoria de ações
@@ -184,6 +190,7 @@ Criar uma **plataforma SaaS unificada** que integre:
 ### Tabelas Principais (Consolidadas)
 
 #### Core (Autenticação e Autorização)
+
 ```sql
 -- Usuários do sistema
 users {
@@ -213,6 +220,7 @@ permissions {
 ```
 
 #### Multi-Tenant (Gestão Empresarial)
+
 ```sql
 -- Empresas/Tenants
 tenants {
@@ -244,6 +252,7 @@ people {
 ```
 
 #### Conformidade NR-01 (Gestão de Riscos)
+
 ```sql
 -- Avaliações de risco
 riskAssessments {
@@ -285,6 +294,7 @@ complianceReports {
 ```
 
 #### Precificação (Gestão de Propostas)
+
 ```sql
 -- Clientes (para precificação)
 clients {
@@ -351,6 +361,7 @@ proposalItems {
 ```
 
 #### Auditoria e Conformidade
+
 ```sql
 -- Logs de auditoria
 auditLogs {
@@ -424,6 +435,7 @@ clients (1) ──→ (N) proposals
 ### Módulo 1: Conformidade NR-01 (Existente + Melhorias)
 
 #### Funcionalidades Atuais
+
 - ✅ Avaliações de riscos psicossociais
 - ✅ Cálculo automático de níveis de risco
 - ✅ Relatórios de compliance
@@ -431,6 +443,7 @@ clients (1) ──→ (N) proposals
 - ✅ Exportação LGPD (DSR)
 
 #### Melhorias Propostas
+
 - 🆕 Integração com propostas (vincular avaliação → proposta de serviço)
 - 🆕 Recomendações de serviços baseadas em risco
 - 🆕 Histórico de avaliações por empresa
@@ -442,6 +455,7 @@ clients (1) ──→ (N) proposals
 ### Módulo 2: Precificação Integrada (Novo)
 
 #### Funcionalidades Principais
+
 - ✅ Cálculo automático de hora técnica
 - ✅ Suporte a 4 regimes tributários (MEI, SN, LP, Autônomo)
 - ✅ Descontos por volume configuráveis
@@ -451,6 +465,7 @@ clients (1) ──→ (N) proposals
 - ✅ Geração de propostas em HTML/PDF
 
 #### Novas Integrações
+
 - 🆕 Propostas baseadas em avaliações NR-01
 - 🆕 Recomendações automáticas de serviços
 - 🆕 Histórico de propostas por cliente
@@ -462,6 +477,7 @@ clients (1) ──→ (N) proposals
 ### Módulo 3: Gestão Empresarial (Existente)
 
 #### Funcionalidades
+
 - ✅ Gestão de empresas (tenants)
 - ✅ Gestão de setores
 - ✅ Gestão de colaboradores
@@ -473,12 +489,14 @@ clients (1) ──→ (N) proposals
 ### Módulo 4: Análise e Relatórios (Novo)
 
 #### Dashboards Executivos
+
 - 📊 Dashboard de Conformidade: Status NR-01 por empresa
 - 📊 Dashboard de Precificação: Propostas, receita, rentabilidade
 - 📊 Dashboard de Auditoria: Ações, mudanças, conformidade
 - 📊 Dashboard de Testes E2E: Status de testes automatizados
 
 #### Relatórios Disponíveis
+
 - 📄 Relatório de Conformidade NR-01 (PDF)
 - 📄 Relatório de Propostas (Excel)
 - 📄 Relatório de Auditoria (PDF)
@@ -615,6 +633,7 @@ Admin pode:
 - [ ] Criar documentação de arquitetura
 
 **Entregáveis:**
+
 - Schema integrado em Drizzle
 - Migrations preparadas
 - Documentação técnica
@@ -626,25 +645,29 @@ Admin pode:
 **Objetivo:** Consolidar routers e lógica de negócio
 
 #### 2.1: Consolidar Módulo de Conformidade
-- [ ] Migrar riskAssessments.* routers
-- [ ] Migrar complianceReports.* routers
+
+- [ ] Migrar riskAssessments.\* routers
+- [ ] Migrar complianceReports.\* routers
 - [ ] Atualizar db helpers para novo schema
 - [ ] Adicionar validações integradas
 
 #### 2.2: Integrar Módulo de Precificação
-- [ ] Migrar pricing.* routers
-- [ ] Migrar proposals.* routers
-- [ ] Migrar clients.* routers
-- [ ] Migrar services.* routers
+
+- [ ] Migrar pricing.\* routers
+- [ ] Migrar proposals.\* routers
+- [ ] Migrar clients.\* routers
+- [ ] Migrar services.\* routers
 - [ ] Atualizar lógica de cálculo
 
 #### 2.3: Consolidar Módulos Transversais
-- [ ] Unificar auth.* routers
-- [ ] Consolidar rolesPermissions.* routers
-- [ ] Integrar auditLogs.* routers
-- [ ] Unificar dataExport.* routers
+
+- [ ] Unificar auth.\* routers
+- [ ] Consolidar rolesPermissions.\* routers
+- [ ] Integrar auditLogs.\* routers
+- [ ] Unificar dataExport.\* routers
 
 **Entregáveis:**
+
 - Routers consolidados
 - DB helpers atualizados
 - Testes unitários passando
@@ -656,34 +679,40 @@ Admin pode:
 **Objetivo:** Criar interface unificada
 
 #### 3.1: Dashboard Principal
+
 - [ ] Criar dashboard com seletor de empresa
 - [ ] Mostrar KPIs consolidados
 - [ ] Exibir atalhos para funcionalidades principais
 - [ ] Implementar notificações em tempo real
 
 #### 3.2: Páginas de Conformidade
+
 - [ ] Migrar RiskAssessments.tsx
 - [ ] Migrar ComplianceReports.tsx
 - [ ] Adicionar integração com propostas
 
 #### 3.3: Páginas de Precificação
+
 - [ ] Criar Clients.tsx
 - [ ] Criar Services.tsx
 - [ ] Criar Proposals.tsx (compositor)
 - [ ] Criar PricingParameters.tsx
 
 #### 3.4: Páginas de Gestão
+
 - [ ] Migrar Tenants.tsx
 - [ ] Migrar Sectors.tsx
 - [ ] Migrar People.tsx
 - [ ] Migrar RolesPermissions.tsx
 
 #### 3.5: Páginas de Auditoria
+
 - [ ] Migrar AuditLogs.tsx
 - [ ] Migrar DataExport.tsx
 - [ ] Criar Dashboard de Auditoria
 
 **Entregáveis:**
+
 - Interface unificada
 - Todas as páginas funcionais
 - Navegação integrada
@@ -701,6 +730,7 @@ Admin pode:
 - [ ] Implementar alertas automáticos
 
 **Entregáveis:**
+
 - Fluxos de negócio funcionando
 - Recomendações automáticas
 - Análises integradas
@@ -719,6 +749,7 @@ Admin pode:
 - [ ] Testes de cálculos de precificação
 
 **Entregáveis:**
+
 - Plano de testes E2E
 - Dashboard de testes
 - Relatório de cobertura
@@ -739,6 +770,7 @@ Admin pode:
 - [ ] Deploy em produção
 
 **Entregáveis:**
+
 - Plataforma em produção
 - Documentação completa
 - Suporte operacional
@@ -749,43 +781,43 @@ Admin pode:
 
 ### Métricas de Funcionalidade
 
-| Métrica | Meta | Atual |
-|---------|------|-------|
-| Cobertura de Testes | 80%+ | 0% |
-| Testes E2E Passando | 100% | 0% |
-| Conformidade NR-01 | 100% | 100% |
-| Conformidade LGPD | 100% | 100% |
-| Funcionalidades Implementadas | 100% | 50% |
+| Métrica                       | Meta | Atual |
+| ----------------------------- | ---- | ----- |
+| Cobertura de Testes           | 80%+ | 0%    |
+| Testes E2E Passando           | 100% | 0%    |
+| Conformidade NR-01            | 100% | 100%  |
+| Conformidade LGPD             | 100% | 100%  |
+| Funcionalidades Implementadas | 100% | 50%   |
 
 ### Métricas de Performance
 
-| Métrica | Meta | Baseline |
-|---------|------|----------|
-| Tempo de Resposta P95 | < 1s | 0.8s |
-| Disponibilidade | 99.9% | N/A |
-| Taxa de Erro | < 0.1% | N/A |
-| Tempo de Carregamento | < 2s | 1.5s |
-| Cálculo de Proposta | < 500ms | N/A |
+| Métrica               | Meta    | Baseline |
+| --------------------- | ------- | -------- |
+| Tempo de Resposta P95 | < 1s    | 0.8s     |
+| Disponibilidade       | 99.9%   | N/A      |
+| Taxa de Erro          | < 0.1%  | N/A      |
+| Tempo de Carregamento | < 2s    | 1.5s     |
+| Cálculo de Proposta   | < 500ms | N/A      |
 
 ### Métricas de Negócio
 
-| Métrica | Meta | Baseline |
-|---------|------|----------|
-| Propostas Geradas/Mês | 100+ | 0 |
-| Taxa de Aceitação | 70%+ | N/A |
-| Receita Média/Proposta | R$ 5.000+ | N/A |
-| Tempo de Criação de Proposta | < 5min | N/A |
-| Satisfação do Usuário | 4.5/5 | N/A |
+| Métrica                      | Meta      | Baseline |
+| ---------------------------- | --------- | -------- |
+| Propostas Geradas/Mês        | 100+      | 0        |
+| Taxa de Aceitação            | 70%+      | N/A      |
+| Receita Média/Proposta       | R$ 5.000+ | N/A      |
+| Tempo de Criação de Proposta | < 5min    | N/A      |
+| Satisfação do Usuário        | 4.5/5     | N/A      |
 
 ### Métricas de Segurança
 
-| Métrica | Meta | Status |
-|---------|------|--------|
-| Autenticação OAuth | ✅ | ✅ |
-| Isolamento Multi-Tenant | ✅ | ✅ |
-| Auditoria Completa | ✅ | ✅ |
-| Criptografia de Dados | ✅ | ✅ |
-| LGPD Compliance | ✅ | ✅ |
+| Métrica                 | Meta | Status |
+| ----------------------- | ---- | ------ |
+| Autenticação OAuth      | ✅   | ✅     |
+| Isolamento Multi-Tenant | ✅   | ✅     |
+| Auditoria Completa      | ✅   | ✅     |
+| Criptografia de Dados   | ✅   | ✅     |
+| LGPD Compliance         | ✅   | ✅     |
 
 ---
 
@@ -809,4 +841,3 @@ Admin pode:
 ---
 
 **Documento Confidencial - Apenas para Uso Interno**
-

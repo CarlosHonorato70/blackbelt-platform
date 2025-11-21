@@ -21,8 +21,8 @@ import TestDashboard from "./pages/TestDashboard";
 function Router() {
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/dashboard"} component={Dashboard} />
+      <Route path={"/"} component={Dashboard} />
+      <Route path={"/home"} component={Home} />
       <Route path={"/compliance-reports"} component={ComplianceReports} />
       <Route path={"/user-invites"} component={UserInvites} />
       <Route path={"/roles-permissions"} component={RolesPermissions} />
@@ -54,4 +54,3 @@ function App() {
 }
 
 export default App;
-

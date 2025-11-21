@@ -62,7 +62,7 @@ export default function People() {
         setDialogOpen(false);
       }, 100);
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(error.message || "Erro ao criar colaborador");
     },
   });
@@ -92,7 +92,8 @@ export default function People() {
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold">Nenhuma empresa selecionada</h3>
           <p className="text-sm text-muted-foreground mt-2">
-            Selecione uma empresa no menu lateral para visualizar e gerenciar seus colaboradores
+            Selecione uma empresa no menu lateral para visualizar e gerenciar
+            seus colaboradores
           </p>
         </div>
       </DashboardLayout>
@@ -106,7 +107,8 @@ export default function People() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Colaboradores</h1>
             <p className="text-muted-foreground">
-              Gerencie os colaboradores de <span className="font-semibold">{selectedTenant.name}</span>
+              Gerencie os colaboradores de{" "}
+              <span className="font-semibold">{selectedTenant.name}</span>
             </p>
           </div>
 
@@ -139,18 +141,18 @@ export default function People() {
 
                   <div className="grid gap-2">
                     <Label htmlFor="sectorId">Setor *</Label>
-                      <Select name="sectorId" required>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o setor" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {sectors?.map((sector) => (
-                            <SelectItem key={sector.id} value={sector.id}>
-                              {sector.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <Select name="sectorId" required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o setor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sectors?.map(sector => (
+                          <SelectItem key={sector.id} value={sector.id}>
+                            {sector.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="grid gap-2">
@@ -186,11 +188,17 @@ export default function People() {
                 </div>
 
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDialogOpen(false)}
+                  >
                     Cancelar
                   </Button>
                   <Button type="submit" disabled={createMutation.isPending}>
-                    {createMutation.isPending ? "Criando..." : "Criar Colaborador"}
+                    {createMutation.isPending
+                      ? "Criando..."
+                      : "Criar Colaborador"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -202,12 +210,16 @@ export default function People() {
           <CardHeader>
             <CardTitle>Colaboradores Cadastrados</CardTitle>
             <CardDescription>
-              {isLoading ? "Carregando..." : `${people?.length || 0} colaborador(es) encontrado(s)`}
+              {isLoading
+                ? "Carregando..."
+                : `${people?.length || 0} colaborador(es) encontrado(s)`}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Carregando...</div>
+              <div className="text-center py-8 text-muted-foreground">
+                Carregando...
+              </div>
             ) : people && people.length > 0 ? (
               <Table>
                 <TableHeader>
@@ -220,9 +232,11 @@ export default function People() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {people.map((person) => (
+                  {people.map(person => (
                     <TableRow key={person.id}>
-                      <TableCell className="font-medium">{person.name}</TableCell>
+                      <TableCell className="font-medium">
+                        {person.name}
+                      </TableCell>
                       <TableCell>{person.sectorName || "-"}</TableCell>
                       <TableCell>{person.position}</TableCell>
                       <TableCell>{person.email || "-"}</TableCell>
@@ -234,9 +248,12 @@ export default function People() {
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Users className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold">Nenhum colaborador cadastrado</h3>
+                <h3 className="text-lg font-semibold">
+                  Nenhum colaborador cadastrado
+                </h3>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Comece criando o primeiro colaborador para {selectedTenant.name}
+                  Comece criando o primeiro colaborador para{" "}
+                  {selectedTenant.name}
                 </p>
               </div>
             )}
@@ -246,4 +263,3 @@ export default function People() {
     </DashboardLayout>
   );
 }
-

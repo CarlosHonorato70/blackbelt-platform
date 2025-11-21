@@ -66,20 +66,20 @@ export function NotificationCenter() {
     },
   ]);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const handleMarkAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+    setNotifications(prev =>
+      prev.map(n => (n.id === id ? { ...n, read: true } : n))
     );
   };
 
   const handleDelete = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
   const handleMarkAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
   const handleClearAll = () => {
@@ -128,7 +128,10 @@ export function NotificationCenter() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
+      <DropdownMenuContent
+        align="end"
+        className="w-80 max-h-96 overflow-y-auto"
+      >
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="font-semibold">Notificações</h3>
           {unreadCount > 0 && (
@@ -146,14 +149,12 @@ export function NotificationCenter() {
         {notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <Bell className="h-8 w-8 text-muted-foreground mb-2 opacity-50" />
-            <p className="text-sm text-muted-foreground">
-              Nenhuma notificação
-            </p>
+            <p className="text-sm text-muted-foreground">Nenhuma notificação</p>
           </div>
         ) : (
           <>
             <div className="space-y-2 p-2">
-              {notifications.map((notification) => (
+              {notifications.map(notification => (
                 <div
                   key={notification.id}
                   className={`p-3 rounded-lg space-y-1 cursor-pointer transition-colors hover:bg-gray-100 ${getNotificationColor(
@@ -176,7 +177,7 @@ export function NotificationCenter() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={(e) => {
+                      onClick={e => {
                         e.stopPropagation();
                         handleDelete(notification.id);
                       }}
@@ -211,4 +212,3 @@ export function NotificationCenter() {
     </DropdownMenu>
   );
 }
-

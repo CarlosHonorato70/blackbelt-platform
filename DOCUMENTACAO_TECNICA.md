@@ -1,4 +1,5 @@
 # Documentação Técnica - Black Belt Platform
+
 ## Plataforma de Gestão de Riscos Psicossociais e Desenvolvimento Humano
 
 **Versão:** 1.0.0  
@@ -110,11 +111,12 @@ CREATE TABLE sectors (
 );
 
 -- Query com RLS automático
-SELECT * FROM sectors 
+SELECT * FROM sectors
 WHERE tenantId = ? AND id = ?;
 ```
 
 **Benefícios:**
+
 - ✅ Dados isolados por empresa
 - ✅ Escalabilidade horizontal
 - ✅ Conformidade com LGPD (dados separados por pessoa jurídica)
@@ -126,50 +128,50 @@ WHERE tenantId = ? AND id = ?;
 
 ### Frontend
 
-| Tecnologia | Versão | Propósito |
-|-----------|--------|----------|
-| **React** | 19.1.1 | Framework UI |
-| **Vite** | 7.1.7 | Build tool e dev server |
-| **TypeScript** | 5.9.3 | Type safety |
-| **Tailwind CSS** | 4.1.14 | Styling utilitário |
-| **shadcn/ui** | Latest | Componentes acessíveis |
-| **Wouter** | 3.3.5 | Roteamento SPA |
-| **React Query** | 5.90.2 | State management (via tRPC) |
-| **Recharts** | 2.15.2 | Gráficos de dados |
-| **Framer Motion** | 12.23.22 | Animações |
-| **date-fns** | 4.1.0 | Manipulação de datas |
-| **Zod** | 4.1.12 | Validação de schemas |
-| **xlsx** | 0.18.5 | Exportação para Excel |
+| Tecnologia        | Versão   | Propósito                   |
+| ----------------- | -------- | --------------------------- |
+| **React**         | 19.1.1   | Framework UI                |
+| **Vite**          | 7.1.7    | Build tool e dev server     |
+| **TypeScript**    | 5.9.3    | Type safety                 |
+| **Tailwind CSS**  | 4.1.14   | Styling utilitário          |
+| **shadcn/ui**     | Latest   | Componentes acessíveis      |
+| **Wouter**        | 3.3.5    | Roteamento SPA              |
+| **React Query**   | 5.90.2   | State management (via tRPC) |
+| **Recharts**      | 2.15.2   | Gráficos de dados           |
+| **Framer Motion** | 12.23.22 | Animações                   |
+| **date-fns**      | 4.1.0    | Manipulação de datas        |
+| **Zod**           | 4.1.12   | Validação de schemas        |
+| **xlsx**          | 0.18.5   | Exportação para Excel       |
 
 ### Backend
 
-| Tecnologia | Versão | Propósito |
-|-----------|--------|----------|
-| **Express** | 4.21.2 | Framework HTTP |
-| **tRPC** | 11.6.0 | RPC type-safe |
-| **TypeScript** | 5.9.3 | Type safety |
-| **Drizzle ORM** | 0.44.5 | Query builder type-safe |
-| **MySQL2** | 3.15.0 | Driver MySQL |
-| **jose** | 6.1.0 | JWT signing |
-| **SuperJSON** | 1.13.3 | Serialização avançada |
-| **AWS SDK** | 3.693.0 | S3 storage |
+| Tecnologia      | Versão  | Propósito               |
+| --------------- | ------- | ----------------------- |
+| **Express**     | 4.21.2  | Framework HTTP          |
+| **tRPC**        | 11.6.0  | RPC type-safe           |
+| **TypeScript**  | 5.9.3   | Type safety             |
+| **Drizzle ORM** | 0.44.5  | Query builder type-safe |
+| **MySQL2**      | 3.15.0  | Driver MySQL            |
+| **jose**        | 6.1.0   | JWT signing             |
+| **SuperJSON**   | 1.13.3  | Serialização avançada   |
+| **AWS SDK**     | 3.693.0 | S3 storage              |
 
 ### Banco de Dados
 
-| Tecnologia | Versão | Propósito |
-|-----------|--------|----------|
-| **MySQL** | 8.0+ | Database relacional |
+| Tecnologia      | Versão | Propósito                      |
+| --------------- | ------ | ------------------------------ |
+| **MySQL**       | 8.0+   | Database relacional            |
 | **Drizzle Kit** | 0.31.4 | Migrations e schema management |
 
 ### DevOps & Ferramentas
 
-| Tecnologia | Versão | Propósito |
-|-----------|--------|----------|
-| **Node.js** | 22.13.0 | Runtime |
-| **pnpm** | 10.4.1 | Package manager |
-| **Prettier** | 3.6.2 | Code formatting |
-| **Vitest** | 2.1.4 | Unit testing |
-| **tsx** | 4.19.1 | TypeScript executor |
+| Tecnologia   | Versão  | Propósito           |
+| ------------ | ------- | ------------------- |
+| **Node.js**  | 22.13.0 | Runtime             |
+| **pnpm**     | 10.4.1  | Package manager     |
+| **Prettier** | 3.6.2   | Code formatting     |
+| **Vitest**   | 2.1.4   | Unit testing        |
+| **tsx**      | 4.19.1  | TypeScript executor |
 
 ---
 
@@ -255,6 +257,7 @@ blackbelt-platform/
 ### 1. **Autenticação e Autorização**
 
 #### OAuth 2.0 (Manus)
+
 ```typescript
 // Fluxo de login
 1. Usuário clica "Sign In"
@@ -265,6 +268,7 @@ blackbelt-platform/
 ```
 
 #### Contexto de Autenticação
+
 ```typescript
 // useAuth() hook
 const { user, loading, isAuthenticated, logout } = useAuth();
@@ -286,6 +290,7 @@ const { user, loading, isAuthenticated, logout } = useAuth();
 ### 2. **Multi-Tenant com Seleção Visual**
 
 #### Modal de Seleção de Empresa
+
 ```typescript
 // TenantSelectionModal.tsx
 - Exibe lista de empresas disponíveis
@@ -296,6 +301,7 @@ const { user, loading, isAuthenticated, logout } = useAuth();
 ```
 
 #### Contexto de Tenant
+
 ```typescript
 // TenantContext.tsx
 const { selectedTenant, setSelectedTenant } = useTenant();
@@ -313,6 +319,7 @@ const { selectedTenant, setSelectedTenant } = useTenant();
 **Página: `/empresas`**
 
 Funcionalidades:
+
 - ✅ Listagem de empresas com paginação
 - ✅ Criação de nova empresa (modal)
 - ✅ Edição de dados da empresa
@@ -321,6 +328,7 @@ Funcionalidades:
 - ✅ Visualização de CNPJ e contato
 
 Campos:
+
 ```typescript
 {
   id: string,
@@ -348,6 +356,7 @@ Campos:
 **Página: `/setores`**
 
 Funcionalidades:
+
 - ✅ Listagem de setores por empresa
 - ✅ Criação de novo setor
 - ✅ Edição de setor
@@ -356,6 +365,7 @@ Funcionalidades:
 - ✅ Visualização de responsável
 
 Campos:
+
 ```typescript
 {
   id: string,
@@ -375,6 +385,7 @@ Campos:
 **Página: `/colaboradores`**
 
 Funcionalidades:
+
 - ✅ Listagem de colaboradores por empresa
 - ✅ Filtro por setor
 - ✅ Criação de novo colaborador
@@ -383,6 +394,7 @@ Funcionalidades:
 - ✅ Tipo de vínculo (próprio/terceirizado)
 
 Campos:
+
 ```typescript
 {
   id: string,
@@ -403,6 +415,7 @@ Campos:
 **Página: `/risk-assessments`**
 
 #### Funcionalidades
+
 - ✅ Listagem de avaliações com status
 - ✅ Criação de nova avaliação (modal)
 - ✅ Visualização de detalhes
@@ -415,6 +428,7 @@ Campos:
 - ✅ Filtro por status e nível de risco
 
 #### Campos da Avaliação
+
 ```typescript
 {
   id: string,
@@ -425,7 +439,7 @@ Campos:
   status: "draft" | "in_progress" | "completed" | "reviewed",
   riskLevel: "low" | "medium" | "high" | "critical",
   assessor: string,
-  
+
   // Dados de avaliação
   methodology: string,
   riskFactors: Array<{
@@ -435,7 +449,7 @@ Campos:
     severity: number,
     controlMeasures: string[]
   }>,
-  
+
   // Resultado
   overallRisk: number,
   actionPlan: string,
@@ -444,6 +458,7 @@ Campos:
 ```
 
 #### Badges de Status
+
 ```typescript
 - draft: "Rascunho" (cinza)
 - in_progress: "Em Andamento" (azul)
@@ -452,6 +467,7 @@ Campos:
 ```
 
 #### Badges de Risco
+
 ```typescript
 - low: "Baixo" (verde)
 - medium: "Médio" (amarelo)
@@ -464,6 +480,7 @@ Campos:
 **Página: `/compliance-reports`**
 
 Funcionalidades:
+
 - ✅ Listagem de relatórios
 - ✅ Geração automática de relatórios
 - ✅ **Exportação em 3 formatos:**
@@ -479,6 +496,7 @@ Funcionalidades:
 **Página: `/auditoria`**
 
 Funcionalidades:
+
 - ✅ Listagem de todos os logs de auditoria
 - ✅ Filtro por usuário, ação, data
 - ✅ Visualização de mudanças (antes/depois)
@@ -490,6 +508,7 @@ Funcionalidades:
 - ✅ Timestamp preciso (UTC)
 
 Campos de Log:
+
 ```typescript
 {
   id: string,
@@ -511,6 +530,7 @@ Campos de Log:
 **Página: `/exportacao-lgpd`**
 
 Funcionalidades:
+
 - ✅ Formulário de solicitação DSR
 - ✅ Seleção de dados a exportar
 - ✅ **Múltiplos formatos:**
@@ -525,6 +545,7 @@ Funcionalidades:
 **Página: `/convites-usuarios`**
 
 Funcionalidades:
+
 - ✅ Envio de convites por e-mail
 - ✅ Geração de token único
 - ✅ Rastreamento de status (pending, accepted, expired, cancelled)
@@ -536,6 +557,7 @@ Funcionalidades:
 **Página: `/perfis-permissoes`**
 
 Funcionalidades:
+
 - ✅ CRUD de roles customizadas
 - ✅ Atribuição de permissões granulares
 - ✅ Suporte a ABAC (Attribute-Based Access Control)
@@ -543,6 +565,7 @@ Funcionalidades:
 - ✅ Auditoria de mudanças
 
 Estrutura RBAC:
+
 ```typescript
 // Roles (Perfis)
 {
@@ -580,6 +603,7 @@ Estrutura RBAC:
 **Componente: Tour com 12 passos**
 
 Funcionalidades:
+
 - ✅ Onboarding para novos usuários
 - ✅ 12 passos cobrindo todas as funcionalidades
 - ✅ Tooltips informativos
@@ -729,21 +753,26 @@ export const riskAssessments = mysqlTable("risk_assessments", {
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   sectorId: varchar("sectorId", { length: 64 }),
-  
+
   // Avaliação
   methodology: varchar("methodology", { length: 100 }),
   assessor: varchar("assessor", { length: 255 }),
   assessmentDate: datetime("assessmentDate"),
-  
+
   // Status
-  status: mysqlEnum("status", ["draft", "in_progress", "completed", "reviewed"]),
+  status: mysqlEnum("status", [
+    "draft",
+    "in_progress",
+    "completed",
+    "reviewed",
+  ]),
   riskLevel: mysqlEnum("riskLevel", ["low", "medium", "high", "critical"]),
-  
+
   // Dados estruturados
   riskFactors: json("riskFactors"),
   controlMeasures: json("controlMeasures"),
   actionPlan: text("actionPlan"),
-  
+
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt").defaultNow(),
@@ -922,12 +951,14 @@ Qualquer ação (CREATE, UPDATE, DELETE)
 ### 1. Autenticação e Autorização
 
 #### OAuth 2.0
+
 - ✅ Integração com Manus OAuth
 - ✅ Session cookies com JWT
 - ✅ Expiração automática de sessão
 - ✅ Refresh tokens (se necessário)
 
 #### RBAC (Role-Based Access Control)
+
 ```typescript
 // Exemplo de proteção de rota
 const protectedProcedure = baseProcedure.use(({ ctx, next }) => {
@@ -947,44 +978,44 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 ```
 
 #### ABAC (Attribute-Based Access Control)
+
 ```typescript
 // Exemplo: Usuário só pode ver dados de seu setor
 const conditions = {
   sector_id: "uuid-do-setor",
-  own_data_only: true
+  own_data_only: true,
 };
 ```
 
 ### 2. Isolamento de Dados (Multi-Tenant)
 
 #### Row-Level Security (RLS)
+
 ```typescript
 // Todas as queries incluem tenantId
 const getUserTodos = async (userId: string, tenantId: string) => {
-  return db.select()
+  return db
+    .select()
     .from(todos)
     .where(
       and(
         eq(todos.userId, userId),
-        eq(todos.tenantId, tenantId)  // ← Isolamento
+        eq(todos.tenantId, tenantId) // ← Isolamento
       )
     );
 };
 ```
 
 #### Validação de Tenant
+
 ```typescript
 // Middleware valida que usuário tem acesso ao tenant
 const validateTenantAccess = async (userId: string, tenantId: string) => {
-  const hasAccess = await db.select()
+  const hasAccess = await db
+    .select()
     .from(userRoles)
-    .where(
-      and(
-        eq(userRoles.userId, userId),
-        eq(userRoles.tenantId, tenantId)
-      )
-    );
-  
+    .where(and(eq(userRoles.userId, userId), eq(userRoles.tenantId, tenantId)));
+
   if (!hasAccess.length) {
     throw new TRPCError({ code: "FORBIDDEN" });
   }
@@ -994,6 +1025,7 @@ const validateTenantAccess = async (userId: string, tenantId: string) => {
 ### 3. Conformidade NR-01
 
 #### Elementos Implementados
+
 - ✅ Identificação de riscos psicossociais
 - ✅ Avaliação de gravidade e probabilidade
 - ✅ Matriz de probabilidade x gravidade
@@ -1003,40 +1035,43 @@ const validateTenantAccess = async (userId: string, tenantId: string) => {
 - ✅ Relatórios exportáveis
 
 #### Checklist de Conformidade
+
 ```typescript
 const complianceChecklist = {
   identification: {
     label: "Identificação de Riscos",
     status: "completed",
-    evidence: "Inventário de riscos"
+    evidence: "Inventário de riscos",
   },
   assessment: {
     label: "Avaliação de Riscos",
     status: "completed",
-    evidence: "Matriz de probabilidade x gravidade"
+    evidence: "Matriz de probabilidade x gravidade",
   },
   control: {
     label: "Controle de Riscos",
     status: "completed",
-    evidence: "Plano de ação"
+    evidence: "Plano de ação",
   },
   documentation: {
     label: "Documentação",
     status: "completed",
-    evidence: "Relatórios e registros"
-  }
+    evidence: "Relatórios e registros",
+  },
 };
 ```
 
 ### 4. LGPD (Lei Geral de Proteção de Dados)
 
 #### Data Subject Requests (DSR)
+
 - ✅ Acesso aos dados pessoais
 - ✅ Exportação em múltiplos formatos
 - ✅ Direito ao esquecimento (exclusão)
 - ✅ Portabilidade de dados
 
 #### Consentimentos
+
 ```typescript
 // Rastreamento de consentimentos
 {
@@ -1053,6 +1088,7 @@ const complianceChecklist = {
 ```
 
 #### Auditoria de Dados Pessoais
+
 - ✅ Todos os acessos registrados
 - ✅ Timestamp preciso
 - ✅ IP address e User-Agent
@@ -1078,24 +1114,28 @@ const complianceChecklist = {
 ### 1. Testes Funcionais
 
 #### Autenticação
+
 - ✅ Login com OAuth
 - ✅ Logout
 - ✅ Persistência de sessão
 - ✅ Expiração de sessão
 
 #### Multi-Tenant
+
 - ✅ Seleção de empresa
 - ✅ Isolamento de dados
 - ✅ Filtro por tenant em todas as páginas
 - ✅ Contexto de tenant persistente
 
 #### Gestão de Dados
+
 - ✅ CRUD de empresas
 - ✅ CRUD de setores
 - ✅ CRUD de colaboradores
 - ✅ CRUD de avaliações
 
 #### Exportação
+
 - ✅ Exportação para Texto
 - ✅ Exportação para JSON
 - ✅ Exportação para Excel
@@ -1103,6 +1143,7 @@ const complianceChecklist = {
 - ✅ Download automático
 
 #### Auditoria
+
 - ✅ Registro de ações
 - ✅ Filtro por usuário
 - ✅ Filtro por data
@@ -1111,17 +1152,20 @@ const complianceChecklist = {
 ### 2. Testes de Interface
 
 #### Responsividade
+
 - ✅ Desktop (1920x1080)
 - ✅ Tablet (768x1024)
 - ✅ Mobile (375x667)
 
 #### Navegação
+
 - ✅ Menu lateral funcional
 - ✅ Rotas corretas
 - ✅ Breadcrumbs (se aplicável)
 - ✅ Botões de ação
 
 #### Componentes
+
 - ✅ Modais aparecem/desaparecem
 - ✅ Dropdowns funcionam
 - ✅ Tabelas com paginação
@@ -1130,12 +1174,14 @@ const complianceChecklist = {
 ### 3. Testes de Dados
 
 #### Validação
+
 - ✅ Campos obrigatórios
 - ✅ Formato de email
 - ✅ Formato de CNPJ
 - ✅ Datas válidas
 
 #### Integridade
+
 - ✅ Foreign keys respeitadas
 - ✅ Índices funcionam
 - ✅ Constraints aplicadas
@@ -1144,12 +1190,14 @@ const complianceChecklist = {
 ### 4. Testes de Performance
 
 #### Carregamento
+
 - ✅ Dashboard carrega em < 2s
 - ✅ Tabelas com 1000+ registros
 - ✅ Paginação eficiente
 - ✅ Filtros rápidos
 
 #### Exportação
+
 - ✅ Exportação de 100 registros < 1s
 - ✅ Arquivo Excel válido
 - ✅ Arquivo JSON válido
@@ -1248,7 +1296,7 @@ CMD ["pnpm", "start"]
 ### Docker Compose
 
 ```yaml
-version: '3.8'
+version: "3.8"
 
 services:
   db:
@@ -1291,24 +1339,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: '22'
-      
+          node-version: "22"
+
       - name: Install pnpm
         run: npm install -g pnpm
-      
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      
+
       - name: Run tests
         run: pnpm test
-      
+
       - name: Build
         run: pnpm build
-      
+
       - name: Deploy
         run: |
           # Deploy script aqui
@@ -1319,23 +1367,24 @@ jobs:
 
 ## 📊 Estatísticas do Projeto
 
-| Métrica | Valor |
-|---------|-------|
-| **Linhas de Código** | ~15,000+ |
-| **Componentes React** | 50+ |
-| **Páginas** | 10 |
-| **Tabelas de Banco de Dados** | 20+ |
-| **Procedures tRPC** | 100+ |
-| **Testes Unitários** | Em desenvolvimento |
-| **Cobertura de Testes** | 60%+ |
-| **Performance (Lighthouse)** | 90+ |
-| **Acessibilidade (WCAG)** | AA |
+| Métrica                       | Valor              |
+| ----------------------------- | ------------------ |
+| **Linhas de Código**          | ~15,000+           |
+| **Componentes React**         | 50+                |
+| **Páginas**                   | 10                 |
+| **Tabelas de Banco de Dados** | 20+                |
+| **Procedures tRPC**           | 100+               |
+| **Testes Unitários**          | Em desenvolvimento |
+| **Cobertura de Testes**       | 60%+               |
+| **Performance (Lighthouse)**  | 90+                |
+| **Acessibilidade (WCAG)**     | AA                 |
 
 ---
 
 ## 🔧 Troubleshooting
 
 ### Servidor não inicia
+
 ```bash
 # Limpar cache e reinstalar
 rm -rf node_modules pnpm-lock.yaml
@@ -1344,6 +1393,7 @@ pnpm dev
 ```
 
 ### Erro de conexão com banco de dados
+
 ```bash
 # Verificar DATABASE_URL
 echo $DATABASE_URL
@@ -1353,6 +1403,7 @@ mysql -u user -p -h host -D blackbelt
 ```
 
 ### Erro de autenticação OAuth
+
 ```bash
 # Verificar variáveis
 echo $VITE_APP_ID
@@ -1363,6 +1414,7 @@ tail -f logs/app.log
 ```
 
 ### Exportação não funciona
+
 ```bash
 # Verificar se xlsx está instalado
 pnpm list xlsx
@@ -1376,6 +1428,7 @@ pnpm add xlsx
 ## 📞 Suporte e Contribuição
 
 Para suporte técnico ou contribuições, entre em contato com:
+
 - **Email**: tech@blackbelt.com.br
 - **GitHub**: https://github.com/seu-repo/blackbelt-platform
 - **Issues**: https://github.com/seu-repo/blackbelt-platform/issues
@@ -1391,4 +1444,3 @@ MIT License - Veja LICENSE.md para detalhes
 **Documentação Criada em:** Novembro 2025  
 **Última Atualização:** Novembro 2025  
 **Versão:** 1.0.0
-

@@ -1,4 +1,13 @@
-import { mysqlEnum, mysqlTable, text, timestamp, varchar, int, boolean, json } from "drizzle-orm/mysql-core";
+import {
+  mysqlEnum,
+  mysqlTable,
+  text,
+  timestamp,
+  varchar,
+  int,
+  boolean,
+  json,
+} from "drizzle-orm/mysql-core";
 import { tenants } from "./schema";
 
 /**
@@ -34,7 +43,9 @@ export const riskAssessments = mysqlTable("risk_assessments", {
   description: text("description"),
   assessmentDate: timestamp("assessmentDate").notNull(),
   assessor: varchar("assessor", { length: 255 }), // Nome do avaliador
-  status: mysqlEnum("status", ["draft", "in_progress", "completed", "reviewed"]).default("draft").notNull(),
+  status: mysqlEnum("status", ["draft", "in_progress", "completed", "reviewed"])
+    .default("draft")
+    .notNull(),
   methodology: text("methodology"), // Metodologia utilizada
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt").defaultNow(),
@@ -45,9 +56,25 @@ export const riskAssessmentItems = mysqlTable("risk_assessment_items", {
   id: varchar("id", { length: 64 }).primaryKey(),
   assessmentId: varchar("assessmentId", { length: 64 }).notNull(),
   riskFactorId: varchar("riskFactorId", { length: 64 }).notNull(),
-  severity: mysqlEnum("severity", ["low", "medium", "high", "critical"]).notNull(), // Gravidade
-  probability: mysqlEnum("probability", ["rare", "unlikely", "possible", "likely", "certain"]).notNull(), // Probabilidade
-  riskLevel: mysqlEnum("riskLevel", ["low", "medium", "high", "critical"]).notNull(), // Nível de risco calculado
+  severity: mysqlEnum("severity", [
+    "low",
+    "medium",
+    "high",
+    "critical",
+  ]).notNull(), // Gravidade
+  probability: mysqlEnum("probability", [
+    "rare",
+    "unlikely",
+    "possible",
+    "likely",
+    "certain",
+  ]).notNull(), // Probabilidade
+  riskLevel: mysqlEnum("riskLevel", [
+    "low",
+    "medium",
+    "high",
+    "critical",
+  ]).notNull(), // Nível de risco calculado
   affectedPopulation: int("affectedPopulation"), // Número de pessoas afetadas
   currentControls: text("currentControls"), // Controles existentes
   observations: text("observations"),
@@ -61,11 +88,26 @@ export const actionPlans = mysqlTable("action_plans", {
   assessmentItemId: varchar("assessmentItemId", { length: 64 }),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
-  actionType: mysqlEnum("actionType", ["elimination", "substitution", "engineering", "administrative", "ppe"]).notNull(),
+  actionType: mysqlEnum("actionType", [
+    "elimination",
+    "substitution",
+    "engineering",
+    "administrative",
+    "ppe",
+  ]).notNull(),
   responsibleId: varchar("responsibleId", { length: 64 }), // ID do responsável
   deadline: timestamp("deadline"),
-  status: mysqlEnum("status", ["pending", "in_progress", "completed", "cancelled"]).default("pending").notNull(),
-  priority: mysqlEnum("priority", ["low", "medium", "high", "urgent"]).default("medium").notNull(),
+  status: mysqlEnum("status", [
+    "pending",
+    "in_progress",
+    "completed",
+    "cancelled",
+  ])
+    .default("pending")
+    .notNull(),
+  priority: mysqlEnum("priority", ["low", "medium", "high", "urgent"])
+    .default("medium")
+    .notNull(),
   budget: int("budget"), // Orçamento estimado em centavos
   completedAt: timestamp("completedAt"),
   createdAt: timestamp("createdAt").defaultNow(),
@@ -78,7 +120,13 @@ export const psychosocialSurveys = mysqlTable("psychosocial_surveys", {
   tenantId: varchar("tenantId", { length: 64 }).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
-  surveyType: mysqlEnum("surveyType", ["climate", "stress", "burnout", "engagement", "custom"]).notNull(),
+  surveyType: mysqlEnum("surveyType", [
+    "climate",
+    "stress",
+    "burnout",
+    "engagement",
+    "custom",
+  ]).notNull(),
   questions: json("questions"), // Array de perguntas
   isActive: boolean("isActive").default(true),
   createdAt: timestamp("createdAt").defaultNow(),
@@ -105,13 +153,22 @@ export const interventionPrograms = mysqlTable("intervention_programs", {
   tenantId: varchar("tenantId", { length: 64 }).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
-  programType: mysqlEnum("programType", ["training", "mentoring", "workshop", "therapy", "resilience", "leadership"]).notNull(),
+  programType: mysqlEnum("programType", [
+    "training",
+    "mentoring",
+    "workshop",
+    "therapy",
+    "resilience",
+    "leadership",
+  ]).notNull(),
   targetAudience: text("targetAudience"),
   duration: int("duration"), // Duração em horas
   facilitator: varchar("facilitator", { length: 255 }), // Nome do facilitador
   startDate: timestamp("startDate"),
   endDate: timestamp("endDate"),
-  status: mysqlEnum("status", ["planned", "active", "completed", "cancelled"]).default("planned").notNull(),
+  status: mysqlEnum("status", ["planned", "active", "completed", "cancelled"])
+    .default("planned")
+    .notNull(),
   maxParticipants: int("maxParticipants"),
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt").defaultNow(),
@@ -135,11 +192,23 @@ export const individualSessions = mysqlTable("individual_sessions", {
   id: varchar("id", { length: 64 }).primaryKey(),
   tenantId: varchar("tenantId", { length: 64 }).notNull(),
   personId: varchar("personId", { length: 64 }).notNull(),
-  sessionType: mysqlEnum("sessionType", ["psychological", "mentoring", "coaching", "medical"]).notNull(),
+  sessionType: mysqlEnum("sessionType", [
+    "psychological",
+    "mentoring",
+    "coaching",
+    "medical",
+  ]).notNull(),
   professional: varchar("professional", { length: 255 }), // Nome do profissional
   scheduledAt: timestamp("scheduledAt").notNull(),
   duration: int("duration"), // Duração em minutos
-  status: mysqlEnum("status", ["scheduled", "completed", "cancelled", "no_show"]).default("scheduled").notNull(),
+  status: mysqlEnum("status", [
+    "scheduled",
+    "completed",
+    "cancelled",
+    "no_show",
+  ])
+    .default("scheduled")
+    .notNull(),
   notes: text("notes"), // Notas confidenciais
   followUp: text("followUp"), // Encaminhamentos
   completedAt: timestamp("completedAt"),
@@ -166,14 +235,22 @@ export const mentalHealthIndicators = mysqlTable("mental_health_indicators", {
 export const complianceDocuments = mysqlTable("compliance_documents", {
   id: varchar("id", { length: 64 }).primaryKey(),
   tenantId: varchar("tenantId", { length: 64 }).notNull(),
-  documentType: mysqlEnum("documentType", ["gro", "inventory", "action_plan", "training_record", "audit_report"]).notNull(),
+  documentType: mysqlEnum("documentType", [
+    "gro",
+    "inventory",
+    "action_plan",
+    "training_record",
+    "audit_report",
+  ]).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   fileUrl: varchar("fileUrl", { length: 500 }), // URL do arquivo no S3
   version: varchar("version", { length: 20 }).default("1.0"),
   validFrom: timestamp("validFrom").notNull(),
   validUntil: timestamp("validUntil"),
-  status: mysqlEnum("status", ["draft", "active", "expired", "archived"]).default("draft").notNull(),
+  status: mysqlEnum("status", ["draft", "active", "expired", "archived"])
+    .default("draft")
+    .notNull(),
   signedBy: varchar("signedBy", { length: 255 }), // Nome do responsável
   signedAt: timestamp("signedAt"),
   createdAt: timestamp("createdAt").defaultNow(),
@@ -192,4 +269,3 @@ export type ProgramParticipant = typeof programParticipants.$inferSelect;
 export type IndividualSession = typeof individualSessions.$inferSelect;
 export type MentalHealthIndicator = typeof mentalHealthIndicators.$inferSelect;
 export type ComplianceDocument = typeof complianceDocuments.$inferSelect;
-

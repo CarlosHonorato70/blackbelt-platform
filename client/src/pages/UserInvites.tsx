@@ -103,11 +103,11 @@ export default function UserInvites() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleRoleChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, role: value }));
+    setFormData(prev => ({ ...prev, role: value }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -155,9 +155,14 @@ export default function UserInvites() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Convites de Usuários</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Convites de Usuários
+            </h1>
             <p className="text-muted-foreground">
-              Gerencie convites para colaboradores - {typeof selectedTenant === 'string' ? selectedTenant : selectedTenant?.name}
+              Gerencie convites para colaboradores -{" "}
+              {typeof selectedTenant === "string"
+                ? selectedTenant
+                : selectedTenant?.name}
             </p>
           </div>
 
@@ -192,7 +197,10 @@ export default function UserInvites() {
 
                 <div className="space-y-2">
                   <Label htmlFor="role">Perfil/Função *</Label>
-                  <Select value={formData.role} onValueChange={handleRoleChange}>
+                  <Select
+                    value={formData.role}
+                    onValueChange={handleRoleChange}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -206,7 +214,9 @@ export default function UserInvites() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="message">Mensagem Personalizada (Opcional)</Label>
+                  <Label htmlFor="message">
+                    Mensagem Personalizada (Opcional)
+                  </Label>
                   <textarea
                     id="message"
                     name="message"
@@ -240,7 +250,9 @@ export default function UserInvites() {
         <div className="grid md:grid-cols-3 gap-4">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Total de Convites</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total de Convites
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold">{invites.length}</p>
@@ -256,7 +268,7 @@ export default function UserInvites() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-yellow-600">
-                {invites.filter((i) => i.status === "pendente").length}
+                {invites.filter(i => i.status === "pendente").length}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 Aguardando aceitar
@@ -270,7 +282,7 @@ export default function UserInvites() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-green-600">
-                {invites.filter((i) => i.status === "aceito").length}
+                {invites.filter(i => i.status === "aceito").length}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 Usuários ativos
@@ -289,7 +301,7 @@ export default function UserInvites() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {invites.map((invite) => (
+              {invites.map(invite => (
                 <div
                   key={invite.id}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
@@ -364,22 +376,19 @@ export default function UserInvites() {
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-blue-800 space-y-2">
+            <p>• Os convites expiram em 7 dias se não forem aceitos</p>
             <p>
-              • Os convites expiram em 7 dias se não forem aceitos
+              • O usuário receberá um e-mail com um link único para ativar sua
+              conta
             </p>
             <p>
-              • O usuário receberá um e-mail com um link único para ativar sua conta
+              • Você pode reenviar convites expirados ou cancelar convites
+              pendentes
             </p>
-            <p>
-              • Você pode reenviar convites expirados ou cancelar convites pendentes
-            </p>
-            <p>
-              • Cada perfil tem permissões específicas na plataforma
-            </p>
+            <p>• Cada perfil tem permissões específicas na plataforma</p>
           </CardContent>
         </Card>
       </div>
     </DashboardLayout>
   );
 }
-

@@ -51,7 +51,8 @@ const onboardingSteps: OnboardingStep[] = [
   {
     id: 2,
     title: "Selecionando uma Empresa",
-    description: "O primeiro passo é escolher a empresa com a qual você vai trabalhar",
+    description:
+      "O primeiro passo é escolher a empresa com a qual você vai trabalhar",
     icon: <Building2 className="h-12 w-12 text-blue-600" />,
     details: [
       "Clique no botão 'Empresa selecionada' no sidebar esquerdo",
@@ -359,7 +360,8 @@ export function OnboardingGuide({ open, onOpenChange }: OnboardingGuideProps) {
                 Parabéns! Você completou o guia de onboarding.
               </p>
               <p className="text-sm text-green-800 mt-1">
-                Agora você está pronto para usar a plataforma Black Belt Consultoria!
+                Agora você está pronto para usar a plataforma Black Belt
+                Consultoria!
               </p>
             </div>
           )}
@@ -368,4 +370,3 @@ export function OnboardingGuide({ open, onOpenChange }: OnboardingGuideProps) {
     </Dialog>
   );
 }
-

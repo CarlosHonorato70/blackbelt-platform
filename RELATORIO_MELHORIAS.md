@@ -1,4 +1,3 @@
-
 # Relatório de Análise e Melhorias – Plataforma BlackBelt
 
 **Autor**: Manus AI
@@ -38,14 +37,14 @@ O principal esforço foi a implementação dos routers de backend ausentes. Fora
 
 A tabela abaixo resume os routers implementados e suas funcionalidades:
 
-| Router Implementado     | Procedures | Funcionalidade Principal                                      |
-| ----------------------- | :--------: | ------------------------------------------------------------- |
-| `riskAssessments`       |     10     | Gestão completa de Avaliações de Risco (NR-01) e Planos de Ação. |
-| `complianceReports`     |     7      | Criação e gerenciamento de Relatórios de Compliance (GRO, PGR). |
-| `pricing`               |     18     | Módulo completo de precificação, incluindo clientes, serviços e propostas. |
-| `auditLogs`             |     3      | Rastreamento e listagem de logs de auditoria para todas as ações. |
-| `userInvites`           |     8      | Sistema de convite de usuários para a plataforma.             |
-| `rolesPermissions`      |     16     | Gerenciamento granular de perfis de usuário e permissões.     |
+| Router Implementado | Procedures | Funcionalidade Principal                                                   |
+| ------------------- | :--------: | -------------------------------------------------------------------------- |
+| `riskAssessments`   |     10     | Gestão completa de Avaliações de Risco (NR-01) e Planos de Ação.           |
+| `complianceReports` |     7      | Criação e gerenciamento de Relatórios de Compliance (GRO, PGR).            |
+| `pricing`           |     18     | Módulo completo de precificação, incluindo clientes, serviços e propostas. |
+| `auditLogs`         |     3      | Rastreamento e listagem de logs de auditoria para todas as ações.          |
+| `userInvites`       |     8      | Sistema de convite de usuários para a plataforma.                          |
+| `rolesPermissions`  |     16     | Gerenciamento granular de perfis de usuário e permissões.                  |
 
 ### 3.3. Correção de Erros e Validação
 

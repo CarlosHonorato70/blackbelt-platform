@@ -89,26 +89,17 @@
       "indexes": {
         "idx_audit_tenant_time": {
           "name": "idx_audit_tenant_time",
-          "columns": [
-            "tenantId",
-            "timestamp"
-          ],
+          "columns": ["tenantId", "timestamp"],
           "isUnique": false
         },
         "idx_audit_user_time": {
           "name": "idx_audit_user_time",
-          "columns": [
-            "userId",
-            "timestamp"
-          ],
+          "columns": ["userId", "timestamp"],
           "isUnique": false
         },
         "idx_audit_entity": {
           "name": "idx_audit_entity",
-          "columns": [
-            "entityType",
-            "entityId"
-          ],
+          "columns": ["entityType", "entityId"],
           "isUnique": false
         }
       },
@@ -116,9 +107,7 @@
       "compositePrimaryKeys": {
         "audit_logs_id": {
           "name": "audit_logs_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -209,17 +198,12 @@
       "indexes": {
         "idx_consent_person": {
           "name": "idx_consent_person",
-          "columns": [
-            "personId",
-            "consentType"
-          ],
+          "columns": ["personId", "consentType"],
           "isUnique": false
         },
         "idx_consent_tenant": {
           "name": "idx_consent_tenant",
-          "columns": [
-            "tenantId"
-          ],
+          "columns": ["tenantId"],
           "isUnique": false
         }
       },
@@ -227,9 +211,7 @@
       "compositePrimaryKeys": {
         "data_consents_id": {
           "name": "data_consents_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -315,24 +297,17 @@
       "indexes": {
         "idx_people_tenant": {
           "name": "idx_people_tenant",
-          "columns": [
-            "tenantId"
-          ],
+          "columns": ["tenantId"],
           "isUnique": false
         },
         "idx_people_tenant_sector": {
           "name": "idx_people_tenant_sector",
-          "columns": [
-            "tenantId",
-            "sectorId"
-          ],
+          "columns": ["tenantId", "sectorId"],
           "isUnique": false
         },
         "idx_people_email": {
           "name": "idx_people_email",
-          "columns": [
-            "email"
-          ],
+          "columns": ["email"],
           "isUnique": false
         }
       },
@@ -340,9 +315,7 @@
       "compositePrimaryKeys": {
         "people_id": {
           "name": "people_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -398,10 +371,7 @@
       "indexes": {
         "idx_perm_resource_action": {
           "name": "idx_perm_resource_action",
-          "columns": [
-            "resource",
-            "action"
-          ],
+          "columns": ["resource", "action"],
           "isUnique": false
         }
       },
@@ -409,17 +379,13 @@
       "compositePrimaryKeys": {
         "permissions_id": {
           "name": "permissions_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "permissions_name_unique": {
           "name": "permissions_name_unique",
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         }
       },
       "checkConstraint": {}
@@ -474,17 +440,12 @@
       "indexes": {
         "idx_role_perm": {
           "name": "idx_role_perm",
-          "columns": [
-            "roleId",
-            "permissionId"
-          ],
+          "columns": ["roleId", "permissionId"],
           "isUnique": false
         },
         "idx_role_perm_tenant": {
           "name": "idx_role_perm_tenant",
-          "columns": [
-            "tenantId"
-          ],
+          "columns": ["tenantId"],
           "isUnique": false
         }
       },
@@ -492,9 +453,7 @@
       "compositePrimaryKeys": {
         "role_permissions_id": {
           "name": "role_permissions_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -551,9 +510,7 @@
       "indexes": {
         "idx_role_scope": {
           "name": "idx_role_scope",
-          "columns": [
-            "scope"
-          ],
+          "columns": ["scope"],
           "isUnique": false
         }
       },
@@ -561,17 +518,13 @@
       "compositePrimaryKeys": {
         "roles_id": {
           "name": "roles_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "roles_systemName_unique": {
           "name": "roles_systemName_unique",
-          "columns": [
-            "systemName"
-          ]
+          "columns": ["systemName"]
         }
       },
       "checkConstraint": {}
@@ -648,17 +601,12 @@
       "indexes": {
         "idx_sector_tenant": {
           "name": "idx_sector_tenant",
-          "columns": [
-            "tenantId"
-          ],
+          "columns": ["tenantId"],
           "isUnique": false
         },
         "idx_sector_tenant_name": {
           "name": "idx_sector_tenant_name",
-          "columns": [
-            "tenantId",
-            "name"
-          ],
+          "columns": ["tenantId", "name"],
           "isUnique": false
         }
       },
@@ -666,9 +614,7 @@
       "compositePrimaryKeys": {
         "sectors_id": {
           "name": "sectors_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -725,9 +671,7 @@
       "indexes": {
         "idx_setting_tenant": {
           "name": "idx_setting_tenant",
-          "columns": [
-            "tenantId"
-          ],
+          "columns": ["tenantId"],
           "isUnique": false
         }
       },
@@ -735,18 +679,13 @@
       "compositePrimaryKeys": {
         "tenant_settings_id": {
           "name": "tenant_settings_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "uk_tenant_setting": {
           "name": "uk_tenant_setting",
-          "columns": [
-            "tenantId",
-            "settingKey"
-          ]
+          "columns": ["tenantId", "settingKey"]
         }
       },
       "checkConstraint": {}
@@ -888,16 +827,12 @@
       "indexes": {
         "idx_tenant_name": {
           "name": "idx_tenant_name",
-          "columns": [
-            "name"
-          ],
+          "columns": ["name"],
           "isUnique": false
         },
         "idx_tenant_status": {
           "name": "idx_tenant_status",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         }
       },
@@ -905,17 +840,13 @@
       "compositePrimaryKeys": {
         "tenants_id": {
           "name": "tenants_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "tenants_cnpj_unique": {
           "name": "tenants_cnpj_unique",
-          "columns": [
-            "cnpj"
-          ]
+          "columns": ["cnpj"]
         }
       },
       "checkConstraint": {}
@@ -999,24 +930,17 @@
       "indexes": {
         "idx_invite_email_status": {
           "name": "idx_invite_email_status",
-          "columns": [
-            "email",
-            "status"
-          ],
+          "columns": ["email", "status"],
           "isUnique": false
         },
         "idx_invite_tenant": {
           "name": "idx_invite_tenant",
-          "columns": [
-            "tenantId"
-          ],
+          "columns": ["tenantId"],
           "isUnique": false
         },
         "idx_invite_token": {
           "name": "idx_invite_token",
-          "columns": [
-            "token"
-          ],
+          "columns": ["token"],
           "isUnique": false
         }
       },
@@ -1024,17 +948,13 @@
       "compositePrimaryKeys": {
         "user_invites_id": {
           "name": "user_invites_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "user_invites_token_unique": {
           "name": "user_invites_token_unique",
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "checkConstraint": {}
@@ -1082,18 +1002,12 @@
       "indexes": {
         "idx_user_role_tenant": {
           "name": "idx_user_role_tenant",
-          "columns": [
-            "userId",
-            "tenantId"
-          ],
+          "columns": ["userId", "tenantId"],
           "isUnique": false
         },
         "idx_user_role": {
           "name": "idx_user_role",
-          "columns": [
-            "userId",
-            "roleId"
-          ],
+          "columns": ["userId", "roleId"],
           "isUnique": false
         }
       },
@@ -1101,9 +1015,7 @@
       "compositePrimaryKeys": {
         "user_roles_id": {
           "name": "user_roles_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -1170,9 +1082,7 @@
       "compositePrimaryKeys": {
         "users_id": {
           "name": "users_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -1289,9 +1199,7 @@
       "compositePrimaryKeys": {
         "action_plans_id": {
           "name": "action_plans_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -1408,9 +1316,7 @@
       "compositePrimaryKeys": {
         "compliance_documents_id": {
           "name": "compliance_documents_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -1511,9 +1417,7 @@
       "compositePrimaryKeys": {
         "individual_sessions_id": {
           "name": "individual_sessions_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -1629,9 +1533,7 @@
       "compositePrimaryKeys": {
         "intervention_programs_id": {
           "name": "intervention_programs_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -1731,9 +1633,7 @@
       "compositePrimaryKeys": {
         "mental_health_indicators_id": {
           "name": "mental_health_indicators_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -1812,9 +1712,7 @@
       "compositePrimaryKeys": {
         "program_participants_id": {
           "name": "program_participants_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -1895,9 +1793,7 @@
       "compositePrimaryKeys": {
         "psychosocial_surveys_id": {
           "name": "psychosocial_surveys_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -1983,9 +1879,7 @@
       "compositePrimaryKeys": {
         "risk_assessment_items_id": {
           "name": "risk_assessment_items_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -2080,9 +1974,7 @@
       "compositePrimaryKeys": {
         "risk_assessments_id": {
           "name": "risk_assessments_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -2134,9 +2026,7 @@
       "compositePrimaryKeys": {
         "risk_categories_id": {
           "name": "risk_categories_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -2202,9 +2092,7 @@
       "compositePrimaryKeys": {
         "risk_factors_id": {
           "name": "risk_factors_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -2292,9 +2180,7 @@
       "compositePrimaryKeys": {
         "survey_responses_id": {
           "name": "survey_responses_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},

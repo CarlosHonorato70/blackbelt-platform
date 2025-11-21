@@ -15,7 +15,7 @@ export function TenantSelector() {
   const { data: tenants, isLoading } = trpc.tenants.list.useQuery({});
 
   const handleValueChange = (tenantId: string) => {
-    const tenant = tenants?.find((t) => t.id === tenantId);
+    const tenant = tenants?.find(t => t.id === tenantId);
     if (tenant) {
       setSelectedTenant({
         id: tenant.id,
@@ -34,10 +34,12 @@ export function TenantSelector() {
         disabled={isLoading}
       >
         <SelectTrigger className="w-full">
-          <SelectValue placeholder={isLoading ? "Carregando..." : "Selecione uma empresa"} />
+          <SelectValue
+            placeholder={isLoading ? "Carregando..." : "Selecione uma empresa"}
+          />
         </SelectTrigger>
         <SelectContent>
-          {tenants?.map((tenant) => (
+          {tenants?.map(tenant => (
             <SelectItem key={tenant.id} value={tenant.id}>
               {tenant.name}
             </SelectItem>
@@ -47,4 +49,3 @@ export function TenantSelector() {
     </div>
   );
 }
-

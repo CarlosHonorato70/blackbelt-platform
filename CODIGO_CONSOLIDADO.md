@@ -38,7 +38,7 @@ import {
 
 /**
  * SCHEMA MULTI-TENANT - BLACK BELT PLATFORM
- * 
+ *
  * Arquitetura: Row-Level Security (RLS) com coluna tenant_id
  * Todas as tabelas de dados de negócio incluem tenant_id para isolamento
  */
@@ -64,33 +64,41 @@ export type InsertUser = typeof users.$inferInsert;
 // MULTI-TENANT: Empresas (Tenants)
 // ============================================================================
 
-export const tenants = mysqlTable("tenants", {
-  id: varchar("id", { length: 64 }).primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  cnpj: varchar("cnpj", { length: 18 }).notNull().unique(),
-  
-  street: varchar("street", { length: 255 }),
-  number: varchar("number", { length: 20 }),
-  complement: varchar("complement", { length: 100 }),
-  neighborhood: varchar("neighborhood", { length: 100 }),
-  city: varchar("city", { length: 100 }),
-  state: varchar("state", { length: 2 }),
-  zipCode: varchar("zipCode", { length: 10 }),
-  
-  contactName: varchar("contactName", { length: 255 }),
-  contactEmail: varchar("contactEmail", { length: 320 }),
-  contactPhone: varchar("contactPhone", { length: 20 }),
-  
-  status: mysqlEnum("status", ["active", "inactive", "suspended"]).default("active").notNull(),
-  strategy: mysqlEnum("strategy", ["shared_rls", "dedicated_schema"]).default("shared_rls").notNull(),
-  schemaName: varchar("schemaName", { length: 100 }),
-  
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-}, (table) => ({
-  nameIdx: index("idx_tenant_name").on(table.name),
-  statusIdx: index("idx_tenant_status").on(table.status),
-}));
+export const tenants = mysqlTable(
+  "tenants",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    cnpj: varchar("cnpj", { length: 18 }).notNull().unique(),
+
+    street: varchar("street", { length: 255 }),
+    number: varchar("number", { length: 20 }),
+    complement: varchar("complement", { length: 100 }),
+    neighborhood: varchar("neighborhood", { length: 100 }),
+    city: varchar("city", { length: 100 }),
+    state: varchar("state", { length: 2 }),
+    zipCode: varchar("zipCode", { length: 10 }),
+
+    contactName: varchar("contactName", { length: 255 }),
+    contactEmail: varchar("contactEmail", { length: 320 }),
+    contactPhone: varchar("contactPhone", { length: 20 }),
+
+    status: mysqlEnum("status", ["active", "inactive", "suspended"])
+      .default("active")
+      .notNull(),
+    strategy: mysqlEnum("strategy", ["shared_rls", "dedicated_schema"])
+      .default("shared_rls")
+      .notNull(),
+    schemaName: varchar("schemaName", { length: 100 }),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  table => ({
+    nameIdx: index("idx_tenant_name").on(table.name),
+    statusIdx: index("idx_tenant_status").on(table.status),
+  })
+);
 
 export type Tenant = typeof tenants.$inferSelect;
 export type InsertTenant = typeof tenants.$inferInsert;
@@ -99,22 +107,29 @@ export type InsertTenant = typeof tenants.$inferInsert;
 // SETORES (por tenant)
 // ============================================================================
 
-export const sectors = mysqlTable("sectors", {
-  id: varchar("id", { length: 64 }).primaryKey(),
-  tenantId: varchar("tenantId", { length: 64 }).notNull(),
-  
-  name: varchar("name", { length: 255 }).notNull(),
-  description: text("description"),
-  responsibleName: varchar("responsibleName", { length: 255 }),
-  unit: varchar("unit", { length: 100 }),
-  shift: varchar("shift", { length: 50 }),
-  
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-}, (table) => ({
-  tenantIdx: index("idx_sector_tenant").on(table.tenantId),
-  tenantNameIdx: index("idx_sector_tenant_name").on(table.tenantId, table.name),
-}));
+export const sectors = mysqlTable(
+  "sectors",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    responsibleName: varchar("responsibleName", { length: 255 }),
+    unit: varchar("unit", { length: 100 }),
+    shift: varchar("shift", { length: 50 }),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_sector_tenant").on(table.tenantId),
+    tenantNameIdx: index("idx_sector_tenant_name").on(
+      table.tenantId,
+      table.name
+    ),
+  })
+);
 
 export type Sector = typeof sectors.$inferSelect;
 export type InsertSector = typeof sectors.$inferInsert;
@@ -123,25 +138,34 @@ export type InsertSector = typeof sectors.$inferInsert;
 // COLABORADORES (por tenant e setor)
 // ============================================================================
 
-export const people = mysqlTable("people", {
-  id: varchar("id", { length: 64 }).primaryKey(),
-  tenantId: varchar("tenantId", { length: 64 }).notNull(),
-  sectorId: varchar("sectorId", { length: 64 }),
-  
-  name: varchar("name", { length: 255 }).notNull(),
-  position: varchar("position", { length: 255 }),
-  email: varchar("email", { length: 320 }),
-  phone: varchar("phone", { length: 20 }),
-  
-  employmentType: mysqlEnum("employmentType", ["own", "outsourced"]).default("own").notNull(),
-  
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-}, (table) => ({
-  tenantIdx: index("idx_people_tenant").on(table.tenantId),
-  tenantSectorIdx: index("idx_people_tenant_sector").on(table.tenantId, table.sectorId),
-  emailIdx: index("idx_people_email").on(table.email),
-}));
+export const people = mysqlTable(
+  "people",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+    sectorId: varchar("sectorId", { length: 64 }),
+
+    name: varchar("name", { length: 255 }).notNull(),
+    position: varchar("position", { length: 255 }),
+    email: varchar("email", { length: 320 }),
+    phone: varchar("phone", { length: 20 }),
+
+    employmentType: mysqlEnum("employmentType", ["own", "outsourced"])
+      .default("own")
+      .notNull(),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_people_tenant").on(table.tenantId),
+    tenantSectorIdx: index("idx_people_tenant_sector").on(
+      table.tenantId,
+      table.sectorId
+    ),
+    emailIdx: index("idx_people_email").on(table.email),
+  })
+);
 
 export type Person = typeof people.$inferSelect;
 export type InsertPerson = typeof people.$inferInsert;
@@ -150,19 +174,23 @@ export type InsertPerson = typeof people.$inferInsert;
 // RBAC: Roles (Perfis de Acesso)
 // ============================================================================
 
-export const roles = mysqlTable("roles", {
-  id: varchar("id", { length: 64 }).primaryKey(),
-  
-  systemName: varchar("systemName", { length: 100 }).notNull().unique(),
-  displayName: varchar("displayName", { length: 100 }).notNull(),
-  description: text("description"),
-  
-  scope: mysqlEnum("scope", ["global", "tenant"]).default("tenant").notNull(),
-  
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-}, (table) => ({
-  scopeIdx: index("idx_role_scope").on(table.scope),
-}));
+export const roles = mysqlTable(
+  "roles",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+
+    systemName: varchar("systemName", { length: 100 }).notNull().unique(),
+    displayName: varchar("displayName", { length: 100 }).notNull(),
+    description: text("description"),
+
+    scope: mysqlEnum("scope", ["global", "tenant"]).default("tenant").notNull(),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    scopeIdx: index("idx_role_scope").on(table.scope),
+  })
+);
 
 export type Role = typeof roles.$inferSelect;
 export type InsertRole = typeof roles.$inferInsert;
@@ -171,18 +199,25 @@ export type InsertRole = typeof roles.$inferInsert;
 // PERMISSÕES (granulares)
 // ============================================================================
 
-export const permissions = mysqlTable("permissions", {
-  id: varchar("id", { length: 64 }).primaryKey(),
-  
-  name: varchar("name", { length: 100 }).notNull().unique(),
-  resource: varchar("resource", { length: 50 }).notNull(),
-  action: varchar("action", { length: 50 }).notNull(),
-  description: text("description"),
-  
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-}, (table) => ({
-  resourceActionIdx: index("idx_perm_resource_action").on(table.resource, table.action),
-}));
+export const permissions = mysqlTable(
+  "permissions",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+
+    name: varchar("name", { length: 100 }).notNull().unique(),
+    resource: varchar("resource", { length: 50 }).notNull(),
+    action: varchar("action", { length: 50 }).notNull(),
+    description: text("description"),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    resourceActionIdx: index("idx_perm_resource_action").on(
+      table.resource,
+      table.action
+    ),
+  })
+);
 
 export type Permission = typeof permissions.$inferSelect;
 export type InsertPermission = typeof permissions.$inferInsert;
@@ -191,20 +226,24 @@ export type InsertPermission = typeof permissions.$inferInsert;
 // ROLE-PERMISSION (associação com condições ABAC)
 // ============================================================================
 
-export const rolePermissions = mysqlTable("role_permissions", {
-  id: varchar("id", { length: 64 }).primaryKey(),
-  
-  roleId: varchar("roleId", { length: 64 }).notNull(),
-  permissionId: varchar("permissionId", { length: 64 }).notNull(),
-  tenantId: varchar("tenantId", { length: 64 }),
-  
-  conditions: json("conditions"),
-  
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-}, (table) => ({
-  rolePermIdx: index("idx_role_perm").on(table.roleId, table.permissionId),
-  tenantIdx: index("idx_role_perm_tenant").on(table.tenantId),
-}));
+export const rolePermissions = mysqlTable(
+  "role_permissions",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+
+    roleId: varchar("roleId", { length: 64 }).notNull(),
+    permissionId: varchar("permissionId", { length: 64 }).notNull(),
+    tenantId: varchar("tenantId", { length: 64 }),
+
+    conditions: json("conditions"),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    rolePermIdx: index("idx_role_perm").on(table.roleId, table.permissionId),
+    tenantIdx: index("idx_role_perm_tenant").on(table.tenantId),
+  })
+);
 
 export type RolePermission = typeof rolePermissions.$inferSelect;
 export type InsertRolePermission = typeof rolePermissions.$inferInsert;
@@ -213,18 +252,25 @@ export type InsertRolePermission = typeof rolePermissions.$inferInsert;
 // USER-ROLE (associação usuário-perfil-tenant)
 // ============================================================================
 
-export const userRoles = mysqlTable("user_roles", {
-  id: varchar("id", { length: 64 }).primaryKey(),
-  
-  userId: varchar("userId", { length: 64 }).notNull(),
-  roleId: varchar("roleId", { length: 64 }).notNull(),
-  tenantId: varchar("tenantId", { length: 64 }),
-  
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-}, (table) => ({
-  userTenantIdx: index("idx_user_role_tenant").on(table.userId, table.tenantId),
-  userRoleIdx: index("idx_user_role").on(table.userId, table.roleId),
-}));
+export const userRoles = mysqlTable(
+  "user_roles",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+
+    userId: varchar("userId", { length: 64 }).notNull(),
+    roleId: varchar("roleId", { length: 64 }).notNull(),
+    tenantId: varchar("tenantId", { length: 64 }),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    userTenantIdx: index("idx_user_role_tenant").on(
+      table.userId,
+      table.tenantId
+    ),
+    userRoleIdx: index("idx_user_role").on(table.userId, table.roleId),
+  })
+);
 
 export type UserRole = typeof userRoles.$inferSelect;
 export type InsertUserRole = typeof userRoles.$inferInsert;
@@ -233,28 +279,38 @@ export type InsertUserRole = typeof userRoles.$inferInsert;
 // AUDITORIA (trilha completa de ações)
 // ============================================================================
 
-export const auditLogs = mysqlTable("audit_logs", {
-  id: varchar("id", { length: 64 }).primaryKey(),
-  
-  tenantId: varchar("tenantId", { length: 64 }),
-  userId: varchar("userId", { length: 64 }).notNull(),
-  
-  action: varchar("action", { length: 50 }).notNull(),
-  entityType: varchar("entityType", { length: 100 }).notNull(),
-  entityId: varchar("entityId", { length: 64 }),
-  
-  oldValues: json("oldValues"),
-  newValues: json("newValues"),
-  
-  ipAddress: varchar("ipAddress", { length: 45 }),
-  userAgent: text("userAgent"),
-  
-  timestamp: timestamp("timestamp").defaultNow().notNull(),
-}, (table) => ({
-  tenantTimestampIdx: index("idx_audit_tenant_time").on(table.tenantId, table.timestamp),
-  userTimestampIdx: index("idx_audit_user_time").on(table.userId, table.timestamp),
-  entityIdx: index("idx_audit_entity").on(table.entityType, table.entityId),
-}));
+export const auditLogs = mysqlTable(
+  "audit_logs",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+
+    tenantId: varchar("tenantId", { length: 64 }),
+    userId: varchar("userId", { length: 64 }).notNull(),
+
+    action: varchar("action", { length: 50 }).notNull(),
+    entityType: varchar("entityType", { length: 100 }).notNull(),
+    entityId: varchar("entityId", { length: 64 }),
+
+    oldValues: json("oldValues"),
+    newValues: json("newValues"),
+
+    ipAddress: varchar("ipAddress", { length: 45 }),
+    userAgent: text("userAgent"),
+
+    timestamp: timestamp("timestamp").defaultNow().notNull(),
+  },
+  table => ({
+    tenantTimestampIdx: index("idx_audit_tenant_time").on(
+      table.tenantId,
+      table.timestamp
+    ),
+    userTimestampIdx: index("idx_audit_user_time").on(
+      table.userId,
+      table.timestamp
+    ),
+    entityIdx: index("idx_audit_entity").on(table.entityType, table.entityId),
+  })
+);
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = typeof auditLogs.$inferInsert;
@@ -263,27 +319,34 @@ export type InsertAuditLog = typeof auditLogs.$inferInsert;
 // LGPD: Consentimentos
 // ============================================================================
 
-export const dataConsents = mysqlTable("data_consents", {
-  id: varchar("id", { length: 64 }).primaryKey(),
-  
-  tenantId: varchar("tenantId", { length: 64 }).notNull(),
-  personId: varchar("personId", { length: 64 }).notNull(),
-  
-  consentType: varchar("consentType", { length: 50 }).notNull(),
-  granted: boolean("granted").notNull(),
-  
-  grantedAt: timestamp("grantedAt"),
-  revokedAt: timestamp("revokedAt"),
-  
-  ipAddress: varchar("ipAddress", { length: 45 }),
-  userAgent: text("userAgent"),
-  version: varchar("version", { length: 20 }),
-  
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-}, (table) => ({
-  personConsentIdx: index("idx_consent_person").on(table.personId, table.consentType),
-  tenantIdx: index("idx_consent_tenant").on(table.tenantId),
-}));
+export const dataConsents = mysqlTable(
+  "data_consents",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+    personId: varchar("personId", { length: 64 }).notNull(),
+
+    consentType: varchar("consentType", { length: 50 }).notNull(),
+    granted: boolean("granted").notNull(),
+
+    grantedAt: timestamp("grantedAt"),
+    revokedAt: timestamp("revokedAt"),
+
+    ipAddress: varchar("ipAddress", { length: 45 }),
+    userAgent: text("userAgent"),
+    version: varchar("version", { length: 20 }),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    personConsentIdx: index("idx_consent_person").on(
+      table.personId,
+      table.consentType
+    ),
+    tenantIdx: index("idx_consent_tenant").on(table.tenantId),
+  })
+);
 
 export type DataConsent = typeof dataConsents.$inferSelect;
 export type InsertDataConsent = typeof dataConsents.$inferInsert;
@@ -292,26 +355,35 @@ export type InsertDataConsent = typeof dataConsents.$inferInsert;
 // CONVITES DE USUÁRIOS
 // ============================================================================
 
-export const userInvites = mysqlTable("user_invites", {
-  id: varchar("id", { length: 64 }).primaryKey(),
-  
-  tenantId: varchar("tenantId", { length: 64 }),
-  email: varchar("email", { length: 320 }).notNull(),
-  roleId: varchar("roleId", { length: 64 }).notNull(),
-  
-  token: varchar("token", { length: 255 }).notNull().unique(),
-  status: mysqlEnum("status", ["pending", "accepted", "expired", "cancelled"]).default("pending").notNull(),
-  
-  invitedBy: varchar("invitedBy", { length: 64 }).notNull(),
-  expiresAt: timestamp("expiresAt").notNull(),
-  acceptedAt: timestamp("acceptedAt"),
-  
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-}, (table) => ({
-  emailStatusIdx: index("idx_invite_email_status").on(table.email, table.status),
-  tenantIdx: index("idx_invite_tenant").on(table.tenantId),
-  tokenIdx: index("idx_invite_token").on(table.token),
-}));
+export const userInvites = mysqlTable(
+  "user_invites",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+
+    tenantId: varchar("tenantId", { length: 64 }),
+    email: varchar("email", { length: 320 }).notNull(),
+    roleId: varchar("roleId", { length: 64 }).notNull(),
+
+    token: varchar("token", { length: 255 }).notNull().unique(),
+    status: mysqlEnum("status", ["pending", "accepted", "expired", "cancelled"])
+      .default("pending")
+      .notNull(),
+
+    invitedBy: varchar("invitedBy", { length: 64 }).notNull(),
+    expiresAt: timestamp("expiresAt").notNull(),
+    acceptedAt: timestamp("acceptedAt"),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    emailStatusIdx: index("idx_invite_email_status").on(
+      table.email,
+      table.status
+    ),
+    tenantIdx: index("idx_invite_tenant").on(table.tenantId),
+    tokenIdx: index("idx_invite_token").on(table.token),
+  })
+);
 
 export type UserInvite = typeof userInvites.$inferSelect;
 export type InsertUserInvite = typeof userInvites.$inferInsert;
@@ -320,36 +392,47 @@ export type InsertUserInvite = typeof userInvites.$inferInsert;
 // PRECIFICAÇÃO: Clientes (para propostas comerciais)
 // ============================================================================
 
-export const clients = mysqlTable("clients", {
-  id: varchar("id", { length: 64 }).primaryKey(),
-  tenantId: varchar("tenantId", { length: 64 }).notNull(),
-  
-  name: varchar("name", { length: 255 }).notNull(),
-  cnpj: varchar("cnpj", { length: 18 }),
-  industry: varchar("industry", { length: 100 }),
-  companySize: mysqlEnum("companySize", ["micro", "small", "medium", "large"]),
-  
-  contactName: varchar("contactName", { length: 255 }),
-  contactEmail: varchar("contactEmail", { length: 320 }),
-  contactPhone: varchar("contactPhone", { length: 20 }),
-  
-  street: varchar("street", { length: 255 }),
-  number: varchar("number", { length: 20 }),
-  complement: varchar("complement", { length: 100 }),
-  neighborhood: varchar("neighborhood", { length: 100 }),
-  city: varchar("city", { length: 100 }),
-  state: varchar("state", { length: 2 }),
-  zipCode: varchar("zipCode", { length: 10 }),
-  
-  status: mysqlEnum("status", ["active", "inactive"]).default("active").notNull(),
-  
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-}, (table) => ({
-  tenantIdx: index("idx_client_tenant").on(table.tenantId),
-  cnpjIdx: index("idx_client_cnpj").on(table.cnpj),
-  emailIdx: index("idx_client_email").on(table.contactEmail),
-}));
+export const clients = mysqlTable(
+  "clients",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+
+    name: varchar("name", { length: 255 }).notNull(),
+    cnpj: varchar("cnpj", { length: 18 }),
+    industry: varchar("industry", { length: 100 }),
+    companySize: mysqlEnum("companySize", [
+      "micro",
+      "small",
+      "medium",
+      "large",
+    ]),
+
+    contactName: varchar("contactName", { length: 255 }),
+    contactEmail: varchar("contactEmail", { length: 320 }),
+    contactPhone: varchar("contactPhone", { length: 20 }),
+
+    street: varchar("street", { length: 255 }),
+    number: varchar("number", { length: 20 }),
+    complement: varchar("complement", { length: 100 }),
+    neighborhood: varchar("neighborhood", { length: 100 }),
+    city: varchar("city", { length: 100 }),
+    state: varchar("state", { length: 2 }),
+    zipCode: varchar("zipCode", { length: 10 }),
+
+    status: mysqlEnum("status", ["active", "inactive"])
+      .default("active")
+      .notNull(),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_client_tenant").on(table.tenantId),
+    cnpjIdx: index("idx_client_cnpj").on(table.cnpj),
+    emailIdx: index("idx_client_email").on(table.contactEmail),
+  })
+);
 
 export type Client = typeof clients.$inferSelect;
 export type InsertClient = typeof clients.$inferInsert;
@@ -358,27 +441,33 @@ export type InsertClient = typeof clients.$inferInsert;
 // PRECIFICAÇÃO: Serviços Oferecidos
 // ============================================================================
 
-export const services = mysqlTable("services", {
-  id: varchar("id", { length: 64 }).primaryKey(),
-  tenantId: varchar("tenantId", { length: 64 }).notNull(),
-  
-  name: varchar("name", { length: 255 }).notNull(),
-  description: text("description"),
-  category: varchar("category", { length: 100 }).notNull(),
-  
-  unit: mysqlEnum("unit", ["hour", "day", "project", "month"]).default("hour").notNull(),
-  
-  minPrice: int("minPrice").notNull(),
-  maxPrice: int("maxPrice").notNull(),
-  
-  isActive: boolean("isActive").default(true).notNull(),
-  
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-}, (table) => ({
-  tenantIdx: index("idx_service_tenant").on(table.tenantId),
-  categoryIdx: index("idx_service_category").on(table.category),
-}));
+export const services = mysqlTable(
+  "services",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    category: varchar("category", { length: 100 }).notNull(),
+
+    unit: mysqlEnum("unit", ["hour", "day", "project", "month"])
+      .default("hour")
+      .notNull(),
+
+    minPrice: int("minPrice").notNull(),
+    maxPrice: int("maxPrice").notNull(),
+
+    isActive: boolean("isActive").default(true).notNull(),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_service_tenant").on(table.tenantId),
+    categoryIdx: index("idx_service_category").on(table.category),
+  })
+);
 
 export type Service = typeof services.$inferSelect;
 export type InsertService = typeof services.$inferInsert;
@@ -387,28 +476,39 @@ export type InsertService = typeof services.$inferInsert;
 // PRECIFICAÇÃO: Parâmetros de Precificação (por tenant)
 // ============================================================================
 
-export const pricingParameters = mysqlTable("pricing_parameters", {
-  id: varchar("id", { length: 64 }).primaryKey(),
-  tenantId: varchar("tenantId", { length: 64 }).notNull().unique(),
-  
-  monthlyFixedCost: int("monthlyFixedCost").notNull(),
-  laborCost: int("laborCost").notNull(),
-  productiveHoursPerMonth: int("productiveHoursPerMonth").notNull(),
-  
-  defaultTaxRegime: mysqlEnum("defaultTaxRegime", ["MEI", "SN", "LP", "autonomous"]).default("SN").notNull(),
-  
-  volumeDiscounts: json("volumeDiscounts"),
-  
-  riskAdjustment: int("riskAdjustment").default(100).notNull(),
-  seniorityAdjustment: int("seniorityAdjustment").default(100).notNull(),
-  
-  taxRates: json("taxRates"),
-  
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-}, (table) => ({
-  tenantIdx: index("idx_pricing_param_tenant").on(table.tenantId),
-}));
+export const pricingParameters = mysqlTable(
+  "pricing_parameters",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull().unique(),
+
+    monthlyFixedCost: int("monthlyFixedCost").notNull(),
+    laborCost: int("laborCost").notNull(),
+    productiveHoursPerMonth: int("productiveHoursPerMonth").notNull(),
+
+    defaultTaxRegime: mysqlEnum("defaultTaxRegime", [
+      "MEI",
+      "SN",
+      "LP",
+      "autonomous",
+    ])
+      .default("SN")
+      .notNull(),
+
+    volumeDiscounts: json("volumeDiscounts"),
+
+    riskAdjustment: int("riskAdjustment").default(100).notNull(),
+    seniorityAdjustment: int("seniorityAdjustment").default(100).notNull(),
+
+    taxRates: json("taxRates"),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_pricing_param_tenant").on(table.tenantId),
+  })
+);
 
 export type PricingParameter = typeof pricingParameters.$inferSelect;
 export type InsertPricingParameter = typeof pricingParameters.$inferInsert;
@@ -417,36 +517,56 @@ export type InsertPricingParameter = typeof pricingParameters.$inferInsert;
 // PRECIFICAÇÃO: Propostas Comerciais
 // ============================================================================
 
-export const proposals = mysqlTable("proposals", {
-  id: varchar("id", { length: 64 }).primaryKey(),
-  tenantId: varchar("tenantId", { length: 64 }).notNull(),
-  clientId: varchar("clientId", { length: 64 }).notNull(),
-  
-  title: varchar("title", { length: 255 }).notNull(),
-  description: text("description"),
-  
-  status: mysqlEnum("status", ["draft", "sent", "accepted", "rejected", "expired"]).default("draft").notNull(),
-  
-  subtotal: int("subtotal").notNull(),
-  discount: int("discount").default(0).notNull(),
-  discountPercent: int("discountPercent").default(0).notNull(),
-  taxes: int("taxes").default(0).notNull(),
-  totalValue: int("totalValue").notNull(),
-  
-  taxRegime: mysqlEnum("taxRegime", ["MEI", "SN", "LP", "autonomous"]).notNull(),
-  
-  validUntil: datetime("validUntil"),
-  generatedAt: timestamp("generatedAt").defaultNow().notNull(),
-  sentAt: timestamp("sentAt"),
-  respondedAt: timestamp("respondedAt"),
-  
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-}, (table) => ({
-  tenantClientIdx: index("idx_proposal_tenant_client").on(table.tenantId, table.clientId),
-  statusIdx: index("idx_proposal_status").on(table.status),
-  dateIdx: index("idx_proposal_date").on(table.generatedAt),
-}));
+export const proposals = mysqlTable(
+  "proposals",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+    clientId: varchar("clientId", { length: 64 }).notNull(),
+
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description"),
+
+    status: mysqlEnum("status", [
+      "draft",
+      "sent",
+      "accepted",
+      "rejected",
+      "expired",
+    ])
+      .default("draft")
+      .notNull(),
+
+    subtotal: int("subtotal").notNull(),
+    discount: int("discount").default(0).notNull(),
+    discountPercent: int("discountPercent").default(0).notNull(),
+    taxes: int("taxes").default(0).notNull(),
+    totalValue: int("totalValue").notNull(),
+
+    taxRegime: mysqlEnum("taxRegime", [
+      "MEI",
+      "SN",
+      "LP",
+      "autonomous",
+    ]).notNull(),
+
+    validUntil: datetime("validUntil"),
+    generatedAt: timestamp("generatedAt").defaultNow().notNull(),
+    sentAt: timestamp("sentAt"),
+    respondedAt: timestamp("respondedAt"),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  table => ({
+    tenantClientIdx: index("idx_proposal_tenant_client").on(
+      table.tenantId,
+      table.clientId
+    ),
+    statusIdx: index("idx_proposal_status").on(table.status),
+    dateIdx: index("idx_proposal_date").on(table.generatedAt),
+  })
+);
 
 export type Proposal = typeof proposals.$inferSelect;
 export type InsertProposal = typeof proposals.$inferInsert;
@@ -455,24 +575,28 @@ export type InsertProposal = typeof proposals.$inferInsert;
 // PRECIFICAÇÃO: Itens das Propostas
 // ============================================================================
 
-export const proposalItems = mysqlTable("proposal_items", {
-  id: varchar("id", { length: 64 }).primaryKey(),
-  proposalId: varchar("proposalId", { length: 64 }).notNull(),
-  serviceId: varchar("serviceId", { length: 64 }).notNull(),
-  
-  serviceName: varchar("serviceName", { length: 255 }).notNull(),
-  
-  quantity: int("quantity").notNull(),
-  unitPrice: int("unitPrice").notNull(),
-  
-  subtotal: int("subtotal").notNull(),
-  technicalHours: int("technicalHours"),
-  
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-}, (table) => ({
-  proposalIdx: index("idx_proposal_item_proposal").on(table.proposalId),
-  serviceIdx: index("idx_proposal_item_service").on(table.serviceId),
-}));
+export const proposalItems = mysqlTable(
+  "proposal_items",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    proposalId: varchar("proposalId", { length: 64 }).notNull(),
+    serviceId: varchar("serviceId", { length: 64 }).notNull(),
+
+    serviceName: varchar("serviceName", { length: 255 }).notNull(),
+
+    quantity: int("quantity").notNull(),
+    unitPrice: int("unitPrice").notNull(),
+
+    subtotal: int("subtotal").notNull(),
+    technicalHours: int("technicalHours"),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    proposalIdx: index("idx_proposal_item_proposal").on(table.proposalId),
+    serviceIdx: index("idx_proposal_item_service").on(table.serviceId),
+  })
+);
 
 export type ProposalItem = typeof proposalItems.$inferSelect;
 export type InsertProposalItem = typeof proposalItems.$inferInsert;
@@ -481,22 +605,28 @@ export type InsertProposalItem = typeof proposalItems.$inferInsert;
 // PRECIFICAÇÃO: Vinculação de Avaliações com Propostas
 // ============================================================================
 
-export const assessmentProposals = mysqlTable("assessment_proposals", {
-  id: varchar("id", { length: 64 }).primaryKey(),
-  tenantId: varchar("tenantId", { length: 64 }).notNull(),
-  
-  assessmentId: varchar("assessmentId", { length: 64 }).notNull(),
-  proposalId: varchar("proposalId", { length: 64 }).notNull(),
-  
-  recommendedServices: json("recommendedServices"),
-  riskLevel: mysqlEnum("riskLevel", ["low", "medium", "high"]).notNull(),
-  
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-}, (table) => ({
-  tenantIdx: index("idx_assess_proposal_tenant").on(table.tenantId),
-  assessmentIdx: index("idx_assess_proposal_assessment").on(table.assessmentId),
-  proposalIdx: index("idx_assess_proposal_proposal").on(table.proposalId),
-}));
+export const assessmentProposals = mysqlTable(
+  "assessment_proposals",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+
+    assessmentId: varchar("assessmentId", { length: 64 }).notNull(),
+    proposalId: varchar("proposalId", { length: 64 }).notNull(),
+
+    recommendedServices: json("recommendedServices"),
+    riskLevel: mysqlEnum("riskLevel", ["low", "medium", "high"]).notNull(),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_assess_proposal_tenant").on(table.tenantId),
+    assessmentIdx: index("idx_assess_proposal_assessment").on(
+      table.assessmentId
+    ),
+    proposalIdx: index("idx_assess_proposal_proposal").on(table.proposalId),
+  })
+);
 
 export type AssessmentProposal = typeof assessmentProposals.$inferSelect;
 export type InsertAssessmentProposal = typeof assessmentProposals.$inferInsert;
@@ -546,10 +676,7 @@ export async function listClients(tenantId: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return await db
-    .select()
-    .from(clients)
-    .where(eq(clients.tenantId, tenantId));
+  return await db.select().from(clients).where(eq(clients.tenantId, tenantId));
 }
 
 export async function getClient(id: string) {
@@ -565,7 +692,10 @@ export async function getClient(id: string) {
   return result[0] || null;
 }
 
-export async function updateClient(id: string, data: Partial<typeof clients.$inferInsert>) {
+export async function updateClient(
+  id: string,
+  data: Partial<typeof clients.$inferInsert>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -630,7 +760,10 @@ export async function getService(id: string) {
   return result[0] || null;
 }
 
-export async function updateService(id: string, data: Partial<typeof services.$inferInsert>) {
+export async function updateService(
+  id: string,
+  data: Partial<typeof services.$inferInsert>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -687,7 +820,10 @@ export async function getPricingParameters(tenantId: string) {
   return result[0] || null;
 }
 
-export async function updatePricingParameters(tenantId: string, data: Partial<typeof pricingParameters.$inferInsert>) {
+export async function updatePricingParameters(
+  tenantId: string,
+  data: Partial<typeof pricingParameters.$inferInsert>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -755,7 +891,10 @@ export async function getProposal(id: string) {
   return result[0] || null;
 }
 
-export async function updateProposal(id: string, data: Partial<typeof proposals.$inferInsert>) {
+export async function updateProposal(
+  id: string,
+  data: Partial<typeof proposals.$inferInsert>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -828,7 +967,9 @@ interface TechnicalHourCalculation {
   seniorityAdjustment?: number;
 }
 
-export function calculateTechnicalHour(params: TechnicalHourCalculation): number {
+export function calculateTechnicalHour(
+  params: TechnicalHourCalculation
+): number {
   const {
     monthlyFixedCost,
     laborCost,
@@ -839,8 +980,10 @@ export function calculateTechnicalHour(params: TechnicalHourCalculation): number
     seniorityAdjustment = 100,
   } = params;
 
-  const baseTechnicalHour = (monthlyFixedCost + laborCost) / productiveHoursPerMonth;
-  const adjustedHour = baseTechnicalHour * (riskAdjustment / 100) * (seniorityAdjustment / 100);
+  const baseTechnicalHour =
+    (monthlyFixedCost + laborCost) / productiveHoursPerMonth;
+  const adjustedHour =
+    baseTechnicalHour * (riskAdjustment / 100) * (seniorityAdjustment / 100);
   const taxRate = taxRates[taxRegime] || 0;
   const technicalHourWithTax = adjustedHour * (1 + taxRate);
 
@@ -865,7 +1008,10 @@ export function calculateProposal(params: ProposalCalculation): {
 } {
   const { items, discountPercent = 0, taxRegime, taxRates = {} } = params;
 
-  const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+  const subtotal = items.reduce(
+    (sum, item) => sum + item.quantity * item.unitPrice,
+    0
+  );
   const discount = Math.round(subtotal * (discountPercent / 100));
   const taxRate = taxRates[taxRegime] || 0;
   const taxes = Math.round((subtotal - discount) * taxRate);
@@ -1156,7 +1302,9 @@ export const proposalsRouter = router({
         clientId: z.string(),
         title: z.string().min(1),
         description: z.string().optional(),
-        status: z.enum(["draft", "sent", "accepted", "rejected", "expired"]).optional(),
+        status: z
+          .enum(["draft", "sent", "accepted", "rejected", "expired"])
+          .optional(),
         subtotal: z.number().int().min(0),
         discount: z.number().int().default(0),
         discountPercent: z.number().int().default(0),
@@ -1192,7 +1340,9 @@ export const proposalsRouter = router({
         id: z.string(),
         title: z.string().optional(),
         description: z.string().optional(),
-        status: z.enum(["draft", "sent", "accepted", "rejected", "expired"]).optional(),
+        status: z
+          .enum(["draft", "sent", "accepted", "rejected", "expired"])
+          .optional(),
         subtotal: z.number().int().optional(),
         discount: z.number().int().optional(),
         discountPercent: z.number().int().optional(),
@@ -1348,7 +1498,7 @@ export async function createContext(
     user = null;
   }
 
-  const tenantId = opts.req.headers["x-tenant-id"] as string || "default";
+  const tenantId = (opts.req.headers["x-tenant-id"] as string) || "default";
 
   return {
     req: opts.req,
@@ -1365,15 +1515,15 @@ export async function createContext(
 
 ### Stack Tecnológico
 
-| Camada | Tecnologia | Versão |
-|--------|-----------|--------|
-| Frontend | React 19 + TypeScript | 19.0+ |
-| Styling | Tailwind CSS 4 | 4.0+ |
-| UI Components | shadcn/ui | Latest |
-| Backend | Express 4 + tRPC 11 | 4.x / 11.x |
-| Database | MySQL + Drizzle ORM | Latest |
-| Authentication | Manus OAuth 2.0 | - |
-| Validation | Zod | Latest |
+| Camada         | Tecnologia            | Versão     |
+| -------------- | --------------------- | ---------- |
+| Frontend       | React 19 + TypeScript | 19.0+      |
+| Styling        | Tailwind CSS 4        | 4.0+       |
+| UI Components  | shadcn/ui             | Latest     |
+| Backend        | Express 4 + tRPC 11   | 4.x / 11.x |
+| Database       | MySQL + Drizzle ORM   | Latest     |
+| Authentication | Manus OAuth 2.0       | -          |
+| Validation     | Zod                   | Latest     |
 
 ### Estrutura de Pastas
 
@@ -1440,6 +1590,7 @@ MySQL Database
 ## Funcionalidades Implementadas
 
 ### Fase 1: Gestão de Riscos Psicossociais (NR-01)
+
 - ✅ Seleção de empresa (tenant) com modal visual
 - ✅ Página de Empresas (Tenants) com CRUD
 - ✅ Página de Setores com filtro por empresa
@@ -1458,6 +1609,7 @@ MySQL Database
 - ✅ Dashboard de Testes E2E
 
 ### Fase 2-3: Sistema de Precificação (NOVO)
+
 - ✅ Schema com 6 novas tabelas
 - ✅ Database Helpers para CRUD
 - ✅ tRPC Routers para Clients, Services, Proposals
@@ -1471,6 +1623,7 @@ MySQL Database
 ## Próximas Fases
 
 ### Fase 4: Frontend de Precificação
+
 - [ ] Página de Clientes (CRUD)
 - [ ] Página de Serviços (CRUD)
 - [ ] Página de Parâmetros de Precificação
@@ -1478,12 +1631,14 @@ MySQL Database
 - [ ] Visualização e Exportação de Propostas
 
 ### Fase 5: Dashboard Unificado
+
 - [ ] Atualizar Home.tsx com novo layout
 - [ ] KPIs consolidados (conformidade + receita)
 - [ ] Widgets de dashboard
 - [ ] Páginas de análise e relatórios
 
 ### Fase 6: Integração de Fluxos
+
 - [ ] Fluxo Avaliação → Proposta
 - [ ] Recomendações inteligentes de serviços
 - [ ] Histórico integrado
@@ -1502,4 +1657,3 @@ MySQL Database
 ---
 
 **Fim do Código Consolidado**
-

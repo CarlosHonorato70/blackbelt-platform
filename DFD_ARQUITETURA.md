@@ -9,7 +9,7 @@ graph TB
     Backend["⚙️ Backend<br/>(Express + tRPC)"]
     Database["💾 Database<br/>(MySQL)"]
     Auth["🔐 OAuth 2.0<br/>(Manus)"]
-    
+
     User -->|HTTP/HTTPS| Frontend
     Frontend -->|tRPC Calls| Backend
     Backend -->|SQL Queries| Database
@@ -31,17 +31,17 @@ graph LR
         LoginModal["Login Modal"]
         TokenStorage["localStorage<br/>(JWT Token)"]
     end
-    
+
     subgraph Auth["🔐 AUTENTICAÇÃO"]
         OAuthServer["OAuth 2.0<br/>(Manus)"]
         Callback["Callback Handler<br/>(/api/oauth/callback)"]
     end
-    
+
     subgraph Server["⚙️ BACKEND (Express)"]
         Context["createContext()"]
         SessionCookie["Session Cookie<br/>(JWT)"]
     end
-    
+
     LoginBtn -->|Redirect to| OAuthServer
     OAuthServer -->|Authorize| LoginModal
     LoginModal -->|Code| Callback
@@ -63,23 +63,23 @@ graph TB
         Client["tRPC Client<br/>(lib/trpc.ts)"]
         Cache["React Query Cache"]
     end
-    
+
     subgraph Network["🌐 REDE"]
         HTTP["HTTP POST<br/>/api/trpc/[procedure]"]
     end
-    
+
     subgraph Backend["⚙️ BACKEND (Express + tRPC)"]
         Router["tRPC Router"]
         Procedure["Procedure Handler"]
         Validation["Zod Validation"]
         Auth["Auth Check<br/>(protectedProcedure)"]
     end
-    
+
     subgraph Database["💾 DATABASE"]
         Query["SQL Query"]
         Table["MySQL Table"]
     end
-    
+
     Component -->|Call Hook| Hook
     Hook -->|Prepare Request| Client
     Client -->|Serialize Data| HTTP
@@ -108,19 +108,19 @@ graph TB
         LocalStorage["localStorage<br/>(tenantId)"]
         Header["Request Header<br/>(x-tenant-id)"]
     end
-    
+
     subgraph Server["⚙️ BACKEND"]
         Context["createContext()"]
         ExtractTenant["Extract tenantId<br/>from Header"]
         TenantContext["ctx.tenantId"]
     end
-    
+
     subgraph DB["💾 DATABASE"]
         RLS["Row-Level Security<br/>(WHERE tenantId = ?)"]
         DataA["Tenant A Data"]
         DataB["Tenant B Data"]
     end
-    
+
     TenantSelector -->|Select Tenant| LocalStorage
     LocalStorage -->|Store tenantId| Header
     Header -->|Include in Request| Context
@@ -144,25 +144,25 @@ graph TB
         Submit["Submit Handler"]
         Mutation["useMutation<br/>(tRPC)"]
     end
-    
+
     subgraph Backend["⚙️ BACKEND"]
         CreateProc["create Procedure"]
         Validation["Validate Input<br/>(Zod)"]
         AuthCheck["Check Auth<br/>(protectedProcedure)"]
         TenantCheck["Verify tenantId"]
     end
-    
+
     subgraph DBHelpers["📚 DB HELPERS"]
         CreateFunc["createClient()<br/>createService()<br/>createProposal()"]
         BuildQuery["Build INSERT Query"]
     end
-    
+
     subgraph Database["💾 DATABASE"]
         Insert["INSERT INTO table"]
         Commit["COMMIT"]
         Return["SELECT * FROM"]
     end
-    
+
     Form -->|User Input| Submit
     Submit -->|Call Mutation| Mutation
     Mutation -->|POST /api/trpc/create| CreateProc
@@ -192,42 +192,42 @@ graph TB
         ServiceSelect["Select Services"]
         Calculate["Calculate Button"]
     end
-    
+
     subgraph Backend["⚙️ BACKEND"]
         ProposalRouter["proposals Router"]
         PricingRouter["pricing Router"]
         GetParams["getPricingParameters()"]
         CalcFunc["calculateProposal()"]
     end
-    
+
     subgraph Database["💾 DATABASE"]
         ClientTable["clients Table"]
         ServiceTable["services Table"]
         ParamTable["pricingParameters Table"]
     end
-    
+
     subgraph Calculation["🧮 CÁLCULOS"]
         Subtotal["Subtotal = Σ(qty × price)"]
         Discount["Discount = subtotal × %"]
         Taxes["Taxes = (subtotal - discount) × rate"]
         Total["Total = subtotal - discount + taxes"]
     end
-    
+
     ProposalForm -->|Select| ClientSelect
     ClientSelect -->|Fetch| ProposalRouter
     ProposalRouter -->|Query| ClientTable
     ClientTable -->|Return Data| ProposalRouter
-    
+
     ProposalForm -->|Select| ServiceSelect
     ServiceSelect -->|Fetch| ProposalRouter
     ProposalRouter -->|Query| ServiceTable
     ServiceTable -->|Return Data| ProposalRouter
-    
+
     ProposalForm -->|Click| Calculate
     Calculate -->|Get Params| PricingRouter
     PricingRouter -->|Query| ParamTable
     ParamTable -->|Return Params| PricingRouter
-    
+
     PricingRouter -->|Execute| CalcFunc
     CalcFunc -->|Calculate| Subtotal
     Subtotal -->|Apply| Discount
@@ -247,23 +247,23 @@ graph TB
     subgraph User["👤 USUÁRIO"]
         Action["Perform Action<br/>(Create/Update/Delete)"]
     end
-    
+
     subgraph Frontend["🖥️ FRONTEND"]
         Component["Component"]
         Mutation["Mutation Call"]
     end
-    
+
     subgraph Backend["⚙️ BACKEND"]
         Procedure["Procedure Handler"]
         AuditLog["logAudit()"]
         BuildLog["Build Log Entry"]
     end
-    
+
     subgraph Database["💾 DATABASE"]
         MainTable["Main Table<br/>(clients, services, etc)"]
         AuditTable["auditLogs Table"]
     end
-    
+
     Action -->|Trigger| Component
     Component -->|Call| Mutation
     Mutation -->|Execute| Procedure
@@ -287,27 +287,27 @@ graph TB
         Submit["Submit Form"]
         Export["Export Button"]
     end
-    
+
     subgraph Backend["⚙️ BACKEND"]
         ListProc["list Procedure"]
         CreateProc["create Procedure"]
         ExportProc["export Procedure"]
         GetDB["getDb()"]
     end
-    
+
     subgraph DBHelpers["📚 DB HELPERS"]
         ListFunc["listRiskAssessments()"]
         CreateFunc["createRiskAssessment()"]
         GetFactors["getRiskFactors()"]
     end
-    
+
     subgraph Database["💾 DATABASE"]
         AssessTable["riskAssessments"]
         FactorTable["riskFactors"]
         PersonTable["people"]
         SectorTable["sectors"]
     end
-    
+
     List -->|Load| ListProc
     ListProc -->|Execute| ListFunc
     ListFunc -->|Query| GetDB
@@ -319,7 +319,7 @@ graph TB
     ListFunc -->|Serialize| ListProc
     ListProc -->|JSON Array| Frontend
     Frontend -->|Display Table| List
-    
+
     Form -->|Fill Data| Submit
     Submit -->|POST| CreateProc
     CreateProc -->|Validate| CreateFunc
@@ -329,7 +329,7 @@ graph TB
     FactorTable -->|Confirm| CreateFunc
     CreateFunc -->|Return ID| CreateProc
     CreateProc -->|Success| Frontend
-    
+
     Export -->|Click| ExportProc
     ExportProc -->|Fetch Data| ListFunc
     ListFunc -->|Get All| AssessTable
@@ -348,11 +348,11 @@ graph TB
         Input["User Input"]
         ClientValidation["Client-side<br/>Validation<br/>(Optional)"]
     end
-    
+
     subgraph Network["🌐 NETWORK"]
         Request["HTTP Request<br/>+ Headers<br/>+ Cookies"]
     end
-    
+
     subgraph Server["⚙️ BACKEND"]
         Context["createContext()"]
         AuthMiddleware["Auth Middleware"]
@@ -361,13 +361,13 @@ graph TB
         ZodValidation["Zod Validation"]
         BusinessLogic["Business Logic"]
     end
-    
+
     subgraph Security["🔐 SECURITY"]
         JWT["JWT Token<br/>Validation"]
         TenantCheck["Tenant ID<br/>Verification"]
         RLS["Row-Level<br/>Security"]
     end
-    
+
     Input -->|User Types| ClientValidation
     ClientValidation -->|Valid| Request
     Request -->|Sent| Context
@@ -395,12 +395,12 @@ graph TB
         Cache["React Query<br/>Cache"]
         Stale["Stale Data"]
     end
-    
+
     subgraph Backend["⚙️ BACKEND"]
         Procedure["Procedure"]
         DB["Database"]
     end
-    
+
     Component -->|First Load| Query
     Query -->|Check Cache| Cache
     Cache -->|Miss| Procedure
@@ -409,12 +409,12 @@ graph TB
     Procedure -->|Return Data| Query
     Query -->|Store| Cache
     Query -->|Render| Component
-    
+
     Component -->|Second Load<br/>(within TTL)| Query
     Query -->|Check Cache| Cache
     Cache -->|Hit| Query
     Query -->|Return Cached| Component
-    
+
     Component -->|Mutation| Procedure
     Procedure -->|Execute| DB
     DB -->|Confirm| Procedure
@@ -439,32 +439,32 @@ sequenceDiagram
     participant tRPC as ⚙️ tRPC Router
     participant DB as 📚 DB Helper
     participant MySQL as 💾 MySQL
-    
+
     User->>Frontend: Clica "Criar Proposta"
     Frontend->>Frontend: Abre Modal
     User->>Frontend: Preenche Formulário
     User->>Frontend: Clica "Salvar"
-    
+
     Frontend->>tRPC: POST /api/trpc/proposals.create<br/>{clientId, title, items, ...}
-    
+
     tRPC->>tRPC: Extrai tenantId do header
     tRPC->>tRPC: Valida com Zod
     tRPC->>tRPC: Verifica autenticação
-    
+
     tRPC->>DB: createProposal(data)
     DB->>DB: Gera ID único
     DB->>MySQL: INSERT INTO proposals
     MySQL->>MySQL: Confirma inserção
     MySQL-->>DB: ID da proposta
-    
+
     DB->>DB: Para cada item
     DB->>MySQL: INSERT INTO proposalItems
     MySQL-->>DB: Confirmação
-    
+
     DB->>MySQL: SELECT * FROM proposals WHERE id = ?
     MySQL-->>DB: Dados completos
     DB-->>tRPC: Retorna objeto Proposal
-    
+
     tRPC-->>Frontend: JSON Response<br/>{id, clientId, title, items, ...}
     Frontend->>Frontend: Atualiza React Query Cache
     Frontend->>Frontend: Re-renderiza componente
@@ -483,49 +483,49 @@ graph TB
         Hooks["Custom Hooks<br/>(useAuth, useQuery, useMutation)"]
         State["State Management<br/>(React Query, Context)"]
     end
-    
+
     subgraph API["🔌 API LAYER"]
         tRPCClient["tRPC Client"]
         Serialization["Serialization<br/>(SuperJSON)"]
         HTTP["HTTP Transport"]
     end
-    
+
     subgraph Business["💼 BUSINESS LOGIC LAYER"]
         Routers["tRPC Routers"]
         Procedures["Procedures<br/>(publicProcedure,<br/>protectedProcedure)"]
         Validation["Validation<br/>(Zod)"]
         Auth["Authentication<br/>(OAuth 2.0)"]
     end
-    
+
     subgraph Data["💾 DATA ACCESS LAYER"]
         DBHelpers["Database Helpers<br/>(CRUD functions)"]
         Calculations["Calculations<br/>(Pricing, etc)"]
         Queries["Query Building"]
     end
-    
+
     subgraph Persistence["🗄️ PERSISTENCE LAYER"]
         ORM["Drizzle ORM"]
         MySQL["MySQL Database"]
         Tables["Tables<br/>(30+ tables)"]
     end
-    
+
     React -->|useQuery/useMutation| Hooks
     Hooks -->|Call| State
     State -->|Manage| React
-    
+
     Hooks -->|tRPC Call| tRPCClient
     tRPCClient -->|Serialize| Serialization
     Serialization -->|HTTP POST| HTTP
-    
+
     HTTP -->|Route| Routers
     Routers -->|Execute| Procedures
     Procedures -->|Validate| Validation
     Procedures -->|Check| Auth
-    
+
     Procedures -->|Call| DBHelpers
     DBHelpers -->|Use| Calculations
     Calculations -->|Build| Queries
-    
+
     Queries -->|Execute| ORM
     ORM -->|SQL| MySQL
     MySQL -->|Query| Tables
@@ -550,34 +550,34 @@ graph TB
         User1["Usuário A1"]
         Data1["Dados Tenant A"]
     end
-    
+
     subgraph Tenant2["🏢 TENANT B<br/>(Empresa ABC)"]
         User2["Usuário B1"]
         Data2["Dados Tenant B"]
     end
-    
+
     subgraph Backend["⚙️ BACKEND"]
         Context1["ctx.tenantId = 'A'"]
         Context2["ctx.tenantId = 'B'"]
     end
-    
+
     subgraph Database["💾 DATABASE COMPARTILHADO"]
         RLS["WHERE tenantId = ?"]
         AllData["Todos os Dados<br/>(Tenant A + B)"]
     end
-    
+
     User1 -->|Login| Context1
     Context1 -->|x-tenant-id: A| RLS
     RLS -->|Filter| AllData
     AllData -->|Return A only| Data1
     Data1 -->|Display| User1
-    
+
     User2 -->|Login| Context2
     Context2 -->|x-tenant-id: B| RLS
     RLS -->|Filter| AllData
     AllData -->|Return B only| Data2
     Data2 -->|Display| User2
-    
+
     Note1["✅ Isolamento Completo<br/>Usuário A não vê dados de B"]
     Note2["✅ Uma única tabela<br/>com RLS"]
     Note3["✅ Escalável e eficiente"]
@@ -594,25 +594,25 @@ graph TB
         Factors["Adicionar Fatores"]
         RiskLevel["Calcular Nível Risco"]
     end
-    
+
     subgraph Step2["💡 PASSO 2: Recomendação"]
         Analyze["Analisar Riscos"]
         Recommend["Recomendar Serviços"]
         CalcPrice["Calcular Preço"]
     end
-    
+
     subgraph Step3["📄 PASSO 3: Proposta"]
         CreateProposal["Criar Proposta"]
         AddItems["Adicionar Itens"]
         LinkAssessment["Vincular Avaliação"]
     end
-    
+
     subgraph Step4["✉️ PASSO 4: Envio"]
         Format["Formatar Documento"]
         Send["Enviar Cliente"]
         Track["Rastrear Status"]
     end
-    
+
     Assessment -->|Completa| Factors
     Factors -->|Submete| RiskLevel
     RiskLevel -->|Alto Risco| Analyze
@@ -631,14 +631,14 @@ graph TB
 
 ## 15. Resumo de Componentes e Fluxos
 
-| Componente | Função | Entrada | Saída |
-|-----------|--------|---------|-------|
-| **Frontend** | Interface de usuário | Ações do usuário | Requisições tRPC |
-| **tRPC Router** | Roteamento de procedures | Requisição HTTP | Resposta JSON |
-| **Procedure** | Lógica de negócio | Dados validados | Resultado processado |
-| **DB Helper** | Acesso a dados | Parâmetros de query | Dados do banco |
-| **Drizzle ORM** | Mapeamento objeto-relacional | Queries tipadas | Resultados SQL |
-| **MySQL** | Persistência de dados | SQL queries | Dados brutos |
+| Componente      | Função                       | Entrada             | Saída                |
+| --------------- | ---------------------------- | ------------------- | -------------------- |
+| **Frontend**    | Interface de usuário         | Ações do usuário    | Requisições tRPC     |
+| **tRPC Router** | Roteamento de procedures     | Requisição HTTP     | Resposta JSON        |
+| **Procedure**   | Lógica de negócio            | Dados validados     | Resultado processado |
+| **DB Helper**   | Acesso a dados               | Parâmetros de query | Dados do banco       |
+| **Drizzle ORM** | Mapeamento objeto-relacional | Queries tipadas     | Resultados SQL       |
+| **MySQL**       | Persistência de dados        | SQL queries         | Dados brutos         |
 
 ---
 
@@ -650,27 +650,27 @@ graph TB
         OAuth["OAuth 2.0<br/>(Manus)"]
         JWT["JWT Token<br/>(Session)"]
     end
-    
+
     subgraph Layer2["🔒 CAMADA 2: AUTORIZAÇÃO"]
         RBAC["RBAC<br/>(Role-Based)"]
         ABAC["ABAC<br/>(Attribute-Based)"]
     end
-    
+
     subgraph Layer3["🔒 CAMADA 3: ISOLAMENTO"]
         TenantCheck["Tenant Check<br/>(x-tenant-id)"]
         RLS["Row-Level Security<br/>(WHERE tenantId)"]
     end
-    
+
     subgraph Layer4["🔒 CAMADA 4: VALIDAÇÃO"]
         InputValidation["Input Validation<br/>(Zod)"]
         TypeSafety["Type Safety<br/>(TypeScript)"]
     end
-    
+
     subgraph Layer5["🔒 CAMADA 5: AUDITORIA"]
         AuditLog["Audit Logging<br/>(Todas ações)"]
         Compliance["Compliance<br/>(LGPD)"]
     end
-    
+
     Request["Requisição"] -->|1. Valida| OAuth
     OAuth -->|2. Verifica| JWT
     JWT -->|3. Checa| RBAC
@@ -700,4 +700,3 @@ graph TB
 ---
 
 **Fim do Diagrama de Fluxo de Dados**
-

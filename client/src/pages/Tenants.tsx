@@ -58,7 +58,7 @@ export default function Tenants() {
         setDialogOpen(false);
       }, 100);
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(error.message || "Erro ao criar empresa");
     },
   });
@@ -150,7 +150,11 @@ export default function Tenants() {
 
                   <div className="grid gap-2">
                     <Label htmlFor="zipCode">CEP</Label>
-                    <Input id="zipCode" name="zipCode" placeholder="00000-000" />
+                    <Input
+                      id="zipCode"
+                      name="zipCode"
+                      placeholder="00000-000"
+                    />
                   </div>
 
                   <div className="border-t pt-4">
@@ -164,7 +168,11 @@ export default function Tenants() {
 
                       <div className="grid gap-2">
                         <Label htmlFor="contactEmail">E-mail</Label>
-                        <Input id="contactEmail" name="contactEmail" type="email" />
+                        <Input
+                          id="contactEmail"
+                          name="contactEmail"
+                          type="email"
+                        />
                       </div>
 
                       <div className="grid gap-2">
@@ -176,7 +184,11 @@ export default function Tenants() {
                 </div>
 
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDialogOpen(false)}
+                  >
                     Cancelar
                   </Button>
                   <Button type="submit" disabled={createMutation.isPending}>
@@ -191,7 +203,9 @@ export default function Tenants() {
         <Card>
           <CardHeader>
             <CardTitle>Filtros</CardTitle>
-            <CardDescription>Busque e filtre as empresas cadastradas</CardDescription>
+            <CardDescription>
+              Busque e filtre as empresas cadastradas
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex gap-4">
@@ -201,7 +215,7 @@ export default function Tenants() {
                   <Input
                     placeholder="Buscar por nome ou CNPJ..."
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={e => setSearch(e.target.value)}
                     className="pl-8"
                   />
                 </div>
@@ -245,9 +259,11 @@ export default function Tenants() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {tenants.map((tenant) => (
+                  {tenants.map(tenant => (
                     <TableRow key={tenant.id}>
-                      <TableCell className="font-medium">{tenant.name}</TableCell>
+                      <TableCell className="font-medium">
+                        {tenant.name}
+                      </TableCell>
                       <TableCell>{tenant.cnpj}</TableCell>
                       <TableCell>
                         {tenant.city && tenant.state
@@ -263,15 +279,15 @@ export default function Tenants() {
                             tenant.status === "active"
                               ? "bg-green-100 text-green-800"
                               : tenant.status === "inactive"
-                              ? "bg-gray-100 text-gray-800"
-                              : "bg-red-100 text-red-800"
+                                ? "bg-gray-100 text-gray-800"
+                                : "bg-red-100 text-red-800"
                           }`}
                         >
                           {tenant.status === "active"
                             ? "Ativo"
                             : tenant.status === "inactive"
-                            ? "Inativo"
-                            : "Suspenso"}
+                              ? "Inativo"
+                              : "Suspenso"}
                         </span>
                       </TableCell>
                     </TableRow>
@@ -281,7 +297,9 @@ export default function Tenants() {
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold">Nenhuma empresa encontrada</h3>
+                <h3 className="text-lg font-semibold">
+                  Nenhuma empresa encontrada
+                </h3>
                 <p className="text-sm text-muted-foreground mt-2">
                   Comece criando uma nova empresa cliente
                 </p>
@@ -293,4 +311,3 @@ export default function Tenants() {
     </DashboardLayout>
   );
 }
-
