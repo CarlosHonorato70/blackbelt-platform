@@ -85,11 +85,9 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     }
     
     if (user.role === undefined) {
-      if (user.id === ENV.ownerId) {
-        user.role = "admin";
-        values.role = "admin";
-        updateSet.role = "admin";
-      }
+      // Default role is 'user', no special owner logic needed
+      values.role = "user";
+      updateSet.role = "user";
     }
 
     if (Object.keys(updateSet).length === 0) {
