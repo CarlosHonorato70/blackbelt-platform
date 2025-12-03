@@ -6,20 +6,12 @@ import { assessmentProposalsRouter, clientsRouter, pricingParametersRouter, pric
 import { peopleRouter } from "./routers/people";
 import { sectorsRouter } from "./routers/sectors";
 import { tenantsRouter } from "./routers/tenants";
+import { authStandaloneRouter } from "./routers/auth-standalone";
 
 export const appRouter = router({
   system: systemRouter,
 
-  auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return {
-        success: true,
-      } as const;
-    }),
-  }),
+  auth: authStandaloneRouter,
 
   // Routers de negócio
   tenants: tenantsRouter,
