@@ -35,13 +35,14 @@ import {
 } from "@/components/ui/table";
 import { useTenant } from "@/contexts/TenantContext";
 import { trpc } from "@/lib/trpc";
-import { AlertCircle, Plus, Trash2, Users } from "lucide-react";
+import { AlertCircle, Edit2, Plus, Trash2, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 export default function People() {
   const { selectedTenant } = useTenant();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
 
@@ -69,6 +70,18 @@ export default function People() {
     },
   });
 
+  const updateMutation = trpc.people.update.useMutation({
+    onSuccess: () => {
+      toast.success("Colaborador atualizado com sucesso!");
+      utils.people.list.invalidate();
+      setEditDialogOpen(false);
+      setSelectedPersonId(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao atualizar colaborador");
+    },
+  });
+
   const deleteMutation = trpc.people.delete.useMutation({
     onSuccess: () => {
       toast.success("Colaborador deletado com sucesso!");
@@ -90,6 +103,22 @@ export default function People() {
 
     const formData = new FormData(e.currentTarget);
     createMutation.mutate({
+      tenantId: selectedTenant.id,
+      sectorId: formData.get("sectorId") as string,
+      name: formData.get("name") as string,
+      email: formData.get("email") as string,
+      phone: formData.get("phone") as string,
+      position: formData.get("position") as string,
+    });
+  };
+
+  const handleEditSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedTenant || !selectedPersonId) return;
+
+    const formData = new FormData(e.currentTarget);
+    updateMutation.mutate({
+      id: selectedPersonId,
       tenantId: selectedTenant.id,
       sectorId: formData.get("sectorId") as string,
       name: formData.get("name") as string,
@@ -244,7 +273,98 @@ export default function People() {
                       <TableCell>{person.position}</TableCell>
                       <TableCell>{person.email || "-"}</TableCell>
                       <TableCell>{person.phone || "-"}</TableCell>
-                      <TableCell>
+                      <TableCell className="flex gap-2">
+                        <Dialog open={editDialogOpen && selectedPersonId === person.id} onOpenChange={(open) => {
+                          if (open) {
+                            setSelectedPersonId(person.id);
+                          }
+                          setEditDialogOpen(open);
+                        }}>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={() => setSelectedPersonId(person.id)}>
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                            <form onSubmit={handleEditSubmit}>
+                              <DialogHeader>
+                                <DialogTitle>Editar Colaborador</DialogTitle>
+                                <DialogDescription>
+                                  Atualize os dados do colaborador {selectedPerson?.name}
+                                </DialogDescription>
+                              </DialogHeader>
+
+                              <div className="grid gap-4 py-4">
+                                <div className="grid gap-2">
+                                  <Label htmlFor="edit-name">Nome Completo *</Label>
+                                  <Input
+                                    id="edit-name"
+                                    name="name"
+                                    defaultValue={selectedPerson?.name}
+                                    required
+                                  />
+                                </div>
+
+                                <div className="grid gap-2">
+                                  <Label htmlFor="edit-sectorId">Setor *</Label>
+                                    <Select name="sectorId" defaultValue={selectedPerson?.sectorId || ""} required>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Selecione o setor" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {sectors?.map((sector) => (
+                                          <SelectItem key={sector.id} value={sector.id}>
+                                            {sector.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="grid gap-2">
+                                  <Label htmlFor="edit-position">Cargo *</Label>
+                                  <Input
+                                    id="edit-position"
+                                    name="position"
+                                    defaultValue={selectedPerson?.position ?? ""}
+                                    required
+                                  />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="grid gap-2">
+                                    <Label htmlFor="edit-email">E-mail</Label>
+                                    <Input
+                                      id="edit-email"
+                                      name="email"
+                                      type="email"
+                                      defaultValue={selectedPerson?.email ?? ""}
+                                    />
+                                  </div>
+
+                                  <div className="grid gap-2">
+                                    <Label htmlFor="edit-phone">Telefone</Label>
+                                    <Input
+                                      id="edit-phone"
+                                      name="phone"
+                                      defaultValue={selectedPerson?.phone ?? ""}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
+                              <DialogFooter>
+                                <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+                                  Cancelar
+                                </Button>
+                                <Button type="submit" disabled={updateMutation.isPending}>
+                                  {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+                                </Button>
+                              </DialogFooter>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
+
                         <Dialog open={deleteDialogOpen && selectedPersonId === person.id} onOpenChange={(open) => {
                           if (open) {
                             setSelectedPersonId(person.id);

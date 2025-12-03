@@ -29,13 +29,14 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useTenant } from "@/contexts/TenantContext";
 import { trpc } from "@/lib/trpc";
-import { AlertCircle, Plus, Trash2, UserSquare2 } from "lucide-react";
+import { AlertCircle, Edit2, Plus, Trash2, UserSquare2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 export default function Sectors() {
   const { selectedTenant } = useTenant();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedSectorId, setSelectedSectorId] = useState<string | null>(null);
 
@@ -55,6 +56,18 @@ export default function Sectors() {
     },
     onError: (error: any) => {
       toast.error(error.message || "Erro ao criar setor");
+    },
+  });
+
+  const updateMutation = trpc.sectors.update.useMutation({
+    onSuccess: () => {
+      toast.success("Setor atualizado com sucesso!");
+      utils.sectors.list.invalidate();
+      setEditDialogOpen(false);
+      setSelectedSectorId(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao atualizar setor");
     },
   });
 
@@ -79,6 +92,20 @@ export default function Sectors() {
 
     const formData = new FormData(e.currentTarget);
     createMutation.mutate({
+      tenantId: selectedTenant.id,
+      name: formData.get("name") as string,
+      description: formData.get("description") as string,
+      responsibleName: formData.get("responsibleName") as string,
+    });
+  };
+
+  const handleEditSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedTenant || !selectedSectorId) return;
+
+    const formData = new FormData(e.currentTarget);
+    updateMutation.mutate({
+      id: selectedSectorId,
       tenantId: selectedTenant.id,
       name: formData.get("name") as string,
       description: formData.get("description") as string,
@@ -203,7 +230,70 @@ export default function Sectors() {
                       <TableCell>
                         {sector.createdAt ? new Date(sector.createdAt).toLocaleDateString("pt-BR") : "-"}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="flex gap-2">
+                        <Dialog open={editDialogOpen && selectedSectorId === sector.id} onOpenChange={(open) => {
+                          if (open) {
+                            setSelectedSectorId(sector.id);
+                          }
+                          setEditDialogOpen(open);
+                        }}>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={() => setSelectedSectorId(sector.id)}>
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-xl">
+                            <form onSubmit={handleEditSubmit}>
+                              <DialogHeader>
+                                <DialogTitle>Editar Setor</DialogTitle>
+                                <DialogDescription>
+                                  Atualize os dados do setor {selectedSector?.name}
+                                </DialogDescription>
+                              </DialogHeader>
+
+                              <div className="grid gap-4 py-4">
+                                <div className="grid gap-2">
+                                  <Label htmlFor="edit-name">Nome do Setor *</Label>
+                                  <Input
+                                    id="edit-name"
+                                    name="name"
+                                    defaultValue={selectedSector?.name}
+                                    required
+                                  />
+                                </div>
+
+                                <div className="grid gap-2">
+                                  <Label htmlFor="edit-description">Descrição</Label>
+                                  <Textarea
+                                    id="edit-description"
+                                    name="description"
+                                    defaultValue={selectedSector?.description || ""}
+                                    rows={3}
+                                  />
+                                </div>
+
+                                <div className="grid gap-2">
+                                  <Label htmlFor="edit-responsibleName">Responsável pelo Setor</Label>
+                                  <Input
+                                    id="edit-responsibleName"
+                                    name="responsibleName"
+                                    defaultValue={selectedSector?.responsibleName || ""}
+                                  />
+                                </div>
+                              </div>
+
+                              <DialogFooter>
+                                <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+                                  Cancelar
+                                </Button>
+                                <Button type="submit" disabled={updateMutation.isPending}>
+                                  {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+                                </Button>
+                              </DialogFooter>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
+
                         <Dialog open={deleteDialogOpen && selectedSectorId === sector.id} onOpenChange={(open) => {
                           if (open) {
                             setSelectedSectorId(sector.id);

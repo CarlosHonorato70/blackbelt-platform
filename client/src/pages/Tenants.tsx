@@ -34,7 +34,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
-import { Building2, Plus, Search, Trash2 } from "lucide-react";
+import { Building2, Edit2, Plus, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -42,6 +42,7 @@ export default function Tenants() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
 
@@ -61,6 +62,18 @@ export default function Tenants() {
     },
     onError: (error: any) => {
       toast.error(error.message || "Erro ao criar empresa");
+    },
+  });
+
+  const updateMutation = trpc.tenants.update.useMutation({
+    onSuccess: () => {
+      toast.success("Empresa atualizada com sucesso!");
+      utils.tenants.list.invalidate();
+      setEditDialogOpen(false);
+      setSelectedTenantId(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao atualizar empresa");
     },
   });
 
@@ -92,6 +105,25 @@ export default function Tenants() {
       contactEmail: formData.get("contactEmail") as string,
       contactPhone: formData.get("contactPhone") as string,
       strategy: "shared_rls",
+    });
+  };
+
+  const handleEditSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedTenantId) return;
+
+    const formData = new FormData(e.currentTarget);
+    updateMutation.mutate({
+      id: selectedTenantId,
+      name: formData.get("name") as string,
+      street: formData.get("street") as string,
+      number: formData.get("number") as string,
+      city: formData.get("city") as string,
+      state: formData.get("state") as string,
+      zipCode: formData.get("zipCode") as string,
+      contactName: formData.get("contactName") as string,
+      contactEmail: formData.get("contactEmail") as string,
+      contactPhone: formData.get("contactPhone") as string,
     });
   };
 
@@ -289,7 +321,94 @@ export default function Tenants() {
                             : "Suspenso"}
                         </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="flex gap-2">
+                        <Dialog open={editDialogOpen && selectedTenantId === tenant.id} onOpenChange={(open) => {
+                          if (open) {
+                            setSelectedTenantId(tenant.id);
+                          }
+                          setEditDialogOpen(open);
+                        }}>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={() => setSelectedTenantId(tenant.id)}>
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                            <form onSubmit={handleEditSubmit}>
+                              <DialogHeader>
+                                <DialogTitle>Editar Empresa</DialogTitle>
+                                <DialogDescription>
+                                  Atualize os dados da empresa {selectedTenant?.name}
+                                </DialogDescription>
+                              </DialogHeader>
+
+                              <div className="grid gap-4 py-4">
+                                <div className="grid gap-2">
+                                  <Label htmlFor="edit-name">Nome da Empresa *</Label>
+                                  <Input id="edit-name" name="name" defaultValue={selectedTenant?.name} required />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="grid gap-2">
+                                    <Label htmlFor="edit-street">Logradouro</Label>
+                                    <Input id="edit-street" name="street" defaultValue={selectedTenant?.street || ""} />
+                                  </div>
+                                  <div className="grid gap-2">
+                                    <Label htmlFor="edit-number">Número</Label>
+                                    <Input id="edit-number" name="number" defaultValue={selectedTenant?.number || ""} />
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="grid gap-2">
+                                    <Label htmlFor="edit-city">Cidade</Label>
+                                    <Input id="edit-city" name="city" defaultValue={selectedTenant?.city || ""} />
+                                  </div>
+                                  <div className="grid gap-2">
+                                    <Label htmlFor="edit-state">UF</Label>
+                                    <Input id="edit-state" name="state" maxLength={2} defaultValue={selectedTenant?.state || ""} />
+                                  </div>
+                                </div>
+
+                                <div className="grid gap-2">
+                                  <Label htmlFor="edit-zipCode">CEP</Label>
+                                  <Input id="edit-zipCode" name="zipCode" defaultValue={selectedTenant?.zipCode || ""} />
+                                </div>
+
+                                <div className="border-t pt-4">
+                                  <h3 className="font-semibold mb-3">Contato Principal</h3>
+
+                                  <div className="grid gap-4">
+                                    <div className="grid gap-2">
+                                      <Label htmlFor="edit-contactName">Nome</Label>
+                                      <Input id="edit-contactName" name="contactName" defaultValue={selectedTenant?.contactName || ""} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                      <Label htmlFor="edit-contactEmail">E-mail</Label>
+                                      <Input id="edit-contactEmail" name="contactEmail" type="email" defaultValue={selectedTenant?.contactEmail || ""} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                      <Label htmlFor="edit-contactPhone">Telefone</Label>
+                                      <Input id="edit-contactPhone" name="contactPhone" defaultValue={selectedTenant?.contactPhone || ""} />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <DialogFooter>
+                                <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+                                  Cancelar
+                                </Button>
+                                <Button type="submit" disabled={updateMutation.isPending}>
+                                  {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+                                </Button>
+                              </DialogFooter>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
+
                         <Dialog open={deleteDialogOpen && selectedTenantId === tenant.id} onOpenChange={(open) => {
                           if (open) {
                             setSelectedTenantId(tenant.id);
