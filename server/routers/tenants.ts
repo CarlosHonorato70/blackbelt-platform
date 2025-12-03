@@ -196,6 +196,36 @@ export const tenantsRouter = router({
       return { success: true };
     }),
 
+  // Deletar tenant
+  delete: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
+      }
+
+      const tenant = await db.getTenant(input.id);
+      if (!tenant) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Empresa não encontrada" });
+      }
+
+      await db.deleteTenant(input.id);
+
+      await db.createAuditLog({
+        tenantId: input.id,
+        userId: ctx.user.id,
+        action: "DELETE",
+        entityType: "tenants",
+        entityId: input.id,
+        oldValues: tenant,
+        newValues: null,
+        ipAddress: ctx.req.ip,
+        userAgent: ctx.req.headers["user-agent"],
+      });
+
+      return { success: true };
+    }),
+
   // Obter configurações do tenant
   getSettings: protectedProcedure
     .input(z.object({ tenantId: z.string() }))
@@ -246,4 +276,3 @@ export const tenantsRouter = router({
       return { success: true };
     }),
 });
-

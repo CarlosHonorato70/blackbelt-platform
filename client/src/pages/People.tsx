@@ -35,13 +35,15 @@ import {
 } from "@/components/ui/table";
 import { useTenant } from "@/contexts/TenantContext";
 import { trpc } from "@/lib/trpc";
-import { AlertCircle, Plus, Users } from "lucide-react";
+import { AlertCircle, Plus, Trash2, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 export default function People() {
   const { selectedTenant } = useTenant();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
 
   const utils = trpc.useUtils();
   const { data: people, isLoading } = trpc.people.list.useQuery(
@@ -62,8 +64,20 @@ export default function People() {
         setDialogOpen(false);
       }, 100);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(error.message || "Erro ao criar colaborador");
+    },
+  });
+
+  const deleteMutation = trpc.people.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Colaborador deletado com sucesso!");
+      utils.people.list.invalidate();
+      setDeleteDialogOpen(false);
+      setSelectedPersonId(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao deletar colaborador");
     },
   });
 
@@ -84,6 +98,8 @@ export default function People() {
       position: formData.get("position") as string,
     });
   };
+
+  const selectedPerson = people?.find((p) => p.id === selectedPersonId);
 
   if (!selectedTenant) {
     return (
@@ -217,6 +233,7 @@ export default function People() {
                     <TableHead>Cargo</TableHead>
                     <TableHead>E-mail</TableHead>
                     <TableHead>Telefone</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -227,6 +244,36 @@ export default function People() {
                       <TableCell>{person.position}</TableCell>
                       <TableCell>{person.email || "-"}</TableCell>
                       <TableCell>{person.phone || "-"}</TableCell>
+                      <TableCell>
+                        <Dialog open={deleteDialogOpen && selectedPersonId === person.id} onOpenChange={(open) => {
+                          if (open) {
+                            setSelectedPersonId(person.id);
+                          }
+                          setDeleteDialogOpen(open);
+                        }}>
+                          <DialogTrigger asChild>
+                            <Button variant="destructive" size="sm" onClick={() => setSelectedPersonId(person.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Confirmar exclusão</DialogTitle>
+                              <DialogDescription>
+                                Tem certeza que deseja deletar o colaborador <strong>{selectedPerson?.name}</strong>? Esta ação não pode ser desfeita.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                                Cancelar
+                              </Button>
+                              <Button variant="destructive" onClick={() => deleteMutation.mutate({ id: person.id, tenantId: selectedTenant.id })} disabled={deleteMutation.isPending}>
+                                {deleteMutation.isPending ? "Deletando..." : "Deletar"}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -246,4 +293,3 @@ export default function People() {
     </DashboardLayout>
   );
 }
-

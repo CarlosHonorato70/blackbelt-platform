@@ -191,6 +191,13 @@ export async function updateTenant(id: string, data: Partial<InsertTenant>) {
     .where(eq(tenants.id, id));
 }
 
+export async function deleteTenant(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(tenants).where(eq(tenants.id, id));
+}
+
 // ============================================================================
 // TENANT SETTINGS
 // ============================================================================

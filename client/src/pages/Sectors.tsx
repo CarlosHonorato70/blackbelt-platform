@@ -29,13 +29,15 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useTenant } from "@/contexts/TenantContext";
 import { trpc } from "@/lib/trpc";
-import { AlertCircle, Plus, UserSquare2 } from "lucide-react";
+import { AlertCircle, Plus, Trash2, UserSquare2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 export default function Sectors() {
   const { selectedTenant } = useTenant();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedSectorId, setSelectedSectorId] = useState<string | null>(null);
 
   const utils = trpc.useUtils();
   const { data: sectors, isLoading } = trpc.sectors.list.useQuery(
@@ -51,8 +53,20 @@ export default function Sectors() {
         setDialogOpen(false);
       }, 100);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(error.message || "Erro ao criar setor");
+    },
+  });
+
+  const deleteMutation = trpc.sectors.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Setor deletado com sucesso!");
+      utils.sectors.list.invalidate();
+      setDeleteDialogOpen(false);
+      setSelectedSectorId(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao deletar setor");
     },
   });
 
@@ -71,6 +85,8 @@ export default function Sectors() {
       responsibleName: formData.get("responsibleName") as string,
     });
   };
+
+  const selectedSector = sectors?.find((s) => s.id === selectedSectorId);
 
   if (!selectedTenant) {
     return (
@@ -174,8 +190,8 @@ export default function Sectors() {
                     <TableHead>Nome</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead>Gestor</TableHead>
-                    <TableHead>Colaboradores</TableHead>
                     <TableHead>Criado em</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -184,9 +200,38 @@ export default function Sectors() {
                       <TableCell className="font-medium">{sector.name}</TableCell>
                       <TableCell className="max-w-xs truncate">{sector.description || "-"}</TableCell>
                       <TableCell>{sector.responsibleName || "-"}</TableCell>
-                      <TableCell>-</TableCell>
                       <TableCell>
                         {sector.createdAt ? new Date(sector.createdAt).toLocaleDateString("pt-BR") : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Dialog open={deleteDialogOpen && selectedSectorId === sector.id} onOpenChange={(open) => {
+                          if (open) {
+                            setSelectedSectorId(sector.id);
+                          }
+                          setDeleteDialogOpen(open);
+                        }}>
+                          <DialogTrigger asChild>
+                            <Button variant="destructive" size="sm" onClick={() => setSelectedSectorId(sector.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Confirmar exclusão</DialogTitle>
+                              <DialogDescription>
+                                Tem certeza que deseja deletar o setor <strong>{selectedSector?.name}</strong>? Esta ação não pode ser desfeita.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                                Cancelar
+                              </Button>
+                              <Button variant="destructive" onClick={() => deleteMutation.mutate({ id: sector.id, tenantId: selectedTenant.id })} disabled={deleteMutation.isPending}>
+                                {deleteMutation.isPending ? "Deletando..." : "Deletar"}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -207,4 +252,3 @@ export default function Sectors() {
     </DashboardLayout>
   );
 }
-

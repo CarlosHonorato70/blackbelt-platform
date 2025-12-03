@@ -34,7 +34,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
-import { Building2, Plus, Search } from "lucide-react";
+import { Building2, Plus, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -42,6 +42,8 @@ export default function Tenants() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
 
   const utils = trpc.useUtils();
   const { data: tenants, isLoading } = trpc.tenants.list.useQuery({
@@ -53,20 +55,30 @@ export default function Tenants() {
     onSuccess: () => {
       toast.success("Empresa criada com sucesso!");
       utils.tenants.list.invalidate();
-      // Aguardar um pouco antes de fechar o dialog para evitar erro de removeChild
       setTimeout(() => {
         setDialogOpen(false);
       }, 100);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(error.message || "Erro ao criar empresa");
+    },
+  });
+
+  const deleteMutation = trpc.tenants.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Empresa deletada com sucesso!");
+      utils.tenants.list.invalidate();
+      setDeleteDialogOpen(false);
+      setSelectedTenantId(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao deletar empresa");
     },
   });
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const form = e.currentTarget;
 
     createMutation.mutate({
       name: formData.get("name") as string,
@@ -82,6 +94,8 @@ export default function Tenants() {
       strategy: "shared_rls",
     });
   };
+
+  const selectedTenant = tenants?.find((t) => t.id === selectedTenantId);
 
   return (
     <DashboardLayout>
@@ -242,6 +256,7 @@ export default function Tenants() {
                     <TableHead>Cidade/UF</TableHead>
                     <TableHead>Contato</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -274,6 +289,36 @@ export default function Tenants() {
                             : "Suspenso"}
                         </span>
                       </TableCell>
+                      <TableCell>
+                        <Dialog open={deleteDialogOpen && selectedTenantId === tenant.id} onOpenChange={(open) => {
+                          if (open) {
+                            setSelectedTenantId(tenant.id);
+                          }
+                          setDeleteDialogOpen(open);
+                        }}>
+                          <DialogTrigger asChild>
+                            <Button variant="destructive" size="sm" onClick={() => setSelectedTenantId(tenant.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Confirmar exclusão</DialogTitle>
+                              <DialogDescription>
+                                Tem certeza que deseja deletar a empresa <strong>{selectedTenant?.name}</strong>? Esta ação não pode ser desfeita.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                                Cancelar
+                              </Button>
+                              <Button variant="destructive" onClick={() => deleteMutation.mutate({ id: tenant.id })} disabled={deleteMutation.isPending}>
+                                {deleteMutation.isPending ? "Deletando..." : "Deletar"}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -293,4 +338,3 @@ export default function Tenants() {
     </DashboardLayout>
   );
 }
-
