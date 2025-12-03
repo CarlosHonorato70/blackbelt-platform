@@ -18,10 +18,12 @@ import AuditLogs from "./pages/AuditLogs";
 import DataExport from "./pages/DataExport";
 import TestDashboard from "./pages/TestDashboard";
 import Help from "./pages/Help";
+import Login from "./pages/Login";
 
 function Router() {
   return (
     <Switch>
+      <Route path={"/login"} component={Login} />
       <Route path={"/"} component={Home} />
       <Route path={"/dashboard"} component={Dashboard} />
       <Route path={"/compliance-reports"} component={ComplianceReports} />
@@ -56,4 +58,3 @@ function App() {
 }
 
 export default App;
-
