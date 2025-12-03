@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,12 +7,125 @@ import { trpc } from "@/lib/trpc";
 import { APP_TITLE, APP_LOGO } from "@/const";
 import { toast } from "sonner";
 
-export default function Login() {
-  const [, setLocation] = useLocation();
-  const [isLogin, setIsLogin] = useState(true);
+type AuthMode = "login" | "register" | "reset";
+
+interface LoginFormProps {
+  mode: AuthMode;
+  onModeChange: (mode: AuthMode) => void;
+  isLoading: boolean;
+  onSubmit: (data: any) => Promise<void>;
+}
+
+function LoginForm({ mode, onModeChange, isLoading, onSubmit }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await onSubmit({ email, password, name });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {mode === "register" && (
+        <div>
+          <label className="block text-sm font-medium mb-1">Nome Completo</label>
+          <Input
+            type="text"
+            placeholder="Seu nome"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required={mode === "register"}
+            disabled={isLoading}
+          />
+        </div>
+      )}
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Email</label>
+        <Input
+          type="email"
+          placeholder="seu@email.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          disabled={isLoading}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">
+          {mode === "reset" ? "Nova Senha" : "Senha"}
+        </label>
+        <Input
+          type="password"
+          placeholder="••••••••"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          disabled={isLoading}
+        />
+      </div>
+
+      <Button type="submit" className="w-full" disabled={isLoading}>
+        {isLoading
+          ? "Processando..."
+          : mode === "login"
+            ? "Entrar"
+            : mode === "register"
+              ? "Registrar"
+              : "Alterar Senha"}
+      </Button>
+
+      <div className="space-y-2 text-center text-sm">
+        {mode === "login" && (
+          <>
+            <div>
+              Não tem conta?{" "}
+              <button
+                type="button"
+                onClick={() => onModeChange("register")}
+                className="text-blue-600 hover:underline font-medium"
+                disabled={isLoading}
+              >
+                Registre-se
+              </button>
+            </div>
+            <div>
+              Esqueceu a senha?{" "}
+              <button
+                type="button"
+                onClick={() => onModeChange("reset")}
+                className="text-blue-600 hover:underline font-medium"
+                disabled={isLoading}
+              >
+                Recuperar
+              </button>
+            </div>
+          </>
+        )}
+
+        {(mode === "register" || mode === "reset") && (
+          <div>
+            <button
+              type="button"
+              onClick={() => onModeChange("login")}
+              className="text-blue-600 hover:underline font-medium"
+              disabled={isLoading}
+            >
+              Voltar para login
+            </button>
+          </div>
+        )}
+      </div>
+    </form>
+  );
+}
+
+export default function Login() {
+  const [, setLocation] = useLocation();
+  const [mode, setMode] = useState<AuthMode>("login");
   const [isLoading, setIsLoading] = useState(false);
 
   const loginMutation = trpc.auth.login.useMutation({
@@ -20,38 +133,60 @@ export default function Login() {
       toast.success("Login realizado com sucesso!");
       setLocation("/");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(error.message || "Erro ao fazer login");
     },
   });
 
   const registerMutation = trpc.auth.register.useMutation({
     onSuccess: () => {
-      toast.success("Conta criada com sucesso! Faça login.");
-      setIsLogin(true);
-      setEmail("");
-      setPassword("");
-      setName("");
+      toast.success("Conta criada com sucesso!");
+      setLocation("/");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(error.message || "Erro ao registrar");
     },
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  const resetPasswordMutation = trpc.auth.resetPassword.useMutation({
+    onSuccess: () => {
+      toast.success("Senha alterada com sucesso!");
+      setMode("login");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao alterar senha");
+    },
+  });
 
+  const handleSubmit = async (data: { email: string; password: string; name: string }) => {
+    setIsLoading(true);
     try {
-      if (isLogin) {
-        await loginMutation.mutateAsync({ email, password });
-      } else {
-        await registerMutation.mutateAsync({ email, password, name });
+      if (mode === "login") {
+        await loginMutation.mutateAsync({ email: data.email, password: data.password });
+      } else if (mode === "register") {
+        await registerMutation.mutateAsync({
+          email: data.email,
+          password: data.password,
+          name: data.name,
+        });
+      } else if (mode === "reset") {
+        await resetPasswordMutation.mutateAsync({ email: data.email, newPassword: data.password });
       }
     } finally {
       setIsLoading(false);
     }
   };
+
+  const title = useMemo(() => {
+    switch (mode) {
+      case "register":
+        return "Crie sua conta";
+      case "reset":
+        return "Recupere sua senha";
+      default:
+        return "Faça login para continuar";
+    }
+  }, [mode]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
@@ -62,86 +197,17 @@ export default function Login() {
           </div>
           <div>
             <CardTitle className="text-2xl">{APP_TITLE}</CardTitle>
-            <CardDescription>
-              {isLogin ? "Faça login para continuar" : "Crie sua conta"}
-            </CardDescription>
+            <CardDescription>{title}</CardDescription>
           </div>
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div>
-                <label className="block text-sm font-medium mb-1">Nome</label>
-                <Input
-                  type="text"
-                  placeholder="Seu nome completo"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required={!isLogin}
-                  disabled={isLoading}
-                />
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
-              <Input
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={isLoading}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Senha</label>
-              <Input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={isLoading}
-              />
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading ? "Processando..." : isLogin ? "Entrar" : "Registrar"}
-            </Button>
-          </form>
-
-          <div className="mt-4 text-center text-sm">
-            {isLogin ? (
-              <>
-                Não tem conta?{" "}
-                <button
-                  onClick={() => setIsLogin(false)}
-                  className="text-blue-600 hover:underline font-medium"
-                  disabled={isLoading}
-                >
-                  Registre-se
-                </button>
-              </>
-            ) : (
-              <>
-                Já tem conta?{" "}
-                <button
-                  onClick={() => setIsLogin(true)}
-                  className="text-blue-600 hover:underline font-medium"
-                  disabled={isLoading}
-                >
-                  Faça login
-                </button>
-              </>
-            )}
-          </div>
+          <LoginForm
+            mode={mode}
+            onModeChange={setMode}
+            isLoading={isLoading}
+            onSubmit={handleSubmit}
+          />
         </CardContent>
       </Card>
     </div>

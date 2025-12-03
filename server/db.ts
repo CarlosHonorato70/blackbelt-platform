@@ -84,10 +84,10 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.lastSignedIn = user.lastSignedIn;
     }
     
-    if (user.role === undefined) {
-      // Default role is 'user', no special owner logic needed
-      values.role = "user";
-      updateSet.role = "user";
+    // Only set role if explicitly provided, don't override existing role
+    if (user.role !== undefined) {
+      values.role = user.role;
+      updateSet.role = user.role;
     }
 
     if (Object.keys(updateSet).length === 0) {

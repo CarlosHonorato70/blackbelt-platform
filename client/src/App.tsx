@@ -17,7 +17,6 @@ import RolesPermissions from "./pages/RolesPermissions";
 import AuditLogs from "./pages/AuditLogs";
 import DataExport from "./pages/DataExport";
 import TestDashboard from "./pages/TestDashboard";
-import Help from "./pages/Help";
 import Login from "./pages/Login";
 
 function Router() {
@@ -32,7 +31,7 @@ function Router() {
       <Route path={"/audit-logs"} component={AuditLogs} />
       <Route path={"/data-export"} component={DataExport} />
       <Route path={"/test-dashboard"} component={TestDashboard} />
-      <Route path={"/help"} component={Help} />
+  
       <Route path={"/tenants"} component={Tenants} />
       <Route path={"/sectors"} component={Sectors} />
       <Route path={"/people"} component={People} />

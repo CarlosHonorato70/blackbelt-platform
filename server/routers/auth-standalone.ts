@@ -117,4 +117,34 @@ export const authStandaloneRouter = router({
       success: true,
     } as const;
   }),
+
+  // Reset password
+  resetPassword: publicProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+        newPassword: z.string().min(6),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const user = await db.getUserByEmail(input.email);
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      // Hash new password
+      const passwordHash = hashPassword(input.newPassword);
+
+      // Update user password
+      await db.upsertUser({
+        id: user.id,
+        passwordHash,
+      });
+
+      return {
+        success: true,
+        message: "Password updated successfully",
+      };
+    }),
 });
