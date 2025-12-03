@@ -14,7 +14,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,17 +32,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useTenant } from "@/contexts/TenantContext";
 import { trpc } from "@/lib/trpc";
 import { AlertCircle, Edit2, Plus, Trash2, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+type DialogMode = "closed" | "create" | "edit" | "delete";
+
 export default function People() {
   const { selectedTenant } = useTenant();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<DialogMode>("closed");
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
 
   const utils = trpc.useUtils();
@@ -61,9 +69,7 @@ export default function People() {
     onSuccess: () => {
       toast.success("Colaborador criado com sucesso!");
       utils.people.list.invalidate();
-      setTimeout(() => {
-        setDialogOpen(false);
-      }, 100);
+      setDialogMode("closed");
     },
     onError: (error: any) => {
       toast.error(error.message || "Erro ao criar colaborador");
@@ -74,7 +80,7 @@ export default function People() {
     onSuccess: () => {
       toast.success("Colaborador atualizado com sucesso!");
       utils.people.list.invalidate();
-      setEditDialogOpen(false);
+      setDialogMode("closed");
       setSelectedPersonId(null);
     },
     onError: (error: any) => {
@@ -86,7 +92,7 @@ export default function People() {
     onSuccess: () => {
       toast.success("Colaborador deletado com sucesso!");
       utils.people.list.invalidate();
-      setDeleteDialogOpen(false);
+      setDialogMode("closed");
       setSelectedPersonId(null);
     },
     onError: (error: any) => {
@@ -155,92 +161,10 @@ export default function People() {
             </p>
           </div>
 
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Colaborador
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <form onSubmit={handleSubmit}>
-                <DialogHeader>
-                  <DialogTitle>Novo Colaborador</DialogTitle>
-                  <DialogDescription>
-                    Cadastre um novo colaborador para {selectedTenant.name}
-                  </DialogDescription>
-                </DialogHeader>
-
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="name">Nome Completo *</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      placeholder="Nome completo do colaborador"
-                      required
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="sectorId">Setor *</Label>
-                      <Select name="sectorId" required>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o setor" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {sectors?.map((sector) => (
-                            <SelectItem key={sector.id} value={sector.id}>
-                              {sector.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="position">Cargo *</Label>
-                    <Input
-                      id="position"
-                      name="position"
-                      placeholder="Ex: Analista, Gerente, Operador"
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="email">E-mail</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        placeholder="email@exemplo.com"
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="phone">Telefone</Label>
-                      <Input
-                        id="phone"
-                        name="phone"
-                        placeholder="(00) 00000-0000"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={createMutation.isPending}>
-                    {createMutation.isPending ? "Criando..." : "Criar Colaborador"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Button onClick={() => setDialogMode("create")}>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Colaborador
+          </Button>
         </div>
 
         <Card>
@@ -274,125 +198,26 @@ export default function People() {
                       <TableCell>{person.email || "-"}</TableCell>
                       <TableCell>{person.phone || "-"}</TableCell>
                       <TableCell className="flex gap-2">
-                        <Dialog open={editDialogOpen && selectedPersonId === person.id} onOpenChange={(open) => {
-                          if (open) {
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
                             setSelectedPersonId(person.id);
-                          }
-                          setEditDialogOpen(open);
-                        }}>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm" onClick={() => setSelectedPersonId(person.id)}>
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                            <form onSubmit={handleEditSubmit}>
-                              <DialogHeader>
-                                <DialogTitle>Editar Colaborador</DialogTitle>
-                                <DialogDescription>
-                                  Atualize os dados do colaborador {selectedPerson?.name}
-                                </DialogDescription>
-                              </DialogHeader>
-
-                              <div className="grid gap-4 py-4">
-                                <div className="grid gap-2">
-                                  <Label htmlFor="edit-name">Nome Completo *</Label>
-                                  <Input
-                                    id="edit-name"
-                                    name="name"
-                                    defaultValue={selectedPerson?.name}
-                                    required
-                                  />
-                                </div>
-
-                                <div className="grid gap-2">
-                                  <Label htmlFor="edit-sectorId">Setor *</Label>
-                                    <Select name="sectorId" defaultValue={selectedPerson?.sectorId || ""} required>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Selecione o setor" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {sectors?.map((sector) => (
-                                          <SelectItem key={sector.id} value={sector.id}>
-                                            {sector.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                </div>
-
-                                <div className="grid gap-2">
-                                  <Label htmlFor="edit-position">Cargo *</Label>
-                                  <Input
-                                    id="edit-position"
-                                    name="position"
-                                    defaultValue={selectedPerson?.position ?? ""}
-                                    required
-                                  />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div className="grid gap-2">
-                                    <Label htmlFor="edit-email">E-mail</Label>
-                                    <Input
-                                      id="edit-email"
-                                      name="email"
-                                      type="email"
-                                      defaultValue={selectedPerson?.email ?? ""}
-                                    />
-                                  </div>
-
-                                  <div className="grid gap-2">
-                                    <Label htmlFor="edit-phone">Telefone</Label>
-                                    <Input
-                                      id="edit-phone"
-                                      name="phone"
-                                      defaultValue={selectedPerson?.phone ?? ""}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-
-                              <DialogFooter>
-                                <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
-                                  Cancelar
-                                </Button>
-                                <Button type="submit" disabled={updateMutation.isPending}>
-                                  {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
-                                </Button>
-                              </DialogFooter>
-                            </form>
-                          </DialogContent>
-                        </Dialog>
-
-                        <Dialog open={deleteDialogOpen && selectedPersonId === person.id} onOpenChange={(open) => {
-                          if (open) {
+                            setDialogMode("edit");
+                          }}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
                             setSelectedPersonId(person.id);
-                          }
-                          setDeleteDialogOpen(open);
-                        }}>
-                          <DialogTrigger asChild>
-                            <Button variant="destructive" size="sm" onClick={() => setSelectedPersonId(person.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Confirmar exclusão</DialogTitle>
-                              <DialogDescription>
-                                Tem certeza que deseja deletar o colaborador <strong>{selectedPerson?.name}</strong>? Esta ação não pode ser desfeita.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <DialogFooter>
-                              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-                                Cancelar
-                              </Button>
-                              <Button variant="destructive" onClick={() => deleteMutation.mutate({ id: person.id, tenantId: selectedTenant.id })} disabled={deleteMutation.isPending}>
-                                {deleteMutation.isPending ? "Deletando..." : "Deletar"}
-                              </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
+                            setDialogMode("delete");
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -409,6 +234,150 @@ export default function People() {
             )}
           </CardContent>
         </Card>
+
+        {/* Dialog para Criar/Editar */}
+        <Dialog open={dialogMode === "create" || dialogMode === "edit"} onOpenChange={(open) => {
+          if (!open) setDialogMode("closed");
+        }}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <form onSubmit={dialogMode === "create" ? handleSubmit : handleEditSubmit}>
+              <DialogHeader>
+                <DialogTitle>
+                  {dialogMode === "create" ? "Novo Colaborador" : "Editar Colaborador"}
+                </DialogTitle>
+                <DialogDescription>
+                  {dialogMode === "create"
+                    ? `Cadastre um novo colaborador para ${selectedTenant.name}`
+                    : `Atualize os dados do colaborador ${selectedPerson?.name}`}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Nome Completo *</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    placeholder="Nome completo do colaborador"
+                    defaultValue={dialogMode === "edit" ? selectedPerson?.name : ""}
+                    required
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="sectorId">Setor *</Label>
+                  <Select
+                    name="sectorId"
+                    defaultValue={dialogMode === "edit" && selectedPerson?.sectorId ? selectedPerson.sectorId : ""}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o setor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sectors?.map((sector) => (
+                        <SelectItem key={sector.id} value={sector.id}>
+                          {sector.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="position">Cargo *</Label>
+                  <Input
+                    id="position"
+                    name="position"
+                    placeholder="Ex: Analista, Gerente, Operador"
+                    defaultValue={dialogMode === "edit" && selectedPerson?.position ? selectedPerson.position : ""}
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">E-mail</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="email@exemplo.com"
+                      defaultValue={dialogMode === "edit" ? selectedPerson?.email ?? "" : ""}
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="phone">Telefone</Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      placeholder="(00) 00000-0000"
+                      defaultValue={dialogMode === "edit" ? selectedPerson?.phone ?? "" : ""}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDialogMode("closed")}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    dialogMode === "create"
+                      ? createMutation.isPending
+                      : updateMutation.isPending
+                  }
+                >
+                  {dialogMode === "create"
+                    ? createMutation.isPending
+                      ? "Criando..."
+                      : "Criar Colaborador"
+                    : updateMutation.isPending
+                    ? "Salvando..."
+                    : "Salvar Alterações"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* AlertDialog para Deletar */}
+        <AlertDialog open={dialogMode === "delete"} onOpenChange={(open) => {
+          if (!open) setDialogMode("closed");
+        }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja deletar o colaborador <strong>{selectedPerson?.name}</strong>?
+                Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="flex gap-2 justify-end">
+              <AlertDialogCancel onClick={() => setDialogMode("closed")}>
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (selectedPersonId) {
+                    deleteMutation.mutate({ id: selectedPersonId, tenantId: selectedTenant.id });
+                  }
+                }}
+                disabled={deleteMutation.isPending}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                {deleteMutation.isPending ? "Deletando..." : "Deletar"}
+              </AlertDialogAction>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
