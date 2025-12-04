@@ -31,6 +31,7 @@ import {
   userRoles,
   users,
 } from "../drizzle/schema";
+import { copsoqAssessments, copsoqResponses, copsoqReports } from "../drizzle/schema_nr01";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -1061,3 +1062,158 @@ export async function getAssessmentProposals(assessmentId: string) {
     .where(eq(assessmentProposals.assessmentId, assessmentId));
 }
 
+
+
+// ============================================================================
+// COPSOQ-II: AVALIAÇÕES DE RISCOS PSICOSSOCIAIS
+// ============================================================================
+
+export async function createCOPSOQAssessment(data: {
+  tenantId: string;
+  sectorId?: string;
+  title: string;
+  description?: string;
+  assessmentDate: Date;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const assessmentId = nanoid();
+  await db.insert(copsoqAssessments).values({
+    id: assessmentId,
+    ...data,
+    status: "draft",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  } as any);
+
+  return assessmentId;
+}
+
+export async function saveCOPSOQResponse(data: {
+  assessmentId: string;
+  personId: string;
+  tenantId: string;
+  ageGroup?: string;
+  gender?: string;
+  yearsInCompany?: string;
+  responses: Record<number, number>;
+  demandScore: number;
+  controlScore: number;
+  supportScore: number;
+  leadershipScore: number;
+  communityScore: number;
+  meaningScore: number;
+  trustScore: number;
+  justiceScore: number;
+  insecurityScore: number;
+  mentalHealthScore: number;
+  burnoutScore: number;
+  violenceScore: number;
+  overallRiskLevel: "low" | "medium" | "high" | "critical";
+  mentalHealthSupport?: string;
+  workplaceImprovement?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const responseId = nanoid();
+  await db.insert(copsoqResponses).values({
+    id: responseId,
+    ...data,
+    responses: JSON.stringify(data.responses),
+    isAnonymous: false,
+    completedAt: new Date(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  } as any);
+
+  return responseId;
+}
+
+export async function getCOPSOQResponses(assessmentId: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db
+    .select()
+    .from(copsoqResponses)
+    .where(eq(copsoqResponses.assessmentId, assessmentId));
+}
+
+export async function getCOPSOQResponsesByPerson(personId: string, tenantId: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db
+    .select()
+    .from(copsoqResponses)
+    .where(and(eq(copsoqResponses.personId, personId), eq(copsoqResponses.tenantId, tenantId)))
+    .orderBy(desc(copsoqResponses.completedAt));
+}
+
+export async function getCOPSOQAssessments(tenantId: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db
+    .select()
+    .from(copsoqAssessments)
+    .where(eq(copsoqAssessments.tenantId, tenantId))
+    .orderBy(desc(copsoqAssessments.assessmentDate));
+}
+
+export async function updateCOPSOQAssessmentStatus(assessmentId: string, status: "draft" | "in_progress" | "completed" | "reviewed") {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .update(copsoqAssessments)
+    .set({ status, updatedAt: new Date() })
+    .where(eq(copsoqAssessments.id, assessmentId));
+}
+
+export async function calculateCOPSOQStats(tenantId: string, sectorId?: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const conditions = [eq(copsoqResponses.tenantId, tenantId)];
+  if (sectorId) {
+    // Você precisaria fazer um join com copsoqAssessments para filtrar por setor
+  }
+
+  const responses = await db
+    .select()
+    .from(copsoqResponses)
+    .where(and(...conditions));
+
+  if (responses.length === 0) return null;
+
+  const stats = {
+    totalResponses: responses.length,
+    avgDemandScore: Math.round(
+      responses.reduce((sum, r) => sum + (r.demandScore || 0), 0) / responses.length
+    ),
+    avgControlScore: Math.round(
+      responses.reduce((sum, r) => sum + (r.controlScore || 0), 0) / responses.length
+    ),
+    avgSupportScore: Math.round(
+      responses.reduce((sum, r) => sum + (r.supportScore || 0), 0) / responses.length
+    ),
+    avgLeadershipScore: Math.round(
+      responses.reduce((sum, r) => sum + (r.leadershipScore || 0), 0) / responses.length
+    ),
+    avgMentalHealthScore: Math.round(
+      responses.reduce((sum, r) => sum + (r.mentalHealthScore || 0), 0) / responses.length
+    ),
+    avgBurnoutScore: Math.round(
+      responses.reduce((sum, r) => sum + (r.burnoutScore || 0), 0) / responses.length
+    ),
+    criticalRiskCount: responses.filter((r) => r.overallRiskLevel === "critical").length,
+    highRiskCount: responses.filter((r) => r.overallRiskLevel === "high").length,
+    mediumRiskCount: responses.filter((r) => r.overallRiskLevel === "medium").length,
+    lowRiskCount: responses.filter((r) => r.overallRiskLevel === "low").length,
+  };
+
+  return stats;
+}

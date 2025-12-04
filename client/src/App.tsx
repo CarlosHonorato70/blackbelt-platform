@@ -19,6 +19,8 @@ import DataExport from "./pages/DataExport";
 import TestDashboard from "./pages/TestDashboard";
 import Login from "./pages/Login";
 import COPSOQ from "./pages/COPSOQ";
+import AssessmentHistory from "./pages/AssessmentHistory";
+import AssessmentAnalytics from "./pages/AssessmentAnalytics";
 
 function Router() {
   return (
@@ -38,7 +40,9 @@ function Router() {
       <Route path={"/people"} component={People} />
       <Route path={"/risk-assessments"} component={RiskAssessments} />
       <Route path={"/risk-assessments/new"} component={RiskAssessmentForm} />
-      <Route path={"/copsoq"} component={COPSOQ} />
+        <Route path="/copsoq" component={COPSOQ} />
+      <Route path="/assessment-history" component={AssessmentHistory} />
+      <Route path="/assessment-analytics" component={AssessmentAnalytics} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
