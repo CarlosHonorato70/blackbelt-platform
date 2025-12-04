@@ -7,6 +7,7 @@ import { getDb } from "../db";
 import { copsoqAssessments, copsoqResponses, copsoqReports, copsoqInvites } from "../../drizzle/schema_nr01";
 import { sendBulkCopsoqInvites } from "../_core/email";
 
+
 export const assessmentsRouter = router({
   // Criar nova avaliacao
   create: protectedProcedure
@@ -316,6 +317,47 @@ export const assessmentsRouter = router({
         totalInvites: input.invitees.length,
         successfulSends: result.success,
         failedSends: result.failed,
+      };
+    }),
+
+  // Cancelar convite
+  cancelInvite: protectedProcedure
+    .input(z.object({ inviteId: z.string() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      // Verificar se convite existe
+      const invite = await db
+        .select()
+        .from(copsoqInvites)
+        .where(eq(copsoqInvites.id, input.inviteId))
+        .limit(1);
+
+      if (!invite || invite.length === 0) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Convite não encontrado",
+        });
+      }
+
+      // Não permitir cancelar convites já concluídos
+      if (invite[0].status === "completed") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Não é possível cancelar um convite já concluído",
+        });
+      }
+
+      // Marcar como cancelado
+      await db
+        .update(copsoqInvites)
+        .set({ status: "expired" })
+        .where(eq(copsoqInvites.id, input.inviteId));
+
+      return {
+        success: true,
+        message: "Convite cancelado com sucesso",
       };
     }),
 });
