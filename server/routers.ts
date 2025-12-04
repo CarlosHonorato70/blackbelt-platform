@@ -7,6 +7,7 @@ import { peopleRouter } from "./routers/people";
 import { sectorsRouter } from "./routers/sectors";
 import { tenantsRouter } from "./routers/tenants";
 import { authStandaloneRouter } from "./routers/auth-standalone";
+import { assessmentsRouter } from "./routers/assessments";
 
 export const appRouter = router({
   system: systemRouter,
@@ -25,6 +26,9 @@ export const appRouter = router({
   proposals: proposalsRouter,
   pricing: pricingRouter,
   assessmentProposals: assessmentProposalsRouter,
+
+  // Routers de avaliações
+  assessments: assessmentsRouter,
 });
 
 export type AppRouter = typeof appRouter;
