@@ -289,6 +289,28 @@ export type InsertCopsoqResponse = typeof copsoqResponses.$inferInsert;
 export type CopsoqReport = typeof copsoqReports.$inferSelect;
 export type InsertCopsoqReport = typeof copsoqReports.$inferInsert;
 
+// Tabela para gerenciar convites de avaliação COPSOQ-II
+export const copsoqInvites = mysqlTable("copsoq_invites", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  assessmentId: varchar("assessmentId", { length: 64 }).notNull(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  respondentEmail: varchar("respondentEmail", { length: 320 }).notNull(),
+  respondentName: varchar("respondentName", { length: 255 }).notNull(),
+  respondentPosition: varchar("respondentPosition", { length: 255 }),
+  sectorId: varchar("sectorId", { length: 64 }),
+  inviteToken: varchar("inviteToken", { length: 255 }).notNull().unique(),
+  status: mysqlEnum("status", ["pending", "sent", "viewed", "completed", "expired"]).default("pending").notNull(),
+  sentAt: timestamp("sentAt"),
+  viewedAt: timestamp("viewedAt"),
+  completedAt: timestamp("completedAt"),
+  expiresAt: timestamp("expiresAt"),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow(),
+});
+
+export type CopsoqInvite = typeof copsoqInvites.$inferSelect;
+export type InsertCopsoqInvite = typeof copsoqInvites.$inferInsert;
+
 export type RiskCategory = typeof riskCategories.$inferSelect;
 export type RiskFactor = typeof riskFactors.$inferSelect;
 export type RiskAssessment = typeof riskAssessments.$inferSelect;

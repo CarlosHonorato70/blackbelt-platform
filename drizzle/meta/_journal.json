@@ -43,6 +43,13 @@
       "when": 1764805817141,
       "tag": "0005_flawless_speed",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1764806944795,
+      "tag": "0006_fluffy_johnny_storm",
+      "breakpoints": true
     }
   ]
 }

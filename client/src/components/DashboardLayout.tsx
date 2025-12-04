@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Building2, Download, Eye, FileText, LayoutDashboard, Lock, LogOut, Mail, PanelLeft, Users, UserSquare2, TestTube, HelpCircle, Clipboard, BarChart3 } from "lucide-react";
+import { Building2, Download, Eye, FileText, LayoutDashboard, Lock, LogOut, Mail, PanelLeft, Users, UserSquare2, TestTube, HelpCircle, Clipboard, BarChart3, Send } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -38,9 +38,9 @@ const menuItems = [
   { icon: FileText, label: "Avaliações NR-01", path: "/risk-assessments" },
   { icon: Clipboard, label: "COPSOQ-II", path: "/copsoq" },
   { icon: FileText, label: "Histórico", path: "/assessment-history" },
-  { icon: FileText, label: "Análise", path: "/assessment-analytics" },
+  { icon: FileText, label: "Análise COPSOQ-II", path: "/copsoq/analytics" },
+  { icon: Mail, label: "Enviar Convites", path: "/copsoq/invites" },
   { icon: FileText, label: "Relatórios Compliance", path: "/compliance-reports" },
-  { icon: Mail, label: "Convites de Usuários", path: "/user-invites" },
   { icon: Lock, label: "Perfis e Permissões", path: "/roles-permissions", adminOnly: true },
   { icon: Eye, label: "Auditoria", path: "/audit-logs", adminOnly: true },
   { icon: Download, label: "Exportação LGPD", path: "/data-export", adminOnly: true },

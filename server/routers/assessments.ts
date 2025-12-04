@@ -1,9 +1,11 @@
+import crypto from "crypto";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { copsoqAssessments, copsoqResponses, copsoqReports } from "../../drizzle/schema_nr01";
+import { copsoqAssessments, copsoqResponses, copsoqReports, copsoqInvites } from "../../drizzle/schema_nr01";
+import { sendBulkCopsoqInvites } from "../_core/email";
 
 export const assessmentsRouter = router({
   // Criar nova avaliacao
@@ -221,6 +223,100 @@ export const assessmentsRouter = router({
         .limit(1);
 
       return result[0] || null;
+    }),
+
+  // Listar convites de avaliacao
+  listInvites: protectedProcedure
+    .input(z.object({ tenantId: z.string() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [];
+
+      return db
+        .select()
+        .from(copsoqInvites)
+        .where(eq(copsoqInvites.tenantId, input.tenantId));
+    }),
+
+  // Enviar convites em lote
+  sendInvites: protectedProcedure
+    .input(
+      z.object({
+        tenantId: z.string(),
+        assessmentTitle: z.string(),
+        invitees: z.array(
+          z.object({
+            email: z.string().email(),
+            name: z.string(),
+            position: z.string().optional(),
+            sector: z.string().optional(),
+          })
+        ),
+        expiresIn: z.number().default(7),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      // Criar avaliacao
+      const assessmentId = `copsoq_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      await db.insert(copsoqAssessments).values({
+        id: assessmentId,
+        tenantId: input.tenantId,
+        title: input.assessmentTitle,
+        assessmentDate: new Date(),
+        status: "in_progress",
+      });
+
+      // Criar convites
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + input.expiresIn);
+
+      const invitesToSend = [];
+      for (const invitee of input.invitees) {
+        const inviteToken = crypto.randomBytes(32).toString("hex");
+        const inviteId = `invite_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+        await db.insert(copsoqInvites).values({
+          id: inviteId,
+          assessmentId,
+          tenantId: input.tenantId,
+          respondentEmail: invitee.email,
+          respondentName: invitee.name,
+          respondentPosition: invitee.position,
+          sectorId: invitee.sector,
+          inviteToken,
+          status: "pending",
+          expiresAt,
+        });
+
+        invitesToSend.push({
+          respondentEmail: invitee.email,
+          respondentName: invitee.name,
+          assessmentTitle: input.assessmentTitle,
+          inviteToken,
+          expiresIn: input.expiresIn,
+        });
+      }
+
+      // Enviar emails em lote
+      const result = await sendBulkCopsoqInvites(invitesToSend);
+
+      // Atualizar status dos convites enviados
+      for (const invitee of input.invitees) {
+        await db
+          .update(copsoqInvites)
+          .set({ status: "sent", sentAt: new Date() })
+          .where(eq(copsoqInvites.respondentEmail, invitee.email));
+      }
+
+      return {
+        assessmentId,
+        totalInvites: input.invitees.length,
+        successfulSends: result.success,
+        failedSends: result.failed,
+      };
     }),
 });
 
