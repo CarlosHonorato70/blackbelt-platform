@@ -7,7 +7,7 @@ import { trpc } from "@/lib/trpc";
 import { APP_TITLE, APP_LOGO } from "@/const";
 import { toast } from "sonner";
 
-type AuthMode = "login" | "register" | "reset";
+type AuthMode = "login" | "register";
 
 interface LoginFormProps {
   mode: AuthMode;
@@ -55,9 +55,7 @@ function LoginForm({ mode, onModeChange, isLoading, onSubmit }: LoginFormProps) 
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">
-          {mode === "reset" ? "Nova Senha" : "Senha"}
-        </label>
+        <label className="block text-sm font-medium mb-1">Senha</label>
         <Input
           type="password"
           placeholder="••••••••"
@@ -73,40 +71,25 @@ function LoginForm({ mode, onModeChange, isLoading, onSubmit }: LoginFormProps) 
           ? "Processando..."
           : mode === "login"
             ? "Entrar"
-            : mode === "register"
-              ? "Registrar"
-              : "Alterar Senha"}
+            : "Registrar"}
       </Button>
 
       <div className="space-y-2 text-center text-sm">
         {mode === "login" && (
-          <>
-            <div>
-              Não tem conta?{" "}
-              <button
-                type="button"
-                onClick={() => onModeChange("register")}
-                className="text-blue-600 hover:underline font-medium"
-                disabled={isLoading}
-              >
-                Registre-se
-              </button>
-            </div>
-            <div>
-              Esqueceu a senha?{" "}
-              <button
-                type="button"
-                onClick={() => onModeChange("reset")}
-                className="text-blue-600 hover:underline font-medium"
-                disabled={isLoading}
-              >
-                Recuperar
-              </button>
-            </div>
-          </>
+          <div>
+            Não tem conta?{" "}
+            <button
+              type="button"
+              onClick={() => onModeChange("register")}
+              className="text-blue-600 hover:underline font-medium"
+              disabled={isLoading}
+            >
+              Registre-se
+            </button>
+          </div>
         )}
 
-        {(mode === "register" || mode === "reset") && (
+        {mode === "register" && (
           <div>
             <button
               type="button"
@@ -148,16 +131,6 @@ export default function Login() {
     },
   });
 
-  const resetPasswordMutation = trpc.auth.resetPassword.useMutation({
-    onSuccess: () => {
-      toast.success("Senha alterada com sucesso!");
-      setMode("login");
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Erro ao alterar senha");
-    },
-  });
-
   const handleSubmit = async (data: { email: string; password: string; name: string }) => {
     setIsLoading(true);
     try {
@@ -169,8 +142,6 @@ export default function Login() {
           password: data.password,
           name: data.name,
         });
-      } else if (mode === "reset") {
-        await resetPasswordMutation.mutateAsync({ email: data.email, newPassword: data.password });
       }
     } finally {
       setIsLoading(false);
@@ -181,8 +152,6 @@ export default function Login() {
     switch (mode) {
       case "register":
         return "Crie sua conta";
-      case "reset":
-        return "Recupere sua senha";
       default:
         return "Faça login para continuar";
     }

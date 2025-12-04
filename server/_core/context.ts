@@ -1,6 +1,7 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
-import { sdk } from "./sdk-standalone";
+import * as db from "../db";
+import { COOKIE_NAME } from "@shared/const";
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
@@ -13,18 +14,19 @@ export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
   let user: User | null = null;
-
+  
   try {
-    user = await sdk.authenticateRequest(opts.req);
+    const userId = opts.req.cookies?.[COOKIE_NAME];
+    if (userId && typeof userId === "string") {
+      const foundUser = await db.getUser(userId);
+      user = foundUser || null;
+    }
   } catch (error) {
-    // Authentication is optional for public procedures
-    // console.debug("[Auth] Request without authentication", error);
-    user = null;
+    console.warn("[Context] Error loading user:", error);
   }
 
-  // Extrair tenantId do header ou usar um padrão
   const tenantId = opts.req.headers["x-tenant-id"] as string || "default";
-
+  
   return {
     req: opts.req,
     res: opts.res,

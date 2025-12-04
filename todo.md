@@ -422,3 +422,15 @@
 - [x] Atualizar status visual do convite cancelado
 - [x] Mostrar mensagem de sucesso/erro
 
+
+## 🔐 Autenticação Local Independente (NOVO)
+
+- [x] Remover dependências do OAuth Manus do contexto
+- [x] Criar router tRPC de autenticação local simples
+- [x] Implementar login/registro com email e senha
+- [x] Adicionar suporte a sessões JWT simples
+- [x] Testar registro de usuário
+- [x] Testar login de usuário
+- [x] Testar logout
+- [x] Testar acesso às funcionalidades após login
+- [x] Validar todas as funcionalidades sem Manus

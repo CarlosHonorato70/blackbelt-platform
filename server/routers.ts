@@ -7,7 +7,7 @@ import { assessmentProposalsRouter, clientsRouter, pricingParametersRouter, pric
 import { peopleRouter } from "./routers/people";
 import { sectorsRouter } from "./routers/sectors";
 import { tenantsRouter } from "./routers/tenants";
-import { authStandaloneRouter } from "./routers/auth-standalone";
+import { authLocalRouter } from "./routers/auth-local";
 import { assessmentsRouter } from "./routers/assessments";
 import { webhookRouter } from "./routers/webhook";
 
@@ -15,7 +15,7 @@ export const appRouter = router({
   system: systemRouter,
   reminders: remindersRouter,
 
-  auth: authStandaloneRouter,
+  auth: authLocalRouter,
 
   // Routers de negócio
   tenants: tenantsRouter,
