@@ -407,3 +407,18 @@
 - [ ] Teste de integração para envio de email
 - [ ] Teste E2E para fluxo completo de lembretes
 
+
+## 🔔 Cancelamento de Convites (NOVO)
+
+### Backend
+- [x] Adicionar rota tRPC para cancelar convite
+- [x] Implementar lógica para marcar convite como cancelado
+- [x] Validar permissões antes de cancelar
+- [x] Registrar log de cancelamento
+
+### Frontend
+- [x] Adicionar botão de cancelamento na tabela de histórico
+- [x] Implementar dialog de confirmação
+- [x] Atualizar status visual do convite cancelado
+- [x] Mostrar mensagem de sucesso/erro
+
