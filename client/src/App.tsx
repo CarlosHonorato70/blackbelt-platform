@@ -24,6 +24,10 @@ import AssessmentHistory from "./pages/AssessmentHistory";
 import AssessmentAnalytics from "./pages/AssessmentAnalytics";
 import CopsoqInvites from "./pages/CopsoqInvites";
 import ReminderManagement from "./pages/ReminderManagement";
+import Services from "./pages/Services";
+import Clients from "./pages/Clients";
+import PricingParameters from "./pages/PricingParameters";
+import Proposals from "./pages/Proposals";
 
 function Router() {
   return (
@@ -49,6 +53,12 @@ function Router() {
       <Route path="/copsoq/history" component={AssessmentHistory} />
       <Route path="/copsoq/analytics" component={AssessmentAnalytics} />
       <Route path="/copsoq/invites" component={CopsoqInvites} />
+      
+      <Route path="/services" component={Services} />
+      <Route path="/clients" component={Clients} />
+      <Route path="/pricing-parameters" component={PricingParameters} />
+      <Route path="/proposals" component={Proposals} />
+      
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

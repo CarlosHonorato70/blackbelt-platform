@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Building2, Download, Eye, FileText, LayoutDashboard, Lock, LogOut, Mail, PanelLeft, Users, UserSquare2, TestTube, HelpCircle, Clipboard, BarChart3, Bell } from "lucide-react";
+import { Building2, Download, Eye, FileText, LayoutDashboard, Lock, LogOut, Mail, PanelLeft, Users, UserSquare2, TestTube, HelpCircle, Clipboard, BarChart3, Bell, DollarSign, ShoppingCart } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -43,6 +43,10 @@ const menuItems = [
   { icon: BarChart3, label: "Rastreamento", path: "/copsoq/tracking" },
   { icon: Bell, label: "Lembretes Automáticos", path: "/reminder-management" },
   { icon: FileText, label: "Relatórios Compliance", path: "/compliance-reports" },
+  { icon: DollarSign, label: "Precificação", path: "/pricing-parameters" },
+  { icon: ShoppingCart, label: "Serviços", path: "/services" },
+  { icon: Building2, label: "Clientes", path: "/clients" },
+  { icon: FileText, label: "Propostas", path: "/proposals" },
   { icon: Lock, label: "Perfis e Permissões", path: "/roles-permissions", adminOnly: true },
   { icon: Eye, label: "Auditoria", path: "/audit-logs", adminOnly: true },
   { icon: Download, label: "Exportação LGPD", path: "/data-export", adminOnly: true },

@@ -434,3 +434,35 @@
 - [x] Testar logout
 - [x] Testar acesso às funcionalidades após login
 - [x] Validar todas as funcionalidades sem Manus
+
+## 💰 Sistema de Precificação (EM DESENVOLVIMENTO)
+
+### Fase 1: Gerenciamento de Serviços
+- [x] Criar página de listagem de serviços
+- [x] Implementar formulário de criação de serviço
+- [x] Implementar formulário de edição de serviço
+- [x] Implementar botão de exclusão de serviço
+- [x] Adicionar validações de preço (mínimo < máximo)
+
+### Fase 2: Gerenciamento de Clientes
+- [x] Criar página de listagem de clientes
+- [x] Implementar formulário de criação de cliente
+- [x] Implementar formulário de edição de cliente
+- [x] Implementar botão de exclusão de cliente
+
+### Fase 3: Parâmetros de Precificação
+- [x] Criar página de configuração de parâmetros
+- [x] Implementar campos de custo mensal e horas produtivas
+- [x] Implementar seleção de regime tributário
+- [x] Implementar ajustes de risco e senioridade
+
+### Fase 4: Criação de Propostas
+- [x] Criar página de criação de propostas
+- [x] Implementar seleção de cliente e serviços
+- [x] Implementar cálculo automático de preço
+- [x] Implementar geração de PDF da proposta
+
+### Fase 5: Integração
+- [x] Adicionar menu de precificação ao sidebar
+- [x] Adicionar rotas ao App.tsx
+- [x] Testar fluxo completo
