@@ -1,5 +1,4 @@
 import { useState } from "react";
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,8 +26,6 @@ export default function CopsoqInvites() {
   const [isLoading, setIsLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedInvitee, setSelectedInvitee] = useState<Invitee | null>(null);
-  const [inviteToCancel, setInviteToCancel] = useState<string | null>(null);
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const invitesQuery = trpc.assessments.listInvites.useQuery(
     { tenantId: "default-tenant" },
@@ -40,14 +37,6 @@ export default function CopsoqInvites() {
       invitesQuery.refetch();
       setInvitees([]);
       setAssessmentTitle("");
-    },
-  });
-
-  const cancelInviteMutation = trpc.assessments.cancelInvite.useMutation({
-    onSuccess: () => {
-      invitesQuery.refetch();
-      setInviteToCancel(null);
-      setShowCancelConfirm(false);
     },
   });
 
@@ -131,16 +120,6 @@ export default function CopsoqInvites() {
   // Remover respondente da lista
   const handleRemoveInvitee = (index: number) => {
     setInvitees(invitees.filter((_, i) => i !== index));
-  };
-
-  // Cancelar convite
-  const handleCancelInvite = async () => {
-    if (!inviteToCancel) return;
-    try {
-      await cancelInviteMutation.mutateAsync({ inviteId: inviteToCancel });
-    } catch (error) {
-      console.error("Erro ao cancelar convite:", error);
-    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -298,7 +277,7 @@ export default function CopsoqInvites() {
 
         {/* HISTÓRICO */}
         <TabsContent value="history" className="space-y-4">
-          {invites.filter((i: any) => i.status !== "expired").length === 0 ? (
+          {invites.length === 0 ? (
             <Card>
               <CardContent className="pt-6 text-center text-gray-500">
                 Nenhum convite enviado ainda
@@ -306,51 +285,40 @@ export default function CopsoqInvites() {
             </Card>
           ) : (
             <div className="space-y-3">
-              {invites.map((invite: any) => {
-                if (invite.status === "expired") return null;
-                return (
-                  <Card key={invite.id}>
-                    <CardContent className="pt-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <p className="font-semibold">{invite.respondentName}</p>
-                          <p className="text-sm text-gray-600 font-mono">{invite.respondentEmail}</p>
-                          <div className="flex gap-2 mt-3">
-                            {getStatusBadge(invite.status)}
-                            {invite.sentAt && (
-                              <span className="text-xs text-gray-600">
-                                Enviado em {new Date(invite.sentAt).toLocaleDateString("pt-BR")}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          {invite.status !== "completed" && invite.status !== "expired" && (
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => {
-                                setInviteToCancel(invite.id);
-                                setShowCancelConfirm(true);
-                              }}
-                              disabled={cancelInviteMutation.isPending}
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Cancelar
-                            </Button>
+              {invites.map((invite) => (
+                <Card key={invite.id}>
+                  <CardContent className="pt-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="font-semibold">{invite.respondentName}</p>
+                        <p className="text-sm text-gray-600 font-mono">{invite.respondentEmail}</p>
+                        <div className="flex gap-2 mt-3">
+                          {getStatusBadge(invite.status)}
+                          {invite.sentAt && (
+                            <span className="text-xs text-gray-600">
+                              Enviado em {new Date(invite.sentAt).toLocaleDateString("pt-BR")}
+                            </span>
                           )}
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                      <div className="flex gap-2">
+                        {invite.status === "pending" && (
+                          <Button size="sm" variant="outline">
+                            <Mail className="w-4 h-4 mr-2" />
+                            Reenviar
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </TabsContent>
       </Tabs>
 
-      {/* DIALOG DE CONFIRMACAO - ENVIAR CONVITES */}
+      {/* DIALOG DE CONFIRMACAO */}
       <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -374,28 +342,6 @@ export default function CopsoqInvites() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleSendInvites} disabled={isLoading}>
               {isLoading ? "Enviando..." : "Confirmar e Enviar"}
-            </AlertDialogAction>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* DIALOG DE CONFIRMACAO - CANCELAR CONVITE */}
-      <AlertDialog open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancelar Convite</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja cancelar este convite? O respondente não poderá mais acessar o questionário COPSOQ-II.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="flex gap-3">
-            <AlertDialogCancel>Manter Convite</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCancelInvite}
-              disabled={cancelInviteMutation.isPending}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {cancelInviteMutation.isPending ? "Cancelando..." : "Cancelar Convite"}
             </AlertDialogAction>
           </div>
         </AlertDialogContent>
