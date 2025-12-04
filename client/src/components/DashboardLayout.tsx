@@ -40,6 +40,7 @@ const menuItems = [
   { icon: FileText, label: "Histórico", path: "/assessment-history" },
   { icon: FileText, label: "Análise COPSOQ-II", path: "/copsoq/analytics" },
   { icon: Mail, label: "Enviar Convites", path: "/copsoq/invites" },
+  { icon: BarChart3, label: "Rastreamento", path: "/copsoq/tracking" },
   { icon: FileText, label: "Relatórios Compliance", path: "/compliance-reports" },
   { icon: Lock, label: "Perfis e Permissões", path: "/roles-permissions", adminOnly: true },
   { icon: Eye, label: "Auditoria", path: "/audit-logs", adminOnly: true },

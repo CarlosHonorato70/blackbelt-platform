@@ -8,6 +8,7 @@ import { sectorsRouter } from "./routers/sectors";
 import { tenantsRouter } from "./routers/tenants";
 import { authStandaloneRouter } from "./routers/auth-standalone";
 import { assessmentsRouter } from "./routers/assessments";
+import { webhookRouter } from "./routers/webhook";
 
 export const appRouter = router({
   system: systemRouter,
@@ -29,6 +30,7 @@ export const appRouter = router({
 
   // Routers de avaliações
   assessments: assessmentsRouter,
+  webhook: webhookRouter,
 });
 
 export type AppRouter = typeof appRouter;
