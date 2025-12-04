@@ -1,6 +1,7 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
+import { remindersRouter } from "./routers/reminders";
 import { publicProcedure, router } from "./_core/trpc";
 import { assessmentProposalsRouter, clientsRouter, pricingParametersRouter, pricingRouter, proposalsRouter, servicesRouter } from "./routers/pricing";
 import { peopleRouter } from "./routers/people";
@@ -12,6 +13,7 @@ import { webhookRouter } from "./routers/webhook";
 
 export const appRouter = router({
   system: systemRouter,
+  reminders: remindersRouter,
 
   auth: authStandaloneRouter,
 

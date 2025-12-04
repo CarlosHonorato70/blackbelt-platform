@@ -366,3 +366,44 @@
 - Comunicar progresso aos stakeholders
 - Preparar plano de rollback para cada fase
 
+
+---
+
+## ✨ Sistema de Lembretes Automáticos (NOVO)
+
+### Backend
+- [x] Criar tabela copsoqReminders no schema
+- [x] Implementar routers tRPC para reminders
+- [x] Criar agendador de lembretes (reminder-scheduler.ts)
+- [x] Integrar agendador ao servidor (startReminderScheduler)
+- [x] Implementar lógica de envio de emails de lembrete
+- [x] Configurar intervalo de lembretes (2, 5, 9 dias)
+- [x] Implementar limite máximo de 3 lembretes por convite
+- [x] Implementar expiração de convites após 14 dias
+- [x] Adicionar tratamento de erros e logging
+
+### Frontend
+- [x] Criar página ReminderManagement.tsx
+- [x] Implementar seleção de avaliação
+- [x] Exibir estatísticas de lembretes
+- [x] Listar histórico de lembretes enviados
+- [x] Botão para executar agendador manualmente
+- [x] Botão para enviar lembrete manual
+- [x] Integrar ao sidebar com ícone Bell
+- [x] Adicionar rota /reminder-management ao App.tsx
+- [x] Exibir status de envio (enviado, falha, rejeitado)
+
+### Configuração
+- [x] Agendador executa a cada 1 hora
+- [x] 1º lembrete: 2 dias após envio
+- [x] 2º lembrete: 5 dias após envio
+- [x] 3º lembrete: 9 dias após envio
+- [x] Máximo 3 lembretes por convite
+- [x] Convites expiram após 14 dias
+
+### Testes
+- [ ] Teste unitário para cálculo de datas de lembrete
+- [ ] Teste unitário para verificação de limite de lembretes
+- [ ] Teste de integração para envio de email
+- [ ] Teste E2E para fluxo completo de lembretes
+

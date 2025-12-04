@@ -23,6 +23,7 @@ import CopsoqTracking from "./pages/CopsoqTracking";
 import AssessmentHistory from "./pages/AssessmentHistory";
 import AssessmentAnalytics from "./pages/AssessmentAnalytics";
 import CopsoqInvites from "./pages/CopsoqInvites";
+import ReminderManagement from "./pages/ReminderManagement";
 
 function Router() {
   return (
@@ -43,7 +44,8 @@ function Router() {
       <Route path={"/risk-assessments"} component={RiskAssessments} />
       <Route path={"/risk-assessments/new"} component={RiskAssessmentForm} />
       <Route path="/copsoq" component={COPSOQ} />
-      <Route path="/copsoq/tracking" component={CopsoqTracking} />
+      <Route path="/copsoq-tracking" component={CopsoqTracking} />
+      <Route path="/reminder-management" component={ReminderManagement} />
       <Route path="/copsoq/history" component={AssessmentHistory} />
       <Route path="/copsoq/analytics" component={AssessmentAnalytics} />
       <Route path="/copsoq/invites" component={CopsoqInvites} />

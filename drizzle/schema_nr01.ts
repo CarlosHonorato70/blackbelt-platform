@@ -311,6 +311,24 @@ export const copsoqInvites = mysqlTable("copsoq_invites", {
 export type CopsoqInvite = typeof copsoqInvites.$inferSelect;
 export type InsertCopsoqInvite = typeof copsoqInvites.$inferInsert;
 
+// Tabela de Lembretes de Avaliação COPSOQ-II
+export const copsoqReminders = mysqlTable("copsoq_reminders", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  inviteId: varchar("invite_id", { length: 64 }).notNull(),
+  assessmentId: varchar("assessment_id", { length: 64 }).notNull(),
+  respondentEmail: varchar("respondent_email", { length: 320 }).notNull(),
+  respondentName: varchar("respondent_name", { length: 255 }).notNull(),
+  reminderNumber: int("reminder_number").default(1).notNull(), // 1º, 2º ou 3º lembrete
+  sentAt: timestamp("sent_at").defaultNow().notNull(),
+  nextReminderAt: timestamp("next_reminder_at"), // Quando enviar próximo lembrete
+  status: mysqlEnum("status", ["sent", "failed", "bounced"]).default("sent").notNull(),
+  errorMessage: text("error_message"), // Se falhar, qual foi o erro
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type CopsoqReminder = typeof copsoqReminders.$inferSelect;
+export type InsertCopsoqReminder = typeof copsoqReminders.$inferInsert;
+
 export type RiskCategory = typeof riskCategories.$inferSelect;
 export type RiskFactor = typeof riskFactors.$inferSelect;
 export type RiskAssessment = typeof riskAssessments.$inferSelect;
