@@ -110,3 +110,13 @@ temp/
 
 # Manus cache/logs
 .manus/
+
+# Docker volumes and data
+docker/backups/*
+!docker/backups/.gitkeep
+docker/nginx/ssl/*
+!docker/nginx/ssl/.gitkeep
+
+# Production environment files (keep templates)
+.env.production
+!.env.production.template
