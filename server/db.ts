@@ -545,6 +545,89 @@ export async function removeUserRole(
   await db.delete(userRoles).where(and(...conditions));
 }
 
+/**
+ * Get all permissions for a user in a specific tenant
+ * Resolves through user roles and role permissions
+ */
+export async function getUserPermissions(userId: string, tenantId?: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Get user roles for the tenant (or global roles if no tenantId)
+  const userRolesList = await getUserRoles(userId, tenantId);
+  if (userRolesList.length === 0) return [];
+
+  const roleIds = userRolesList.map(ur => ur.roleId);
+
+  // Get all role permissions
+  const conditions = [sql`${rolePermissions.roleId} IN (${sql.join(roleIds.map(id => sql`${id}`), sql`, `)})`];
+  
+  // Filter by tenant if specified
+  if (tenantId !== undefined) {
+    conditions.push(
+      or(
+        eq(rolePermissions.tenantId, tenantId),
+        sql`${rolePermissions.tenantId} IS NULL` // Include global permissions
+      )!
+    );
+  }
+
+  const rolePerms = await db
+    .select({
+      rolePermission: rolePermissions,
+      permission: {
+        id: sql`${rolePermissions.permissionId}`,
+        name: sql`${rolePermissions.permissionId}`,
+        resource: sql`${rolePermissions.permissionId}`,
+        action: sql`${rolePermissions.permissionId}`,
+      },
+    })
+    .from(rolePermissions)
+    .where(and(...conditions));
+
+  return rolePerms;
+}
+
+/**
+ * Check if user has a specific permission in a tenant
+ */
+export async function userHasPermission(
+  userId: string,
+  permissionName: string,
+  tenantId?: string
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  // Get user roles for the tenant
+  const userRolesList = await getUserRoles(userId, tenantId);
+  if (userRolesList.length === 0) return false;
+
+  const roleIds = userRolesList.map(ur => ur.roleId);
+
+  // Check if any role has the permission
+  const result = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(rolePermissions)
+    .innerJoin(
+      sql`(SELECT id FROM permissions WHERE name = ${permissionName}) as perm`,
+      sql`${rolePermissions.permissionId} = perm.id`
+    )
+    .where(
+      and(
+        sql`${rolePermissions.roleId} IN (${sql.join(roleIds.map(id => sql`${id}`), sql`, `)})`,
+        tenantId
+          ? or(
+              eq(rolePermissions.tenantId, tenantId),
+              sql`${rolePermissions.tenantId} IS NULL`
+            )!
+          : sql`TRUE`
+      )
+    );
+
+  return result.length > 0 && result[0].count > 0;
+}
+
 // ============================================================================
 // AUDIT LOGS
 // ============================================================================

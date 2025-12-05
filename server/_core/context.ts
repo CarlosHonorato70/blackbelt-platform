@@ -7,13 +7,15 @@ export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
   res: CreateExpressContextOptions["res"];
   user: User | null;
-  tenantId: string;
+  tenantId: string | null;
+  userRoles: Awaited<ReturnType<typeof db.getUserRoles>>;
 };
 
 export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
   let user: User | null = null;
+  let userRoles: Awaited<ReturnType<typeof db.getUserRoles>> = [];
 
   try {
     const userId = opts.req.cookies?.[COOKIE_NAME];
@@ -25,12 +27,26 @@ export async function createContext(
     console.warn("[Context] Error loading user:", error);
   }
 
-  const tenantId = (opts.req.headers["x-tenant-id"] as string) || "default";
+  // Get tenantId from header or query param
+  const tenantId = 
+    (opts.req.headers["x-tenant-id"] as string) || 
+    (opts.req.query?.tenantId as string) ||
+    null;
+
+  // Load user roles for the tenant if user is authenticated
+  if (user && tenantId) {
+    try {
+      userRoles = await db.getUserRoles(user.id, tenantId);
+    } catch (error) {
+      console.warn("[Context] Error loading user roles:", error);
+    }
+  }
 
   return {
     req: opts.req,
     res: opts.res,
     user,
     tenantId,
+    userRoles,
   };
 }
