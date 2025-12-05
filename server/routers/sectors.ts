@@ -1,24 +1,21 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router, tenantProcedure } from "../_core/trpc";
 import * as db from "../db";
 
 export const sectorsRouter = router({
   // Listar setores de um tenant
-  list: protectedProcedure
+  list: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
         search: z.string().optional(),
-      })
+      }).optional()
     )
     .query(async ({ ctx, input }) => {
-      // TODO: Verificar se usuário tem acesso a este tenant
-
-      const sectors = await db.listSectors(input.tenantId, input.search);
+      const sectors = await db.listSectors(ctx.tenantId!, input?.search);
 
       await db.createAuditLog({
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         userId: ctx.user.id,
         action: "READ",
         entityType: "sectors",
@@ -33,15 +30,14 @@ export const sectorsRouter = router({
     }),
 
   // Obter um setor específico
-  get: protectedProcedure
+  get: tenantProcedure
     .input(
       z.object({
         id: z.string(),
-        tenantId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
-      const sector = await db.getSector(input.id, input.tenantId);
+      const sector = await db.getSector(input.id, ctx.tenantId!);
 
       if (!sector) {
         throw new TRPCError({
@@ -51,7 +47,7 @@ export const sectorsRouter = router({
       }
 
       await db.createAuditLog({
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         userId: ctx.user.id,
         action: "READ",
         entityType: "sectors",
@@ -66,10 +62,10 @@ export const sectorsRouter = router({
     }),
 
   // Criar novo setor
-  create: protectedProcedure
+  create: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        
         name: z.string().min(1, "Nome é obrigatório"),
         description: z.string().optional(),
         responsibleName: z.string().optional(),
@@ -81,7 +77,7 @@ export const sectorsRouter = router({
       // TODO: Verificar se usuário tem permissão para criar setores neste tenant
 
       // Verificar se tenant existe
-      const tenant = await db.getTenant(input.tenantId);
+      const tenant = await db.getTenant(ctx.tenantId!);
       if (!tenant) {
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -89,10 +85,13 @@ export const sectorsRouter = router({
         });
       }
 
-      const sector = await db.createSector(input);
+      const sector = await db.createSector({
+        ...input,
+        tenantId: ctx.tenantId!,
+      });
 
       await db.createAuditLog({
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         userId: ctx.user.id,
         action: "CREATE",
         entityType: "sectors",
@@ -107,11 +106,11 @@ export const sectorsRouter = router({
     }),
 
   // Atualizar setor
-  update: protectedProcedure
+  update: tenantProcedure
     .input(
       z.object({
         id: z.string(),
-        tenantId: z.string(),
+        
         name: z.string().min(1).optional(),
         description: z.string().optional(),
         responsibleName: z.string().optional(),
@@ -120,9 +119,9 @@ export const sectorsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { id, tenantId, ...data } = input;
+      const { id, ...data } = input;
 
-      const sector = await db.getSector(id, tenantId);
+      const sector = await db.getSector(id, ctx.tenantId!);
       if (!sector) {
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -132,10 +131,10 @@ export const sectorsRouter = router({
 
       // TODO: Verificar permissões
 
-      await db.updateSector(id, tenantId, data);
+      await db.updateSector(id, ctx.tenantId!, data);
 
       await db.createAuditLog({
-        tenantId,
+        tenantId: ctx.tenantId!,
         userId: ctx.user.id,
         action: "UPDATE",
         entityType: "sectors",
@@ -150,15 +149,15 @@ export const sectorsRouter = router({
     }),
 
   // Deletar setor
-  delete: protectedProcedure
+  delete: tenantProcedure
     .input(
       z.object({
         id: z.string(),
-        tenantId: z.string(),
+        
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const sector = await db.getSector(input.id, input.tenantId);
+      const sector = await db.getSector(input.id, ctx.tenantId!);
       if (!sector) {
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -169,10 +168,10 @@ export const sectorsRouter = router({
       // TODO: Verificar permissões
       // TODO: Verificar se há colaboradores vinculados
 
-      await db.deleteSector(input.id, input.tenantId);
+      await db.deleteSector(input.id, ctx.tenantId!);
 
       await db.createAuditLog({
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         userId: ctx.user.id,
         action: "DELETE",
         entityType: "sectors",

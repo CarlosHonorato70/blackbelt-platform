@@ -1,27 +1,23 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router, tenantProcedure } from "../_core/trpc";
 import * as db from "../db";
 
 export const peopleRouter = router({
   // Listar colaboradores de um tenant
-  list: protectedProcedure
+  list: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
         sectorId: z.string().optional(),
         search: z.string().optional(),
         employmentType: z.enum(["own", "outsourced"]).optional(),
-      })
+      }).optional()
     )
     .query(async ({ ctx, input }) => {
-      // TODO: Verificar se usuário tem acesso a este tenant
-
-      const { tenantId, ...filters } = input;
-      const people = await db.listPeople(tenantId, filters);
+      const people = await db.listPeople(ctx.tenantId!, input || {});
 
       await db.createAuditLog({
-        tenantId,
+        tenantId: ctx.tenantId!,
         userId: ctx.user.id,
         action: "READ",
         entityType: "people",
@@ -36,15 +32,15 @@ export const peopleRouter = router({
     }),
 
   // Obter um colaborador específico
-  get: protectedProcedure
+  get: tenantProcedure
     .input(
       z.object({
         id: z.string(),
-        tenantId: z.string(),
+        
       })
     )
     .query(async ({ ctx, input }) => {
-      const person = await db.getPerson(input.id, input.tenantId);
+      const person = await db.getPerson(input.id, ctx.tenantId!);
 
       if (!person) {
         throw new TRPCError({
@@ -54,7 +50,7 @@ export const peopleRouter = router({
       }
 
       await db.createAuditLog({
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         userId: ctx.user.id,
         action: "READ",
         entityType: "people",
@@ -69,10 +65,10 @@ export const peopleRouter = router({
     }),
 
   // Criar novo colaborador
-  create: protectedProcedure
+  create: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        
         sectorId: z.string().optional(),
         name: z.string().min(1, "Nome é obrigatório"),
         position: z.string().optional(),
@@ -85,7 +81,7 @@ export const peopleRouter = router({
       // TODO: Verificar se usuário tem permissão para criar colaboradores neste tenant
 
       // Verificar se tenant existe
-      const tenant = await db.getTenant(input.tenantId);
+      const tenant = await db.getTenant(ctx.tenantId!);
       if (!tenant) {
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -95,7 +91,7 @@ export const peopleRouter = router({
 
       // Verificar se setor existe (se informado)
       if (input.sectorId) {
-        const sector = await db.getSector(input.sectorId, input.tenantId);
+        const sector = await db.getSector(input.sectorId, ctx.tenantId!);
         if (!sector) {
           throw new TRPCError({
             code: "NOT_FOUND",
@@ -104,10 +100,13 @@ export const peopleRouter = router({
         }
       }
 
-      const person = await db.createPerson(input);
+      const person = await db.createPerson({
+        ...input,
+        tenantId: ctx.tenantId!,
+      });
 
       await db.createAuditLog({
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         userId: ctx.user.id,
         action: "CREATE",
         entityType: "people",
@@ -122,11 +121,11 @@ export const peopleRouter = router({
     }),
 
   // Atualizar colaborador
-  update: protectedProcedure
+  update: tenantProcedure
     .input(
       z.object({
         id: z.string(),
-        tenantId: z.string(),
+        
         sectorId: z.string().optional(),
         name: z.string().min(1).optional(),
         position: z.string().optional(),
@@ -136,9 +135,9 @@ export const peopleRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { id, tenantId, ...data } = input;
+      const { id, ...data } = input;
 
-      const person = await db.getPerson(id, tenantId);
+      const person = await db.getPerson(id, ctx.tenantId!);
       if (!person) {
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -148,7 +147,7 @@ export const peopleRouter = router({
 
       // Verificar se setor existe (se informado)
       if (data.sectorId) {
-        const sector = await db.getSector(data.sectorId, tenantId);
+        const sector = await db.getSector(data.sectorId, ctx.tenantId!);
         if (!sector) {
           throw new TRPCError({
             code: "NOT_FOUND",
@@ -159,10 +158,10 @@ export const peopleRouter = router({
 
       // TODO: Verificar permissões
 
-      await db.updatePerson(id, tenantId, data);
+      await db.updatePerson(id, ctx.tenantId!, data);
 
       await db.createAuditLog({
-        tenantId,
+        tenantId: ctx.tenantId!,
         userId: ctx.user.id,
         action: "UPDATE",
         entityType: "people",
@@ -177,15 +176,15 @@ export const peopleRouter = router({
     }),
 
   // Deletar colaborador
-  delete: protectedProcedure
+  delete: tenantProcedure
     .input(
       z.object({
         id: z.string(),
-        tenantId: z.string(),
+        
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const person = await db.getPerson(input.id, input.tenantId);
+      const person = await db.getPerson(input.id, ctx.tenantId!);
       if (!person) {
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -196,10 +195,10 @@ export const peopleRouter = router({
       // TODO: Verificar permissões
       // TODO: Verificar consentimentos LGPD antes de deletar
 
-      await db.deletePerson(input.id, input.tenantId);
+      await db.deletePerson(input.id, ctx.tenantId!);
 
       await db.createAuditLog({
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         userId: ctx.user.id,
         action: "DELETE",
         entityType: "people",
@@ -218,11 +217,11 @@ export const peopleRouter = router({
     .input(
       z.object({
         id: z.string(),
-        tenantId: z.string(),
+        
       })
     )
     .query(async ({ ctx, input }) => {
-      const person = await db.getPerson(input.id, input.tenantId);
+      const person = await db.getPerson(input.id, ctx.tenantId!);
       if (!person) {
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -235,14 +234,14 @@ export const peopleRouter = router({
 
       // Buscar logs de auditoria relacionados
       const auditLogs = await db.getAuditLogs({
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         entityType: "people",
         entityId: input.id,
         limit: 100,
       });
 
       await db.createAuditLog({
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         userId: ctx.user.id,
         action: "READ",
         entityType: "people",
