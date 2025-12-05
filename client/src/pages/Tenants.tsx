@@ -33,15 +33,27 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { trpc } from "@/lib/trpc";
-import { Building2, Plus, Search } from "lucide-react";
+import { Building2, Edit2, Plus, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+
+type DialogMode = "closed" | "create" | "edit" | "delete";
 
 export default function Tenants() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<DialogMode>("closed");
+  const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
 
   const utils = trpc.useUtils();
   const { data: tenants, isLoading } = trpc.tenants.list.useQuery({
@@ -53,20 +65,41 @@ export default function Tenants() {
     onSuccess: () => {
       toast.success("Empresa criada com sucesso!");
       utils.tenants.list.invalidate();
-      // Aguardar um pouco antes de fechar o dialog para evitar erro de removeChild
-      setTimeout(() => {
-        setDialogOpen(false);
-      }, 100);
+      setDialogMode("closed");
     },
     onError: error => {
+    onError: (error: any) => {
       toast.error(error.message || "Erro ao criar empresa");
+    },
+  });
+
+  const updateMutation = trpc.tenants.update.useMutation({
+    onSuccess: () => {
+      toast.success("Empresa atualizada com sucesso!");
+      utils.tenants.list.invalidate();
+      setDialogMode("closed");
+      setSelectedTenantId(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao atualizar empresa");
+    },
+  });
+
+  const deleteMutation = trpc.tenants.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Empresa deletada com sucesso!");
+      utils.tenants.list.invalidate();
+      setDialogMode("closed");
+      setSelectedTenantId(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao deletar empresa");
     },
   });
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const form = e.currentTarget;
 
     createMutation.mutate({
       name: formData.get("name") as string,
@@ -82,6 +115,27 @@ export default function Tenants() {
       strategy: "shared_rls",
     });
   };
+
+  const handleEditSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedTenantId) return;
+
+    const formData = new FormData(e.currentTarget);
+    updateMutation.mutate({
+      id: selectedTenantId,
+      name: formData.get("name") as string,
+      street: formData.get("street") as string,
+      number: formData.get("number") as string,
+      city: formData.get("city") as string,
+      state: formData.get("state") as string,
+      zipCode: formData.get("zipCode") as string,
+      contactName: formData.get("contactName") as string,
+      contactEmail: formData.get("contactEmail") as string,
+      contactPhone: formData.get("contactPhone") as string,
+    });
+  };
+
+  const selectedTenant = tenants?.find(t => t.id === selectedTenantId);
 
   return (
     <DashboardLayout>
@@ -198,6 +252,10 @@ export default function Tenants() {
               </form>
             </DialogContent>
           </Dialog>
+          <Button onClick={() => setDialogMode("create")}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nova Empresa
+          </Button>
         </div>
 
         <Card>
@@ -256,6 +314,7 @@ export default function Tenants() {
                     <TableHead>Cidade/UF</TableHead>
                     <TableHead>Contato</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -290,6 +349,28 @@ export default function Tenants() {
                               : "Suspenso"}
                         </span>
                       </TableCell>
+                      <TableCell className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedTenantId(tenant.id);
+                            setDialogMode("edit");
+                          }}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedTenantId(tenant.id);
+                            setDialogMode("delete");
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -307,6 +388,235 @@ export default function Tenants() {
             )}
           </CardContent>
         </Card>
+
+        {/* Dialog para Criar/Editar */}
+        <Dialog
+          open={dialogMode === "create" || dialogMode === "edit"}
+          onOpenChange={open => {
+            if (!open) setDialogMode("closed");
+          }}
+        >
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <form
+              onSubmit={
+                dialogMode === "create" ? handleSubmit : handleEditSubmit
+              }
+            >
+              <DialogHeader>
+                <DialogTitle>
+                  {dialogMode === "create" ? "Nova Empresa" : "Editar Empresa"}
+                </DialogTitle>
+                <DialogDescription>
+                  {dialogMode === "create"
+                    ? "Cadastre uma nova empresa cliente na plataforma"
+                    : `Atualize os dados da empresa ${selectedTenant?.name}`}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Nome da Empresa *</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    defaultValue={
+                      dialogMode === "edit" ? selectedTenant?.name : ""
+                    }
+                    required
+                  />
+                </div>
+
+                {dialogMode === "create" && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="cnpj">CNPJ *</Label>
+                    <Input
+                      id="cnpj"
+                      name="cnpj"
+                      placeholder="00.000.000/0000-00"
+                      required
+                    />
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="street">Logradouro</Label>
+                    <Input
+                      id="street"
+                      name="street"
+                      defaultValue={
+                        dialogMode === "edit"
+                          ? (selectedTenant?.street ?? "")
+                          : ""
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="number">Número</Label>
+                    <Input
+                      id="number"
+                      name="number"
+                      defaultValue={
+                        dialogMode === "edit"
+                          ? (selectedTenant?.number ?? "")
+                          : ""
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="city">Cidade</Label>
+                    <Input
+                      id="city"
+                      name="city"
+                      defaultValue={
+                        dialogMode === "edit"
+                          ? (selectedTenant?.city ?? "")
+                          : ""
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="state">UF</Label>
+                    <Input
+                      id="state"
+                      name="state"
+                      maxLength={2}
+                      defaultValue={
+                        dialogMode === "edit"
+                          ? (selectedTenant?.state ?? "")
+                          : ""
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="zipCode">CEP</Label>
+                  <Input
+                    id="zipCode"
+                    name="zipCode"
+                    placeholder="00000-000"
+                    defaultValue={
+                      dialogMode === "edit"
+                        ? (selectedTenant?.zipCode ?? "")
+                        : ""
+                    }
+                  />
+                </div>
+
+                <div className="border-t pt-4">
+                  <h3 className="font-semibold mb-3">Contato Principal</h3>
+
+                  <div className="grid gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="contactName">Nome</Label>
+                      <Input
+                        id="contactName"
+                        name="contactName"
+                        defaultValue={
+                          dialogMode === "edit"
+                            ? (selectedTenant?.contactName ?? "")
+                            : ""
+                        }
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="contactEmail">E-mail</Label>
+                      <Input
+                        id="contactEmail"
+                        name="contactEmail"
+                        type="email"
+                        defaultValue={
+                          dialogMode === "edit"
+                            ? (selectedTenant?.contactEmail ?? "")
+                            : ""
+                        }
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="contactPhone">Telefone</Label>
+                      <Input
+                        id="contactPhone"
+                        name="contactPhone"
+                        defaultValue={
+                          dialogMode === "edit"
+                            ? (selectedTenant?.contactPhone ?? "")
+                            : ""
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDialogMode("closed")}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    dialogMode === "create"
+                      ? createMutation.isPending
+                      : updateMutation.isPending
+                  }
+                >
+                  {dialogMode === "create"
+                    ? createMutation.isPending
+                      ? "Criando..."
+                      : "Criar Empresa"
+                    : updateMutation.isPending
+                      ? "Salvando..."
+                      : "Salvar Alterações"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* AlertDialog para Deletar */}
+        <AlertDialog
+          open={dialogMode === "delete"}
+          onOpenChange={open => {
+            if (!open) setDialogMode("closed");
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja deletar a empresa{" "}
+                <strong>{selectedTenant?.name}</strong>? Esta ação não pode ser
+                desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="flex gap-2 justify-end">
+              <AlertDialogCancel onClick={() => setDialogMode("closed")}>
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (selectedTenantId) {
+                    deleteMutation.mutate({ id: selectedTenantId });
+                  }
+                }}
+                disabled={deleteMutation.isPending}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                {deleteMutation.isPending ? "Deletando..." : "Deletar"}
+              </AlertDialogAction>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );

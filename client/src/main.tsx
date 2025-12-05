@@ -32,9 +32,17 @@ const trpcClient = trpc.createClient({
       url: "/api/trpc",
       transformer: superjson,
       fetch(input, init) {
+        // Get tenant ID from localStorage
+        const tenantData = localStorage.getItem("blackbelt_selected_tenant");
+        const tenantId = tenantData ? JSON.parse(tenantData).id : null;
+        
         return globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
+          headers: {
+            ...(init?.headers ?? {}),
+            ...(tenantId ? { "x-tenant-id": tenantId } : {}),
+          },
         });
       },
     }),

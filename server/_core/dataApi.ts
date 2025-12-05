@@ -17,10 +17,10 @@ export async function callDataApi(
   apiId: string,
   options: DataApiCallOptions = {}
 ): Promise<unknown> {
-  if (!ENV.forgeApiUrl) {
+  if (!process.env.OPENAI_API_URL) {
     throw new Error("BUILT_IN_FORGE_API_URL is not configured");
   }
-  if (!ENV.forgeApiKey) {
+  if (!process.env.OPENAI_API_KEY) {
     throw new Error("BUILT_IN_FORGE_API_KEY is not configured");
   }
 
@@ -28,6 +28,9 @@ export async function callDataApi(
   const baseUrl = ENV.forgeApiUrl.endsWith("/")
     ? ENV.forgeApiUrl
     : `${ENV.forgeApiUrl}/`;
+  const baseUrl = process.env.OPENAI_API_URL.endsWith("/")
+    ? process.env.OPENAI_API_URL
+    : `${process.env.OPENAI_API_URL}/`;
   const fullUrl = new URL(
     "webdevtoken.v1.WebDevService/CallApi",
     baseUrl
@@ -39,7 +42,7 @@ export async function callDataApi(
       accept: "application/json",
       "content-type": "application/json",
       "connect-protocol-version": "1",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
+      authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
       apiId,

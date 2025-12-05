@@ -31,6 +31,11 @@ import {
   userRoles,
   users,
 } from "../drizzle/schema";
+import {
+  copsoqAssessments,
+  copsoqResponses,
+  copsoqReports,
+} from "../drizzle/schema_nr01";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -72,7 +77,12 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     const values: InsertUser = { id: user.id };
     const updateSet: Record<string, unknown> = {};
 
-    const textFields = ["name", "email", "loginMethod"] as const;
+    const textFields = [
+      "name",
+      "email",
+      "loginMethod",
+      "passwordHash",
+    ] as const;
     type TextField = (typeof textFields)[number];
 
     const assignNullable = (field: TextField) => {
@@ -96,6 +106,10 @@ export async function upsertUser(user: InsertUser): Promise<void> {
         values.role = "admin";
         updateSet.role = "admin";
       }
+    // Only set role if explicitly provided, don't override existing role
+    if (user.role !== undefined) {
+      values.role = user.role;
+      updateSet.role = user.role;
     }
 
     if (Object.keys(updateSet).length === 0) {
@@ -214,6 +228,13 @@ export async function updateTenant(id: string, data: Partial<InsertTenant>) {
     .update(tenants)
     .set({ ...data, updatedAt: new Date() })
     .where(eq(tenants.id, id));
+}
+
+export async function deleteTenant(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(tenants).where(eq(tenants.id, id));
 }
 
 // ============================================================================
@@ -534,6 +555,89 @@ export async function removeUserRole(
   }
 
   await db.delete(userRoles).where(and(...conditions));
+}
+
+/**
+ * Get all permissions for a user in a specific tenant
+ * Resolves through user roles and role permissions
+ */
+export async function getUserPermissions(userId: string, tenantId?: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Get user roles for the tenant (or global roles if no tenantId)
+  const userRolesList = await getUserRoles(userId, tenantId);
+  if (userRolesList.length === 0) return [];
+
+  const roleIds = userRolesList.map(ur => ur.roleId);
+
+  // Get all role permissions
+  const conditions = [sql`${rolePermissions.roleId} IN (${sql.join(roleIds.map(id => sql`${id}`), sql`, `)})`];
+  
+  // Filter by tenant if specified
+  if (tenantId !== undefined) {
+    conditions.push(
+      or(
+        eq(rolePermissions.tenantId, tenantId),
+        sql`${rolePermissions.tenantId} IS NULL` // Include global permissions
+      )!
+    );
+  }
+
+  const rolePerms = await db
+    .select({
+      rolePermission: rolePermissions,
+      permission: {
+        id: sql`${rolePermissions.permissionId}`,
+        name: sql`${rolePermissions.permissionId}`,
+        resource: sql`${rolePermissions.permissionId}`,
+        action: sql`${rolePermissions.permissionId}`,
+      },
+    })
+    .from(rolePermissions)
+    .where(and(...conditions));
+
+  return rolePerms;
+}
+
+/**
+ * Check if user has a specific permission in a tenant
+ */
+export async function userHasPermission(
+  userId: string,
+  permissionName: string,
+  tenantId?: string
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  // Get user roles for the tenant
+  const userRolesList = await getUserRoles(userId, tenantId);
+  if (userRolesList.length === 0) return false;
+
+  const roleIds = userRolesList.map(ur => ur.roleId);
+
+  // Check if any role has the permission
+  const result = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(rolePermissions)
+    .innerJoin(
+      sql`(SELECT id FROM permissions WHERE name = ${permissionName}) as perm`,
+      sql`${rolePermissions.permissionId} = perm.id`
+    )
+    .where(
+      and(
+        sql`${rolePermissions.roleId} IN (${sql.join(roleIds.map(id => sql`${id}`), sql`, `)})`,
+        tenantId
+          ? or(
+              eq(rolePermissions.tenantId, tenantId),
+              sql`${rolePermissions.tenantId} IS NULL`
+            )!
+          : sql`TRUE`
+      )
+    );
+
+  return result.length > 0 && result[0].count > 0;
 }
 
 // ============================================================================
@@ -888,6 +992,55 @@ export async function createPricingParameters(data: {
   return paramId;
 }
 
+}
+
+export async function updateService(
+  id: string,
+  data: Partial<typeof services.$inferInsert>
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .update(services)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(services.id, id));
+}
+
+export async function deleteService(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(services).where(eq(services.id, id));
+}
+
+// ============================================================================
+// PRECIFICAÇÃO: PRICING PARAMETERS
+// ============================================================================
+
+export async function createPricingParameters(data: {
+  tenantId: string;
+  monthlyFixedCost: number;
+  laborCost: number;
+  productiveHoursPerMonth: number;
+  defaultTaxRegime?: "MEI" | "SN" | "LP" | "autonomous";
+  volumeDiscounts?: Record<string, number>;
+  riskAdjustment?: number;
+  seniorityAdjustment?: number;
+  taxRates?: Record<string, number>;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const paramId = nanoid();
+  await db.insert(pricingParameters).values({
+    id: paramId,
+    ...data,
+  } as any);
+
+  return paramId;
+}
+
 export async function getPricingParameters(tenantId: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -1149,4 +1302,180 @@ export async function getAssessmentProposals(assessmentId: string) {
     .select()
     .from(assessmentProposals)
     .where(eq(assessmentProposals.assessmentId, assessmentId));
+}
+
+// ============================================================================
+// COPSOQ-II: AVALIAÇÕES DE RISCOS PSICOSSOCIAIS
+// ============================================================================
+
+export async function createCOPSOQAssessment(data: {
+  tenantId: string;
+  sectorId?: string;
+  title: string;
+  description?: string;
+  assessmentDate: Date;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const assessmentId = nanoid();
+  await db.insert(copsoqAssessments).values({
+    id: assessmentId,
+    ...data,
+    status: "draft",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  } as any);
+
+  return assessmentId;
+}
+
+export async function saveCOPSOQResponse(data: {
+  assessmentId: string;
+  personId: string;
+  tenantId: string;
+  ageGroup?: string;
+  gender?: string;
+  yearsInCompany?: string;
+  responses: Record<number, number>;
+  demandScore: number;
+  controlScore: number;
+  supportScore: number;
+  leadershipScore: number;
+  communityScore: number;
+  meaningScore: number;
+  trustScore: number;
+  justiceScore: number;
+  insecurityScore: number;
+  mentalHealthScore: number;
+  burnoutScore: number;
+  violenceScore: number;
+  overallRiskLevel: "low" | "medium" | "high" | "critical";
+  mentalHealthSupport?: string;
+  workplaceImprovement?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const responseId = nanoid();
+  await db.insert(copsoqResponses).values({
+    id: responseId,
+    ...data,
+    responses: JSON.stringify(data.responses),
+    isAnonymous: false,
+    completedAt: new Date(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  } as any);
+
+  return responseId;
+}
+
+export async function getCOPSOQResponses(assessmentId: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db
+    .select()
+    .from(copsoqResponses)
+    .where(eq(copsoqResponses.assessmentId, assessmentId));
+}
+
+export async function getCOPSOQResponsesByPerson(
+  personId: string,
+  tenantId: string
+) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db
+    .select()
+    .from(copsoqResponses)
+    .where(
+      and(
+        eq(copsoqResponses.personId, personId),
+        eq(copsoqResponses.tenantId, tenantId)
+      )
+    )
+    .orderBy(desc(copsoqResponses.completedAt));
+}
+
+export async function getCOPSOQAssessments(tenantId: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db
+    .select()
+    .from(copsoqAssessments)
+    .where(eq(copsoqAssessments.tenantId, tenantId))
+    .orderBy(desc(copsoqAssessments.assessmentDate));
+}
+
+export async function updateCOPSOQAssessmentStatus(
+  assessmentId: string,
+  status: "draft" | "in_progress" | "completed" | "reviewed"
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .update(copsoqAssessments)
+    .set({ status, updatedAt: new Date() })
+    .where(eq(copsoqAssessments.id, assessmentId));
+}
+
+export async function calculateCOPSOQStats(
+  tenantId: string,
+  sectorId?: string
+) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const conditions = [eq(copsoqResponses.tenantId, tenantId)];
+  if (sectorId) {
+    // Você precisaria fazer um join com copsoqAssessments para filtrar por setor
+  }
+
+  const responses = await db
+    .select()
+    .from(copsoqResponses)
+    .where(and(...conditions));
+
+  if (responses.length === 0) return null;
+
+  const stats = {
+    totalResponses: responses.length,
+    avgDemandScore: Math.round(
+      responses.reduce((sum, r) => sum + (r.demandScore || 0), 0) /
+        responses.length
+    ),
+    avgControlScore: Math.round(
+      responses.reduce((sum, r) => sum + (r.controlScore || 0), 0) /
+        responses.length
+    ),
+    avgSupportScore: Math.round(
+      responses.reduce((sum, r) => sum + (r.supportScore || 0), 0) /
+        responses.length
+    ),
+    avgLeadershipScore: Math.round(
+      responses.reduce((sum, r) => sum + (r.leadershipScore || 0), 0) /
+        responses.length
+    ),
+    avgMentalHealthScore: Math.round(
+      responses.reduce((sum, r) => sum + (r.mentalHealthScore || 0), 0) /
+        responses.length
+    ),
+    avgBurnoutScore: Math.round(
+      responses.reduce((sum, r) => sum + (r.burnoutScore || 0), 0) /
+        responses.length
+    ),
+    criticalRiskCount: responses.filter(r => r.overallRiskLevel === "critical")
+      .length,
+    highRiskCount: responses.filter(r => r.overallRiskLevel === "high").length,
+    mediumRiskCount: responses.filter(r => r.overallRiskLevel === "medium")
+      .length,
+    lowRiskCount: responses.filter(r => r.overallRiskLevel === "low").length,
+  };
+
+  return stats;
 }

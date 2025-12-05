@@ -1,10 +1,9 @@
 export const ENV = {
-  appId: process.env.VITE_APP_ID ?? "",
-  cookieSecret: process.env.JWT_SECRET ?? "",
-  databaseUrl: process.env.DATABASE_URL ?? "",
-  oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
-  ownerId: process.env.OWNER_OPEN_ID ?? "",
+  cookieSecret:
+    process.env.JWT_SECRET ?? "your-secret-key-change-in-production",
+  databaseUrl:
+    process.env.DATABASE_URL ?? "mongodb://localhost:27017/blackbelt",
   isProduction: process.env.NODE_ENV === "production",
-  forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
-  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  appTitle: process.env.VITE_APP_TITLE ?? "Black Belt Consultoria",
+  appLogo: process.env.VITE_APP_LOGO ?? "/logo.png",
 };

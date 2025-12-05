@@ -34,6 +34,12 @@ import {
   Users,
   UserSquare2,
   TestTube,
+  HelpCircle,
+  Clipboard,
+  BarChart3,
+  Bell,
+  DollarSign,
+  ShoppingCart,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -49,12 +55,22 @@ const menuItems = [
   { icon: UserSquare2, label: "Setores", path: "/sectors" },
   { icon: Users, label: "Colaboradores", path: "/people" },
   { icon: FileText, label: "Avaliações NR-01", path: "/risk-assessments" },
+  { icon: Clipboard, label: "COPSOQ-II", path: "/copsoq" },
+  { icon: FileText, label: "Histórico", path: "/assessment-history" },
+  { icon: FileText, label: "Análise COPSOQ-II", path: "/copsoq/analytics" },
+  { icon: Mail, label: "Enviar Convites", path: "/copsoq/invites" },
+  { icon: BarChart3, label: "Rastreamento", path: "/copsoq/tracking" },
+  { icon: Bell, label: "Lembretes Automáticos", path: "/reminder-management" },
   {
     icon: FileText,
     label: "Relatórios Compliance",
     path: "/compliance-reports",
   },
   { icon: Mail, label: "Convites de Usuários", path: "/user-invites" },
+  { icon: DollarSign, label: "Precificação", path: "/pricing-parameters" },
+  { icon: ShoppingCart, label: "Serviços", path: "/services" },
+  { icon: Building2, label: "Clientes", path: "/clients" },
+  { icon: FileText, label: "Propostas", path: "/proposals" },
   {
     icon: Lock,
     label: "Perfis e Permissões",
@@ -74,6 +90,7 @@ const menuItems = [
     path: "/test-dashboard",
     adminOnly: true,
   },
+  { icon: HelpCircle, label: "Ajuda e Suporte", path: "/help" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

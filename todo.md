@@ -68,6 +68,11 @@
 - [ ] Criar tabela pricingParameters (parâmetros de precificação)
 - [ ] Criar tabela proposals (propostas comerciais)
 - [ ] Criar tabela proposalItems (itens das propostas)
+- [x] Criar tabela clients (clientes para precificação)
+- [x] Criar tabela services (serviços oferecidos)
+- [x] Criar tabela pricingParameters (parâmetros de precificação)
+- [x] Criar tabela proposals (propostas comerciais)
+- [x] Criar tabela proposalItems (itens das propostas)
 
 ### Schema Auditoria
 
@@ -79,6 +84,8 @@
 
 - [ ] Criar migrations para novo schema
 - [ ] Testar migrations em desenvolvimento
+- [x] Criar migrations para novo schema
+- [x] Testar migrations em desenvolvimento
 - [ ] Documentar estratégia de rollback
 
 ---
@@ -102,6 +109,21 @@
 - [ ] Router pricingParameters (get, update)
 - [ ] Router proposals (list, create, update, delete, getById)
 - [ ] Router pricing (calculateTechnicalHour, calculateProposal)
+- [x] Helpers para clients (CRUD)
+- [x] Helpers para services (CRUD)
+- [x] Helpers para pricingParameters (CRUD)
+- [x] Helpers para proposals (CRUD)
+- [x] Helpers para proposalItems (CRUD)
+- [x] Helper para cálculo de hora técnica
+- [x] Helper para cálculo de proposta completa
+
+### tRPC Routers (server/routers.ts)
+
+- [x] Router clients (list, create, update, delete)
+- [x] Router services (list, create, update, delete)
+- [x] Router pricingParameters (get, update)
+- [x] Router proposals (list, create, update, delete, getById)
+- [x] Router pricing (calculateTechnicalHour, calculateProposal)
 
 ### Lógica de Negócio
 
@@ -407,3 +429,122 @@
 - Documentar decisões de arquitetura
 - Comunicar progresso aos stakeholders
 - Preparar plano de rollback para cada fase
+
+---
+
+## 📝 Notas Importantes
+
+- Manter compatibilidade com plataforma atual durante migração
+- Testar cada fase antes de prosseguir para próxima
+- Documentar decisões de arquitetura
+- Comunicar progresso aos stakeholders
+- Preparar plano de rollback para cada fase
+
+---
+
+## ✨ Sistema de Lembretes Automáticos (NOVO)
+
+### Backend
+
+- [x] Criar tabela copsoqReminders no schema
+- [x] Implementar routers tRPC para reminders
+- [x] Criar agendador de lembretes (reminder-scheduler.ts)
+- [x] Integrar agendador ao servidor (startReminderScheduler)
+- [x] Implementar lógica de envio de emails de lembrete
+- [x] Configurar intervalo de lembretes (2, 5, 9 dias)
+- [x] Implementar limite máximo de 3 lembretes por convite
+- [x] Implementar expiração de convites após 14 dias
+- [x] Adicionar tratamento de erros e logging
+
+### Frontend
+
+- [x] Criar página ReminderManagement.tsx
+- [x] Implementar seleção de avaliação
+- [x] Exibir estatísticas de lembretes
+- [x] Listar histórico de lembretes enviados
+- [x] Botão para executar agendador manualmente
+- [x] Botão para enviar lembrete manual
+- [x] Integrar ao sidebar com ícone Bell
+- [x] Adicionar rota /reminder-management ao App.tsx
+- [x] Exibir status de envio (enviado, falha, rejeitado)
+
+### Configuração
+
+- [x] Agendador executa a cada 1 hora
+- [x] 1º lembrete: 2 dias após envio
+- [x] 2º lembrete: 5 dias após envio
+- [x] 3º lembrete: 9 dias após envio
+- [x] Máximo 3 lembretes por convite
+- [x] Convites expiram após 14 dias
+
+### Testes
+
+- [ ] Teste unitário para cálculo de datas de lembrete
+- [ ] Teste unitário para verificação de limite de lembretes
+- [ ] Teste de integração para envio de email
+- [ ] Teste E2E para fluxo completo de lembretes
+
+## 🔔 Cancelamento de Convites (NOVO)
+
+### Backend
+
+- [x] Adicionar rota tRPC para cancelar convite
+- [x] Implementar lógica para marcar convite como cancelado
+- [x] Validar permissões antes de cancelar
+- [x] Registrar log de cancelamento
+
+### Frontend
+
+- [x] Adicionar botão de cancelamento na tabela de histórico
+- [x] Implementar dialog de confirmação
+- [x] Atualizar status visual do convite cancelado
+- [x] Mostrar mensagem de sucesso/erro
+
+## 🔐 Autenticação Local Independente (NOVO)
+
+- [x] Remover dependências do OAuth Manus do contexto
+- [x] Criar router tRPC de autenticação local simples
+- [x] Implementar login/registro com email e senha
+- [x] Adicionar suporte a sessões JWT simples
+- [x] Testar registro de usuário
+- [x] Testar login de usuário
+- [x] Testar logout
+- [x] Testar acesso às funcionalidades após login
+- [x] Validar todas as funcionalidades sem Manus
+
+## 💰 Sistema de Precificação (EM DESENVOLVIMENTO)
+
+### Fase 1: Gerenciamento de Serviços
+
+- [x] Criar página de listagem de serviços
+- [x] Implementar formulário de criação de serviço
+- [x] Implementar formulário de edição de serviço
+- [x] Implementar botão de exclusão de serviço
+- [x] Adicionar validações de preço (mínimo < máximo)
+
+### Fase 2: Gerenciamento de Clientes
+
+- [x] Criar página de listagem de clientes
+- [x] Implementar formulário de criação de cliente
+- [x] Implementar formulário de edição de cliente
+- [x] Implementar botão de exclusão de cliente
+
+### Fase 3: Parâmetros de Precificação
+
+- [x] Criar página de configuração de parâmetros
+- [x] Implementar campos de custo mensal e horas produtivas
+- [x] Implementar seleção de regime tributário
+- [x] Implementar ajustes de risco e senioridade
+
+### Fase 4: Criação de Propostas
+
+- [x] Criar página de criação de propostas
+- [x] Implementar seleção de cliente e serviços
+- [x] Implementar cálculo automático de preço
+- [x] Implementar geração de PDF da proposta
+
+### Fase 5: Integração
+
+- [x] Adicionar menu de precificação ao sidebar
+- [x] Adicionar rotas ao App.tsx
+- [x] Testar fluxo completo
