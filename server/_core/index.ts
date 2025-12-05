@@ -8,6 +8,17 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { startReminderScheduler } from "./reminder-scheduler";
+import {
+  helmetConfig,
+  corsConfig,
+  apiRateLimiter,
+  authRateLimiter,
+  requestLogger,
+  validateHeaders,
+  ipMonitoring,
+  validateTenantIsolation,
+  healthCheck,
+} from "./security";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -31,11 +42,57 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+
+  // ============================================================================
+  // SECURITY MIDDLEWARE (Applied first)
+  // ============================================================================
+
+  // Helmet security headers
+  app.use(helmetConfig);
+
+  // CORS configuration
+  app.use(corsConfig);
+
+  // Request logging
+  if (process.env.NODE_ENV === "development") {
+    app.use(requestLogger);
+  }
+
+  // Security validation
+  app.use(validateHeaders);
+  app.use(ipMonitoring);
+  app.use(validateTenantIsolation);
+
+  // Health check endpoint (before rate limiting)
+  app.get("/health", healthCheck);
+  app.get("/api/health", healthCheck);
+
+  // ============================================================================
+  // RATE LIMITING
+  // ============================================================================
+
+  // Apply general rate limiting to all API routes
+  app.use("/api", apiRateLimiter);
+
+  // Stricter rate limiting for auth routes
+  app.use("/api/auth", authRateLimiter);
+  app.use("/api/oauth", authRateLimiter);
+
+  // ============================================================================
+  // BODY PARSING
+  // ============================================================================
+
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  // ============================================================================
+  // APPLICATION ROUTES
+  // ============================================================================
+
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+
   // tRPC API
   app.use(
     "/api/trpc",
@@ -44,6 +101,11 @@ async function startServer() {
       createContext,
     })
   );
+
+  // ============================================================================
+  // STATIC FILES / VITE
+  // ============================================================================
+
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
