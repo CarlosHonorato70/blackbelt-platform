@@ -1094,4 +1094,191 @@ export const assessmentProposalsRouter = router({
       if (!ctx.user?.id) throw new Error("Unauthorized");
       return await db.getAssessmentProposals(input.assessmentId);
     }),
+
+  generateFromAssessment: tenantProcedure
+    .input(
+      z.object({
+        assessmentId: z.string(),
+        clientId: z.string(),
+        sendEmail: z.boolean().default(false),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user?.id) throw new Error("Unauthorized");
+
+      // Import email function
+      const { sendProposalEmail } = await import("../_core/email");
+
+      // Get assessment details to determine risk level
+      const assessment = await db.getAssessment(input.assessmentId, ctx.tenantId!);
+      if (!assessment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Assessment not found",
+        });
+      }
+
+      // Get client details
+      const client = await db.getClient(input.clientId);
+      if (!client || client.tenantId !== ctx.tenantId) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client not found",
+        });
+      }
+
+      // Calculate overall risk level from assessment items
+      const assessmentItems = assessment.items || [];
+      let riskLevel: "low" | "medium" | "high" | "critical" = "low";
+      
+      if (assessmentItems.length > 0) {
+        const criticalCount = assessmentItems.filter((item: any) => item.riskLevel === "critical").length;
+        const highCount = assessmentItems.filter((item: any) => item.riskLevel === "high").length;
+        const mediumCount = assessmentItems.filter((item: any) => item.riskLevel === "medium").length;
+
+        if (criticalCount > 0 || highCount >= 3) {
+          riskLevel = "critical";
+        } else if (highCount > 0 || mediumCount >= 5) {
+          riskLevel = "high";
+        } else if (mediumCount > 0) {
+          riskLevel = "medium";
+        }
+      }
+
+      // Get recommended services based on risk level
+      const allServices = await db.listServices(ctx.tenantId!);
+      const recommendedServices = [];
+
+      // Add base services
+      if (riskLevel === "critical" || riskLevel === "high") {
+        // High risk: comprehensive package
+        const diagnosticService = allServices.find((s: any) => 
+          s.name.toLowerCase().includes("diagnóstico") || 
+          s.name.toLowerCase().includes("avaliação")
+        );
+        const trainingService = allServices.find((s: any) => 
+          s.name.toLowerCase().includes("treinamento") || 
+          s.name.toLowerCase().includes("capacitação")
+        );
+        const consultingService = allServices.find((s: any) => 
+          s.name.toLowerCase().includes("consultoria") || 
+          s.name.toLowerCase().includes("gestão")
+        );
+
+        if (diagnosticService) recommendedServices.push({ serviceId: diagnosticService.id, quantity: 1 });
+        if (trainingService) recommendedServices.push({ serviceId: trainingService.id, quantity: 3 });
+        if (consultingService) recommendedServices.push({ serviceId: consultingService.id, quantity: 12 });
+      } else if (riskLevel === "medium") {
+        // Medium risk: standard package
+        const diagnosticService = allServices.find((s: any) => 
+          s.name.toLowerCase().includes("diagnóstico")
+        );
+        const trainingService = allServices.find((s: any) => 
+          s.name.toLowerCase().includes("treinamento")
+        );
+
+        if (diagnosticService) recommendedServices.push({ serviceId: diagnosticService.id, quantity: 1 });
+        if (trainingService) recommendedServices.push({ serviceId: trainingService.id, quantity: 2 });
+      } else {
+        // Low risk: basic package
+        const diagnosticService = allServices.find((s: any) => 
+          s.name.toLowerCase().includes("diagnóstico")
+        );
+        if (diagnosticService) recommendedServices.push({ serviceId: diagnosticService.id, quantity: 1 });
+      }
+
+      // If no services found, add default ones
+      if (recommendedServices.length === 0 && allServices.length > 0) {
+        recommendedServices.push({ 
+          serviceId: allServices[0].id, 
+          quantity: 1 
+        });
+      }
+
+      // Create proposal
+      const proposalTitle = `Proposta de Gestão de Riscos Psicossociais - ${client.name}`;
+      const validUntil = new Date();
+      validUntil.setDate(validUntil.getDate() + 30); // Valid for 30 days
+
+      let subtotal = 0;
+      const proposalItemsData = [];
+
+      for (const rec of recommendedServices) {
+        const service = allServices.find((s: any) => s.id === rec.serviceId);
+        if (service) {
+          const itemSubtotal = service.minPrice * rec.quantity;
+          subtotal += itemSubtotal;
+          proposalItemsData.push({
+            serviceId: service.id,
+            serviceName: service.name,
+            quantity: rec.quantity,
+            unitPrice: service.minPrice,
+            subtotal: itemSubtotal,
+          });
+        }
+      }
+
+      // Get pricing parameters for tax calculation
+      const pricingParams = await db.getPricingParameters(ctx.tenantId!);
+      const taxRate = pricingParams?.taxRates?.SN || 0.08; // Default to Simples Nacional 8%
+      const taxes = Math.round(subtotal * taxRate);
+      const totalValue = subtotal + taxes;
+
+      const proposalId = await db.createProposal({
+        tenantId: ctx.tenantId!,
+        clientId: input.clientId,
+        title: proposalTitle,
+        description: `Proposta baseada na avaliação de riscos ${assessment.title}`,
+        status: "draft",
+        subtotal,
+        discount: 0,
+        discountPercent: 0,
+        taxes,
+        totalValue,
+        taxRegime: "SN",
+        validUntil,
+      });
+
+      // Create proposal items
+      for (const item of proposalItemsData) {
+        await db.createProposalItem({
+          proposalId,
+          ...item,
+        });
+      }
+
+      // Link assessment to proposal
+      await db.createAssessmentProposal({
+        tenantId: ctx.tenantId!,
+        assessmentId: input.assessmentId,
+        proposalId,
+        recommendedServices: proposalItemsData.map(i => i.serviceId),
+        riskLevel: riskLevel === "critical" ? "high" : riskLevel,
+      });
+
+      // Send email if requested
+      if (input.sendEmail && client.contactEmail) {
+        await sendProposalEmail({
+          clientEmail: client.contactEmail,
+          clientName: client.contactName || client.name,
+          proposalId,
+          proposalTitle,
+          totalValue,
+          riskLevel,
+          services: proposalItemsData.map(item => ({
+            name: item.serviceName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+          })),
+          validUntil,
+        });
+      }
+
+      return {
+        proposalId,
+        riskLevel,
+        totalValue,
+        emailSent: input.sendEmail && !!client.contactEmail,
+      };
+    }),
 });

@@ -1257,6 +1257,37 @@ export async function getAssessmentProposals(assessmentId: string) {
     .where(eq(assessmentProposals.assessmentId, assessmentId));
 }
 
+export async function getAssessment(assessmentId: string, tenantId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const { riskAssessments, riskAssessmentItems } = await import("../drizzle/schema_nr01");
+
+  const [assessment] = await db
+    .select()
+    .from(riskAssessments)
+    .where(
+      and(
+        eq(riskAssessments.id, assessmentId),
+        eq(riskAssessments.tenantId, tenantId)
+      )
+    );
+
+  if (!assessment) return null;
+
+  // Get assessment items
+  const items = await db
+    .select()
+    .from(riskAssessmentItems)
+    .where(eq(riskAssessmentItems.assessmentId, assessmentId));
+
+  return {
+    ...assessment,
+    items,
+  };
+}
+
+
 // ============================================================================
 // COPSOQ-II: AVALIAÇÕES DE RISCOS PSICOSSOCIAIS
 // ============================================================================

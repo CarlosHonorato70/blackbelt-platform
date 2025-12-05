@@ -294,3 +294,179 @@ export async function sendReminderEmail(params: {
     text: `${reminder.message} Acesse: ${inviteUrl}`,
   });
 }
+
+/**
+ * Envia proposta comercial baseada em avaliação de riscos
+ */
+export async function sendProposalEmail(params: {
+  clientEmail: string;
+  clientName: string;
+  proposalId: string;
+  proposalTitle: string;
+  totalValue: number;
+  riskLevel: "low" | "medium" | "high" | "critical";
+  services: Array<{ name: string; quantity: number; unitPrice: number }>;
+  validUntil?: Date;
+}): Promise<boolean> {
+  const {
+    clientEmail,
+    clientName,
+    proposalId,
+    proposalTitle,
+    totalValue,
+    riskLevel,
+    services,
+    validUntil,
+  } = params;
+
+  const proposalUrl = `${process.env.VITE_FRONTEND_URL || "http://localhost:3000"}/proposals/${proposalId}`;
+  
+  const riskLevelColors = {
+    low: { bg: "#dcfce7", border: "#10b981", text: "#166534", label: "Baixo" },
+    medium: { bg: "#fef3c7", border: "#f59e0b", text: "#92400e", label: "Médio" },
+    high: { bg: "#fee2e2", border: "#ef4444", text: "#991b1b", label: "Alto" },
+    critical: { bg: "#fce7f3", border: "#db2777", text: "#831843", label: "Crítico" },
+  };
+
+  const riskStyle = riskLevelColors[riskLevel];
+  const formattedValue = new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(totalValue / 100);
+
+  const servicesHtml = services
+    .map(
+      service => `
+        <tr>
+          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px;">${service.name}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px; text-align: center;">${service.quantity}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px; text-align: right;">
+            ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(service.unitPrice / 100)}
+          </td>
+        </tr>
+      `
+    )
+    .join("");
+
+  const validityText = validUntil
+    ? `Esta proposta é válida até ${new Intl.DateTimeFormat("pt-BR").format(validUntil)}.`
+    : "Entre em contato para discutir prazos e condições.";
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 28px;">Proposta Comercial</h1>
+        <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Black Belt Consultoria</p>
+      </div>
+
+      <div style="background: white; padding: 40px 20px; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="margin: 0 0 20px 0; font-size: 16px;">
+          Prezado(a) <strong>${clientName}</strong>,
+        </p>
+
+        <p style="margin: 0 0 20px 0; font-size: 14px; color: #666;">
+          Com base na avaliação de riscos psicossociais realizada, preparamos uma proposta personalizada de serviços para sua organização.
+        </p>
+
+        <div style="background: ${riskStyle.bg}; padding: 20px; border-left: 4px solid ${riskStyle.border}; margin: 20px 0; border-radius: 6px;">
+          <p style="margin: 0; font-size: 14px; color: ${riskStyle.text};">
+            <strong>Nível de Risco Identificado:</strong> ${riskStyle.label}<br>
+            <strong>Proposta:</strong> ${proposalTitle}
+          </p>
+        </div>
+
+        <h2 style="font-size: 18px; color: #333; margin: 30px 0 15px 0; border-bottom: 2px solid #667eea; padding-bottom: 10px;">
+          Serviços Recomendados
+        </h2>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <thead>
+            <tr style="background: #f3f4f6;">
+              <th style="padding: 12px; text-align: left; font-size: 14px; font-weight: 600; border-bottom: 2px solid #667eea;">Serviço</th>
+              <th style="padding: 12px; text-align: center; font-size: 14px; font-weight: 600; border-bottom: 2px solid #667eea;">Quantidade</th>
+              <th style="padding: 12px; text-align: right; font-size: 14px; font-weight: 600; border-bottom: 2px solid #667eea;">Valor Unit.</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${servicesHtml}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2" style="padding: 20px 12px; text-align: right; font-size: 16px; font-weight: bold;">
+                Valor Total:
+              </td>
+              <td style="padding: 20px 12px; text-align: right; font-size: 18px; font-weight: bold; color: #667eea;">
+                ${formattedValue}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 30px 0;">
+          <h3 style="margin: 0 0 15px 0; font-size: 16px; color: #333;">Por que estes serviços?</h3>
+          <p style="margin: 0; font-size: 14px; color: #666; line-height: 1.6;">
+            Nossa proposta foi elaborada considerando os riscos psicossociais identificados na avaliação. 
+            Os serviços selecionados visam não apenas a conformidade com a NR-01, mas também a criação 
+            de um ambiente de trabalho mais saudável e produtivo.
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${proposalUrl}" style="background: #667eea; color: white; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
+            Ver Proposta Completa
+          </a>
+        </div>
+
+        <p style="margin: 20px 0 0 0; font-size: 12px; color: #999; text-align: center;">
+          ${validityText}
+        </p>
+      </div>
+
+      <div style="background: #f9fafb; padding: 25px 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+        <div style="font-size: 13px; color: #666; margin-bottom: 15px;">
+          <strong style="color: #333;">Diferenciais Black Belt:</strong>
+          <ul style="margin: 10px 0; padding-left: 20px; line-height: 1.8;">
+            <li>Mais de 20 anos de experiência em segurança e saúde ocupacional</li>
+            <li>9.000+ atendimentos clínicos realizados</li>
+            <li>Metodologias proprietárias validadas</li>
+            <li>Abordagem focada em alta performance, não apenas compliance</li>
+          </ul>
+        </div>
+        <p style="margin: 15px 0 0 0; font-size: 12px; color: #666; text-align: center;">
+          Black Belt Consultoria | Plataforma de Gestão de Riscos Psicossociais<br>
+          <a href="mailto:contato@blackbelt.com.br" style="color: #667eea; text-decoration: none;">contato@blackbelt.com.br</a>
+        </p>
+      </div>
+    </div>
+  `;
+
+  const textContent = `
+Proposta Comercial - Black Belt Consultoria
+
+Prezado(a) ${clientName},
+
+Com base na avaliação de riscos psicossociais realizada, preparamos uma proposta personalizada.
+
+Nível de Risco: ${riskStyle.label}
+Proposta: ${proposalTitle}
+
+Serviços Recomendados:
+${services.map(s => `- ${s.name} (${s.quantity} x ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(s.unitPrice / 100)})`).join("\n")}
+
+Valor Total: ${formattedValue}
+
+${validityText}
+
+Acesse a proposta completa: ${proposalUrl}
+
+Black Belt Consultoria
+contato@blackbelt.com.br
+  `.trim();
+
+  return sendEmail({
+    to: clientEmail,
+    subject: `Proposta: ${proposalTitle} - Black Belt Consultoria`,
+    html,
+    text: textContent,
+  });
+}
