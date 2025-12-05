@@ -106,6 +106,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
         values.role = "admin";
         updateSet.role = "admin";
       }
+    }
     // Only set role if explicitly provided, don't override existing role
     if (user.role !== undefined) {
       values.role = user.role;
@@ -990,8 +991,6 @@ export async function createPricingParameters(data: {
   } as any);
 
   return paramId;
-}
-
 }
 
 export async function updateService(

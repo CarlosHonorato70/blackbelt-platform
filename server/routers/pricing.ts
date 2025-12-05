@@ -1,8 +1,9 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { publicProcedure, router } from "../_core/trpc";
+import { publicProcedure, router, protectedProcedure, tenantProcedure } from "../_core/trpc";
 import { getDb } from "../db";
+import * as db from "../db";
 import {
   clients,
   services,
@@ -722,35 +723,7 @@ export const pricingRouter = router({
         };
       }),
   }),
-import { z } from "zod";
-import { protectedProcedure, router, tenantProcedure } from "../_core/trpc";
-import {
-  calculateProposal,
-  calculateTechnicalHour,
-  createAssessmentProposal,
-  createClient,
-  createPricingParameters,
-  createProposal,
-  createProposalItem,
-  createService,
-  deleteClient,
-  deleteProposal,
-  deleteProposalItem,
-  deleteService,
-  getAssessmentProposals,
-  getClient,
-  getPricingParameters,
-  getProposal,
-  getService,
-  listClients,
-  listProposals,
-  listProposalItems,
-  listServices,
-  updateClient,
-  updatePricingParameters,
-  updateProposal,
-  updateService,
-} from "../db";
+});
 
 // ============================================================================
 // CLIENTS ROUTER
@@ -758,7 +731,7 @@ import {
 
 export const clientsRouter = router({
   list: tenantProcedure.query(async ({ ctx }) => {
-    return await listClients(ctx.tenantId!);
+    return await db.listClients(ctx.tenantId!);
   }),
 
   create: tenantProcedure
@@ -782,7 +755,7 @@ export const clientsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new Error("Unauthorized");
-      return await createClient({
+      return await db.createClient({
         tenantId: ctx.tenantId!,
         ...input,
       });
@@ -792,7 +765,7 @@ export const clientsRouter = router({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new Error("Unauthorized");
-      const client = await getClient(input.id);
+      const client = await db.getClient(input.id);
       if (client?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
       return client;
     }),
@@ -820,20 +793,20 @@ export const clientsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new Error("Unauthorized");
-      const client = await getClient(input.id);
+      const client = await db.getClient(input.id);
       if (client?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
       const { id, ...data } = input;
-      await updateClient(id, data);
-      return await getClient(id);
+      await db.updateClient(id, data);
+      return await db.getClient(id);
     }),
 
   delete: tenantProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new Error("Unauthorized");
-      const client = await getClient(input.id);
+      const client = await db.getClient(input.id);
       if (client?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
-      await deleteClient(input.id);
+      await db.deleteClient(input.id);
       return { success: true };
     }),
 });
@@ -845,7 +818,7 @@ export const clientsRouter = router({
 export const servicesRouter = router({
   list: tenantProcedure.query(async ({ ctx }) => {
     if (!ctx.user?.id) throw new Error("Unauthorized");
-    return await listServices(ctx.tenantId!);
+    return await db.listServices(ctx.tenantId!);
   }),
 
   create: protectedProcedure
@@ -861,7 +834,7 @@ export const servicesRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new Error("Unauthorized");
-      return await createService({
+      return await db.createService({
         tenantId: ctx.tenantId!,
         ...input,
       });
@@ -871,7 +844,7 @@ export const servicesRouter = router({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new Error("Unauthorized");
-      const service = await getService(input.id);
+      const service = await db.getService(input.id);
       if (service?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
       return service;
     }),
@@ -891,20 +864,20 @@ export const servicesRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new Error("Unauthorized");
-      const service = await getService(input.id);
+      const service = await db.getService(input.id);
       if (service?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
       const { id, ...data } = input;
-      await updateService(id, data);
-      return await getService(id);
+      await db.updateService(id, data);
+      return await db.getService(id);
     }),
 
   delete: tenantProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new Error("Unauthorized");
-      const service = await getService(input.id);
+      const service = await db.getService(input.id);
       if (service?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
-      await deleteService(input.id);
+      await db.deleteService(input.id);
       return { success: true };
     }),
 });
@@ -916,7 +889,7 @@ export const servicesRouter = router({
 export const pricingParametersRouter = router({
   get: tenantProcedure.query(async ({ ctx }) => {
     if (!ctx.user?.id) throw new Error("Unauthorized");
-    return await getPricingParameters(ctx.tenantId!);
+    return await db.getPricingParameters(ctx.tenantId!);
   }),
 
   update: tenantProcedure
@@ -934,8 +907,8 @@ export const pricingParametersRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new Error("Unauthorized");
-      await updatePricingParameters(ctx.tenantId!, input);
-      return await getPricingParameters(ctx.tenantId!);
+      await db.updatePricingParameters(ctx.tenantId!, input);
+      return await db.getPricingParameters(ctx.tenantId!);
     }),
 });
 
@@ -948,7 +921,7 @@ export const proposalsRouter = router({
     .input(z.object({ clientId: z.string().optional() }))
     .query(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new Error("Unauthorized");
-      return await listProposals(ctx.tenantId!, input.clientId);
+      return await db.listProposals(ctx.tenantId!, input.clientId);
     }),
 
   create: protectedProcedure
@@ -971,9 +944,9 @@ export const proposalsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new Error("Unauthorized");
-      const client = await getClient(input.clientId);
+      const client = await db.getClient(input.clientId);
       if (client?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
-      return await createProposal({
+      return await db.createProposal({
         tenantId: ctx.tenantId!,
         ...input,
       });
@@ -983,9 +956,9 @@ export const proposalsRouter = router({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new Error("Unauthorized");
-      const proposal = await getProposal(input.id);
+      const proposal = await db.getProposal(input.id);
       if (proposal?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
-      const items = await listProposalItems(input.id);
+      const items = await db.listProposalItems(input.id);
       return { ...proposal, items };
     }),
 
@@ -1008,20 +981,20 @@ export const proposalsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new Error("Unauthorized");
-      const proposal = await getProposal(input.id);
+      const proposal = await db.getProposal(input.id);
       if (proposal?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
       const { id, ...data } = input;
-      await updateProposal(id, data);
-      return await getProposal(id);
+      await db.updateProposal(id, data);
+      return await db.getProposal(id);
     }),
 
   delete: tenantProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new Error("Unauthorized");
-      const proposal = await getProposal(input.id);
+      const proposal = await db.getProposal(input.id);
       if (proposal?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
-      await deleteProposal(input.id);
+      await db.deleteProposal(input.id);
       return { success: true };
     }),
 
@@ -1039,16 +1012,16 @@ export const proposalsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new Error("Unauthorized");
-      const proposal = await getProposal(input.proposalId);
+      const proposal = await db.getProposal(input.proposalId);
       if (proposal?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
-      return await createProposalItem(input);
+      return await db.createProposalItem(input);
     }),
 
   removeItem: tenantProcedure
     .input(z.object({ itemId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new Error("Unauthorized");
-      await deleteProposalItem(input.itemId);
+      await db.deleteProposalItem(input.itemId);
       return { success: true };
     }),
 });
@@ -1057,7 +1030,7 @@ export const proposalsRouter = router({
 // PRICING CALCULATIONS ROUTER
 // ============================================================================
 
-export const pricingRouter = router({
+export const pricingCalculationsRouter = router({
   calculateTechnicalHour: protectedProcedure
     .input(
       z.object({
@@ -1071,7 +1044,7 @@ export const pricingRouter = router({
       })
     )
     .query(({ input }) => {
-      return calculateTechnicalHour(input as any);
+      return db.calculateTechnicalHour(input as any);
     }),
 
   calculateProposal: protectedProcedure
@@ -1089,7 +1062,7 @@ export const pricingRouter = router({
       })
     )
     .query(({ input }) => {
-      return calculateProposal(input as any);
+      return db.calculateProposal(input as any);
     }),
 });
 
@@ -1109,7 +1082,7 @@ export const assessmentProposalsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new Error("Unauthorized");
-      return await createAssessmentProposal({
+      return await db.createAssessmentProposal({
         tenantId: ctx.tenantId!,
         ...input,
       });
@@ -1119,6 +1092,6 @@ export const assessmentProposalsRouter = router({
     .input(z.object({ assessmentId: z.string() }))
     .query(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new Error("Unauthorized");
-      return await getAssessmentProposals(input.assessmentId);
+      return await db.getAssessmentProposals(input.assessmentId);
     }),
 });

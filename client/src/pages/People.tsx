@@ -71,7 +71,6 @@ export default function People() {
       utils.people.list.invalidate();
       setDialogMode("closed");
     },
-    onError: error => {
     onError: (error: any) => {
       toast.error(error.message || "Erro ao criar colaborador");
     },
