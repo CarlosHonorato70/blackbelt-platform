@@ -993,52 +993,6 @@ export async function createPricingParameters(data: {
   return paramId;
 }
 
-export async function updateService(
-  id: string,
-  data: Partial<typeof services.$inferInsert>
-) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
-  await db
-    .update(services)
-    .set({ ...data, updatedAt: new Date() })
-    .where(eq(services.id, id));
-}
-
-export async function deleteService(id: string) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
-  await db.delete(services).where(eq(services.id, id));
-}
-
-// ============================================================================
-// PRECIFICAÇÃO: PRICING PARAMETERS
-// ============================================================================
-
-export async function createPricingParameters(data: {
-  tenantId: string;
-  monthlyFixedCost: number;
-  laborCost: number;
-  productiveHoursPerMonth: number;
-  defaultTaxRegime?: "MEI" | "SN" | "LP" | "autonomous";
-  volumeDiscounts?: Record<string, number>;
-  riskAdjustment?: number;
-  seniorityAdjustment?: number;
-  taxRates?: Record<string, number>;
-}) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
-  const paramId = nanoid();
-  await db.insert(pricingParameters).values({
-    id: paramId,
-    ...data,
-  } as any);
-
-  return paramId;
-}
 
 export async function getPricingParameters(tenantId: string) {
   const db = await getDb();
