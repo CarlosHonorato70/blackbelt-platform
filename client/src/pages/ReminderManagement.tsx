@@ -31,7 +31,7 @@ export default function ReminderManagement() {
 
   // Listar avaliações
   const assessmentsQuery = trpc.assessments.list.useQuery(
-    { tenantId: selectedTenantId },
+    undefined,
     { enabled: !!selectedTenantId }
   );
 

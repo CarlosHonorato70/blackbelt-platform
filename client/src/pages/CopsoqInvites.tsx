@@ -60,7 +60,7 @@ export default function CopsoqInvites() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const invitesQuery = trpc.assessments.listInvites.useQuery(
-    { tenantId: "default-tenant" },
+    undefined,
     { enabled: !!user }
   );
 
@@ -159,7 +159,6 @@ export default function CopsoqInvites() {
     setIsLoading(true);
     try {
       await sendInvitesMutation.mutateAsync({
-        tenantId: "default-tenant",
         assessmentTitle,
         invitees,
         expiresIn: parseInt(expiresIn),

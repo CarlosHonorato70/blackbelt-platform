@@ -56,12 +56,12 @@ export default function People() {
 
   const utils = trpc.useUtils();
   const { data: people, isLoading } = trpc.people.list.useQuery(
-    { tenantId: selectedTenant?.id! },
+    undefined,
     { enabled: !!selectedTenant }
   );
 
   const { data: sectors } = trpc.sectors.list.useQuery(
-    { tenantId: selectedTenant?.id! },
+    undefined,
     { enabled: !!selectedTenant }
   );
 
@@ -109,7 +109,6 @@ export default function People() {
 
     const formData = new FormData(e.currentTarget);
     createMutation.mutate({
-      tenantId: selectedTenant.id,
       sectorId: formData.get("sectorId") as string,
       name: formData.get("name") as string,
       email: formData.get("email") as string,
@@ -125,7 +124,6 @@ export default function People() {
     const formData = new FormData(e.currentTarget);
     updateMutation.mutate({
       id: selectedPersonId,
-      tenantId: selectedTenant.id,
       sectorId: formData.get("sectorId") as string,
       name: formData.get("name") as string,
       email: formData.get("email") as string,
@@ -411,7 +409,6 @@ export default function People() {
                   if (selectedPersonId) {
                     deleteMutation.mutate({
                       id: selectedPersonId,
-                      tenantId: selectedTenant.id,
                     });
                   }
                 }}

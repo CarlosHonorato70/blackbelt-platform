@@ -50,7 +50,7 @@ export default function Sectors() {
 
   const utils = trpc.useUtils();
   const { data: sectors, isLoading } = trpc.sectors.list.useQuery(
-    { tenantId: selectedTenant?.id! },
+    undefined,
     { enabled: !!selectedTenant }
   );
 
@@ -98,7 +98,6 @@ export default function Sectors() {
 
     const formData = new FormData(e.currentTarget);
     createMutation.mutate({
-      tenantId: selectedTenant.id,
       name: formData.get("name") as string,
       description: formData.get("description") as string,
       responsibleName: formData.get("responsibleName") as string,
@@ -112,7 +111,6 @@ export default function Sectors() {
     const formData = new FormData(e.currentTarget);
     updateMutation.mutate({
       id: selectedSectorId,
-      tenantId: selectedTenant.id,
       name: formData.get("name") as string,
       description: formData.get("description") as string,
       responsibleName: formData.get("responsibleName") as string,
@@ -360,7 +358,6 @@ export default function Sectors() {
                   if (selectedSectorId) {
                     deleteMutation.mutate({
                       id: selectedSectorId,
-                      tenantId: selectedTenant.id,
                     });
                   }
                 }}

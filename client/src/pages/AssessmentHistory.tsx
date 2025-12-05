@@ -37,7 +37,7 @@ export default function AssessmentHistory() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const assessmentsQuery = trpc.assessments.list.useQuery(
-    { tenantId: "default-tenant" },
+    undefined,
     { enabled: !!user }
   );
 

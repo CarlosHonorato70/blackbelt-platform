@@ -134,7 +134,6 @@ export default function COPSOQ() {
       await submitResponseMutation.mutateAsync({
         assessmentId,
         personId: personId || user.id,
-        tenantId: "default-tenant",
         responses: responses as Record<string, number>,
         ageGroup: respondentAge,
         gender: respondentGender,

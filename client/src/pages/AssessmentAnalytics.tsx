@@ -31,7 +31,7 @@ export default function AssessmentAnalytics() {
   const { user } = useAuth();
 
   const assessmentsQuery = trpc.assessments.list.useQuery(
-    { tenantId: "default-tenant" },
+    undefined,
     { enabled: !!user }
   );
 
