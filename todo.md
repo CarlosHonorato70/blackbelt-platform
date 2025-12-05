@@ -26,6 +26,7 @@
 ## 🆕 Fase 1: Preparação e Planejamento (Semana 1)
 
 ### Análise e Documentação
+
 - [x] Análise de ambas as plataformas
 - [x] Criação do projeto estratégico
 - [x] Definição da arquitetura unificada
@@ -33,6 +34,7 @@
 - [ ] Alocação de recursos
 
 ### Setup de Ambiente
+
 - [ ] Backup do projeto atual
 - [ ] Criar branch de desenvolvimento
 - [ ] Preparar ambiente de testes
@@ -42,21 +44,25 @@
 ## 🆕 Fase 2: Atualizar Schema de Banco de Dados (Semana 2)
 
 ### Schema Core (Autenticação)
+
 - [ ] Validar tabela users (consolidada)
 - [ ] Validar tabela roles (RBAC)
 - [ ] Validar tabela permissions (ABAC)
 
 ### Schema Multi-Tenant
+
 - [ ] Validar tabela tenants (empresas)
 - [ ] Validar tabela sectors (setores)
 - [ ] Validar tabela people (colaboradores)
 
 ### Schema Conformidade NR-01
+
 - [ ] Validar tabela riskAssessments (avaliações)
 - [ ] Validar tabela riskFactors (fatores de risco)
 - [ ] Validar tabela complianceReports (relatórios)
 
 ### Schema Precificação (NOVO)
+
 - [x] Criar tabela clients (clientes para precificação)
 - [x] Criar tabela services (serviços oferecidos)
 - [x] Criar tabela pricingParameters (parâmetros de precificação)
@@ -64,11 +70,13 @@
 - [x] Criar tabela proposalItems (itens das propostas)
 
 ### Schema Auditoria
+
 - [ ] Validar tabela auditLogs (logs de auditoria)
 - [ ] Validar tabela dataConsents (consentimentos LGPD)
 - [ ] Validar tabela userInvites (convites de usuários)
 
 ### Migrations
+
 - [x] Criar migrations para novo schema
 - [x] Testar migrations em desenvolvimento
 - [ ] Documentar estratégia de rollback
@@ -78,6 +86,7 @@
 ## 🆕 Fase 3: Backend - Módulo de Precificação (Semana 3-4)
 
 ### Database Helpers (server/db.ts)
+
 - [x] Helpers para clients (CRUD)
 - [x] Helpers para services (CRUD)
 - [x] Helpers para pricingParameters (CRUD)
@@ -87,6 +96,7 @@
 - [x] Helper para cálculo de proposta completa
 
 ### tRPC Routers (server/routers.ts)
+
 - [x] Router clients (list, create, update, delete)
 - [x] Router services (list, create, update, delete)
 - [x] Router pricingParameters (get, update)
@@ -94,6 +104,7 @@
 - [x] Router pricing (calculateTechnicalHour, calculateProposal)
 
 ### Lógica de Negócio
+
 - [ ] Cálculo de hora técnica (4 regimes tributários)
 - [ ] Aplicação de descontos por volume
 - [ ] Cálculo de impostos
@@ -101,6 +112,7 @@
 - [ ] Envio de proposta por email
 
 ### Validações
+
 - [ ] Validação de clientes
 - [ ] Validação de serviços
 - [ ] Validação de parâmetros de precificação
@@ -111,27 +123,31 @@
 ## 🆕 Fase 4: Backend - Módulo de Gestão Integrada (Semana 4-5)
 
 ### Integração Conformidade + Precificação
+
 - [ ] Helper para recomendação de serviços baseada em risco
 - [ ] Helper para vincular avaliação → proposta
 - [ ] Helper para histórico de propostas por cliente
 - [ ] Helper para análise de rentabilidade
 
 ### Consolidação de Routers
-- [ ] Consolidar auth.* routers
-- [ ] Consolidar rolesPermissions.* routers
-- [ ] Consolidar auditLogs.* routers
-- [ ] Consolidar dataExport.* routers
-- [ ] Consolidar tenants.* routers
-- [ ] Consolidar sectors.* routers
-- [ ] Consolidar people.* routers
+
+- [ ] Consolidar auth.\* routers
+- [ ] Consolidar rolesPermissions.\* routers
+- [ ] Consolidar auditLogs.\* routers
+- [ ] Consolidar dataExport.\* routers
+- [ ] Consolidar tenants.\* routers
+- [ ] Consolidar sectors.\* routers
+- [ ] Consolidar people.\* routers
 
 ### Serviços Transversais
+
 - [ ] Integração com S3 (storage)
 - [ ] Notificações em tempo real
 - [ ] Integração com LLM (análises)
 - [ ] Integração com geração de imagens
 
 ### Testes Backend
+
 - [ ] Testes unitários para cálculos
 - [ ] Testes de integração para fluxos
 - [ ] Testes de validação
@@ -141,6 +157,7 @@
 ## 🆕 Fase 5: Frontend - Páginas de Precificação (Semana 5-6)
 
 ### Página de Clientes
+
 - [ ] Criar client/src/pages/Clients.tsx
 - [ ] Listar clientes com tabela
 - [ ] Criar novo cliente (modal/form)
@@ -149,6 +166,7 @@
 - [ ] Exportar lista de clientes
 
 ### Página de Serviços
+
 - [ ] Criar client/src/pages/Services.tsx
 - [ ] Listar serviços com tabela
 - [ ] Criar novo serviço (modal/form)
@@ -157,6 +175,7 @@
 - [ ] Exportar lista de serviços
 
 ### Página de Parâmetros de Precificação
+
 - [ ] Criar client/src/pages/PricingParameters.tsx
 - [ ] Formulário para configurar parâmetros
 - [ ] Campos: custo fixo, custo MO, horas produtivas, descontos, ajustes
@@ -164,6 +183,7 @@
 - [ ] Salvar e atualizar parâmetros
 
 ### Página de Propostas (Compositor)
+
 - [ ] Criar client/src/pages/Proposals.tsx
 - [ ] Seletor de cliente
 - [ ] Seletor de regime tributário
@@ -175,12 +195,14 @@
 - [ ] Enviar por email
 
 ### Componentes Reutilizáveis
+
 - [ ] ClientSelector component
 - [ ] ServiceSelector component
 - [ ] ProposalPreview component
 - [ ] PricingCalculator component
 
 ### Testes Frontend
+
 - [ ] Testes de renderização
 - [ ] Testes de interação
 - [ ] Testes de cálculos
@@ -190,6 +212,7 @@
 ## 🆕 Fase 6: Frontend - Dashboard Unificado (Semana 6-7)
 
 ### Dashboard Principal
+
 - [ ] Atualizar Home.tsx com novo layout
 - [ ] Seletor de empresa (tenant)
 - [ ] KPIs consolidados:
@@ -201,6 +224,7 @@
   - [ ] Taxa de aceitação de propostas
 
 ### Widgets de Dashboard
+
 - [ ] Widget de conformidade NR-01
 - [ ] Widget de propostas recentes
 - [ ] Widget de clientes principais
@@ -208,6 +232,7 @@
 - [ ] Widget de status de avaliações
 
 ### Atualização do Menu Lateral
+
 - [ ] Reorganizar menu para incluir precificação
 - [ ] Adicionar seção "Conformidade"
 - [ ] Adicionar seção "Precificação"
@@ -215,6 +240,7 @@
 - [ ] Adicionar seção "Análise"
 
 ### Páginas de Análise e Relatórios
+
 - [ ] Criar ComplianceDashboard.tsx
 - [ ] Criar PricingDashboard.tsx
 - [ ] Criar AuditDashboard.tsx
@@ -227,30 +253,35 @@
 ## 🆕 Fase 7: Integrar Fluxos de Negócio (Semana 7-8)
 
 ### Fluxo 1: Avaliação → Proposta
+
 - [ ] Adicionar botão "Gerar Proposta" em avaliação
 - [ ] Pré-popular proposta com dados da avaliação
 - [ ] Recomendar serviços baseado em risco
 - [ ] Criar proposta automaticamente
 
 ### Fluxo 2: Gestão de Múltiplos Clientes
+
 - [ ] Implementar seletor de empresa no dashboard
 - [ ] Filtrar dados por empresa selecionada
 - [ ] Atualizar contexto de tenant
 - [ ] Persistir seleção em localStorage
 
 ### Fluxo 3: Histórico Integrado
+
 - [ ] Visualizar histórico de avaliações por cliente
 - [ ] Visualizar histórico de propostas por cliente
 - [ ] Comparar avaliações ao longo do tempo
 - [ ] Análise de evolução de risco
 
 ### Fluxo 4: Recomendações Inteligentes
+
 - [ ] Recomendar serviços baseado em risco
 - [ ] Sugerir descontos por volume
 - [ ] Alertar sobre conformidade vencida
 - [ ] Notificar sobre propostas expiradas
 
 ### Integração de Dados
+
 - [ ] Vincular clientes de precificação com empresas
 - [ ] Vincular avaliações com propostas
 - [ ] Histórico de propostas por avaliação
@@ -261,6 +292,7 @@
 ## 🆕 Fase 8: Testes E2E e Validação (Semana 8-9)
 
 ### Testes de Precificação
+
 - [ ] TC-022: Criar cliente
 - [ ] TC-023: Criar serviço
 - [ ] TC-024: Configurar parâmetros de precificação
@@ -272,6 +304,7 @@
 - [ ] TC-030: Aceitar/rejeitar proposta
 
 ### Testes de Integração
+
 - [ ] TC-031: Fluxo completo avaliação → proposta
 - [ ] TC-032: Recomendação de serviços
 - [ ] TC-033: Histórico de propostas
@@ -279,6 +312,7 @@
 - [ ] TC-035: Múltiplas empresas
 
 ### Testes de Cálculo
+
 - [ ] TC-036: Cálculo de hora técnica (MEI)
 - [ ] TC-037: Cálculo de hora técnica (SN)
 - [ ] TC-038: Cálculo de hora técnica (LP)
@@ -288,17 +322,20 @@
 - [ ] TC-042: Validação de totais
 
 ### Testes de Performance
+
 - [ ] Tempo de cálculo de proposta < 500ms
 - [ ] Carregamento de lista de propostas < 1s
 - [ ] Geração de PDF < 2s
 
 ### Testes de Segurança
+
 - [ ] Isolamento de dados por tenant
 - [ ] Validação de permissões
 - [ ] Proteção contra SQL injection
 - [ ] Validação de entrada
 
 ### Dashboard de Testes
+
 - [ ] Atualizar TestDashboard com novos testes
 - [ ] Adicionar métricas de precificação
 - [ ] Adicionar métricas de integração
@@ -308,6 +345,7 @@
 ## 🆕 Fase 9: Documentação e Deploy (Semana 9-10)
 
 ### Documentação
+
 - [ ] Atualizar README.md
 - [ ] Documentar novas APIs (tRPC)
 - [ ] Criar guia de usuário para precificação
@@ -317,6 +355,7 @@
 - [ ] Documentar schema de banco de dados
 
 ### Preparação para Produção
+
 - [ ] Configurar variáveis de ambiente
 - [ ] Preparar migrations para produção
 - [ ] Configurar backup de banco de dados
@@ -324,6 +363,7 @@
 - [ ] Testar em staging
 
 ### Deployment
+
 - [ ] Deploy em staging
 - [ ] Testes de carga
 - [ ] Validação de conformidade
@@ -331,6 +371,7 @@
 - [ ] Monitoramento pós-deploy
 
 ### Treinamento e Suporte
+
 - [ ] Treinar equipe de consultores
 - [ ] Treinar equipe administrativa
 - [ ] Criar documentação de suporte
@@ -346,6 +387,7 @@
 **Pendentes:** 132+
 
 **Fases:**
+
 1. Preparação: 2/5 ✓
 2. Schema: 0/13 ✗
 3. Backend Precificação: 0/18 ✗
@@ -366,12 +408,12 @@
 - Comunicar progresso aos stakeholders
 - Preparar plano de rollback para cada fase
 
-
 ---
 
 ## ✨ Sistema de Lembretes Automáticos (NOVO)
 
 ### Backend
+
 - [x] Criar tabela copsoqReminders no schema
 - [x] Implementar routers tRPC para reminders
 - [x] Criar agendador de lembretes (reminder-scheduler.ts)
@@ -383,6 +425,7 @@
 - [x] Adicionar tratamento de erros e logging
 
 ### Frontend
+
 - [x] Criar página ReminderManagement.tsx
 - [x] Implementar seleção de avaliação
 - [x] Exibir estatísticas de lembretes
@@ -394,6 +437,7 @@
 - [x] Exibir status de envio (enviado, falha, rejeitado)
 
 ### Configuração
+
 - [x] Agendador executa a cada 1 hora
 - [x] 1º lembrete: 2 dias após envio
 - [x] 2º lembrete: 5 dias após envio
@@ -402,26 +446,27 @@
 - [x] Convites expiram após 14 dias
 
 ### Testes
+
 - [ ] Teste unitário para cálculo de datas de lembrete
 - [ ] Teste unitário para verificação de limite de lembretes
 - [ ] Teste de integração para envio de email
 - [ ] Teste E2E para fluxo completo de lembretes
 
-
 ## 🔔 Cancelamento de Convites (NOVO)
 
 ### Backend
+
 - [x] Adicionar rota tRPC para cancelar convite
 - [x] Implementar lógica para marcar convite como cancelado
 - [x] Validar permissões antes de cancelar
 - [x] Registrar log de cancelamento
 
 ### Frontend
+
 - [x] Adicionar botão de cancelamento na tabela de histórico
 - [x] Implementar dialog de confirmação
 - [x] Atualizar status visual do convite cancelado
 - [x] Mostrar mensagem de sucesso/erro
-
 
 ## 🔐 Autenticação Local Independente (NOVO)
 
@@ -438,6 +483,7 @@
 ## 💰 Sistema de Precificação (EM DESENVOLVIMENTO)
 
 ### Fase 1: Gerenciamento de Serviços
+
 - [x] Criar página de listagem de serviços
 - [x] Implementar formulário de criação de serviço
 - [x] Implementar formulário de edição de serviço
@@ -445,24 +491,28 @@
 - [x] Adicionar validações de preço (mínimo < máximo)
 
 ### Fase 2: Gerenciamento de Clientes
+
 - [x] Criar página de listagem de clientes
 - [x] Implementar formulário de criação de cliente
 - [x] Implementar formulário de edição de cliente
 - [x] Implementar botão de exclusão de cliente
 
 ### Fase 3: Parâmetros de Precificação
+
 - [x] Criar página de configuração de parâmetros
 - [x] Implementar campos de custo mensal e horas produtivas
 - [x] Implementar seleção de regime tributário
 - [x] Implementar ajustes de risco e senioridade
 
 ### Fase 4: Criação de Propostas
+
 - [x] Criar página de criação de propostas
 - [x] Implementar seleção de cliente e serviços
 - [x] Implementar cálculo automático de preço
 - [x] Implementar geração de PDF da proposta
 
 ### Fase 5: Integração
+
 - [x] Adicionar menu de precificação ao sidebar
 - [x] Adicionar rotas ao App.tsx
 - [x] Testar fluxo completo

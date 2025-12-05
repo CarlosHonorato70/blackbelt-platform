@@ -18,7 +18,7 @@ export function TenantSelectionModal() {
   const { data: tenants, isLoading } = trpc.tenants.list.useQuery({});
 
   const handleSelectTenant = (tenantId: string) => {
-    const tenant = tenants?.find((t) => t.id === tenantId);
+    const tenant = tenants?.find(t => t.id === tenantId);
     if (tenant) {
       setSelectedTenant({
         id: tenant.id,
@@ -39,7 +39,9 @@ export function TenantSelectionModal() {
         >
           <Building2 className="h-4 w-4 flex-shrink-0" />
           <div className="flex flex-col flex-1 min-w-0">
-            <span className="text-xs text-muted-foreground">Empresa selecionada</span>
+            <span className="text-xs text-muted-foreground">
+              Empresa selecionada
+            </span>
             <span className="font-semibold truncate">
               {selectedTenant?.name || "Selecione uma empresa"}
             </span>
@@ -60,11 +62,11 @@ export function TenantSelectionModal() {
               Carregando empresas...
             </div>
           ) : tenants && tenants.length > 0 ? (
-            tenants.map((tenant) => (
+            tenants.map(tenant => (
               <button
                 key={tenant.id}
                 onClick={() => handleSelectTenant(tenant.id)}
-                className={`w-full text-left p-4 rounded-lg border-2 transition-all ${ 
+                className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
                   selectedTenant?.id === tenant.id
                     ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
                     : "border-border hover:border-blue-300 hover:bg-accent"
@@ -104,4 +106,3 @@ export function TenantSelectionModal() {
     </Dialog>
   );
 }
-

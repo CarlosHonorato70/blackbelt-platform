@@ -33,7 +33,12 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useState } from "react";
-import { exportToJSON, exportToExcel, generateComplianceReport, exportToPDF } from "@/lib/exportUtils";
+import {
+  exportToJSON,
+  exportToExcel,
+  generateComplianceReport,
+  exportToPDF,
+} from "@/lib/exportUtils";
 
 export default function ComplianceReports() {
   const { selectedTenant } = useTenant();
@@ -206,7 +211,10 @@ export default function ComplianceReports() {
             Relatórios de Compliance NR-01
           </h1>
           <p className="text-muted-foreground">
-            Gestão de conformidade com Portaria MTE nº 1.419/2024 - {typeof selectedTenant === 'string' ? selectedTenant : selectedTenant?.name}
+            Gestão de conformidade com Portaria MTE nº 1.419/2024 -{" "}
+            {typeof selectedTenant === "string"
+              ? selectedTenant
+              : selectedTenant?.name}
           </p>
         </div>
 
@@ -222,9 +230,7 @@ export default function ComplianceReports() {
               <div className="space-y-2">
                 <p className="text-sm text-blue-800">Taxa de Conformidade</p>
                 <p className="text-3xl font-bold text-blue-900">67.5%</p>
-                <p className="text-xs text-blue-700">
-                  5 de 8 itens completos
-                </p>
+                <p className="text-xs text-blue-700">5 de 8 itens completos</p>
               </div>
               <div className="space-y-2">
                 <p className="text-sm text-blue-800">Ações Planejadas</p>
@@ -257,7 +263,7 @@ export default function ComplianceReports() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {reports.map((report) => (
+              {reports.map(report => (
                 <div
                   key={report.id}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
@@ -296,8 +302,13 @@ export default function ComplianceReports() {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
-                            const reportText = generateComplianceReport([report]);
-                            exportToPDF(reportText, `compliance_${report.id}_${new Date().toISOString().split('T')[0]}.txt`);
+                            const reportText = generateComplianceReport([
+                              report,
+                            ]);
+                            exportToPDF(
+                              reportText,
+                              `compliance_${report.id}_${new Date().toISOString().split("T")[0]}.txt`
+                            );
                           }}
                         >
                           <Download className="h-4 w-4 mr-2" />
@@ -305,7 +316,10 @@ export default function ComplianceReports() {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
-                            exportToJSON([report], `compliance_${report.id}_${new Date().toISOString().split('T')[0]}.json`);
+                            exportToJSON(
+                              [report],
+                              `compliance_${report.id}_${new Date().toISOString().split("T")[0]}.json`
+                            );
                           }}
                         >
                           <Download className="h-4 w-4 mr-2" />
@@ -313,7 +327,11 @@ export default function ComplianceReports() {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
-                            exportToExcel([report], `compliance_${report.id}_${new Date().toISOString().split('T')[0]}.xlsx`, 'Compliance');
+                            exportToExcel(
+                              [report],
+                              `compliance_${report.id}_${new Date().toISOString().split("T")[0]}.xlsx`,
+                              "Compliance"
+                            );
                           }}
                         >
                           <Download className="h-4 w-4 mr-2" />
@@ -381,7 +399,7 @@ export default function ComplianceReports() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {actionPlan.map((action) => (
+              {actionPlan.map(action => (
                 <div
                   key={action.id}
                   className="p-4 border rounded-lg space-y-3"
@@ -463,4 +481,3 @@ export default function ComplianceReports() {
     </DashboardLayout>
   );
 }
-

@@ -8,18 +8,18 @@ Configurar todas as 10 secrets necessárias no GitHub para que os workflows de C
 
 ## 🎯 Visão Geral das 10 Secrets
 
-| # | Secret | Tipo | Prioridade | Complexidade |
-|---|--------|------|-----------|--------------|
-| 1 | DOCKER_USERNAME | Credencial | Alta | Baixa |
-| 2 | DOCKER_PASSWORD | Credencial | Alta | Baixa |
-| 3 | STAGING_HOST | Servidor | Alta | Baixa |
-| 4 | STAGING_USER | Servidor | Alta | Baixa |
-| 5 | STAGING_SSH_KEY | SSH | Alta | **Alta** |
-| 6 | PROD_HOST | Servidor | Alta | Baixa |
-| 7 | PROD_USER | Servidor | Alta | Baixa |
-| 8 | PROD_SSH_KEY | SSH | Alta | **Alta** |
-| 9 | SONAR_TOKEN | Token | Média | Média |
-| 10 | SLACK_WEBHOOK | Webhook | Média | Baixa |
+| #   | Secret          | Tipo       | Prioridade | Complexidade |
+| --- | --------------- | ---------- | ---------- | ------------ |
+| 1   | DOCKER_USERNAME | Credencial | Alta       | Baixa        |
+| 2   | DOCKER_PASSWORD | Credencial | Alta       | Baixa        |
+| 3   | STAGING_HOST    | Servidor   | Alta       | Baixa        |
+| 4   | STAGING_USER    | Servidor   | Alta       | Baixa        |
+| 5   | STAGING_SSH_KEY | SSH        | Alta       | **Alta**     |
+| 6   | PROD_HOST       | Servidor   | Alta       | Baixa        |
+| 7   | PROD_USER       | Servidor   | Alta       | Baixa        |
+| 8   | PROD_SSH_KEY    | SSH        | Alta       | **Alta**     |
+| 9   | SONAR_TOKEN     | Token      | Média      | Média        |
+| 10  | SLACK_WEBHOOK   | Webhook    | Média      | Baixa        |
 
 ---
 
@@ -34,6 +34,7 @@ Configurar todas as 10 secrets necessárias no GitHub para que os workflows de C
 ### Resultado Esperado
 
 Você verá a página de Secrets com:
+
 - Botão "New repository secret" (verde)
 - Lista vazia (se primeira vez)
 - Aba "Repository secrets" selecionada
@@ -109,6 +110,7 @@ Informações para conectar ao servidor de staging via SSH.
 ### Passo 2.1: Obter IP/Domínio do Servidor Staging
 
 **Opção A: Servidor já existe**
+
 ```bash
 # Pergunte ao seu provedor de hosting
 # Exemplo: 192.168.1.100 ou staging.blackbelt.com
@@ -117,6 +119,7 @@ Informações para conectar ao servidor de staging via SSH.
 **Opção B: Criar servidor (AWS, DigitalOcean, etc)**
 
 **DigitalOcean:**
+
 1. Acesse https://cloud.digitalocean.com
 2. Clique em **Create** → **Droplets**
 3. Selecione:
@@ -297,6 +300,7 @@ Repita os mesmos passos do Staging:
 ### ⚠️ Segurança Production
 
 **IMPORTANTE:**
+
 - Use chave SSH diferente para production
 - Restrinja acesso SSH apenas a IPs conhecidos
 - Use firewall para bloquear portas desnecessárias
@@ -444,6 +448,7 @@ Se houver erro:
 **Causa:** Chave SSH não está correta ou não foi adicionada ao servidor.
 
 **Solução:**
+
 ```bash
 # 1. Verifique se chave privada está correta
 cat ~/.ssh/staging_key | wc -l
@@ -461,6 +466,7 @@ cat ~/.ssh/staging_key.pub | ssh -i ~/.ssh/staging_key root@192.168.1.100 "cat >
 **Causa:** Credenciais Docker incorretas.
 
 **Solução:**
+
 ```bash
 # 1. Teste localmente
 docker login -u seu-username
@@ -474,6 +480,7 @@ docker login -u seu-username
 **Causa:** URL do Slack webhook incorreta ou expirada.
 
 **Solução:**
+
 ```bash
 # 1. Regenere webhook no Slack
 # 2. Copie URL completa (incluindo https://)
@@ -485,6 +492,7 @@ docker login -u seu-username
 **Causa:** Token expirou.
 
 **Solução:**
+
 ```bash
 # 1. Acesse https://sonarcloud.io/account/security
 # 2. Gere novo token
@@ -508,18 +516,18 @@ docker login -u seu-username
 
 ## 📋 Resumo das 10 Secrets
 
-| # | Nome | Valor | Onde Obter |
-|---|------|-------|-----------|
-| 1 | DOCKER_USERNAME | Username Docker Hub | https://hub.docker.com |
-| 2 | DOCKER_PASSWORD | Token Docker Hub | https://hub.docker.com/settings/security |
-| 3 | STAGING_HOST | IP/domínio staging | Seu provedor hosting |
-| 4 | STAGING_USER | Usuário SSH | `root` ou `ubuntu` |
-| 5 | STAGING_SSH_KEY | Chave privada | `ssh-keygen` |
-| 6 | PROD_HOST | IP/domínio production | Seu provedor hosting |
-| 7 | PROD_USER | Usuário SSH | `root` ou `ubuntu` |
-| 8 | PROD_SSH_KEY | Chave privada | `ssh-keygen` |
-| 9 | SONAR_TOKEN | Token SonarCloud | https://sonarcloud.io/account/security |
-| 10 | SLACK_WEBHOOK | URL webhook | https://api.slack.com/apps |
+| #   | Nome            | Valor                 | Onde Obter                               |
+| --- | --------------- | --------------------- | ---------------------------------------- |
+| 1   | DOCKER_USERNAME | Username Docker Hub   | https://hub.docker.com                   |
+| 2   | DOCKER_PASSWORD | Token Docker Hub      | https://hub.docker.com/settings/security |
+| 3   | STAGING_HOST    | IP/domínio staging    | Seu provedor hosting                     |
+| 4   | STAGING_USER    | Usuário SSH           | `root` ou `ubuntu`                       |
+| 5   | STAGING_SSH_KEY | Chave privada         | `ssh-keygen`                             |
+| 6   | PROD_HOST       | IP/domínio production | Seu provedor hosting                     |
+| 7   | PROD_USER       | Usuário SSH           | `root` ou `ubuntu`                       |
+| 8   | PROD_SSH_KEY    | Chave privada         | `ssh-keygen`                             |
+| 9   | SONAR_TOKEN     | Token SonarCloud      | https://sonarcloud.io/account/security   |
+| 10  | SLACK_WEBHOOK   | URL webhook           | https://api.slack.com/apps               |
 
 ---
 

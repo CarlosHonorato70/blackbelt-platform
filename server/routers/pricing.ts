@@ -234,7 +234,9 @@ export const proposalsRouter = router({
         clientId: z.string(),
         title: z.string().min(1),
         description: z.string().optional(),
-        status: z.enum(["draft", "sent", "accepted", "rejected", "expired"]).optional(),
+        status: z
+          .enum(["draft", "sent", "accepted", "rejected", "expired"])
+          .optional(),
         subtotal: z.number().int().min(0),
         discount: z.number().int().default(0),
         discountPercent: z.number().int().default(0),
@@ -270,7 +272,9 @@ export const proposalsRouter = router({
         id: z.string(),
         title: z.string().optional(),
         description: z.string().optional(),
-        status: z.enum(["draft", "sent", "accepted", "rejected", "expired"]).optional(),
+        status: z
+          .enum(["draft", "sent", "accepted", "rejected", "expired"])
+          .optional(),
         subtotal: z.number().int().optional(),
         discount: z.number().int().optional(),
         discountPercent: z.number().int().optional(),
@@ -395,4 +399,3 @@ export const assessmentProposalsRouter = router({
       return await getAssessmentProposals(input.assessmentId);
     }),
 });
-

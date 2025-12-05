@@ -92,7 +92,11 @@ class StandaloneAuthService {
         !isNonEmptyString(email) ||
         !isNonEmptyString(name)
       ) {
-        console.warn("[Auth] Session payload missing required fields", { userId, email, name });
+        console.warn("[Auth] Session payload missing required fields", {
+          userId,
+          email,
+          name,
+        });
         return null;
       }
 

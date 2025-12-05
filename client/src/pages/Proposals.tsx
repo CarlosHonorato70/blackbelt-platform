@@ -2,9 +2,22 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Plus, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
 
@@ -16,11 +29,17 @@ export default function Proposals() {
     taxRegime: "MEI" as "MEI" | "SN" | "LP" | "autonomous",
     description: "",
   });
-  const [proposalItems, setProposalItems] = useState<Array<{ serviceId: string; quantity: number; unitPrice: number }>>([]);
+  const [proposalItems, setProposalItems] = useState<
+    Array<{ serviceId: string; quantity: number; unitPrice: number }>
+  >([]);
   const [selectedService, setSelectedService] = useState("");
   const [quantity, setQuantity] = useState(1);
 
-  const { data: proposals, isLoading, refetch } = trpc.proposals.list.useQuery({ clientId: "" });
+  const {
+    data: proposals,
+    isLoading,
+    refetch,
+  } = trpc.proposals.list.useQuery({ clientId: "" });
   const { data: clients } = trpc.clients.list.useQuery();
   const { data: services } = trpc.services.list.useQuery();
   const { data: parameters } = trpc.pricingParameters.get.useQuery();
@@ -54,7 +73,10 @@ export default function Proposals() {
   };
 
   const calculateTotal = () => {
-    return proposalItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    return proposalItems.reduce(
+      (sum, item) => sum + item.quantity * item.unitPrice,
+      0
+    );
   };
 
   const handleCreateProposal = async () => {
@@ -107,7 +129,9 @@ export default function Proposals() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold">Propostas</h1>
-            <p className="text-gray-600">Criar e gerenciar propostas comerciais</p>
+            <p className="text-gray-600">
+              Criar e gerenciar propostas comerciais
+            </p>
           </div>
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
@@ -119,7 +143,9 @@ export default function Proposals() {
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Criar Nova Proposta</DialogTitle>
-                <DialogDescription>Crie uma proposta comercial para seu cliente</DialogDescription>
+                <DialogDescription>
+                  Crie uma proposta comercial para seu cliente
+                </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-4">
@@ -127,7 +153,9 @@ export default function Proposals() {
                   <label className="text-sm font-medium">Cliente</label>
                   <select
                     value={formData.clientId}
-                    onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
+                    onChange={e =>
+                      setFormData({ ...formData, clientId: e.target.value })
+                    }
                     className="w-full border rounded px-3 py-2"
                   >
                     <option value="">Selecione um cliente</option>
@@ -142,14 +170,27 @@ export default function Proposals() {
                 <Input
                   placeholder="Título da Proposta"
                   value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  onChange={e =>
+                    setFormData({ ...formData, title: e.target.value })
+                  }
                 />
 
                 <div>
-                  <label className="text-sm font-medium">Regime Tributário</label>
+                  <label className="text-sm font-medium">
+                    Regime Tributário
+                  </label>
                   <select
                     value={formData.taxRegime}
-                    onChange={(e) => setFormData({ ...formData, taxRegime: e.target.value as "MEI" | "SN" | "LP" | "autonomous" })}
+                    onChange={e =>
+                      setFormData({
+                        ...formData,
+                        taxRegime: e.target.value as
+                          | "MEI"
+                          | "SN"
+                          | "LP"
+                          | "autonomous",
+                      })
+                    }
                     className="w-full border rounded px-3 py-2"
                   >
                     <option value="MEI">MEI</option>
@@ -162,7 +203,9 @@ export default function Proposals() {
                 <Input
                   placeholder="Descrição (opcional)"
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={e =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
                 />
 
                 <div className="border-t pt-4">
@@ -173,13 +216,14 @@ export default function Proposals() {
                       <label className="text-sm font-medium">Serviço</label>
                       <select
                         value={selectedService}
-                        onChange={(e) => setSelectedService(e.target.value)}
+                        onChange={e => setSelectedService(e.target.value)}
                         className="w-full border rounded px-3 py-2"
                       >
                         <option value="">Selecione um serviço</option>
                         {services?.map((service: any) => (
                           <option key={service.id} value={service.id}>
-                            {service.name} (R$ {service.minPrice.toFixed(2)} - R$ {service.maxPrice.toFixed(2)})
+                            {service.name} (R$ {service.minPrice.toFixed(2)} -
+                            R$ {service.maxPrice.toFixed(2)})
                           </option>
                         ))}
                       </select>
@@ -190,7 +234,9 @@ export default function Proposals() {
                         type="number"
                         placeholder="Quantidade"
                         value={quantity}
-                        onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                        onChange={e =>
+                          setQuantity(parseInt(e.target.value) || 1)
+                        }
                         className="flex-1"
                       />
                       <Button onClick={handleAddItem}>Adicionar</Button>
@@ -200,11 +246,17 @@ export default function Proposals() {
                   {proposalItems.length > 0 && (
                     <div className="space-y-2 mb-4">
                       {proposalItems.map((item, index) => {
-                        const service = services?.find((s: any) => s.id === item.serviceId);
+                        const service = services?.find(
+                          (s: any) => s.id === item.serviceId
+                        );
                         return (
-                          <div key={index} className="flex justify-between items-center bg-gray-50 p-2 rounded">
+                          <div
+                            key={index}
+                            className="flex justify-between items-center bg-gray-50 p-2 rounded"
+                          >
                             <span className="text-sm">
-                              {service?.name} x {item.quantity} = R$ {(item.quantity * item.unitPrice).toFixed(2)}
+                              {service?.name} x {item.quantity} = R${" "}
+                              {(item.quantity * item.unitPrice).toFixed(2)}
                             </span>
                             <Button
                               size="sm"
@@ -221,7 +273,9 @@ export default function Proposals() {
 
                   <div className="bg-blue-50 p-3 rounded">
                     <p className="text-sm text-gray-600">Total da Proposta</p>
-                    <p className="text-2xl font-bold text-blue-600">R$ {calculateTotal().toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      R$ {calculateTotal().toFixed(2)}
+                    </p>
                   </div>
                 </div>
 
@@ -236,7 +290,9 @@ export default function Proposals() {
         <Card>
           <CardHeader>
             <CardTitle>Lista de Propostas</CardTitle>
-            <CardDescription>Total de {proposals?.length || 0} propostas</CardDescription>
+            <CardDescription>
+              Total de {proposals?.length || 0} propostas
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -255,15 +311,28 @@ export default function Proposals() {
                   </thead>
                   <tbody>
                     {proposals.map((proposal: any) => {
-                      const client = clients?.find((c: any) => c.id === proposal.clientId);
+                      const client = clients?.find(
+                        (c: any) => c.id === proposal.clientId
+                      );
                       return (
-                        <tr key={proposal.id} className="border-b hover:bg-gray-50">
-                          <td className="py-2 px-4 font-medium">{proposal.title}</td>
+                        <tr
+                          key={proposal.id}
+                          className="border-b hover:bg-gray-50"
+                        >
+                          <td className="py-2 px-4 font-medium">
+                            {proposal.title}
+                          </td>
                           <td className="py-2 px-4">{client?.name || "-"}</td>
-                          <td className="py-2 px-4">R$ {proposal.totalValue.toFixed(2)}</td>
+                          <td className="py-2 px-4">
+                            R$ {proposal.totalValue.toFixed(2)}
+                          </td>
                           <td className="py-2 px-4">{proposal.taxRegime}</td>
                           <td className="py-2 px-4 flex gap-2">
-                            <Button size="sm" variant="outline" className="gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1"
+                            >
                               <Eye className="w-4 h-4" />
                             </Button>
                             <Button
@@ -282,7 +351,9 @@ export default function Proposals() {
                 </table>
               </div>
             ) : (
-              <p className="text-center text-gray-500">Nenhuma proposta cadastrada</p>
+              <p className="text-center text-gray-500">
+                Nenhuma proposta cadastrada
+              </p>
             )}
           </CardContent>
         </Card>

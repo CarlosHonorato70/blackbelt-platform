@@ -14,7 +14,7 @@ export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
   let user: User | null = null;
-  
+
   try {
     const userId = opts.req.cookies?.[COOKIE_NAME];
     if (userId && typeof userId === "string") {
@@ -25,8 +25,8 @@ export async function createContext(
     console.warn("[Context] Error loading user:", error);
   }
 
-  const tenantId = opts.req.headers["x-tenant-id"] as string || "default";
-  
+  const tenantId = (opts.req.headers["x-tenant-id"] as string) || "default";
+
   return {
     req: opts.req,
     res: opts.res,

@@ -89,7 +89,11 @@ export const authStandaloneRouter = router({
       });
 
       // Create session token
-      const token = await sdk.createSessionToken(userId, input.email, input.name);
+      const token = await sdk.createSessionToken(
+        userId,
+        input.email,
+        input.name
+      );
 
       // Set cookie
       const cookieOptions = getSessionCookieOptions(ctx.req);
@@ -107,7 +111,7 @@ export const authStandaloneRouter = router({
     }),
 
   // Get current user
-  me: publicProcedure.query((opts) => opts.ctx.user),
+  me: publicProcedure.query(opts => opts.ctx.user),
 
   // Logout
   logout: publicProcedure.mutation(({ ctx }) => {

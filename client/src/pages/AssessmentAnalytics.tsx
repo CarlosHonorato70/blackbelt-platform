@@ -1,8 +1,28 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 import { Download, TrendingUp, Users, AlertTriangle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -61,7 +81,10 @@ export default function AssessmentAnalytics() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Análise de Avaliações</h1>
-        <p className="text-gray-600 mt-2">Dashboard consolidado com estatísticas e tendências de riscos psicossociais</p>
+        <p className="text-gray-600 mt-2">
+          Dashboard consolidado com estatísticas e tendências de riscos
+          psicossociais
+        </p>
       </div>
 
       {/* KPIs */}
@@ -81,7 +104,9 @@ export default function AssessmentAnalytics() {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Score Médio Geral</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Score Médio Geral
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">68</div>
@@ -130,13 +155,20 @@ export default function AssessmentAnalytics() {
           <Card>
             <CardHeader>
               <CardTitle>Scores por Dimensão COPSOQ-II</CardTitle>
-              <CardDescription>Comparativo de scores em cada dimensão avaliada</CardDescription>
+              <CardDescription>
+                Comparativo de scores em cada dimensão avaliada
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
                 <BarChart data={dimensionData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="dimension" angle={-45} textAnchor="end" height={100} />
+                  <XAxis
+                    dataKey="dimension"
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                  />
                   <YAxis domain={[0, 100]} />
                   <Tooltip />
                   <Bar dataKey="score" fill="#3b82f6" radius={[8, 8, 0, 0]} />
@@ -151,7 +183,9 @@ export default function AssessmentAnalytics() {
           <Card>
             <CardHeader>
               <CardTitle>Evolução Temporal</CardTitle>
-              <CardDescription>Score médio e número de respondentes ao longo do tempo</CardDescription>
+              <CardDescription>
+                Score médio e número de respondentes ao longo do tempo
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
@@ -189,7 +223,9 @@ export default function AssessmentAnalytics() {
           <Card>
             <CardHeader>
               <CardTitle>Comparativo por Setor</CardTitle>
-              <CardDescription>Análise de riscos psicossociais por departamento</CardDescription>
+              <CardDescription>
+                Análise de riscos psicossociais por departamento
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
@@ -200,7 +236,11 @@ export default function AssessmentAnalytics() {
                   <Tooltip />
                   <Legend />
                   <Bar dataKey="score" fill="#f59e0b" name="Score Médio" />
-                  <Bar dataKey="respondents" fill="#3b82f6" name="Respondentes" />
+                  <Bar
+                    dataKey="respondents"
+                    fill="#3b82f6"
+                    name="Respondentes"
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -212,7 +252,9 @@ export default function AssessmentAnalytics() {
           <Card>
             <CardHeader>
               <CardTitle>Distribuição de Risco</CardTitle>
-              <CardDescription>Percentual de respondentes por nível de risco</CardDescription>
+              <CardDescription>
+                Percentual de respondentes por nível de risco
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-6">
@@ -237,15 +279,21 @@ export default function AssessmentAnalytics() {
                 </ResponsiveContainer>
 
                 <div className="space-y-4">
-                  {riskDistribution.map((item) => (
+                  {riskDistribution.map(item => (
                     <div key={item.name} className="flex items-center gap-3">
-                      <div className="w-4 h-4 rounded" style={{ backgroundColor: item.color }} />
+                      <div
+                        className="w-4 h-4 rounded"
+                        style={{ backgroundColor: item.color }}
+                      />
                       <div className="flex-1">
                         <p className="font-medium text-sm">{item.name}</p>
                         <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
                           <div
                             className="h-2 rounded-full transition-all"
-                            style={{ width: `${item.value}%`, backgroundColor: item.color }}
+                            style={{
+                              width: `${item.value}%`,
+                              backgroundColor: item.color,
+                            }}
                           />
                         </div>
                       </div>
@@ -263,20 +311,30 @@ export default function AssessmentAnalytics() {
       <Card>
         <CardHeader>
           <CardTitle>Recomendações Estratégicas</CardTitle>
-          <CardDescription>Ações prioritárias baseadas na análise consolidada</CardDescription>
+          <CardDescription>
+            Ações prioritárias baseadas na análise consolidada
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <h4 className="font-semibold text-red-900 mb-2">Prioridade 1: Casos Críticos</h4>
-            <p className="text-sm text-red-800 mb-3">28 respondentes com risco crítico necessitam intervenção imediata</p>
+            <h4 className="font-semibold text-red-900 mb-2">
+              Prioridade 1: Casos Críticos
+            </h4>
+            <p className="text-sm text-red-800 mb-3">
+              28 respondentes com risco crítico necessitam intervenção imediata
+            </p>
             <Button size="sm" className="bg-red-600 hover:bg-red-700">
               Gerar Plano de Ação
             </Button>
           </div>
 
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-            <h4 className="font-semibold text-orange-900 mb-2">Prioridade 2: Dimensões Críticas</h4>
-            <p className="text-sm text-orange-800 mb-2">Focar em: Violência (35), Burnout (58), Saúde Mental (62)</p>
+            <h4 className="font-semibold text-orange-900 mb-2">
+              Prioridade 2: Dimensões Críticas
+            </h4>
+            <p className="text-sm text-orange-800 mb-2">
+              Focar em: Violência (35), Burnout (58), Saúde Mental (62)
+            </p>
             <ul className="text-sm text-orange-800 space-y-1 list-disc list-inside">
               <li>Implementar programa de prevenção de assédio e violência</li>
               <li>Oferecer suporte psicológico especializado</li>
@@ -285,8 +343,13 @@ export default function AssessmentAnalytics() {
           </div>
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-semibold text-blue-900 mb-2">Prioridade 3: Manutenção</h4>
-            <p className="text-sm text-blue-800">Manter boas práticas em dimensões com scores altos (Liderança, Significado)</p>
+            <h4 className="font-semibold text-blue-900 mb-2">
+              Prioridade 3: Manutenção
+            </h4>
+            <p className="text-sm text-blue-800">
+              Manter boas práticas em dimensões com scores altos (Liderança,
+              Significado)
+            </p>
           </div>
         </CardContent>
       </Card>

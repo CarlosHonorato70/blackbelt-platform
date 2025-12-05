@@ -1,7 +1,21 @@
 import { useState } from "react";
-import { ChevronDown, BookOpen, MessageCircle, FileText, Video, Mail, Phone } from "lucide-react";
+import {
+  ChevronDown,
+  BookOpen,
+  MessageCircle,
+  FileText,
+  Video,
+  Mail,
+  Phone,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -158,35 +172,43 @@ Regimes: MEI, Simples Nacional, Lucro Presumido, Autônomo`,
 const faqItems = [
   {
     question: "Como faço login na plataforma?",
-    answer: "Clique em 'Sign in' e use suas credenciais OAuth (Google, Microsoft) ou email/senha se configurado.",
+    answer:
+      "Clique em 'Sign in' e use suas credenciais OAuth (Google, Microsoft) ou email/senha se configurado.",
   },
   {
     question: "Como adiciono uma nova empresa?",
-    answer: "Vá para Empresas > Nova Empresa > Preencha os dados obrigatórios (nome e CNPJ) > Clique em Criar.",
+    answer:
+      "Vá para Empresas > Nova Empresa > Preencha os dados obrigatórios (nome e CNPJ) > Clique em Criar.",
   },
   {
     question: "Posso editar uma avaliação já criada?",
-    answer: "Sim! Clique no menu de ações (3 pontos) na avaliação e selecione 'Editar'.",
+    answer:
+      "Sim! Clique no menu de ações (3 pontos) na avaliação e selecione 'Editar'.",
   },
   {
     question: "Como exporto dados?",
-    answer: "Cada seção tem um botão de exportação. Escolha o formato (JSON, Excel, Texto) e clique para baixar.",
+    answer:
+      "Cada seção tem um botão de exportação. Escolha o formato (JSON, Excel, Texto) e clique para baixar.",
   },
   {
     question: "Qual é a diferença entre os perfis?",
-    answer: "Admin: acesso total. Consultor: pode criar/editar avaliações. Visualizador: apenas leitura.",
+    answer:
+      "Admin: acesso total. Consultor: pode criar/editar avaliações. Visualizador: apenas leitura.",
   },
   {
     question: "Como funciona a auditoria?",
-    answer: "Todas as ações são registradas com usuário, data, hora e valores alterados. Acesse em Auditoria.",
+    answer:
+      "Todas as ações são registradas com usuário, data, hora e valores alterados. Acesse em Auditoria.",
   },
   {
     question: "Posso usar a plataforma offline?",
-    answer: "Sim! Instale localmente com Docker e MySQL. Siga o GUIA_INSTALACAO_WINDOWS.md.",
+    answer:
+      "Sim! Instale localmente com Docker e MySQL. Siga o GUIA_INSTALACAO_WINDOWS.md.",
   },
   {
     question: "Como mudo minha senha?",
-    answer: "Clique no seu perfil (canto superior direito) > Configurações > Alterar Senha.",
+    answer:
+      "Clique no seu perfil (canto superior direito) > Configurações > Alterar Senha.",
   },
 ];
 
@@ -236,8 +258,11 @@ export default function Help() {
           {/* Guia Rápido */}
           <TabsContent value="guide" className="space-y-4">
             <div className="grid gap-4">
-              {guideItems.map((item) => (
-                <Card key={item.id} className="cursor-pointer hover:shadow-lg transition-shadow">
+              {guideItems.map(item => (
+                <Card
+                  key={item.id}
+                  className="cursor-pointer hover:shadow-lg transition-shadow"
+                >
                   <CardHeader>
                     <div className="flex items-start gap-4">
                       <div className="text-orange-500 mt-1">{item.icon}</div>
@@ -264,7 +289,9 @@ export default function Help() {
                 <Card key={index} className="overflow-hidden">
                   <button
                     onClick={() =>
-                      setExpandedFaq(expandedFaq === `faq-${index}` ? null : `faq-${index}`)
+                      setExpandedFaq(
+                        expandedFaq === `faq-${index}` ? null : `faq-${index}`
+                      )
                     }
                     className="w-full p-4 text-left hover:bg-muted/50 transition-colors flex items-center justify-between"
                   >
@@ -277,7 +304,9 @@ export default function Help() {
                   </button>
                   {expandedFaq === `faq-${index}` && (
                     <CardContent className="pt-0 pb-4 px-4">
-                      <p className="text-sm text-muted-foreground">{item.answer}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {item.answer}
+                      </p>
                     </CardContent>
                   )}
                 </Card>
@@ -298,7 +327,9 @@ export default function Help() {
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <p className="font-semibold">{info.value}</p>
-                    <p className="text-sm text-muted-foreground">{info.description}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {info.description}
+                    </p>
                   </CardContent>
                 </Card>
               ))}
@@ -308,23 +339,49 @@ export default function Help() {
             <Card>
               <CardHeader>
                 <CardTitle>Recursos Adicionais</CardTitle>
-                <CardDescription>Documentação e materiais úteis</CardDescription>
+                <CardDescription>
+                  Documentação e materiais úteis
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start" asChild>
-                  <a href="https://github.com/CarlosHonorato70/blackbelt-platform" target="_blank" rel="noopener noreferrer">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  asChild
+                >
+                  <a
+                    href="https://github.com/CarlosHonorato70/blackbelt-platform"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <FileText className="w-4 h-4 mr-2" />
                     Documentação Técnica (GitHub)
                   </a>
                 </Button>
-                <Button variant="outline" className="w-full justify-start" asChild>
-                  <a href="https://github.com/CarlosHonorato70/blackbelt-platform/issues" target="_blank" rel="noopener noreferrer">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  asChild
+                >
+                  <a
+                    href="https://github.com/CarlosHonorato70/blackbelt-platform/issues"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <MessageCircle className="w-4 h-4 mr-2" />
                     Issues e Sugestões
                   </a>
                 </Button>
-                <Button variant="outline" className="w-full justify-start" asChild>
-                  <a href="https://github.com/CarlosHonorato70/blackbelt-platform/blob/main/README.md" target="_blank" rel="noopener noreferrer">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  asChild
+                >
+                  <a
+                    href="https://github.com/CarlosHonorato70/blackbelt-platform/blob/main/README.md"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <BookOpen className="w-4 h-4 mr-2" />
                     README da Plataforma
                   </a>
@@ -335,14 +392,21 @@ export default function Help() {
             {/* Dicas Úteis */}
             <Card className="bg-orange-50 border-orange-200">
               <CardHeader>
-                <CardTitle className="text-orange-900">💡 Dicas Úteis</CardTitle>
+                <CardTitle className="text-orange-900">
+                  💡 Dicas Úteis
+                </CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-orange-800 space-y-2">
-                <p>• Use o Dashboard como ponto de partida para explorar a plataforma</p>
+                <p>
+                  • Use o Dashboard como ponto de partida para explorar a
+                  plataforma
+                </p>
                 <p>• Sempre preencha os campos obrigatórios antes de salvar</p>
                 <p>• Exporte seus dados regularmente para backup</p>
                 <p>• Verifique a Auditoria para rastrear mudanças</p>
-                <p>• Use a busca para encontrar rapidamente empresas e avaliações</p>
+                <p>
+                  • Use a busca para encontrar rapidamente empresas e avaliações
+                </p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -351,4 +415,3 @@ export default function Help() {
     </DashboardLayout>
   );
 }
-

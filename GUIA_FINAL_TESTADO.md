@@ -9,6 +9,7 @@
 ## 🎯 O que você tem
 
 Uma plataforma **100% funcional e independente** que:
+
 - ✅ Roda sem dependências Manus
 - ✅ Usa autenticação local (email/senha)
 - ✅ Suporta MongoDB
@@ -52,6 +53,7 @@ docker-compose logs -f backend
 ### Passo 4: Acessar a Plataforma
 
 Abra no navegador:
+
 - **Aplicação:** http://localhost:3000
 - **MongoDB Express:** http://localhost:8081
   - Usuário: `admin`
@@ -76,22 +78,26 @@ Abra no navegador:
 Após login, teste cada funcionalidade:
 
 ### ✅ Dashboard
+
 - Clique em **Dashboard** no menu
 - Deve mostrar KPIs e métricas
 
 ### ✅ Gestão de Empresas
+
 - Clique em **Empresas**
 - Clique em **+ Nova Empresa**
 - Preencha CNPJ, nome, etc.
 - Salve
 
 ### ✅ Avaliações NR-01
+
 - Clique em **Avaliações NR-01**
 - Clique em **+ Nova Avaliação**
 - Preencha o formulário
 - Salve
 
 ### ✅ Exportação de Dados
+
 - Vá para **Auditoria**
 - Clique em **Exportar** (JSON, Excel ou Texto)
 - Arquivo deve baixar
@@ -181,6 +187,7 @@ blackbelt-platform/
 Antes de colocar em produção, altere:
 
 1. **JWT_SECRET** em `.env`
+
    ```bash
    # Gere uma chave segura
    openssl rand -hex 32
@@ -200,11 +207,13 @@ Antes de colocar em produção, altere:
 ## 📊 Dados de Teste
 
 Usuário de teste já criado:
+
 - **Email:** carlos@blackbelt.com
 - **Senha:** senha123
 - **Papel:** user
 
 Para criar usuário admin:
+
 ```bash
 # Conectar ao MongoDB
 docker-compose exec mongodb mongosh -u admin -p blackbelt2024
@@ -266,6 +275,7 @@ docker-compose up -d
 Se encontrar problemas:
 
 1. **Verificar logs:**
+
    ```bash
    docker-compose logs -f backend
    docker-compose logs -f mongodb

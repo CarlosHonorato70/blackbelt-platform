@@ -134,7 +134,7 @@ export default function Tenants() {
     });
   };
 
-  const selectedTenant = tenants?.find((t) => t.id === selectedTenantId);
+  const selectedTenant = tenants?.find(t => t.id === selectedTenantId);
 
   return (
     <DashboardLayout>
@@ -156,7 +156,9 @@ export default function Tenants() {
         <Card>
           <CardHeader>
             <CardTitle>Filtros</CardTitle>
-            <CardDescription>Busque e filtre as empresas cadastradas</CardDescription>
+            <CardDescription>
+              Busque e filtre as empresas cadastradas
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex gap-4">
@@ -166,7 +168,7 @@ export default function Tenants() {
                   <Input
                     placeholder="Buscar por nome ou CNPJ..."
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={e => setSearch(e.target.value)}
                     className="pl-8"
                   />
                 </div>
@@ -211,9 +213,11 @@ export default function Tenants() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {tenants.map((tenant) => (
+                  {tenants.map(tenant => (
                     <TableRow key={tenant.id}>
-                      <TableCell className="font-medium">{tenant.name}</TableCell>
+                      <TableCell className="font-medium">
+                        {tenant.name}
+                      </TableCell>
                       <TableCell>{tenant.cnpj}</TableCell>
                       <TableCell>
                         {tenant.city && tenant.state
@@ -229,15 +233,15 @@ export default function Tenants() {
                             tenant.status === "active"
                               ? "bg-green-100 text-green-800"
                               : tenant.status === "inactive"
-                              ? "bg-gray-100 text-gray-800"
-                              : "bg-red-100 text-red-800"
+                                ? "bg-gray-100 text-gray-800"
+                                : "bg-red-100 text-red-800"
                           }`}
                         >
                           {tenant.status === "active"
                             ? "Ativo"
                             : tenant.status === "inactive"
-                            ? "Inativo"
-                            : "Suspenso"}
+                              ? "Inativo"
+                              : "Suspenso"}
                         </span>
                       </TableCell>
                       <TableCell className="flex gap-2">
@@ -269,7 +273,9 @@ export default function Tenants() {
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold">Nenhuma empresa encontrada</h3>
+                <h3 className="text-lg font-semibold">
+                  Nenhuma empresa encontrada
+                </h3>
                 <p className="text-sm text-muted-foreground mt-2">
                   Comece criando uma nova empresa cliente
                 </p>
@@ -279,11 +285,18 @@ export default function Tenants() {
         </Card>
 
         {/* Dialog para Criar/Editar */}
-        <Dialog open={dialogMode === "create" || dialogMode === "edit"} onOpenChange={(open) => {
-          if (!open) setDialogMode("closed");
-        }}>
+        <Dialog
+          open={dialogMode === "create" || dialogMode === "edit"}
+          onOpenChange={open => {
+            if (!open) setDialogMode("closed");
+          }}
+        >
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <form onSubmit={dialogMode === "create" ? handleSubmit : handleEditSubmit}>
+            <form
+              onSubmit={
+                dialogMode === "create" ? handleSubmit : handleEditSubmit
+              }
+            >
               <DialogHeader>
                 <DialogTitle>
                   {dialogMode === "create" ? "Nova Empresa" : "Editar Empresa"}
@@ -301,7 +314,9 @@ export default function Tenants() {
                   <Input
                     id="name"
                     name="name"
-                    defaultValue={dialogMode === "edit" ? selectedTenant?.name : ""}
+                    defaultValue={
+                      dialogMode === "edit" ? selectedTenant?.name : ""
+                    }
                     required
                   />
                 </div>
@@ -324,7 +339,11 @@ export default function Tenants() {
                     <Input
                       id="street"
                       name="street"
-                      defaultValue={dialogMode === "edit" ? selectedTenant?.street ?? "" : ""}
+                      defaultValue={
+                        dialogMode === "edit"
+                          ? (selectedTenant?.street ?? "")
+                          : ""
+                      }
                     />
                   </div>
                   <div className="grid gap-2">
@@ -332,7 +351,11 @@ export default function Tenants() {
                     <Input
                       id="number"
                       name="number"
-                      defaultValue={dialogMode === "edit" ? selectedTenant?.number ?? "" : ""}
+                      defaultValue={
+                        dialogMode === "edit"
+                          ? (selectedTenant?.number ?? "")
+                          : ""
+                      }
                     />
                   </div>
                 </div>
@@ -343,7 +366,11 @@ export default function Tenants() {
                     <Input
                       id="city"
                       name="city"
-                      defaultValue={dialogMode === "edit" ? selectedTenant?.city ?? "" : ""}
+                      defaultValue={
+                        dialogMode === "edit"
+                          ? (selectedTenant?.city ?? "")
+                          : ""
+                      }
                     />
                   </div>
                   <div className="grid gap-2">
@@ -352,7 +379,11 @@ export default function Tenants() {
                       id="state"
                       name="state"
                       maxLength={2}
-                      defaultValue={dialogMode === "edit" ? selectedTenant?.state ?? "" : ""}
+                      defaultValue={
+                        dialogMode === "edit"
+                          ? (selectedTenant?.state ?? "")
+                          : ""
+                      }
                     />
                   </div>
                 </div>
@@ -363,7 +394,11 @@ export default function Tenants() {
                     id="zipCode"
                     name="zipCode"
                     placeholder="00000-000"
-                    defaultValue={dialogMode === "edit" ? selectedTenant?.zipCode ?? "" : ""}
+                    defaultValue={
+                      dialogMode === "edit"
+                        ? (selectedTenant?.zipCode ?? "")
+                        : ""
+                    }
                   />
                 </div>
 
@@ -376,7 +411,11 @@ export default function Tenants() {
                       <Input
                         id="contactName"
                         name="contactName"
-                        defaultValue={dialogMode === "edit" ? selectedTenant?.contactName ?? "" : ""}
+                        defaultValue={
+                          dialogMode === "edit"
+                            ? (selectedTenant?.contactName ?? "")
+                            : ""
+                        }
                       />
                     </div>
 
@@ -386,7 +425,11 @@ export default function Tenants() {
                         id="contactEmail"
                         name="contactEmail"
                         type="email"
-                        defaultValue={dialogMode === "edit" ? selectedTenant?.contactEmail ?? "" : ""}
+                        defaultValue={
+                          dialogMode === "edit"
+                            ? (selectedTenant?.contactEmail ?? "")
+                            : ""
+                        }
                       />
                     </div>
 
@@ -395,7 +438,11 @@ export default function Tenants() {
                       <Input
                         id="contactPhone"
                         name="contactPhone"
-                        defaultValue={dialogMode === "edit" ? selectedTenant?.contactPhone ?? "" : ""}
+                        defaultValue={
+                          dialogMode === "edit"
+                            ? (selectedTenant?.contactPhone ?? "")
+                            : ""
+                        }
                       />
                     </div>
                   </div>
@@ -423,8 +470,8 @@ export default function Tenants() {
                       ? "Criando..."
                       : "Criar Empresa"
                     : updateMutation.isPending
-                    ? "Salvando..."
-                    : "Salvar Alterações"}
+                      ? "Salvando..."
+                      : "Salvar Alterações"}
                 </Button>
               </DialogFooter>
             </form>
@@ -432,15 +479,19 @@ export default function Tenants() {
         </Dialog>
 
         {/* AlertDialog para Deletar */}
-        <AlertDialog open={dialogMode === "delete"} onOpenChange={(open) => {
-          if (!open) setDialogMode("closed");
-        }}>
+        <AlertDialog
+          open={dialogMode === "delete"}
+          onOpenChange={open => {
+            if (!open) setDialogMode("closed");
+          }}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
               <AlertDialogDescription>
-                Tem certeza que deseja deletar a empresa <strong>{selectedTenant?.name}</strong>?
-                Esta ação não pode ser desfeita.
+                Tem certeza que deseja deletar a empresa{" "}
+                <strong>{selectedTenant?.name}</strong>? Esta ação não pode ser
+                desfeita.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="flex gap-2 justify-end">

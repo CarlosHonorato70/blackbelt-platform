@@ -25,8 +25,13 @@ export async function callDataApi(
   }
 
   // Build the full URL by appending the service path to the base URL
-  const baseUrl = process.env.OPENAI_API_URL.endsWith("/") ? process.env.OPENAI_API_URL : `${process.env.OPENAI_API_URL}/`;
-  const fullUrl = new URL("webdevtoken.v1.WebDevService/CallApi", baseUrl).toString();
+  const baseUrl = process.env.OPENAI_API_URL.endsWith("/")
+    ? process.env.OPENAI_API_URL
+    : `${process.env.OPENAI_API_URL}/`;
+  const fullUrl = new URL(
+    "webdevtoken.v1.WebDevService/CallApi",
+    baseUrl
+  ).toString();
 
   const response = await fetch(fullUrl, {
     method: "POST",

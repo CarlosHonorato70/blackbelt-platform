@@ -85,55 +85,55 @@ on:
 jobs:
   lint-and-build:
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
         node-version: [22.x]
-    
+
     steps:
       # 1. Checkout
       - name: Checkout código
         uses: actions/checkout@v4
-      
+
       # 2. Setup Node.js
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'pnpm'
-      
+          cache: "pnpm"
+
       # 3. Setup pnpm
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 8
-      
+
       # 4. Instalar dependências
       - name: Instalar dependências
         run: pnpm install --frozen-lockfile
-      
+
       # 5. ESLint
       - name: Executar ESLint
         run: pnpm lint
         continue-on-error: true
-      
+
       # 6. Prettier (verificar formatação)
       - name: Verificar formatação com Prettier
         run: pnpm format:check
         continue-on-error: true
-      
+
       # 7. Type Check
       - name: Type checking com TypeScript
         run: pnpm tsc --noEmit
-      
+
       # 8. Build Frontend
       - name: Build Frontend (Vite)
         run: pnpm build:client
-      
+
       # 9. Build Backend
       - name: Build Backend
         run: pnpm build:server
-      
+
       # 10. Upload artifacts
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
@@ -143,12 +143,12 @@ jobs:
             dist/
             build/
           retention-days: 5
-      
+
       # 11. Notificação de sucesso
       - name: Notificar sucesso
         if: success()
         run: echo "✅ CI passou com sucesso!"
-      
+
       # 12. Notificação de falha
       - name: Notificar falha
         if: failure()
@@ -174,28 +174,28 @@ on:
 jobs:
   unit-tests:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          cache: 'pnpm'
-      
+          cache: "pnpm"
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 8
-      
+
       - name: Instalar dependências
         run: pnpm install --frozen-lockfile
-      
+
       - name: Executar testes unitários
         run: pnpm test:unit
-      
+
       - name: Upload coverage
         uses: codecov/codecov-action@v3
         with:
@@ -205,7 +205,7 @@ jobs:
 
   integration-tests:
     runs-on: ubuntu-latest
-    
+
     services:
       mysql:
         image: mysql:8.0
@@ -221,31 +221,31 @@ jobs:
           --health-retries=3
         ports:
           - 3306:3306
-    
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          cache: 'pnpm'
-      
+          cache: "pnpm"
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 8
-      
+
       - name: Instalar dependências
         run: pnpm install --frozen-lockfile
-      
+
       - name: Setup banco de testes
         run: |
           pnpm db:push
         env:
           DATABASE_URL: mysql://blackbelt:blackbelt123@localhost:3306/blackbelt_test
-      
+
       - name: Executar testes de integração
         run: pnpm test:integration
         env:
@@ -253,7 +253,7 @@ jobs:
 
   e2e-tests:
     runs-on: ubuntu-latest
-    
+
     services:
       mysql:
         image: mysql:8.0
@@ -269,38 +269,38 @@ jobs:
           --health-retries=3
         ports:
           - 3306:3306
-    
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          cache: 'pnpm'
-      
+          cache: "pnpm"
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 8
-      
+
       - name: Instalar dependências
         run: pnpm install --frozen-lockfile
-      
+
       - name: Setup banco de testes E2E
         run: pnpm db:push
         env:
           DATABASE_URL: mysql://blackbelt:blackbelt123@localhost:3306/blackbelt_e2e
-      
+
       - name: Build aplicação
         run: pnpm build
-      
+
       - name: Executar testes E2E
         run: pnpm test:e2e
         env:
           DATABASE_URL: mysql://blackbelt:blackbelt123@localhost:3306/blackbelt_e2e
-      
+
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v3
@@ -325,30 +325,30 @@ on:
   pull_request:
     branches: [main, develop]
   schedule:
-    - cron: '0 2 * * *'  # Diariamente às 2 AM
+    - cron: "0 2 * * *" # Diariamente às 2 AM
 
 jobs:
   sast:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          cache: 'pnpm'
-      
+          cache: "pnpm"
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 8
-      
+
       - name: Instalar dependências
         run: pnpm install --frozen-lockfile
-      
+
       - name: SonarQube Scan
         uses: SonarSource/sonarcloud-github-action@master
         env:
@@ -357,26 +357,26 @@ jobs:
 
   dependency-check:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
-      
+
       - name: Dependency Check
         uses: dependency-check/Dependency-Check_Action@main
         with:
-          project: 'blackbelt-platform'
-          path: '.'
-          format: 'JSON'
+          project: "blackbelt-platform"
+          path: "."
+          format: "JSON"
           args: >
             --enableExperimental
-      
+
       - name: Upload Dependency Check report
         uses: actions/upload-artifact@v3
         with:
           name: dependency-check-report
           path: reports/
-      
+
       - name: Publicar resultados
         if: always()
         uses: actions/upload-artifact@v3
@@ -386,25 +386,25 @@ jobs:
 
   npm-audit:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          cache: 'pnpm'
-      
+          cache: "pnpm"
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 8
-      
+
       - name: Instalar dependências
         run: pnpm install --frozen-lockfile
-      
+
       - name: npm audit
         run: npm audit --audit-level=moderate
         continue-on-error: true
@@ -427,45 +427,45 @@ on:
 jobs:
   deploy-staging:
     runs-on: ubuntu-latest
-    
+
     environment:
       name: staging
       url: https://staging.blackbelt-consultoria.com
-    
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          cache: 'pnpm'
-      
+          cache: "pnpm"
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 8
-      
+
       - name: Instalar dependências
         run: pnpm install --frozen-lockfile
-      
+
       - name: Build aplicação
         run: pnpm build
         env:
           VITE_API_URL: https://staging-api.blackbelt-consultoria.com
-      
+
       - name: Build Docker image
         run: |
           docker build -t blackbelt:staging-${{ github.sha }} .
           docker tag blackbelt:staging-${{ github.sha }} blackbelt:staging-latest
-      
+
       - name: Push Docker image
         run: |
           echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
           docker push blackbelt:staging-${{ github.sha }}
           docker push blackbelt:staging-latest
-      
+
       - name: Deploy para Staging
         uses: appleboy/ssh-action@master
         with:
@@ -478,7 +478,7 @@ jobs:
             docker-compose -f docker-compose.staging.yml down
             docker-compose -f docker-compose.staging.yml up -d
             docker-compose -f docker-compose.staging.yml exec -T app pnpm db:push
-      
+
       - name: Health check
         run: |
           for i in {1..30}; do
@@ -491,21 +491,21 @@ jobs:
           done
           echo "❌ Staging não respondeu"
           exit 1
-      
+
       - name: Notificar sucesso
         if: success()
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
-          text: '✅ Deploy para Staging bem-sucedido!'
+          text: "✅ Deploy para Staging bem-sucedido!"
           webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-      
+
       - name: Notificar falha
         if: failure()
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
-          text: '❌ Deploy para Staging falhou!'
+          text: "❌ Deploy para Staging falhou!"
           webhook_url: ${{ secrets.SLACK_WEBHOOK }}
 ```
 
@@ -522,51 +522,51 @@ on:
   push:
     branches: [main]
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
 
 jobs:
   deploy-production:
     runs-on: ubuntu-latest
-    
+
     environment:
       name: production
       url: https://blackbelt-consultoria.com
-    
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          cache: 'pnpm'
-      
+          cache: "pnpm"
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 8
-      
+
       - name: Instalar dependências
         run: pnpm install --frozen-lockfile
-      
+
       - name: Build aplicação
         run: pnpm build
         env:
           VITE_API_URL: https://api.blackbelt-consultoria.com
-      
+
       - name: Build Docker image
         run: |
           docker build -t blackbelt:prod-${{ github.sha }} .
           docker tag blackbelt:prod-${{ github.sha }} blackbelt:prod-latest
-      
+
       - name: Push Docker image
         run: |
           echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
           docker push blackbelt:prod-${{ github.sha }}
           docker push blackbelt:prod-latest
-      
+
       - name: Deploy para Production
         uses: appleboy/ssh-action@master
         with:
@@ -579,7 +579,7 @@ jobs:
             docker-compose -f docker-compose.prod.yml down
             docker-compose -f docker-compose.prod.yml up -d
             docker-compose -f docker-compose.prod.yml exec -T app pnpm db:push
-      
+
       - name: Health check
         run: |
           for i in {1..30}; do
@@ -592,7 +592,7 @@ jobs:
           done
           echo "❌ Production não respondeu"
           exit 1
-      
+
       - name: Criar Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/create-release@v1
@@ -605,21 +605,21 @@ jobs:
             Versão: ${{ github.ref }}
             Commit: ${{ github.sha }}
             Deploy: Production
-      
+
       - name: Notificar sucesso
         if: success()
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
-          text: '✅ Deploy para Production bem-sucedido!'
+          text: "✅ Deploy para Production bem-sucedido!"
           webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-      
+
       - name: Notificar falha
         if: failure()
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
-          text: '❌ Deploy para Production falhou!'
+          text: "❌ Deploy para Production falhou!"
           webhook_url: ${{ secrets.SLACK_WEBHOOK }}
 ```
 
@@ -634,20 +634,20 @@ name: Tarefas Agendadas
 
 on:
   schedule:
-    - cron: '0 2 * * *'   # Diariamente às 2 AM
-    - cron: '0 0 * * 0'   # Semanalmente (domingo)
+    - cron: "0 2 * * *" # Diariamente às 2 AM
+    - cron: "0 0 * * 0" # Semanalmente (domingo)
   workflow_dispatch:
 
 jobs:
   backup-database:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Backup do banco de dados
         run: |
           echo "Executando backup..."
           # Comandos de backup
-      
+
       - name: Upload backup
         uses: actions/upload-artifact@v3
         with:
@@ -657,11 +657,11 @@ jobs:
 
   security-scan:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
-      
+
       - name: Executar scan de segurança
         run: |
           echo "Executando scan de segurança..."
@@ -669,11 +669,11 @@ jobs:
 
   performance-test:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
-      
+
       - name: Executar testes de performance
         run: |
           echo "Executando testes de performance..."
@@ -706,14 +706,14 @@ VITE_APP_ID              # App ID OAuth
 
 ## 📊 Matriz de Workflows
 
-| Workflow | Trigger | Duração | Ambiente |
-|----------|---------|---------|----------|
-| **CI** | Push/PR | 5-10 min | N/A |
-| **Testes** | Push/PR | 15-20 min | Docker |
-| **Segurança** | Push/PR/Schedule | 10-15 min | N/A |
-| **Staging** | Push develop | 10-15 min | Staging |
-| **Production** | Push main/tags | 15-20 min | Production |
-| **Agendadas** | Cron | Variável | N/A |
+| Workflow       | Trigger          | Duração   | Ambiente   |
+| -------------- | ---------------- | --------- | ---------- |
+| **CI**         | Push/PR          | 5-10 min  | N/A        |
+| **Testes**     | Push/PR          | 15-20 min | Docker     |
+| **Segurança**  | Push/PR/Schedule | 10-15 min | N/A        |
+| **Staging**    | Push develop     | 10-15 min | Staging    |
+| **Production** | Push main/tags   | 15-20 min | Production |
+| **Agendadas**  | Cron             | Variável  | N/A        |
 
 ---
 
@@ -767,16 +767,19 @@ VITE_APP_ID              # App ID OAuth
 ## 🚨 Troubleshooting CI/CD
 
 ### Erro: "Workflow não inicia"
+
 - Verifique se o arquivo YAML está em `.github/workflows/`
 - Valide sintaxe YAML
 - Verifique permissões do repositório
 
 ### Erro: "Testes falhando"
+
 - Verifique logs do workflow
 - Teste localmente: `pnpm test`
 - Verifique variáveis de ambiente
 
 ### Erro: "Deploy falhando"
+
 - Verifique secrets configurados
 - Teste SSH connection
 - Verifique permissões do servidor

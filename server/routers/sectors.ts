@@ -14,7 +14,7 @@ export const sectorsRouter = router({
     )
     .query(async ({ ctx, input }) => {
       // TODO: Verificar se usuário tem acesso a este tenant
-      
+
       const sectors = await db.listSectors(input.tenantId, input.search);
 
       await db.createAuditLog({
@@ -44,7 +44,10 @@ export const sectorsRouter = router({
       const sector = await db.getSector(input.id, input.tenantId);
 
       if (!sector) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Setor não encontrado" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Setor não encontrado",
+        });
       }
 
       await db.createAuditLog({
@@ -76,11 +79,14 @@ export const sectorsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       // TODO: Verificar se usuário tem permissão para criar setores neste tenant
-      
+
       // Verificar se tenant existe
       const tenant = await db.getTenant(input.tenantId);
       if (!tenant) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Empresa não encontrada" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Empresa não encontrada",
+        });
       }
 
       const sector = await db.createSector(input);
@@ -118,7 +124,10 @@ export const sectorsRouter = router({
 
       const sector = await db.getSector(id, tenantId);
       if (!sector) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Setor não encontrado" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Setor não encontrado",
+        });
       }
 
       // TODO: Verificar permissões
@@ -151,7 +160,10 @@ export const sectorsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const sector = await db.getSector(input.id, input.tenantId);
       if (!sector) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Setor não encontrado" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Setor não encontrado",
+        });
       }
 
       // TODO: Verificar permissões
@@ -174,4 +186,3 @@ export const sectorsRouter = router({
       return { success: true };
     }),
 });
-

@@ -66,7 +66,10 @@ export const authSimpleRouter = router({
           throw new Error("Email ou senha incorretos");
         }
 
-        const validPassword = await bcrypt.compare(input.password, user.passwordHash);
+        const validPassword = await bcrypt.compare(
+          input.password,
+          user.passwordHash
+        );
         if (!validPassword) {
           throw new Error("Email ou senha incorretos");
         }
@@ -93,7 +96,7 @@ export const authSimpleRouter = router({
       }
     }),
 
-  me: publicProcedure.query((opts) => opts.ctx.user || null),
+  me: publicProcedure.query(opts => opts.ctx.user || null),
 
   logout: publicProcedure.mutation(({ ctx }) => {
     try {

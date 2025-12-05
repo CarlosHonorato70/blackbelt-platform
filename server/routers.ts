@@ -3,7 +3,14 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { remindersRouter } from "./routers/reminders";
 import { publicProcedure, router } from "./_core/trpc";
-import { assessmentProposalsRouter, clientsRouter, pricingParametersRouter, pricingRouter, proposalsRouter, servicesRouter } from "./routers/pricing";
+import {
+  assessmentProposalsRouter,
+  clientsRouter,
+  pricingParametersRouter,
+  pricingRouter,
+  proposalsRouter,
+  servicesRouter,
+} from "./routers/pricing";
 import { peopleRouter } from "./routers/people";
 import { sectorsRouter } from "./routers/sectors";
 import { tenantsRouter } from "./routers/tenants";
@@ -36,4 +43,3 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
-

@@ -55,24 +55,35 @@ export const remindersRouter = router({
         .from(copsoqInvites)
         .where(eq(copsoqInvites.assessmentId, input.assessmentId));
 
-      const sentReminders = reminders.filter((r) => r.status === "sent").length;
-      const failedReminders = reminders.filter((r) => r.status === "failed").length;
-      const bouncedReminders = reminders.filter((r) => r.status === "bounced").length;
+      const sentReminders = reminders.filter(r => r.status === "sent").length;
+      const failedReminders = reminders.filter(
+        r => r.status === "failed"
+      ).length;
+      const bouncedReminders = reminders.filter(
+        r => r.status === "bounced"
+      ).length;
 
-      const pendingInvites = invites.filter((i) => i.status === "sent" && !i.completedAt).length;
-      const completedInvites = invites.filter((i) => i.completedAt).length;
+      const pendingInvites = invites.filter(
+        i => i.status === "sent" && !i.completedAt
+      ).length;
+      const completedInvites = invites.filter(i => i.completedAt).length;
 
       return {
         totalInvites: invites.length,
         completedInvites,
         pendingInvites,
-        responseRate: invites.length > 0 ? Math.round((completedInvites / invites.length) * 100) : 0,
+        responseRate:
+          invites.length > 0
+            ? Math.round((completedInvites / invites.length) * 100)
+            : 0,
         totalReminders: reminders.length,
         sentReminders,
         failedReminders,
         bouncedReminders,
         averageRemindersPerInvite:
-          invites.length > 0 ? Math.round((reminders.length / invites.length) * 10) / 10 : 0,
+          invites.length > 0
+            ? Math.round((reminders.length / invites.length) * 10) / 10
+            : 0,
       };
     }),
 
@@ -82,11 +93,15 @@ export const remindersRouter = router({
   triggerScheduler: protectedProcedure.mutation(async () => {
     try {
       await scheduleReminders();
-      return { success: true, message: "Agendador de lembretes executado com sucesso" };
+      return {
+        success: true,
+        message: "Agendador de lembretes executado com sucesso",
+      };
     } catch (error) {
       return {
         success: false,
-        message: error instanceof Error ? error.message : "Erro ao executar agendador",
+        message:
+          error instanceof Error ? error.message : "Erro ao executar agendador",
       };
     }
   }),

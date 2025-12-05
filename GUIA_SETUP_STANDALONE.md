@@ -157,30 +157,35 @@ db.users.insertOne({
 Após login, você terá acesso a:
 
 ### 1. **Dashboard**
-   - Visão geral de empresas, colaboradores e avaliações
-   - KPIs e métricas em tempo real
-   - Status de conformidade NR-01
+
+- Visão geral de empresas, colaboradores e avaliações
+- KPIs e métricas em tempo real
+- Status de conformidade NR-01
 
 ### 2. **Gestão de Empresas**
-   - Criar e gerenciar tenants (empresas)
-   - Associar setores e colaboradores
-   - Validação de CNPJ
+
+- Criar e gerenciar tenants (empresas)
+- Associar setores e colaboradores
+- Validação de CNPJ
 
 ### 3. **Avaliações NR-01**
-   - Criar avaliações de riscos psicossociais
-   - Gerar relatórios de compliance
-   - Exportar em JSON, Excel ou Texto
+
+- Criar avaliações de riscos psicossociais
+- Gerar relatórios de compliance
+- Exportar em JSON, Excel ou Texto
 
 ### 4. **Gestão de Precificação**
-   - Cadastro de clientes
-   - Gestão de serviços
-   - Geração de propostas comerciais
-   - Cálculo de hora técnica (MEI, SN, LP, Autônomo)
+
+- Cadastro de clientes
+- Gestão de serviços
+- Geração de propostas comerciais
+- Cálculo de hora técnica (MEI, SN, LP, Autônomo)
 
 ### 5. **Auditoria e Compliance**
-   - Logs de todas as ações
-   - Exportação de dados (LGPD)
-   - Relatórios de compliance
+
+- Logs de todas as ações
+- Exportação de dados (LGPD)
+- Relatórios de compliance
 
 ## 🐛 Troubleshooting
 
@@ -234,6 +239,7 @@ docker-compose up -d
 Antes de colocar em produção:
 
 1. **Alterar JWT_SECRET**
+
    ```env
    JWT_SECRET=gerar-uma-chave-segura-aleatoria-muito-longa
    ```
