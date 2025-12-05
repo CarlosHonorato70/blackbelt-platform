@@ -10,7 +10,14 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
-    "db:push": "drizzle-kit generate && drizzle-kit migrate"
+    "db:push": "drizzle-kit generate && drizzle-kit migrate",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f mysql",
+    "docker:mysql": "docker exec -it blackbelt-mysql mysql -u blackbelt_user -pblackbelt_password blackbelt",
+    "docker:reset": "docker-compose down -v && docker-compose up -d",
+    "docker:backup": "docker exec blackbelt-mysql mysqldump -u blackbelt_user -pblackbelt_password blackbelt > backup-$(date +%Y%m%d-%H%M%S).sql",
+    "setup:docker": "docker-compose up -d && sleep 10 && pnpm db:push"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
@@ -89,6 +96,7 @@
     "@types/react": "^19.1.16",
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.4",
+    "@vitest/coverage-v8": "2.1.9",
     "add": "^2.0.6",
     "autoprefixer": "^10.4.20",
     "drizzle-kit": "^0.31.4",

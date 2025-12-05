@@ -1,5 +1,7 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
+import { mockUser } from "./trpc"; // Importar o mock user do trpc.ts
+import { sdk } from "./sdk";
 import * as db from "../db";
 import { COOKIE_NAME } from "@shared/const";
 
@@ -16,6 +18,8 @@ export async function createContext(
 ): Promise<TrpcContext> {
   let user: User | null = null;
   let userRoles: Awaited<ReturnType<typeof db.getUserRoles>> = [];
+
+  // Ignorar autenticação e usar o mock user
 
   try {
     const userId = opts.req.cookies?.[COOKIE_NAME];

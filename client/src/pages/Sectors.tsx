@@ -60,6 +60,7 @@ export default function Sectors() {
       utils.sectors.list.invalidate();
       setDialogMode("closed");
     },
+    onError: error => {
     onError: (error: any) => {
       toast.error(error.message || "Erro ao criar setor");
     },
@@ -146,6 +147,70 @@ export default function Sectors() {
             </p>
           </div>
 
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Setor
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-xl">
+              <form onSubmit={handleSubmit}>
+                <DialogHeader>
+                  <DialogTitle>Novo Setor</DialogTitle>
+                  <DialogDescription>
+                    Cadastre um novo setor para {selectedTenant.name}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">Nome do Setor *</Label>
+                    <Input
+                      id="name"
+                      name="name"
+                      placeholder="Ex: Administrativo, Produção, Comercial"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="description">Descrição</Label>
+                    <Textarea
+                      id="description"
+                      name="description"
+                      placeholder="Descreva as atividades e responsabilidades do setor..."
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="responsibleName">
+                      Responsável pelo Setor
+                    </Label>
+                    <Input
+                      id="responsibleName"
+                      name="responsibleName"
+                      placeholder="Nome do responsável pelo setor"
+                    />
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDialogOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={createMutation.isPending}>
+                    {createMutation.isPending ? "Criando..." : "Criar Setor"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
           <Button onClick={() => setDialogMode("create")}>
             <Plus className="mr-2 h-4 w-4" />
             Novo Setor

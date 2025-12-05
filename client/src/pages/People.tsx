@@ -71,6 +71,7 @@ export default function People() {
       utils.people.list.invalidate();
       setDialogMode("closed");
     },
+    onError: error => {
     onError: (error: any) => {
       toast.error(error.message || "Erro ao criar colaborador");
     },
@@ -161,6 +162,98 @@ export default function People() {
             </p>
           </div>
 
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Colaborador
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <form onSubmit={handleSubmit}>
+                <DialogHeader>
+                  <DialogTitle>Novo Colaborador</DialogTitle>
+                  <DialogDescription>
+                    Cadastre um novo colaborador para {selectedTenant.name}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">Nome Completo *</Label>
+                    <Input
+                      id="name"
+                      name="name"
+                      placeholder="Nome completo do colaborador"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="sectorId">Setor *</Label>
+                    <Select name="sectorId" required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o setor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sectors?.map(sector => (
+                          <SelectItem key={sector.id} value={sector.id}>
+                            {sector.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="position">Cargo *</Label>
+                    <Input
+                      id="position"
+                      name="position"
+                      placeholder="Ex: Analista, Gerente, Operador"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="email">E-mail</Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="email@exemplo.com"
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="phone">Telefone</Label>
+                      <Input
+                        id="phone"
+                        name="phone"
+                        placeholder="(00) 00000-0000"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDialogOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={createMutation.isPending}>
+                    {createMutation.isPending
+                      ? "Criando..."
+                      : "Criar Colaborador"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
           <Button onClick={() => setDialogMode("create")}>
             <Plus className="mr-2 h-4 w-4" />
             Novo Colaborador

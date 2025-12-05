@@ -1,0 +1,15 @@
+graph TB
+    User["👤 Usuário<br/>(Browser)"]
+    Frontend["🖥️ Frontend<br/>(React 19)"]
+    Backend["⚙️ Backend<br/>(Express + tRPC)"]
+    Database["💾 Database<br/>(MySQL)"]
+    Auth["🔐 OAuth 2.0<br/>(Manus)"]
+    
+    User -->|HTTP/HTTPS| Frontend
+    Frontend -->|tRPC Calls| Backend
+    Backend -->|SQL Queries| Database
+    Backend -->|Validate Token| Auth
+    Database -->|Data| Backend
+    Backend -->|JSON Response| Frontend
+    Frontend -->|Render UI| User
+    Auth -->|JWT Token| Backend

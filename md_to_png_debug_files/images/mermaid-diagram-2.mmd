@@ -1,0 +1,24 @@
+graph LR
+    subgraph Client["🖥️ FRONTEND (React)"]
+        LoginBtn["Login Button"]
+        LoginModal["Login Modal"]
+        TokenStorage["localStorage<br/>(JWT Token)"]
+    end
+    
+    subgraph Auth["🔐 AUTENTICAÇÃO"]
+        OAuthServer["OAuth 2.0<br/>(Manus)"]
+        Callback["Callback Handler<br/>(/api/oauth/callback)"]
+    end
+    
+    subgraph Server["⚙️ BACKEND (Express)"]
+        Context["createContext()"]
+        SessionCookie["Session Cookie<br/>(JWT)"]
+    end
+    
+    LoginBtn -->|Redirect to| OAuthServer
+    OAuthServer -->|Authorize| LoginModal
+    LoginModal -->|Code| Callback
+    Callback -->|Create Session| SessionCookie
+    SessionCookie -->|Set Cookie| TokenStorage
+    TokenStorage -->|Include in Requests| Context
+    Context -->|Validate User| Server

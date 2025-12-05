@@ -1,10 +1,12 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { publicProcedure, router } from "../_core/trpc";
 import { protectedProcedure, router, tenantProcedure } from "../_core/trpc";
 import * as db from "../db";
 
 export const peopleRouter = router({
   // Listar colaboradores de um tenant
+  list: publicProcedure
   list: tenantProcedure
     .input(
       z.object({
@@ -17,6 +19,8 @@ export const peopleRouter = router({
       const people = await db.listPeople(ctx.tenantId!, input || {});
 
       await db.createAuditLog({
+        tenantId,
+        userId: ctx.user!.id,
         tenantId: ctx.tenantId!,
         userId: ctx.user.id,
         action: "READ",
@@ -32,6 +36,7 @@ export const peopleRouter = router({
     }),
 
   // Obter um colaborador específico
+  get: publicProcedure
   get: tenantProcedure
     .input(
       z.object({
@@ -50,6 +55,8 @@ export const peopleRouter = router({
       }
 
       await db.createAuditLog({
+        tenantId: input.tenantId,
+        userId: ctx.user!.id,
         tenantId: ctx.tenantId!,
         userId: ctx.user.id,
         action: "READ",
@@ -65,6 +72,7 @@ export const peopleRouter = router({
     }),
 
   // Criar novo colaborador
+  create: publicProcedure
   create: tenantProcedure
     .input(
       z.object({
@@ -106,6 +114,8 @@ export const peopleRouter = router({
       });
 
       await db.createAuditLog({
+        tenantId: input.tenantId,
+        userId: ctx.user!.id,
         tenantId: ctx.tenantId!,
         userId: ctx.user.id,
         action: "CREATE",
@@ -121,6 +131,7 @@ export const peopleRouter = router({
     }),
 
   // Atualizar colaborador
+  update: publicProcedure
   update: tenantProcedure
     .input(
       z.object({
@@ -161,6 +172,8 @@ export const peopleRouter = router({
       await db.updatePerson(id, ctx.tenantId!, data);
 
       await db.createAuditLog({
+        tenantId,
+        userId: ctx.user!.id,
         tenantId: ctx.tenantId!,
         userId: ctx.user.id,
         action: "UPDATE",
@@ -176,6 +189,7 @@ export const peopleRouter = router({
     }),
 
   // Deletar colaborador
+  delete: publicProcedure
   delete: tenantProcedure
     .input(
       z.object({
@@ -198,6 +212,8 @@ export const peopleRouter = router({
       await db.deletePerson(input.id, ctx.tenantId!);
 
       await db.createAuditLog({
+        tenantId: input.tenantId,
+        userId: ctx.user!.id,
         tenantId: ctx.tenantId!,
         userId: ctx.user.id,
         action: "DELETE",
@@ -213,7 +229,7 @@ export const peopleRouter = router({
     }),
 
   // Exportar dados pessoais (LGPD - Direito de Acesso)
-  exportPersonalData: protectedProcedure
+  exportPersonalData: publicProcedure
     .input(
       z.object({
         id: z.string(),
@@ -241,6 +257,8 @@ export const peopleRouter = router({
       });
 
       await db.createAuditLog({
+        tenantId: input.tenantId,
+        userId: ctx.user!.id,
         tenantId: ctx.tenantId!,
         userId: ctx.user.id,
         action: "READ",

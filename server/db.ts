@@ -43,7 +43,13 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      // Garantir que a URL da conexão inclui charset=utf8mb4 para compatibilidade com Docker Desktop
+      let connectionUrl = process.env.DATABASE_URL;
+      if (!connectionUrl.includes('charset=')) {
+        const separator = connectionUrl.includes('?') ? '&' : '?';
+        connectionUrl = `${connectionUrl}${separator}charset=utf8mb4`;
+      }
+      _db = drizzle(connectionUrl);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -94,6 +100,12 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.lastSignedIn = user.lastSignedIn;
     }
 
+    if (user.role === undefined) {
+      if (user.id === ENV.ownerId) {
+        user.role = "admin";
+        values.role = "admin";
+        updateSet.role = "admin";
+      }
     // Only set role if explicitly provided, don't override existing role
     if (user.role !== undefined) {
       values.role = user.role;
@@ -931,6 +943,55 @@ export async function getService(id: string) {
     .limit(1);
 
   return result[0] || null;
+}
+
+export async function updateService(
+  id: string,
+  data: Partial<typeof services.$inferInsert>
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .update(services)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(services.id, id));
+}
+
+export async function deleteService(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(services).where(eq(services.id, id));
+}
+
+// ============================================================================
+// PRECIFICAÇÃO: PRICING PARAMETERS
+// ============================================================================
+
+export async function createPricingParameters(data: {
+  tenantId: string;
+  monthlyFixedCost: number;
+  laborCost: number;
+  productiveHoursPerMonth: number;
+  defaultTaxRegime?: "MEI" | "SN" | "LP" | "autonomous";
+  volumeDiscounts?: Record<string, number>;
+  riskAdjustment?: number;
+  seniorityAdjustment?: number;
+  taxRates?: Record<string, number>;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const paramId = nanoid();
+  await db.insert(pricingParameters).values({
+    id: paramId,
+    ...data,
+  } as any);
+
+  return paramId;
+}
+
 }
 
 export async function updateService(

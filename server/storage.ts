@@ -1,6 +1,7 @@
 // Local storage helpers for standalone Black Belt Platform
 // Files are stored in /uploads directory
 
+import { ENV } from "./_core/env";
 import { promises as fs } from "fs";
 import { join } from "path";
 
@@ -49,6 +50,7 @@ export async function storageGet(
   relKey: string,
   _expiresIn = 300
 ): Promise<{ key: string; url: string }> {
+  const { baseUrl, apiKey } = getStorageConfig();
   const key = normalizeKey(relKey);
   const url = `/uploads/${key}`;
 

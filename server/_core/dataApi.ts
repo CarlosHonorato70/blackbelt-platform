@@ -25,6 +25,9 @@ export async function callDataApi(
   }
 
   // Build the full URL by appending the service path to the base URL
+  const baseUrl = ENV.forgeApiUrl.endsWith("/")
+    ? ENV.forgeApiUrl
+    : `${ENV.forgeApiUrl}/`;
   const baseUrl = process.env.OPENAI_API_URL.endsWith("/")
     ? process.env.OPENAI_API_URL
     : `${process.env.OPENAI_API_URL}/`;

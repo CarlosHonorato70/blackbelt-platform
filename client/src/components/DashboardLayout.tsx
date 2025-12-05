@@ -66,6 +66,7 @@ const menuItems = [
     label: "Relatórios Compliance",
     path: "/compliance-reports",
   },
+  { icon: Mail, label: "Convites de Usuários", path: "/user-invites" },
   { icon: DollarSign, label: "Precificação", path: "/pricing-parameters" },
   { icon: ShoppingCart, label: "Serviços", path: "/services" },
   { icon: Building2, label: "Clientes", path: "/clients" },

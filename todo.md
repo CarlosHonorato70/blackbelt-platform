@@ -63,6 +63,11 @@
 
 ### Schema Precificação (NOVO)
 
+- [ ] Criar tabela clients (clientes para precificação)
+- [ ] Criar tabela services (serviços oferecidos)
+- [ ] Criar tabela pricingParameters (parâmetros de precificação)
+- [ ] Criar tabela proposals (propostas comerciais)
+- [ ] Criar tabela proposalItems (itens das propostas)
 - [x] Criar tabela clients (clientes para precificação)
 - [x] Criar tabela services (serviços oferecidos)
 - [x] Criar tabela pricingParameters (parâmetros de precificação)
@@ -77,6 +82,8 @@
 
 ### Migrations
 
+- [ ] Criar migrations para novo schema
+- [ ] Testar migrations em desenvolvimento
 - [x] Criar migrations para novo schema
 - [x] Testar migrations em desenvolvimento
 - [ ] Documentar estratégia de rollback
@@ -87,6 +94,21 @@
 
 ### Database Helpers (server/db.ts)
 
+- [ ] Helpers para clients (CRUD)
+- [ ] Helpers para services (CRUD)
+- [ ] Helpers para pricingParameters (CRUD)
+- [ ] Helpers para proposals (CRUD)
+- [ ] Helpers para proposalItems (CRUD)
+- [ ] Helper para cálculo de hora técnica
+- [ ] Helper para cálculo de proposta completa
+
+### tRPC Routers (server/routers.ts)
+
+- [ ] Router clients (list, create, update, delete)
+- [ ] Router services (list, create, update, delete)
+- [ ] Router pricingParameters (get, update)
+- [ ] Router proposals (list, create, update, delete, getById)
+- [ ] Router pricing (calculateTechnicalHour, calculateProposal)
 - [x] Helpers para clients (CRUD)
 - [x] Helpers para services (CRUD)
 - [x] Helpers para pricingParameters (CRUD)
@@ -397,6 +419,16 @@
 7. Fluxos de Negócio: 0/10 ✗
 8. Testes E2E: 0/25 ✗
 9. Documentação: 0/16 ✗
+
+---
+
+## 📝 Notas Importantes
+
+- Manter compatibilidade com plataforma atual durante migração
+- Testar cada fase antes de prosseguir para próxima
+- Documentar decisões de arquitetura
+- Comunicar progresso aos stakeholders
+- Preparar plano de rollback para cada fase
 
 ---
 
