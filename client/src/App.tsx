@@ -29,6 +29,7 @@ import Services from "./pages/Services";
 import Clients from "./pages/Clients";
 import PricingParameters from "./pages/PricingParameters";
 import Proposals from "./pages/Proposals";
+import ExecutiveDashboard from "./pages/ExecutiveDashboard";
 
 function Router() {
   return (
@@ -38,6 +39,7 @@ function Router() {
       <Route path={"/login"} component={Login} />
       <Route path={"/"} component={Home} />
       <Route path={"/dashboard"} component={Dashboard} />
+      <Route path={"/executive"} component={ExecutiveDashboard} />
       <Route path={"/compliance-reports"} component={ComplianceReports} />
       <Route path={"/user-invites"} component={UserInvites} />
       <Route path={"/roles-permissions"} component={RolesPermissions} />
