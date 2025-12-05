@@ -2,9 +2,22 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Plus, Edit2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -55,7 +68,9 @@ export default function Clients() {
       setIsOpen(false);
       refetch();
     } catch (error) {
-      toast.error(editingId ? "Erro ao atualizar cliente" : "Erro ao criar cliente");
+      toast.error(
+        editingId ? "Erro ao atualizar cliente" : "Erro ao criar cliente"
+      );
     }
   };
 
@@ -114,42 +129,58 @@ export default function Clients() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>{editingId ? "Editar Cliente" : "Criar Novo Cliente"}</DialogTitle>
+                <DialogTitle>
+                  {editingId ? "Editar Cliente" : "Criar Novo Cliente"}
+                </DialogTitle>
                 <DialogDescription>
-                  {editingId ? "Atualize os dados do cliente" : "Adicione um novo cliente à sua base"}
+                  {editingId
+                    ? "Atualize os dados do cliente"
+                    : "Adicione um novo cliente à sua base"}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <Input
                   placeholder="Nome da Empresa"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={e =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                 />
                 <Input
                   placeholder="CNPJ"
                   value={formData.cnpj}
-                  onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+                  onChange={e =>
+                    setFormData({ ...formData, cnpj: e.target.value })
+                  }
                 />
                 <Input
                   placeholder="Indústria"
                   value={formData.industry}
-                  onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
+                  onChange={e =>
+                    setFormData({ ...formData, industry: e.target.value })
+                  }
                 />
                 <Input
                   placeholder="Nome do Contato"
                   value={formData.contactName}
-                  onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
+                  onChange={e =>
+                    setFormData({ ...formData, contactName: e.target.value })
+                  }
                 />
                 <Input
                   placeholder="Email do Contato"
                   type="email"
                   value={formData.contactEmail}
-                  onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                  onChange={e =>
+                    setFormData({ ...formData, contactEmail: e.target.value })
+                  }
                 />
                 <Input
                   placeholder="Telefone"
                   value={formData.contactPhone}
-                  onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+                  onChange={e =>
+                    setFormData({ ...formData, contactPhone: e.target.value })
+                  }
                 />
                 <Button onClick={handleCreate} className="w-full">
                   {editingId ? "Atualizar Cliente" : "Criar Cliente"}
@@ -162,7 +193,9 @@ export default function Clients() {
         <Card>
           <CardHeader>
             <CardTitle>Lista de Clientes</CardTitle>
-            <CardDescription>Total de {clients?.length || 0} clientes</CardDescription>
+            <CardDescription>
+              Total de {clients?.length || 0} clientes
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -184,8 +217,12 @@ export default function Clients() {
                       <tr key={client.id} className="border-b hover:bg-gray-50">
                         <td className="py-2 px-4 font-medium">{client.name}</td>
                         <td className="py-2 px-4">{client.cnpj || "-"}</td>
-                        <td className="py-2 px-4">{client.contactName || "-"}</td>
-                        <td className="py-2 px-4">{client.contactEmail || "-"}</td>
+                        <td className="py-2 px-4">
+                          {client.contactName || "-"}
+                        </td>
+                        <td className="py-2 px-4">
+                          {client.contactEmail || "-"}
+                        </td>
                         <td className="py-2 px-4 flex gap-2">
                           <Button
                             size="sm"
@@ -210,7 +247,9 @@ export default function Clients() {
                 </table>
               </div>
             ) : (
-              <p className="text-center text-gray-500">Nenhum cliente cadastrado</p>
+              <p className="text-center text-gray-500">
+                Nenhum cliente cadastrado
+              </p>
             )}
           </CardContent>
         </Card>

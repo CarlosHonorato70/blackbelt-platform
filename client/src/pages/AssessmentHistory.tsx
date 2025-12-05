@@ -1,27 +1,49 @@
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, CheckCircle, AlertTriangle, XCircle, Download, Eye } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle,
+  AlertTriangle,
+  XCircle,
+  Download,
+  Eye,
+} from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function AssessmentHistory() {
   const { user } = useAuth();
-  const [selectedAssessment, setSelectedAssessment] = useState<string | null>(null);
+  const [selectedAssessment, setSelectedAssessment] = useState<string | null>(
+    null
+  );
   const [searchTerm, setSearchTerm] = useState("");
 
   const assessmentsQuery = trpc.assessments.list.useQuery(
-    { tenantId: "default-tenant" },
+    undefined,
     { enabled: !!user }
   );
 
   const assessments = assessmentsQuery.data || [];
   const filteredAssessments = assessments.filter(
-    (a) =>
+    a =>
       a.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       a.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -56,7 +78,9 @@ export default function AssessmentHistory() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Histórico de Avaliações</h1>
-        <p className="text-gray-600 mt-2">Visualize e analise todas as avaliações COPSOQ-II realizadas</p>
+        <p className="text-gray-600 mt-2">
+          Visualize e analise todas as avaliações COPSOQ-II realizadas
+        </p>
       </div>
 
       {/* FILTROS */}
@@ -66,7 +90,7 @@ export default function AssessmentHistory() {
             <Input
               placeholder="Buscar por título ou descrição..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={e => setSearchTerm(e.target.value)}
               className="flex-1"
             />
             <Button variant="outline">Filtrar</Button>
@@ -78,7 +102,9 @@ export default function AssessmentHistory() {
       {/* LISTA DE AVALIACOES */}
       <Tabs defaultValue="all" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="all">Todas ({filteredAssessments.length})</TabsTrigger>
+          <TabsTrigger value="all">
+            Todas ({filteredAssessments.length})
+          </TabsTrigger>
           <TabsTrigger value="completed">Concluídas</TabsTrigger>
           <TabsTrigger value="in_progress">Em Andamento</TabsTrigger>
           <TabsTrigger value="draft">Rascunhos</TabsTrigger>
@@ -93,7 +119,7 @@ export default function AssessmentHistory() {
             </Card>
           ) : (
             <div className="space-y-3">
-              {filteredAssessments.map((assessment) => (
+              {filteredAssessments.map(assessment => (
                 <Card
                   key={assessment.id}
                   className="cursor-pointer hover:shadow-md transition-shadow"
@@ -102,26 +128,32 @@ export default function AssessmentHistory() {
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{assessment.title}</h3>
-                        <p className="text-sm text-gray-600 mt-1">{assessment.description}</p>
+                        <h3 className="font-semibold text-lg">
+                          {assessment.title}
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {assessment.description}
+                        </p>
                         <div className="flex gap-2 mt-3">
                           <Badge variant="outline">
-                            {new Date(assessment.assessmentDate).toLocaleDateString("pt-BR")}
+                            {new Date(
+                              assessment.assessmentDate
+                            ).toLocaleDateString("pt-BR")}
                           </Badge>
                           <Badge
                             className={
                               assessment.status === "completed"
                                 ? "bg-green-100 text-green-800"
                                 : assessment.status === "in_progress"
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-gray-100 text-gray-800"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-gray-100 text-gray-800"
                             }
                           >
                             {assessment.status === "completed"
                               ? "Concluída"
                               : assessment.status === "in_progress"
-                              ? "Em Andamento"
-                              : "Rascunho"}
+                                ? "Em Andamento"
+                                : "Rascunho"}
                           </Badge>
                         </div>
                       </div>
@@ -145,15 +177,22 @@ export default function AssessmentHistory() {
 
         <TabsContent value="completed" className="space-y-4">
           {filteredAssessments
-            .filter((a) => a.status === "completed")
-            .map((assessment) => (
-              <Card key={assessment.id} className="hover:shadow-md transition-shadow">
+            .filter(a => a.status === "completed")
+            .map(assessment => (
+              <Card
+                key={assessment.id}
+                className="hover:shadow-md transition-shadow"
+              >
                 <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <h3 className="font-semibold">{assessment.title}</h3>
-                      <p className="text-sm text-gray-600 mt-1">{assessment.description}</p>
-                      <Badge className="mt-3 bg-green-100 text-green-800">Concluída</Badge>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {assessment.description}
+                      </p>
+                      <Badge className="mt-3 bg-green-100 text-green-800">
+                        Concluída
+                      </Badge>
                     </div>
                     <Button size="sm" variant="outline">
                       <Download className="w-4 h-4 mr-2" />
@@ -167,15 +206,22 @@ export default function AssessmentHistory() {
 
         <TabsContent value="in_progress" className="space-y-4">
           {filteredAssessments
-            .filter((a) => a.status === "in_progress")
-            .map((assessment) => (
-              <Card key={assessment.id} className="hover:shadow-md transition-shadow">
+            .filter(a => a.status === "in_progress")
+            .map(assessment => (
+              <Card
+                key={assessment.id}
+                className="hover:shadow-md transition-shadow"
+              >
                 <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <h3 className="font-semibold">{assessment.title}</h3>
-                      <p className="text-sm text-gray-600 mt-1">{assessment.description}</p>
-                      <Badge className="mt-3 bg-blue-100 text-blue-800">Em Andamento</Badge>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {assessment.description}
+                      </p>
+                      <Badge className="mt-3 bg-blue-100 text-blue-800">
+                        Em Andamento
+                      </Badge>
                     </div>
                     <Button size="sm">Continuar</Button>
                   </div>
@@ -186,15 +232,22 @@ export default function AssessmentHistory() {
 
         <TabsContent value="draft" className="space-y-4">
           {filteredAssessments
-            .filter((a) => a.status === "draft")
-            .map((assessment) => (
-              <Card key={assessment.id} className="hover:shadow-md transition-shadow">
+            .filter(a => a.status === "draft")
+            .map(assessment => (
+              <Card
+                key={assessment.id}
+                className="hover:shadow-md transition-shadow"
+              >
                 <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <h3 className="font-semibold">{assessment.title}</h3>
-                      <p className="text-sm text-gray-600 mt-1">{assessment.description}</p>
-                      <Badge className="mt-3 bg-gray-100 text-gray-800">Rascunho</Badge>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {assessment.description}
+                      </p>
+                      <Badge className="mt-3 bg-gray-100 text-gray-800">
+                        Rascunho
+                      </Badge>
                     </div>
                     <Button size="sm">Editar</Button>
                   </div>
@@ -208,10 +261,14 @@ export default function AssessmentHistory() {
       <div className="grid grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Total de Avaliações</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total de Avaliações
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{filteredAssessments.length}</div>
+            <div className="text-3xl font-bold">
+              {filteredAssessments.length}
+            </div>
           </CardContent>
         </Card>
 
@@ -221,7 +278,7 @@ export default function AssessmentHistory() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-green-600">
-              {filteredAssessments.filter((a) => a.status === "completed").length}
+              {filteredAssessments.filter(a => a.status === "completed").length}
             </div>
           </CardContent>
         </Card>
@@ -232,7 +289,10 @@ export default function AssessmentHistory() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-blue-600">
-              {filteredAssessments.filter((a) => a.status === "in_progress").length}
+              {
+                filteredAssessments.filter(a => a.status === "in_progress")
+                  .length
+              }
             </div>
           </CardContent>
         </Card>
@@ -243,7 +303,7 @@ export default function AssessmentHistory() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-gray-600">
-              {filteredAssessments.filter((a) => a.status === "draft").length}
+              {filteredAssessments.filter(a => a.status === "draft").length}
             </div>
           </CardContent>
         </Card>

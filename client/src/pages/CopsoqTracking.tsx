@@ -1,10 +1,30 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle, Clock, AlertCircle, XCircle, Mail, RefreshCw } from "lucide-react";
+import {
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  XCircle,
+  Mail,
+  RefreshCw,
+} from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -12,7 +32,9 @@ import { useAuth } from "@/_core/hooks/useAuth";
 export default function CopsoqTracking() {
   const { user } = useAuth();
   const [assessmentId, setAssessmentId] = useState("");
-  const [selectedAssessment, setSelectedAssessment] = useState<string | null>(null);
+  const [selectedAssessment, setSelectedAssessment] = useState<string | null>(
+    null
+  );
 
   // Buscar estatísticas de resposta
   const statsQuery = trpc.webhook.getResponseStats.useQuery(
@@ -22,7 +44,10 @@ export default function CopsoqTracking() {
 
   // Buscar lista de respostas
   const responsesQuery = trpc.webhook.listResponses.useQuery(
-    { assessmentId: selectedAssessment || "", tenantId: user?.id || "default-tenant" },
+    {
+      assessmentId: selectedAssessment || "",
+      tenantId: user?.id || "default-tenant",
+    },
     { enabled: !!selectedAssessment && !!user?.id }
   );
 
@@ -45,13 +70,17 @@ export default function CopsoqTracking() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "completed":
-        return <Badge className="bg-green-100 text-green-800">Respondido</Badge>;
+        return (
+          <Badge className="bg-green-100 text-green-800">Respondido</Badge>
+        );
       case "pending":
         return <Badge className="bg-gray-100 text-gray-800">Pendente</Badge>;
       case "expired":
         return <Badge className="bg-red-100 text-red-800">Expirado</Badge>;
       default:
-        return <Badge className="bg-yellow-100 text-yellow-800">Visualizado</Badge>;
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800">Visualizado</Badge>
+        );
     }
   };
 
@@ -88,9 +117,12 @@ export default function CopsoqTracking() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Rastreamento de Respostas COPSOQ-II</h1>
+        <h1 className="text-3xl font-bold">
+          Rastreamento de Respostas COPSOQ-II
+        </h1>
         <p className="text-gray-600 mt-2">
-          Acompanhe o status de resposta dos colaboradores e visualize os resultados das avaliações
+          Acompanhe o status de resposta dos colaboradores e visualize os
+          resultados das avaliações
         </p>
       </div>
 
@@ -106,7 +138,7 @@ export default function CopsoqTracking() {
           <Input
             placeholder="ID da Avaliação (ex: copsoq_assess_...)"
             value={assessmentId}
-            onChange={(e) => setAssessmentId(e.target.value)}
+            onChange={e => setAssessmentId(e.target.value)}
           />
           <Button
             onClick={() => setSelectedAssessment(assessmentId)}
@@ -139,7 +171,9 @@ export default function CopsoqTracking() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.responded}</div>
+              <div className="text-2xl font-bold text-green-600">
+                {stats.responded}
+              </div>
             </CardContent>
           </Card>
 
@@ -150,7 +184,9 @@ export default function CopsoqTracking() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+              <div className="text-2xl font-bold text-yellow-600">
+                {stats.pending}
+              </div>
             </CardContent>
           </Card>
 
@@ -202,13 +238,15 @@ export default function CopsoqTracking() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {responses.map((response) => (
+                    {responses.map(response => (
                       <TableRow key={response.inviteId}>
                         <TableCell className="font-medium">
                           {response.respondentName}
                         </TableCell>
                         <TableCell>{response.respondentEmail}</TableCell>
-                        <TableCell>{response.respondentPosition || "-"}</TableCell>
+                        <TableCell>
+                          {response.respondentPosition || "-"}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             {getStatusIcon(response.status)}
@@ -217,18 +255,28 @@ export default function CopsoqTracking() {
                         </TableCell>
                         <TableCell>
                           {response.sentAt
-                            ? new Date(response.sentAt).toLocaleDateString("pt-BR")
+                            ? new Date(response.sentAt).toLocaleDateString(
+                                "pt-BR"
+                              )
                             : "-"}
                         </TableCell>
                         <TableCell>
                           {response.completedAt
-                            ? new Date(response.completedAt).toLocaleDateString("pt-BR")
+                            ? new Date(response.completedAt).toLocaleDateString(
+                                "pt-BR"
+                              )
                             : "-"}
                         </TableCell>
                         <TableCell>
                           {response.response ? (
-                            <span className={getRiskLevelColor(response.response.overallRiskLevel || 'low')}>
-                              {getRiskLevelLabel(response.response.overallRiskLevel || 'low')}
+                            <span
+                              className={getRiskLevelColor(
+                                response.response.overallRiskLevel || "low"
+                              )}
+                            >
+                              {getRiskLevelLabel(
+                                response.response.overallRiskLevel || "low"
+                              )}
                             </span>
                           ) : (
                             "-"

@@ -56,12 +56,12 @@ export default function People() {
 
   const utils = trpc.useUtils();
   const { data: people, isLoading } = trpc.people.list.useQuery(
-    { tenantId: selectedTenant?.id! },
+    undefined,
     { enabled: !!selectedTenant }
   );
 
   const { data: sectors } = trpc.sectors.list.useQuery(
-    { tenantId: selectedTenant?.id! },
+    undefined,
     { enabled: !!selectedTenant }
   );
 
@@ -109,7 +109,6 @@ export default function People() {
 
     const formData = new FormData(e.currentTarget);
     createMutation.mutate({
-      tenantId: selectedTenant.id,
       sectorId: formData.get("sectorId") as string,
       name: formData.get("name") as string,
       email: formData.get("email") as string,
@@ -125,7 +124,6 @@ export default function People() {
     const formData = new FormData(e.currentTarget);
     updateMutation.mutate({
       id: selectedPersonId,
-      tenantId: selectedTenant.id,
       sectorId: formData.get("sectorId") as string,
       name: formData.get("name") as string,
       email: formData.get("email") as string,
@@ -134,7 +132,7 @@ export default function People() {
     });
   };
 
-  const selectedPerson = people?.find((p) => p.id === selectedPersonId);
+  const selectedPerson = people?.find(p => p.id === selectedPersonId);
 
   if (!selectedTenant) {
     return (
@@ -143,7 +141,8 @@ export default function People() {
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold">Nenhuma empresa selecionada</h3>
           <p className="text-sm text-muted-foreground mt-2">
-            Selecione uma empresa no menu lateral para visualizar e gerenciar seus colaboradores
+            Selecione uma empresa no menu lateral para visualizar e gerenciar
+            seus colaboradores
           </p>
         </div>
       </DashboardLayout>
@@ -157,7 +156,8 @@ export default function People() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Colaboradores</h1>
             <p className="text-muted-foreground">
-              Gerencie os colaboradores de <span className="font-semibold">{selectedTenant.name}</span>
+              Gerencie os colaboradores de{" "}
+              <span className="font-semibold">{selectedTenant.name}</span>
             </p>
           </div>
 
@@ -171,12 +171,16 @@ export default function People() {
           <CardHeader>
             <CardTitle>Colaboradores Cadastrados</CardTitle>
             <CardDescription>
-              {isLoading ? "Carregando..." : `${people?.length || 0} colaborador(es) encontrado(s)`}
+              {isLoading
+                ? "Carregando..."
+                : `${people?.length || 0} colaborador(es) encontrado(s)`}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Carregando...</div>
+              <div className="text-center py-8 text-muted-foreground">
+                Carregando...
+              </div>
             ) : people && people.length > 0 ? (
               <Table>
                 <TableHeader>
@@ -190,9 +194,11 @@ export default function People() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {people.map((person) => (
+                  {people.map(person => (
                     <TableRow key={person.id}>
-                      <TableCell className="font-medium">{person.name}</TableCell>
+                      <TableCell className="font-medium">
+                        {person.name}
+                      </TableCell>
                       <TableCell>{person.sectorName || "-"}</TableCell>
                       <TableCell>{person.position}</TableCell>
                       <TableCell>{person.email || "-"}</TableCell>
@@ -226,9 +232,12 @@ export default function People() {
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Users className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold">Nenhum colaborador cadastrado</h3>
+                <h3 className="text-lg font-semibold">
+                  Nenhum colaborador cadastrado
+                </h3>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Comece criando o primeiro colaborador para {selectedTenant.name}
+                  Comece criando o primeiro colaborador para{" "}
+                  {selectedTenant.name}
                 </p>
               </div>
             )}
@@ -236,14 +245,23 @@ export default function People() {
         </Card>
 
         {/* Dialog para Criar/Editar */}
-        <Dialog open={dialogMode === "create" || dialogMode === "edit"} onOpenChange={(open) => {
-          if (!open) setDialogMode("closed");
-        }}>
+        <Dialog
+          open={dialogMode === "create" || dialogMode === "edit"}
+          onOpenChange={open => {
+            if (!open) setDialogMode("closed");
+          }}
+        >
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <form onSubmit={dialogMode === "create" ? handleSubmit : handleEditSubmit}>
+            <form
+              onSubmit={
+                dialogMode === "create" ? handleSubmit : handleEditSubmit
+              }
+            >
               <DialogHeader>
                 <DialogTitle>
-                  {dialogMode === "create" ? "Novo Colaborador" : "Editar Colaborador"}
+                  {dialogMode === "create"
+                    ? "Novo Colaborador"
+                    : "Editar Colaborador"}
                 </DialogTitle>
                 <DialogDescription>
                   {dialogMode === "create"
@@ -259,7 +277,9 @@ export default function People() {
                     id="name"
                     name="name"
                     placeholder="Nome completo do colaborador"
-                    defaultValue={dialogMode === "edit" ? selectedPerson?.name : ""}
+                    defaultValue={
+                      dialogMode === "edit" ? selectedPerson?.name : ""
+                    }
                     required
                   />
                 </div>
@@ -268,14 +288,18 @@ export default function People() {
                   <Label htmlFor="sectorId">Setor *</Label>
                   <Select
                     name="sectorId"
-                    defaultValue={dialogMode === "edit" && selectedPerson?.sectorId ? selectedPerson.sectorId : ""}
+                    defaultValue={
+                      dialogMode === "edit" && selectedPerson?.sectorId
+                        ? selectedPerson.sectorId
+                        : ""
+                    }
                     required
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o setor" />
                     </SelectTrigger>
                     <SelectContent>
-                      {sectors?.map((sector) => (
+                      {sectors?.map(sector => (
                         <SelectItem key={sector.id} value={sector.id}>
                           {sector.name}
                         </SelectItem>
@@ -290,7 +314,11 @@ export default function People() {
                     id="position"
                     name="position"
                     placeholder="Ex: Analista, Gerente, Operador"
-                    defaultValue={dialogMode === "edit" && selectedPerson?.position ? selectedPerson.position : ""}
+                    defaultValue={
+                      dialogMode === "edit" && selectedPerson?.position
+                        ? selectedPerson.position
+                        : ""
+                    }
                     required
                   />
                 </div>
@@ -303,7 +331,11 @@ export default function People() {
                       name="email"
                       type="email"
                       placeholder="email@exemplo.com"
-                      defaultValue={dialogMode === "edit" ? selectedPerson?.email ?? "" : ""}
+                      defaultValue={
+                        dialogMode === "edit"
+                          ? (selectedPerson?.email ?? "")
+                          : ""
+                      }
                     />
                   </div>
 
@@ -313,7 +345,11 @@ export default function People() {
                       id="phone"
                       name="phone"
                       placeholder="(00) 00000-0000"
-                      defaultValue={dialogMode === "edit" ? selectedPerson?.phone ?? "" : ""}
+                      defaultValue={
+                        dialogMode === "edit"
+                          ? (selectedPerson?.phone ?? "")
+                          : ""
+                      }
                     />
                   </div>
                 </div>
@@ -340,8 +376,8 @@ export default function People() {
                       ? "Criando..."
                       : "Criar Colaborador"
                     : updateMutation.isPending
-                    ? "Salvando..."
-                    : "Salvar Alterações"}
+                      ? "Salvando..."
+                      : "Salvar Alterações"}
                 </Button>
               </DialogFooter>
             </form>
@@ -349,15 +385,19 @@ export default function People() {
         </Dialog>
 
         {/* AlertDialog para Deletar */}
-        <AlertDialog open={dialogMode === "delete"} onOpenChange={(open) => {
-          if (!open) setDialogMode("closed");
-        }}>
+        <AlertDialog
+          open={dialogMode === "delete"}
+          onOpenChange={open => {
+            if (!open) setDialogMode("closed");
+          }}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
               <AlertDialogDescription>
-                Tem certeza que deseja deletar o colaborador <strong>{selectedPerson?.name}</strong>?
-                Esta ação não pode ser desfeita.
+                Tem certeza que deseja deletar o colaborador{" "}
+                <strong>{selectedPerson?.name}</strong>? Esta ação não pode ser
+                desfeita.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="flex gap-2 justify-end">
@@ -367,7 +407,9 @@ export default function People() {
               <AlertDialogAction
                 onClick={() => {
                   if (selectedPersonId) {
-                    deleteMutation.mutate({ id: selectedPersonId, tenantId: selectedTenant.id });
+                    deleteMutation.mutate({
+                      id: selectedPersonId,
+                    });
                   }
                 }}
                 disabled={deleteMutation.isPending}

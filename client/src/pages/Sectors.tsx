@@ -50,7 +50,7 @@ export default function Sectors() {
 
   const utils = trpc.useUtils();
   const { data: sectors, isLoading } = trpc.sectors.list.useQuery(
-    { tenantId: selectedTenant?.id! },
+    undefined,
     { enabled: !!selectedTenant }
   );
 
@@ -98,7 +98,6 @@ export default function Sectors() {
 
     const formData = new FormData(e.currentTarget);
     createMutation.mutate({
-      tenantId: selectedTenant.id,
       name: formData.get("name") as string,
       description: formData.get("description") as string,
       responsibleName: formData.get("responsibleName") as string,
@@ -112,14 +111,13 @@ export default function Sectors() {
     const formData = new FormData(e.currentTarget);
     updateMutation.mutate({
       id: selectedSectorId,
-      tenantId: selectedTenant.id,
       name: formData.get("name") as string,
       description: formData.get("description") as string,
       responsibleName: formData.get("responsibleName") as string,
     });
   };
 
-  const selectedSector = sectors?.find((s) => s.id === selectedSectorId);
+  const selectedSector = sectors?.find(s => s.id === selectedSectorId);
 
   if (!selectedTenant) {
     return (
@@ -128,7 +126,8 @@ export default function Sectors() {
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold">Nenhuma empresa selecionada</h3>
           <p className="text-sm text-muted-foreground mt-2">
-            Selecione uma empresa no menu lateral para visualizar e gerenciar seus setores
+            Selecione uma empresa no menu lateral para visualizar e gerenciar
+            seus setores
           </p>
         </div>
       </DashboardLayout>
@@ -142,7 +141,8 @@ export default function Sectors() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Setores</h1>
             <p className="text-muted-foreground">
-              Gerencie os setores de <span className="font-semibold">{selectedTenant.name}</span>
+              Gerencie os setores de{" "}
+              <span className="font-semibold">{selectedTenant.name}</span>
             </p>
           </div>
 
@@ -156,12 +156,16 @@ export default function Sectors() {
           <CardHeader>
             <CardTitle>Setores Cadastrados</CardTitle>
             <CardDescription>
-              {isLoading ? "Carregando..." : `${sectors?.length || 0} setor(es) encontrado(s)`}
+              {isLoading
+                ? "Carregando..."
+                : `${sectors?.length || 0} setor(es) encontrado(s)`}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Carregando...</div>
+              <div className="text-center py-8 text-muted-foreground">
+                Carregando...
+              </div>
             ) : sectors && sectors.length > 0 ? (
               <Table>
                 <TableHeader>
@@ -174,13 +178,21 @@ export default function Sectors() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sectors.map((sector) => (
+                  {sectors.map(sector => (
                     <TableRow key={sector.id}>
-                      <TableCell className="font-medium">{sector.name}</TableCell>
-                      <TableCell className="max-w-xs truncate">{sector.description || "-"}</TableCell>
+                      <TableCell className="font-medium">
+                        {sector.name}
+                      </TableCell>
+                      <TableCell className="max-w-xs truncate">
+                        {sector.description || "-"}
+                      </TableCell>
                       <TableCell>{sector.responsibleName || "-"}</TableCell>
                       <TableCell>
-                        {sector.createdAt ? new Date(sector.createdAt).toLocaleDateString("pt-BR") : "-"}
+                        {sector.createdAt
+                          ? new Date(sector.createdAt).toLocaleDateString(
+                              "pt-BR"
+                            )
+                          : "-"}
                       </TableCell>
                       <TableCell className="flex gap-2">
                         <Button
@@ -211,7 +223,9 @@ export default function Sectors() {
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <UserSquare2 className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold">Nenhum setor cadastrado</h3>
+                <h3 className="text-lg font-semibold">
+                  Nenhum setor cadastrado
+                </h3>
                 <p className="text-sm text-muted-foreground mt-2">
                   Comece criando o primeiro setor para {selectedTenant.name}
                 </p>
@@ -221,11 +235,18 @@ export default function Sectors() {
         </Card>
 
         {/* Dialog para Criar/Editar */}
-        <Dialog open={dialogMode === "create" || dialogMode === "edit"} onOpenChange={(open) => {
-          if (!open) setDialogMode("closed");
-        }}>
+        <Dialog
+          open={dialogMode === "create" || dialogMode === "edit"}
+          onOpenChange={open => {
+            if (!open) setDialogMode("closed");
+          }}
+        >
           <DialogContent className="max-w-xl">
-            <form onSubmit={dialogMode === "create" ? handleSubmit : handleEditSubmit}>
+            <form
+              onSubmit={
+                dialogMode === "create" ? handleSubmit : handleEditSubmit
+              }
+            >
               <DialogHeader>
                 <DialogTitle>
                   {dialogMode === "create" ? "Novo Setor" : "Editar Setor"}
@@ -244,7 +265,9 @@ export default function Sectors() {
                     id="name"
                     name="name"
                     placeholder="Ex: Administrativo, Produção, Comercial"
-                    defaultValue={dialogMode === "edit" ? selectedSector?.name : ""}
+                    defaultValue={
+                      dialogMode === "edit" ? selectedSector?.name : ""
+                    }
                     required
                   />
                 </div>
@@ -255,18 +278,28 @@ export default function Sectors() {
                     id="description"
                     name="description"
                     placeholder="Descreva as atividades e responsabilidades do setor..."
-                    defaultValue={dialogMode === "edit" ? selectedSector?.description ?? "" : ""}
+                    defaultValue={
+                      dialogMode === "edit"
+                        ? (selectedSector?.description ?? "")
+                        : ""
+                    }
                     rows={3}
                   />
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="responsibleName">Responsável pelo Setor</Label>
+                  <Label htmlFor="responsibleName">
+                    Responsável pelo Setor
+                  </Label>
                   <Input
                     id="responsibleName"
                     name="responsibleName"
                     placeholder="Nome do responsável pelo setor"
-                    defaultValue={dialogMode === "edit" ? selectedSector?.responsibleName ?? "" : ""}
+                    defaultValue={
+                      dialogMode === "edit"
+                        ? (selectedSector?.responsibleName ?? "")
+                        : ""
+                    }
                   />
                 </div>
               </div>
@@ -292,8 +325,8 @@ export default function Sectors() {
                       ? "Criando..."
                       : "Criar Setor"
                     : updateMutation.isPending
-                    ? "Salvando..."
-                    : "Salvar Alterações"}
+                      ? "Salvando..."
+                      : "Salvar Alterações"}
                 </Button>
               </DialogFooter>
             </form>
@@ -301,15 +334,19 @@ export default function Sectors() {
         </Dialog>
 
         {/* AlertDialog para Deletar */}
-        <AlertDialog open={dialogMode === "delete"} onOpenChange={(open) => {
-          if (!open) setDialogMode("closed");
-        }}>
+        <AlertDialog
+          open={dialogMode === "delete"}
+          onOpenChange={open => {
+            if (!open) setDialogMode("closed");
+          }}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
               <AlertDialogDescription>
-                Tem certeza que deseja deletar o setor <strong>{selectedSector?.name}</strong>?
-                Esta ação não pode ser desfeita.
+                Tem certeza que deseja deletar o setor{" "}
+                <strong>{selectedSector?.name}</strong>? Esta ação não pode ser
+                desfeita.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="flex gap-2 justify-end">
@@ -319,7 +356,9 @@ export default function Sectors() {
               <AlertDialogAction
                 onClick={() => {
                   if (selectedSectorId) {
-                    deleteMutation.mutate({ id: selectedSectorId, tenantId: selectedTenant.id });
+                    deleteMutation.mutate({
+                      id: selectedSectorId,
+                    });
                   }
                 }}
                 disabled={deleteMutation.isPending}

@@ -37,11 +37,16 @@ export async function scheduleReminders() {
         and(
           eq(copsoqInvites.status, "sent"),
           isNull(copsoqInvites.completedAt),
-          lt(copsoqInvites.expiresAt, new Date(Date.now() + 24 * 60 * 60 * 1000))
+          lt(
+            copsoqInvites.expiresAt,
+            new Date(Date.now() + 24 * 60 * 60 * 1000)
+          )
         )
       );
 
-    console.log(`[Reminder Scheduler] Found ${pendingInvites.length} pending invites`);
+    console.log(
+      `[Reminder Scheduler] Found ${pendingInvites.length} pending invites`
+    );
 
     for (const invite of pendingInvites) {
       // 2. Verificar quantos lembretes já foram enviados
@@ -123,7 +128,10 @@ export async function scheduleReminders() {
           respondentName: invite.respondentName,
           reminderNumber: nextReminderNumber,
           sentAt: new Date(),
-          nextReminderAt: nextReminderNumber < REMINDER_CONFIG.maxReminders ? nextReminderDate : null,
+          nextReminderAt:
+            nextReminderNumber < REMINDER_CONFIG.maxReminders
+              ? nextReminderDate
+              : null,
           status: "sent",
         });
 
@@ -146,7 +154,8 @@ export async function scheduleReminders() {
           reminderNumber: nextReminderNumber,
           sentAt: new Date(),
           status: "failed",
-          errorMessage: error instanceof Error ? error.message : "Unknown error",
+          errorMessage:
+            error instanceof Error ? error.message : "Unknown error",
         });
       }
     }
@@ -172,9 +181,14 @@ export async function scheduleReminders() {
       console.log(`[Reminder Scheduler] Marked invite ${invite.id} as expired`);
     }
 
-    console.log("[Reminder Scheduler] Reminder scheduling completed successfully");
+    console.log(
+      "[Reminder Scheduler] Reminder scheduling completed successfully"
+    );
   } catch (error) {
-    console.error("[Reminder Scheduler] Error during reminder scheduling:", error);
+    console.error(
+      "[Reminder Scheduler] Error during reminder scheduling:",
+      error
+    );
   }
 }
 
@@ -189,9 +203,12 @@ export function startReminderScheduler() {
   scheduleReminders().catch(console.error);
 
   // Executar a cada 1 hora
-  const intervalId = setInterval(() => {
-    scheduleReminders().catch(console.error);
-  }, 60 * 60 * 1000); // 1 hora em milissegundos
+  const intervalId = setInterval(
+    () => {
+      scheduleReminders().catch(console.error);
+    },
+    60 * 60 * 1000
+  ); // 1 hora em milissegundos
 
   // Permitir parar o scheduler
   return () => clearInterval(intervalId);

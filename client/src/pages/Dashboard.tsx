@@ -1,5 +1,11 @@
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useTenant } from "@/contexts/TenantContext";
 import {
   AlertCircle,
@@ -84,13 +90,16 @@ export default function Dashboard() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">
-            Visão geral de riscos psicossociais - {typeof selectedTenant === 'string' ? selectedTenant : selectedTenant?.name}
+            Visão geral de riscos psicossociais -{" "}
+            {typeof selectedTenant === "string"
+              ? selectedTenant
+              : selectedTenant?.name}
           </p>
         </div>
 
         {/* KPI Cards */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {metrics.map((metric) => {
+          {metrics.map(metric => {
             const Icon = metric.icon;
             return (
               <Card key={metric.title}>
@@ -123,7 +132,7 @@ export default function Dashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {risksByLevel.map((risk) => (
+              {risksByLevel.map(risk => (
                 <div key={risk.level} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{risk.level}</span>
@@ -152,14 +161,16 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {risksByCategory.map((risk) => (
+                {risksByCategory.map(risk => (
                   <div key={risk.category} className="flex items-center gap-4">
                     <div className="flex-1">
                       <p className="text-sm font-medium">{risk.category}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <BarChart3 className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-semibold">{risk.count}</span>
+                      <span className="text-sm font-semibold">
+                        {risk.count}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -179,7 +190,9 @@ export default function Dashboard() {
           <CardContent>
             <div className="grid md:grid-cols-3 gap-6">
               <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Satisfação Geral</p>
+                <p className="text-sm text-muted-foreground">
+                  Satisfação Geral
+                </p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold">6.8</span>
                   <span className="text-sm text-muted-foreground">/10</span>
@@ -191,7 +204,9 @@ export default function Dashboard() {
               </div>
 
               <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Clima Organizacional</p>
+                <p className="text-sm text-muted-foreground">
+                  Clima Organizacional
+                </p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold">7.2</span>
                   <span className="text-sm text-muted-foreground">/10</span>
@@ -203,7 +218,9 @@ export default function Dashboard() {
               </div>
 
               <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Qualidade de Vida</p>
+                <p className="text-sm text-muted-foreground">
+                  Qualidade de Vida
+                </p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold">6.5</span>
                   <span className="text-sm text-muted-foreground">/10</span>
@@ -288,4 +305,3 @@ export default function Dashboard() {
     </DashboardLayout>
   );
 }
-

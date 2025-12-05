@@ -2,31 +2,35 @@ import crypto from "crypto";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router, tenantProcedure } from "../_core/trpc";
 import { getDb } from "../db";
-import { copsoqAssessments, copsoqResponses, copsoqReports, copsoqInvites } from "../../drizzle/schema_nr01";
+import {
+  copsoqAssessments,
+  copsoqResponses,
+  copsoqReports,
+  copsoqInvites,
+} from "../../drizzle/schema_nr01";
 import { sendBulkCopsoqInvites } from "../_core/email";
-
 
 export const assessmentsRouter = router({
   // Criar nova avaliacao
-  create: protectedProcedure
+  create: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        
         sectorId: z.string().optional(),
         title: z.string(),
         description: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
       const id = `copsoq_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       await db.insert(copsoqAssessments).values({
         id,
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         sectorId: input.sectorId,
         title: input.title,
         description: input.description,
@@ -38,22 +42,22 @@ export const assessmentsRouter = router({
     }),
 
   // Listar avaliacoes
-  list: protectedProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .query(async ({ input }) => {
+  list: tenantProcedure
+    .input(z.object({  }))
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
       return db
         .select()
         .from(copsoqAssessments)
-        .where(eq(copsoqAssessments.tenantId, input.tenantId));
+        .where(eq(copsoqAssessments.tenantId, ctx.tenantId!));
     }),
 
   // Obter avaliacao por ID
-  getById: protectedProcedure
+  getById: tenantProcedure
     .input(z.object({ id: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return null;
 
@@ -72,7 +76,7 @@ export const assessmentsRouter = router({
       z.object({
         assessmentId: z.string(),
         personId: z.string(),
-        tenantId: z.string(),
+        
         responses: z.record(z.string(), z.number()),
         ageGroup: z.string().optional(),
         gender: z.string().optional(),
@@ -81,12 +85,14 @@ export const assessmentsRouter = router({
         workplaceImprovement: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
       // Calcular scores por dimensao
-      const dimensionScores = calculateDimensionScores(input.responses as Record<string | number, number>);
+      const dimensionScores = calculateDimensionScores(
+        input.responses as Record<string | number, number>
+      );
       const overallRiskLevel = classifyOverallRisk(dimensionScores);
 
       const responseId = `copsoq_resp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -95,7 +101,7 @@ export const assessmentsRouter = router({
         id: responseId,
         assessmentId: input.assessmentId,
         personId: input.personId,
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         responses: input.responses,
         ageGroup: input.ageGroup,
         gender: input.gender,
@@ -124,7 +130,7 @@ export const assessmentsRouter = router({
   // Obter respostas de uma avaliacao
   getResponses: protectedProcedure
     .input(z.object({ assessmentId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
@@ -139,10 +145,10 @@ export const assessmentsRouter = router({
     .input(
       z.object({
         assessmentId: z.string(),
-        tenantId: z.string(),
+        
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -160,31 +166,75 @@ export const assessmentsRouter = router({
 
       // Calcular medias
       const totalRespondents = responses.length;
-      const avgDemandScore = Math.round(responses.reduce((sum, r) => sum + (r.demandScore || 0), 0) / totalRespondents);
-      const avgControlScore = Math.round(responses.reduce((sum, r) => sum + (r.controlScore || 0), 0) / totalRespondents);
-      const avgSupportScore = Math.round(responses.reduce((sum, r) => sum + (r.supportScore || 0), 0) / totalRespondents);
-      const avgLeadershipScore = Math.round(responses.reduce((sum, r) => sum + (r.leadershipScore || 0), 0) / totalRespondents);
-      const avgCommunityScore = Math.round(responses.reduce((sum, r) => sum + (r.communityScore || 0), 0) / totalRespondents);
-      const avgMeaningScore = Math.round(responses.reduce((sum, r) => sum + (r.meaningScore || 0), 0) / totalRespondents);
-      const avgTrustScore = Math.round(responses.reduce((sum, r) => sum + (r.trustScore || 0), 0) / totalRespondents);
-      const avgJusticeScore = Math.round(responses.reduce((sum, r) => sum + (r.justiceScore || 0), 0) / totalRespondents);
-      const avgInsecurityScore = Math.round(responses.reduce((sum, r) => sum + (r.insecurityScore || 0), 0) / totalRespondents);
-      const avgMentalHealthScore = Math.round(responses.reduce((sum, r) => sum + (r.mentalHealthScore || 0), 0) / totalRespondents);
-      const avgBurnoutScore = Math.round(responses.reduce((sum, r) => sum + (r.burnoutScore || 0), 0) / totalRespondents);
-      const avgViolenceScore = Math.round(responses.reduce((sum, r) => sum + (r.violenceScore || 0), 0) / totalRespondents);
+      const avgDemandScore = Math.round(
+        responses.reduce((sum, r) => sum + (r.demandScore || 0), 0) /
+          totalRespondents
+      );
+      const avgControlScore = Math.round(
+        responses.reduce((sum, r) => sum + (r.controlScore || 0), 0) /
+          totalRespondents
+      );
+      const avgSupportScore = Math.round(
+        responses.reduce((sum, r) => sum + (r.supportScore || 0), 0) /
+          totalRespondents
+      );
+      const avgLeadershipScore = Math.round(
+        responses.reduce((sum, r) => sum + (r.leadershipScore || 0), 0) /
+          totalRespondents
+      );
+      const avgCommunityScore = Math.round(
+        responses.reduce((sum, r) => sum + (r.communityScore || 0), 0) /
+          totalRespondents
+      );
+      const avgMeaningScore = Math.round(
+        responses.reduce((sum, r) => sum + (r.meaningScore || 0), 0) /
+          totalRespondents
+      );
+      const avgTrustScore = Math.round(
+        responses.reduce((sum, r) => sum + (r.trustScore || 0), 0) /
+          totalRespondents
+      );
+      const avgJusticeScore = Math.round(
+        responses.reduce((sum, r) => sum + (r.justiceScore || 0), 0) /
+          totalRespondents
+      );
+      const avgInsecurityScore = Math.round(
+        responses.reduce((sum, r) => sum + (r.insecurityScore || 0), 0) /
+          totalRespondents
+      );
+      const avgMentalHealthScore = Math.round(
+        responses.reduce((sum, r) => sum + (r.mentalHealthScore || 0), 0) /
+          totalRespondents
+      );
+      const avgBurnoutScore = Math.round(
+        responses.reduce((sum, r) => sum + (r.burnoutScore || 0), 0) /
+          totalRespondents
+      );
+      const avgViolenceScore = Math.round(
+        responses.reduce((sum, r) => sum + (r.violenceScore || 0), 0) /
+          totalRespondents
+      );
 
       // Contar distribuicao de risco
-      const lowRiskCount = responses.filter((r) => r.overallRiskLevel === "low").length;
-      const mediumRiskCount = responses.filter((r) => r.overallRiskLevel === "medium").length;
-      const highRiskCount = responses.filter((r) => r.overallRiskLevel === "high").length;
-      const criticalRiskCount = responses.filter((r) => r.overallRiskLevel === "critical").length;
+      const lowRiskCount = responses.filter(
+        r => r.overallRiskLevel === "low"
+      ).length;
+      const mediumRiskCount = responses.filter(
+        r => r.overallRiskLevel === "medium"
+      ).length;
+      const highRiskCount = responses.filter(
+        r => r.overallRiskLevel === "high"
+      ).length;
+      const criticalRiskCount = responses.filter(
+        r => r.overallRiskLevel === "critical"
+      ).length;
 
       const reportId = `copsoq_report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       await db.insert(copsoqReports).values({
         id: reportId,
         assessmentId: input.assessmentId,
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         title: `Relatorio COPSOQ-II - ${new Date().toLocaleDateString("pt-BR")}`,
         totalRespondents,
         responseRate: 100,
@@ -213,7 +263,7 @@ export const assessmentsRouter = router({
   // Obter relatorio
   getReport: protectedProcedure
     .input(z.object({ reportId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return null;
 
@@ -228,22 +278,22 @@ export const assessmentsRouter = router({
 
   // Listar convites de avaliacao
   listInvites: protectedProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .query(async ({ input }) => {
+    .input(z.object({  }))
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
       return db
         .select()
         .from(copsoqInvites)
-        .where(eq(copsoqInvites.tenantId, input.tenantId));
+        .where(eq(copsoqInvites.tenantId, ctx.tenantId!));
     }),
 
   // Enviar convites em lote
-  sendInvites: protectedProcedure
+  sendInvites: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        
         assessmentTitle: z.string(),
         invitees: z.array(
           z.object({
@@ -256,7 +306,7 @@ export const assessmentsRouter = router({
         expiresIn: z.number().default(7),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -264,7 +314,7 @@ export const assessmentsRouter = router({
       const assessmentId = `copsoq_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       await db.insert(copsoqAssessments).values({
         id: assessmentId,
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         title: input.assessmentTitle,
         assessmentDate: new Date(),
         status: "in_progress",
@@ -282,7 +332,7 @@ export const assessmentsRouter = router({
         await db.insert(copsoqInvites).values({
           id: inviteId,
           assessmentId,
-          tenantId: input.tenantId,
+          tenantId: ctx.tenantId!,
           respondentEmail: invitee.email,
           respondentName: invitee.name,
           respondentPosition: invitee.position,
@@ -323,7 +373,7 @@ export const assessmentsRouter = router({
   // Cancelar convite
   cancelInvite: protectedProcedure
     .input(z.object({ inviteId: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -382,10 +432,8 @@ function calculateDimensionScores(responses: Record<string | number, number>) {
   const scores: Record<string, number> = {};
 
   for (const [dimension, questions] of Object.entries(dimensions)) {
-    const values = questions
-      .map((q) => responses[q] || 0)
-      .filter((v) => v > 0);
-    
+    const values = questions.map(q => responses[q] || 0).filter(v => v > 0);
+
     if (values.length === 0) {
       scores[dimension] = 0;
     } else {

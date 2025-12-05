@@ -196,8 +196,8 @@ export const webhookRouter = router({
         .where(eq(copsoqResponses.assessmentId, input.assessmentId));
 
       // Combinar dados
-      const result = invites.map((invite) => {
-        const response = responses.find((r) => r.personId === invite.id);
+      const result = invites.map(invite => {
+        const response = responses.find(r => r.personId === invite.id);
 
         return {
           inviteId: invite.id,
@@ -249,10 +249,10 @@ export const webhookRouter = router({
         .where(eq(copsoqInvites.assessmentId, input.assessmentId));
 
       const totalInvites = invites.length;
-      const responded = invites.filter((i) => i.status === "completed").length;
-      const pending = invites.filter((i) => i.status === "pending").length;
+      const responded = invites.filter(i => i.status === "completed").length;
+      const pending = invites.filter(i => i.status === "pending").length;
       const expired = invites.filter(
-        (i) => i.expiresAt && new Date() > i.expiresAt
+        i => i.expiresAt && new Date() > i.expiresAt
       ).length;
       const responseRate =
         totalInvites > 0 ? Math.round((responded / totalInvites) * 100) : 0;
@@ -287,9 +287,7 @@ function calculateDimensionScores(responses: Record<string | number, number>) {
   const scores: Record<string, number> = {};
 
   for (const [dimension, questions] of Object.entries(dimensions)) {
-    const values = questions
-      .map((q) => responses[q] || 0)
-      .filter((v) => v > 0);
+    const values = questions.map(q => responses[q] || 0).filter(v => v > 0);
 
     if (values.length === 0) {
       scores[dimension] = 0;

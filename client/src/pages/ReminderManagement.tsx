@@ -1,9 +1,28 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Mail, RotateCcw, CheckCircle2, XCircle } from "lucide-react";
+import {
+  AlertCircle,
+  Mail,
+  RotateCcw,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 export default function ReminderManagement() {
@@ -12,7 +31,7 @@ export default function ReminderManagement() {
 
   // Listar avaliações
   const assessmentsQuery = trpc.assessments.list.useQuery(
-    { tenantId: selectedTenantId },
+    undefined,
     { enabled: !!selectedTenantId }
   );
 
@@ -79,7 +98,8 @@ export default function ReminderManagement() {
       <div>
         <h1 className="text-3xl font-bold">Gerenciamento de Lembretes</h1>
         <p className="text-gray-600 mt-2">
-          Acompanhe e gerencie lembretes automáticos para colaboradores que ainda não responderam
+          Acompanhe e gerencie lembretes automáticos para colaboradores que
+          ainda não responderam
         </p>
       </div>
 
@@ -87,12 +107,14 @@ export default function ReminderManagement() {
       <Card>
         <CardHeader>
           <CardTitle>Selecionar Avaliação</CardTitle>
-          <CardDescription>Escolha uma avaliação para gerenciar lembretes</CardDescription>
+          <CardDescription>
+            Escolha uma avaliação para gerenciar lembretes
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <select
             value={selectedAssessment}
-            onChange={(e) => setSelectedAssessment(e.target.value)}
+            onChange={e => setSelectedAssessment(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">-- Selecione uma avaliação --</option>
@@ -111,7 +133,9 @@ export default function ReminderManagement() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total de Convites</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total de Convites
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats.totalInvites}</div>
@@ -123,7 +147,9 @@ export default function ReminderManagement() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Taxa de Resposta</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Taxa de Resposta
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats.responseRate}%</div>
@@ -135,7 +161,9 @@ export default function ReminderManagement() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Lembretes Enviados</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Lembretes Enviados
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats.totalReminders}</div>
@@ -147,11 +175,17 @@ export default function ReminderManagement() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Média por Convite</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Média por Convite
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.averageRemindersPerInvite}</div>
-                <p className="text-xs text-gray-600 mt-1">lembretes por pessoa</p>
+                <div className="text-2xl font-bold">
+                  {stats.averageRemindersPerInvite}
+                </div>
+                <p className="text-xs text-gray-600 mt-1">
+                  lembretes por pessoa
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -168,10 +202,13 @@ export default function ReminderManagement() {
                 className="gap-2"
               >
                 <RotateCcw className="w-4 h-4" />
-                {triggerMutation.isPending ? "Executando..." : "Executar Agendador"}
+                {triggerMutation.isPending
+                  ? "Executando..."
+                  : "Executar Agendador"}
               </Button>
               <p className="text-sm text-gray-600 mt-2">
-                O agendador verifica automaticamente a cada 1 hora e envia lembretes conforme necessário.
+                O agendador verifica automaticamente a cada 1 hora e envia
+                lembretes conforme necessário.
               </p>
             </CardContent>
           </Card>
@@ -215,7 +252,9 @@ export default function ReminderManagement() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            {new Date(reminder.sentAt).toLocaleDateString("pt-BR")}
+                            {new Date(reminder.sentAt).toLocaleDateString(
+                              "pt-BR"
+                            )}
                           </TableCell>
                           <TableCell>
                             <Badge className={getStatusColor(reminder.status)}>
@@ -229,7 +268,9 @@ export default function ReminderManagement() {
                           </TableCell>
                           <TableCell>
                             {reminder.nextReminderAt
-                              ? new Date(reminder.nextReminderAt).toLocaleDateString("pt-BR")
+                              ? new Date(
+                                  reminder.nextReminderAt
+                                ).toLocaleDateString("pt-BR")
                               : "—"}
                           </TableCell>
                         </TableRow>
@@ -244,23 +285,29 @@ export default function ReminderManagement() {
           {/* Informações */}
           <Card className="border-blue-200 bg-blue-50">
             <CardHeader>
-              <CardTitle className="text-base">Como Funciona o Sistema de Lembretes</CardTitle>
+              <CardTitle className="text-base">
+                Como Funciona o Sistema de Lembretes
+              </CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-blue-900 space-y-2">
               <p>
-                • <strong>1º Lembrete:</strong> Enviado 2 dias após o convite inicial
+                • <strong>1º Lembrete:</strong> Enviado 2 dias após o convite
+                inicial
               </p>
               <p>
-                • <strong>2º Lembrete:</strong> Enviado 5 dias após o convite inicial
+                • <strong>2º Lembrete:</strong> Enviado 5 dias após o convite
+                inicial
               </p>
               <p>
-                • <strong>3º Lembrete:</strong> Enviado 9 dias após o convite inicial
+                • <strong>3º Lembrete:</strong> Enviado 9 dias após o convite
+                inicial
               </p>
               <p>
                 • <strong>Expiração:</strong> Convites expiram após 14 dias
               </p>
               <p>
-                • <strong>Automático:</strong> O agendador executa automaticamente a cada 1 hora
+                • <strong>Automático:</strong> O agendador executa
+                automaticamente a cada 1 hora
               </p>
             </CardContent>
           </Card>

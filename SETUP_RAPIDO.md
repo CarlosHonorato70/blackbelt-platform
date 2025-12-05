@@ -3,12 +3,14 @@
 ## 🚀 Opção 1: Setup Automático (Recomendado)
 
 ### Windows (PowerShell)
+
 ```powershell
 # Abra PowerShell como Administrador na pasta do projeto
 .\setup-windows.ps1
 ```
 
 ### Linux/macOS (Bash)
+
 ```bash
 # Na pasta do projeto
 bash setup-linux.sh

@@ -10,32 +10,32 @@ on:
 jobs:
   unit-tests:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          cache: 'pnpm'
-      
+          cache: "pnpm"
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 8
-      
+
       - name: Instalar dependências
         run: pnpm install --frozen-lockfile
-      
+
       - name: Executar testes unitários
         run: pnpm test:unit
         continue-on-error: true
 
   integration-tests:
     runs-on: ubuntu-latest
-    
+
     services:
       mysql:
         image: mysql:8.0
@@ -51,31 +51,31 @@ jobs:
           --health-retries=3
         ports:
           - 3306:3306
-    
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          cache: 'pnpm'
-      
+          cache: "pnpm"
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 8
-      
+
       - name: Instalar dependências
         run: pnpm install --frozen-lockfile
-      
+
       - name: Setup banco de testes
         run: pnpm db:push
         env:
           DATABASE_URL: mysql://blackbelt:blackbelt123@localhost:3306/blackbelt_test
         continue-on-error: true
-      
+
       - name: Executar testes de integração
         run: pnpm test:integration
         env:

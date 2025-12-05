@@ -31,7 +31,11 @@ import {
   userRoles,
   users,
 } from "../drizzle/schema";
-import { copsoqAssessments, copsoqResponses, copsoqReports } from "../drizzle/schema_nr01";
+import {
+  copsoqAssessments,
+  copsoqResponses,
+  copsoqReports,
+} from "../drizzle/schema_nr01";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -67,7 +71,12 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     const values: InsertUser = { id: user.id };
     const updateSet: Record<string, unknown> = {};
 
-    const textFields = ["name", "email", "loginMethod", "passwordHash"] as const;
+    const textFields = [
+      "name",
+      "email",
+      "loginMethod",
+      "passwordHash",
+    ] as const;
     type TextField = (typeof textFields)[number];
 
     const assignNullable = (field: TextField) => {
@@ -84,7 +93,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       values.lastSignedIn = user.lastSignedIn;
       updateSet.lastSignedIn = user.lastSignedIn;
     }
-    
+
     // Only set role if explicitly provided, don't override existing role
     if (user.role !== undefined) {
       values.role = user.role;
@@ -119,7 +128,11 @@ export async function getUserByEmail(email: string) {
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -127,7 +140,9 @@ export async function getUserByEmail(email: string) {
 // TENANTS
 // ============================================================================
 
-export async function createTenant(data: Omit<InsertTenant, "id" | "createdAt" | "updatedAt">) {
+export async function createTenant(
+  data: Omit<InsertTenant, "id" | "createdAt" | "updatedAt">
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -144,7 +159,11 @@ export async function getTenant(id: string) {
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await db.select().from(tenants).where(eq(tenants.id, id)).limit(1);
+  const result = await db
+    .select()
+    .from(tenants)
+    .where(eq(tenants.id, id))
+    .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -152,11 +171,18 @@ export async function getTenantByCNPJ(cnpj: string) {
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await db.select().from(tenants).where(eq(tenants.cnpj, cnpj)).limit(1);
+  const result = await db
+    .select()
+    .from(tenants)
+    .where(eq(tenants.cnpj, cnpj))
+    .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function listTenants(filters?: { status?: string; search?: string }) {
+export async function listTenants(filters?: {
+  status?: string;
+  search?: string;
+}) {
   const db = await getDb();
   if (!db) return [];
 
@@ -210,13 +236,22 @@ export async function getTenantSetting(tenantId: string, key: string) {
   const result = await db
     .select()
     .from(tenantSettings)
-    .where(and(eq(tenantSettings.tenantId, tenantId), eq(tenantSettings.settingKey, key)))
+    .where(
+      and(
+        eq(tenantSettings.tenantId, tenantId),
+        eq(tenantSettings.settingKey, key)
+      )
+    )
     .limit(1);
 
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function setTenantSetting(tenantId: string, key: string, value: any) {
+export async function setTenantSetting(
+  tenantId: string,
+  key: string,
+  value: any
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -241,7 +276,9 @@ export async function setTenantSetting(tenantId: string, key: string, value: any
 // SECTORS
 // ============================================================================
 
-export async function createSector(data: Omit<InsertSector, "id" | "createdAt" | "updatedAt">) {
+export async function createSector(
+  data: Omit<InsertSector, "id" | "createdAt" | "updatedAt">
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -277,10 +314,17 @@ export async function listSectors(tenantId: string, search?: string) {
     conditions.push(like(sectors.name, `%${search}%`));
   }
 
-  return await db.select().from(sectors).where(and(...conditions));
+  return await db
+    .select()
+    .from(sectors)
+    .where(and(...conditions));
 }
 
-export async function updateSector(id: string, tenantId: string, data: Partial<InsertSector>) {
+export async function updateSector(
+  id: string,
+  tenantId: string,
+  data: Partial<InsertSector>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -294,14 +338,18 @@ export async function deleteSector(id: string, tenantId: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  await db.delete(sectors).where(and(eq(sectors.id, id), eq(sectors.tenantId, tenantId)));
+  await db
+    .delete(sectors)
+    .where(and(eq(sectors.id, id), eq(sectors.tenantId, tenantId)));
 }
 
 // ============================================================================
 // PEOPLE (Colaboradores)
 // ============================================================================
 
-export async function createPerson(data: Omit<InsertPerson, "id" | "createdAt" | "updatedAt">) {
+export async function createPerson(
+  data: Omit<InsertPerson, "id" | "createdAt" | "updatedAt">
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -374,7 +422,11 @@ export async function listPeople(
   return results;
 }
 
-export async function updatePerson(id: string, tenantId: string, data: Partial<InsertPerson>) {
+export async function updatePerson(
+  id: string,
+  tenantId: string,
+  data: Partial<InsertPerson>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -388,7 +440,9 @@ export async function deletePerson(id: string, tenantId: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  await db.delete(people).where(and(eq(people.id, id), eq(people.tenantId, tenantId)));
+  await db
+    .delete(people)
+    .where(and(eq(people.id, id), eq(people.tenantId, tenantId)));
 }
 
 // ============================================================================
@@ -420,7 +474,11 @@ export async function getRoleBySystemName(systemName: string) {
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await db.select().from(roles).where(eq(roles.systemName, systemName)).limit(1);
+  const result = await db
+    .select()
+    .from(roles)
+    .where(eq(roles.systemName, systemName))
+    .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -438,7 +496,9 @@ export async function listRoles(scope?: "global" | "tenant") {
 // USER ROLES
 // ============================================================================
 
-export async function assignUserRole(data: Omit<InsertUserRole, "id" | "createdAt">) {
+export async function assignUserRole(
+  data: Omit<InsertUserRole, "id" | "createdAt">
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -460,14 +520,24 @@ export async function getUserRoles(userId: string, tenantId?: string) {
     conditions.push(eq(userRoles.tenantId, tenantId));
   }
 
-  return await db.select().from(userRoles).where(and(...conditions));
+  return await db
+    .select()
+    .from(userRoles)
+    .where(and(...conditions));
 }
 
-export async function removeUserRole(userId: string, roleId: string, tenantId?: string) {
+export async function removeUserRole(
+  userId: string,
+  roleId: string,
+  tenantId?: string
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const conditions = [eq(userRoles.userId, userId), eq(userRoles.roleId, roleId)];
+  const conditions = [
+    eq(userRoles.userId, userId),
+    eq(userRoles.roleId, roleId),
+  ];
   if (tenantId !== undefined) {
     conditions.push(eq(userRoles.tenantId, tenantId));
   }
@@ -475,11 +545,96 @@ export async function removeUserRole(userId: string, roleId: string, tenantId?: 
   await db.delete(userRoles).where(and(...conditions));
 }
 
+/**
+ * Get all permissions for a user in a specific tenant
+ * Resolves through user roles and role permissions
+ */
+export async function getUserPermissions(userId: string, tenantId?: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Get user roles for the tenant (or global roles if no tenantId)
+  const userRolesList = await getUserRoles(userId, tenantId);
+  if (userRolesList.length === 0) return [];
+
+  const roleIds = userRolesList.map(ur => ur.roleId);
+
+  // Get all role permissions
+  const conditions = [sql`${rolePermissions.roleId} IN (${sql.join(roleIds.map(id => sql`${id}`), sql`, `)})`];
+  
+  // Filter by tenant if specified
+  if (tenantId !== undefined) {
+    conditions.push(
+      or(
+        eq(rolePermissions.tenantId, tenantId),
+        sql`${rolePermissions.tenantId} IS NULL` // Include global permissions
+      )!
+    );
+  }
+
+  const rolePerms = await db
+    .select({
+      rolePermission: rolePermissions,
+      permission: {
+        id: sql`${rolePermissions.permissionId}`,
+        name: sql`${rolePermissions.permissionId}`,
+        resource: sql`${rolePermissions.permissionId}`,
+        action: sql`${rolePermissions.permissionId}`,
+      },
+    })
+    .from(rolePermissions)
+    .where(and(...conditions));
+
+  return rolePerms;
+}
+
+/**
+ * Check if user has a specific permission in a tenant
+ */
+export async function userHasPermission(
+  userId: string,
+  permissionName: string,
+  tenantId?: string
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  // Get user roles for the tenant
+  const userRolesList = await getUserRoles(userId, tenantId);
+  if (userRolesList.length === 0) return false;
+
+  const roleIds = userRolesList.map(ur => ur.roleId);
+
+  // Check if any role has the permission
+  const result = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(rolePermissions)
+    .innerJoin(
+      sql`(SELECT id FROM permissions WHERE name = ${permissionName}) as perm`,
+      sql`${rolePermissions.permissionId} = perm.id`
+    )
+    .where(
+      and(
+        sql`${rolePermissions.roleId} IN (${sql.join(roleIds.map(id => sql`${id}`), sql`, `)})`,
+        tenantId
+          ? or(
+              eq(rolePermissions.tenantId, tenantId),
+              sql`${rolePermissions.tenantId} IS NULL`
+            )!
+          : sql`TRUE`
+      )
+    );
+
+  return result.length > 0 && result[0].count > 0;
+}
+
 // ============================================================================
 // AUDIT LOGS
 // ============================================================================
 
-export async function createAuditLog(data: Omit<InsertAuditLog, "id" | "timestamp">) {
+export async function createAuditLog(
+  data: Omit<InsertAuditLog, "id" | "timestamp">
+) {
   const db = await getDb();
   if (!db) {
     console.warn("[Audit] Database not available, skipping audit log");
@@ -498,15 +653,13 @@ export async function createAuditLog(data: Omit<InsertAuditLog, "id" | "timestam
   }
 }
 
-export async function getAuditLogs(
-  filters: {
-    tenantId?: string;
-    userId?: string;
-    entityType?: string;
-    entityId?: string;
-    limit?: number;
-  }
-) {
+export async function getAuditLogs(filters: {
+  tenantId?: string;
+  userId?: string;
+  entityType?: string;
+  entityId?: string;
+  limit?: number;
+}) {
   const db = await getDb();
   if (!db) return [];
 
@@ -543,7 +696,9 @@ export async function getAuditLogs(
 // DATA CONSENTS (LGPD)
 // ============================================================================
 
-export async function createDataConsent(data: Omit<InsertDataConsent, "id" | "createdAt">) {
+export async function createDataConsent(
+  data: Omit<InsertDataConsent, "id" | "createdAt">
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -556,7 +711,10 @@ export async function createDataConsent(data: Omit<InsertDataConsent, "id" | "cr
   return consent;
 }
 
-export async function getPersonConsents(personId: string, consentType?: string) {
+export async function getPersonConsents(
+  personId: string,
+  consentType?: string
+) {
   const db = await getDb();
   if (!db) return [];
 
@@ -565,7 +723,10 @@ export async function getPersonConsents(personId: string, consentType?: string) 
     conditions.push(eq(dataConsents.consentType, consentType));
   }
 
-  return await db.select().from(dataConsents).where(and(...conditions));
+  return await db
+    .select()
+    .from(dataConsents)
+    .where(and(...conditions));
 }
 
 export async function revokeConsent(id: string) {
@@ -602,7 +763,11 @@ export async function getInviteByToken(token: string) {
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await db.select().from(userInvites).where(eq(userInvites.token, token)).limit(1);
+  const result = await db
+    .select()
+    .from(userInvites)
+    .where(eq(userInvites.token, token))
+    .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -641,11 +806,11 @@ export async function cancelInvite(id: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  await db.update(userInvites).set({ status: "cancelled" }).where(eq(userInvites.id, id));
+  await db
+    .update(userInvites)
+    .set({ status: "cancelled" })
+    .where(eq(userInvites.id, id));
 }
-
-
-
 
 // ============================================================================
 // PRECIFICAÇÃO: CLIENTS
@@ -684,10 +849,7 @@ export async function listClients(tenantId: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return await db
-    .select()
-    .from(clients)
-    .where(eq(clients.tenantId, tenantId));
+  return await db.select().from(clients).where(eq(clients.tenantId, tenantId));
 }
 
 export async function getClient(id: string) {
@@ -703,7 +865,10 @@ export async function getClient(id: string) {
   return result[0] || null;
 }
 
-export async function updateClient(id: string, data: Partial<typeof clients.$inferInsert>) {
+export async function updateClient(
+  id: string,
+  data: Partial<typeof clients.$inferInsert>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -768,7 +933,10 @@ export async function getService(id: string) {
   return result[0] || null;
 }
 
-export async function updateService(id: string, data: Partial<typeof services.$inferInsert>) {
+export async function updateService(
+  id: string,
+  data: Partial<typeof services.$inferInsert>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -825,7 +993,10 @@ export async function getPricingParameters(tenantId: string) {
   return result[0] || null;
 }
 
-export async function updatePricingParameters(tenantId: string, data: Partial<typeof pricingParameters.$inferInsert>) {
+export async function updatePricingParameters(
+  tenantId: string,
+  data: Partial<typeof pricingParameters.$inferInsert>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -893,7 +1064,10 @@ export async function getProposal(id: string) {
   return result[0] || null;
 }
 
-export async function updateProposal(id: string, data: Partial<typeof proposals.$inferInsert>) {
+export async function updateProposal(
+  id: string,
+  data: Partial<typeof proposals.$inferInsert>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -966,7 +1140,9 @@ interface TechnicalHourCalculation {
   seniorityAdjustment?: number;
 }
 
-export function calculateTechnicalHour(params: TechnicalHourCalculation): number {
+export function calculateTechnicalHour(
+  params: TechnicalHourCalculation
+): number {
   const {
     monthlyFixedCost,
     laborCost,
@@ -978,10 +1154,12 @@ export function calculateTechnicalHour(params: TechnicalHourCalculation): number
   } = params;
 
   // Cálculo base: (Custo Fixo + Custo MO) / Horas Produtivas
-  const baseTechnicalHour = (monthlyFixedCost + laborCost) / productiveHoursPerMonth;
+  const baseTechnicalHour =
+    (monthlyFixedCost + laborCost) / productiveHoursPerMonth;
 
   // Aplicar ajustes
-  const adjustedHour = baseTechnicalHour * (riskAdjustment / 100) * (seniorityAdjustment / 100);
+  const adjustedHour =
+    baseTechnicalHour * (riskAdjustment / 100) * (seniorityAdjustment / 100);
 
   // Aplicar impostos
   const taxRate = taxRates[taxRegime] || 0;
@@ -1009,7 +1187,10 @@ export function calculateProposal(params: ProposalCalculation): {
   const { items, discountPercent = 0, taxRegime, taxRates = {} } = params;
 
   // Calcular subtotal
-  const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+  const subtotal = items.reduce(
+    (sum, item) => sum + item.quantity * item.unitPrice,
+    0
+  );
 
   // Calcular desconto
   const discount = Math.round(subtotal * (discountPercent / 100));
@@ -1061,8 +1242,6 @@ export async function getAssessmentProposals(assessmentId: string) {
     .from(assessmentProposals)
     .where(eq(assessmentProposals.assessmentId, assessmentId));
 }
-
-
 
 // ============================================================================
 // COPSOQ-II: AVALIAÇÕES DE RISCOS PSICOSSOCIAIS
@@ -1141,14 +1320,22 @@ export async function getCOPSOQResponses(assessmentId: string) {
     .where(eq(copsoqResponses.assessmentId, assessmentId));
 }
 
-export async function getCOPSOQResponsesByPerson(personId: string, tenantId: string) {
+export async function getCOPSOQResponsesByPerson(
+  personId: string,
+  tenantId: string
+) {
   const db = await getDb();
   if (!db) return [];
 
   return await db
     .select()
     .from(copsoqResponses)
-    .where(and(eq(copsoqResponses.personId, personId), eq(copsoqResponses.tenantId, tenantId)))
+    .where(
+      and(
+        eq(copsoqResponses.personId, personId),
+        eq(copsoqResponses.tenantId, tenantId)
+      )
+    )
     .orderBy(desc(copsoqResponses.completedAt));
 }
 
@@ -1163,7 +1350,10 @@ export async function getCOPSOQAssessments(tenantId: string) {
     .orderBy(desc(copsoqAssessments.assessmentDate));
 }
 
-export async function updateCOPSOQAssessmentStatus(assessmentId: string, status: "draft" | "in_progress" | "completed" | "reviewed") {
+export async function updateCOPSOQAssessmentStatus(
+  assessmentId: string,
+  status: "draft" | "in_progress" | "completed" | "reviewed"
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -1173,7 +1363,10 @@ export async function updateCOPSOQAssessmentStatus(assessmentId: string, status:
     .where(eq(copsoqAssessments.id, assessmentId));
 }
 
-export async function calculateCOPSOQStats(tenantId: string, sectorId?: string) {
+export async function calculateCOPSOQStats(
+  tenantId: string,
+  sectorId?: string
+) {
   const db = await getDb();
   if (!db) return null;
 
@@ -1192,27 +1385,35 @@ export async function calculateCOPSOQStats(tenantId: string, sectorId?: string) 
   const stats = {
     totalResponses: responses.length,
     avgDemandScore: Math.round(
-      responses.reduce((sum, r) => sum + (r.demandScore || 0), 0) / responses.length
+      responses.reduce((sum, r) => sum + (r.demandScore || 0), 0) /
+        responses.length
     ),
     avgControlScore: Math.round(
-      responses.reduce((sum, r) => sum + (r.controlScore || 0), 0) / responses.length
+      responses.reduce((sum, r) => sum + (r.controlScore || 0), 0) /
+        responses.length
     ),
     avgSupportScore: Math.round(
-      responses.reduce((sum, r) => sum + (r.supportScore || 0), 0) / responses.length
+      responses.reduce((sum, r) => sum + (r.supportScore || 0), 0) /
+        responses.length
     ),
     avgLeadershipScore: Math.round(
-      responses.reduce((sum, r) => sum + (r.leadershipScore || 0), 0) / responses.length
+      responses.reduce((sum, r) => sum + (r.leadershipScore || 0), 0) /
+        responses.length
     ),
     avgMentalHealthScore: Math.round(
-      responses.reduce((sum, r) => sum + (r.mentalHealthScore || 0), 0) / responses.length
+      responses.reduce((sum, r) => sum + (r.mentalHealthScore || 0), 0) /
+        responses.length
     ),
     avgBurnoutScore: Math.round(
-      responses.reduce((sum, r) => sum + (r.burnoutScore || 0), 0) / responses.length
+      responses.reduce((sum, r) => sum + (r.burnoutScore || 0), 0) /
+        responses.length
     ),
-    criticalRiskCount: responses.filter((r) => r.overallRiskLevel === "critical").length,
-    highRiskCount: responses.filter((r) => r.overallRiskLevel === "high").length,
-    mediumRiskCount: responses.filter((r) => r.overallRiskLevel === "medium").length,
-    lowRiskCount: responses.filter((r) => r.overallRiskLevel === "low").length,
+    criticalRiskCount: responses.filter(r => r.overallRiskLevel === "critical")
+      .length,
+    highRiskCount: responses.filter(r => r.overallRiskLevel === "high").length,
+    mediumRiskCount: responses.filter(r => r.overallRiskLevel === "medium")
+      .length,
+    lowRiskCount: responses.filter(r => r.overallRiskLevel === "low").length,
   };
 
   return stats;

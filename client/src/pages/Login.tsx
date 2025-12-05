@@ -2,7 +2,13 @@ import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { APP_TITLE, APP_LOGO } from "@/const";
 import { toast } from "sonner";
@@ -16,7 +22,12 @@ interface LoginFormProps {
   onSubmit: (data: any) => Promise<void>;
 }
 
-function LoginForm({ mode, onModeChange, isLoading, onSubmit }: LoginFormProps) {
+function LoginForm({
+  mode,
+  onModeChange,
+  isLoading,
+  onSubmit,
+}: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -30,12 +41,14 @@ function LoginForm({ mode, onModeChange, isLoading, onSubmit }: LoginFormProps) 
     <form onSubmit={handleSubmit} className="space-y-4">
       {mode === "register" && (
         <div>
-          <label className="block text-sm font-medium mb-1">Nome Completo</label>
+          <label className="block text-sm font-medium mb-1">
+            Nome Completo
+          </label>
           <Input
             type="text"
             placeholder="Seu nome"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={e => setName(e.target.value)}
             required={mode === "register"}
             disabled={isLoading}
           />
@@ -48,7 +61,7 @@ function LoginForm({ mode, onModeChange, isLoading, onSubmit }: LoginFormProps) 
           type="email"
           placeholder="seu@email.com"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={e => setEmail(e.target.value)}
           required
           disabled={isLoading}
         />
@@ -60,7 +73,7 @@ function LoginForm({ mode, onModeChange, isLoading, onSubmit }: LoginFormProps) 
           type="password"
           placeholder="••••••••"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={e => setPassword(e.target.value)}
           required
           disabled={isLoading}
         />
@@ -131,11 +144,18 @@ export default function Login() {
     },
   });
 
-  const handleSubmit = async (data: { email: string; password: string; name: string }) => {
+  const handleSubmit = async (data: {
+    email: string;
+    password: string;
+    name: string;
+  }) => {
     setIsLoading(true);
     try {
       if (mode === "login") {
-        await loginMutation.mutateAsync({ email: data.email, password: data.password });
+        await loginMutation.mutateAsync({
+          email: data.email,
+          password: data.password,
+        });
       } else if (mode === "register") {
         await registerMutation.mutateAsync({
           email: data.email,
@@ -162,7 +182,11 @@ export default function Login() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
-            <img src={APP_LOGO} alt={APP_TITLE} className="h-16 w-16 rounded-lg" />
+            <img
+              src={APP_LOGO}
+              alt={APP_TITLE}
+              className="h-16 w-16 rounded-lg"
+            />
           </div>
           <div>
             <CardTitle className="text-2xl">{APP_TITLE}</CardTitle>

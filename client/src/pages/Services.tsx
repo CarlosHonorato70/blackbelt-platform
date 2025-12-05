@@ -2,9 +2,22 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Plus, Edit2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -60,7 +73,9 @@ export default function Services() {
       setIsOpen(false);
       refetch();
     } catch (error) {
-      toast.error(editingId ? "Erro ao atualizar serviço" : "Erro ao criar serviço");
+      toast.error(
+        editingId ? "Erro ao atualizar serviço" : "Erro ao criar serviço"
+      );
     }
   };
 
@@ -119,27 +134,44 @@ export default function Services() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>{editingId ? "Editar Serviço" : "Criar Novo Serviço"}</DialogTitle>
+                <DialogTitle>
+                  {editingId ? "Editar Serviço" : "Criar Novo Serviço"}
+                </DialogTitle>
                 <DialogDescription>
-                  {editingId ? "Atualize os dados do serviço" : "Adicione um novo serviço à sua base"}
+                  {editingId
+                    ? "Atualize os dados do serviço"
+                    : "Adicione um novo serviço à sua base"}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <Input
                   placeholder="Nome do Serviço"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={e =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                 />
                 <Input
                   placeholder="Categoria"
                   value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  onChange={e =>
+                    setFormData({ ...formData, category: e.target.value })
+                  }
                 />
                 <div>
                   <label className="text-sm font-medium">Unidade</label>
                   <select
                     value={formData.unit}
-                    onChange={(e) => setFormData({ ...formData, unit: e.target.value as "hour" | "day" | "project" | "month" })}
+                    onChange={e =>
+                      setFormData({
+                        ...formData,
+                        unit: e.target.value as
+                          | "hour"
+                          | "day"
+                          | "project"
+                          | "month",
+                      })
+                    }
                     className="w-full border rounded px-3 py-2"
                   >
                     <option value="hour">Hora</option>
@@ -152,18 +184,30 @@ export default function Services() {
                   placeholder="Preço Mínimo"
                   type="number"
                   value={formData.minPrice}
-                  onChange={(e) => setFormData({ ...formData, minPrice: parseFloat(e.target.value) || 0 })}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      minPrice: parseFloat(e.target.value) || 0,
+                    })
+                  }
                 />
                 <Input
                   placeholder="Preço Máximo"
                   type="number"
                   value={formData.maxPrice}
-                  onChange={(e) => setFormData({ ...formData, maxPrice: parseFloat(e.target.value) || 0 })}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      maxPrice: parseFloat(e.target.value) || 0,
+                    })
+                  }
                 />
                 <Input
                   placeholder="Descrição (opcional)"
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={e =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
                 />
                 <Button onClick={handleCreate} className="w-full">
                   {editingId ? "Atualizar Serviço" : "Criar Serviço"}
@@ -176,7 +220,9 @@ export default function Services() {
         <Card>
           <CardHeader>
             <CardTitle>Lista de Serviços</CardTitle>
-            <CardDescription>Total de {services?.length || 0} serviços</CardDescription>
+            <CardDescription>
+              Total de {services?.length || 0} serviços
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -196,8 +242,13 @@ export default function Services() {
                   </thead>
                   <tbody>
                     {services.map((service: any) => (
-                      <tr key={service.id} className="border-b hover:bg-gray-50">
-                        <td className="py-2 px-4 font-medium">{service.name}</td>
+                      <tr
+                        key={service.id}
+                        className="border-b hover:bg-gray-50"
+                      >
+                        <td className="py-2 px-4 font-medium">
+                          {service.name}
+                        </td>
                         <td className="py-2 px-4">{service.category}</td>
                         <td className="py-2 px-4">
                           {service.unit === "hour" && "Hora"}
@@ -205,8 +256,12 @@ export default function Services() {
                           {service.unit === "project" && "Projeto"}
                           {service.unit === "month" && "Mês"}
                         </td>
-                        <td className="py-2 px-4">R$ {service.minPrice.toFixed(2)}</td>
-                        <td className="py-2 px-4">R$ {service.maxPrice.toFixed(2)}</td>
+                        <td className="py-2 px-4">
+                          R$ {service.minPrice.toFixed(2)}
+                        </td>
+                        <td className="py-2 px-4">
+                          R$ {service.maxPrice.toFixed(2)}
+                        </td>
                         <td className="py-2 px-4 flex gap-2">
                           <Button
                             size="sm"
@@ -231,7 +286,9 @@ export default function Services() {
                 </table>
               </div>
             ) : (
-              <p className="text-center text-gray-500">Nenhum serviço cadastrado</p>
+              <p className="text-center text-gray-500">
+                Nenhum serviço cadastrado
+              </p>
             )}
           </CardContent>
         </Card>

@@ -1,4 +1,4 @@
-import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from '@shared/const';
+import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from "@shared/const";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
@@ -31,7 +31,7 @@ export const adminProcedure = t.procedure.use(
   t.middleware(async opts => {
     const { ctx, next } = opts;
 
-    if (!ctx.user || ctx.user.role !== 'admin') {
+    if (!ctx.user || ctx.user.role !== "admin") {
       throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
     }
 
@@ -41,5 +41,46 @@ export const adminProcedure = t.procedure.use(
         user: ctx.user,
       },
     });
-  }),
+  })
 );
+
+/**
+ * Middleware to enforce tenant isolation
+ * Requires both authentication and a valid tenantId
+ */
+const requireTenant = t.middleware(async opts => {
+  const { ctx, next } = opts;
+
+  if (!ctx.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
+  }
+
+  if (!ctx.tenantId) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Tenant ID is required. Please select a company.",
+    });
+  }
+
+  // Verify user has access to this tenant
+  if (ctx.userRoles.length === 0 && ctx.user.role !== "admin") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "You don't have access to this tenant.",
+    });
+  }
+
+  return next({
+    ctx: {
+      ...ctx,
+      user: ctx.user,
+      tenantId: ctx.tenantId,
+    },
+  });
+});
+
+/**
+ * Procedure that requires tenant context
+ * Use this for all multi-tenant operations
+ */
+export const tenantProcedure = t.procedure.use(requireTenant);

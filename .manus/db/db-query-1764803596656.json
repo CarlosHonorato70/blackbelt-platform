@@ -1,9 +1,0 @@
-{
-  "query": "INSERT INTO tenants (id, name, cnpj, city, state, status, strategy, createdAt, updatedAt) VALUES ('tenant_001', 'Tech Solutions Brasil', '12.345.678/0001-90', 'São Paulo', 'SP', 'active', 'shared_rls', NOW(), NOW()), ('tenant_002', 'Logística Moderna LTDA', '98.765.432/0001-10', 'Rio de Janeiro', 'RJ', 'active', 'shared_rls', NOW(), NOW()), ('tenant_003', 'Manufatura Premium', '55.444.333/0001-22', 'Belo Horizonte', 'MG', 'active', 'shared_rls', NOW(), NOW());",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Ru6seV56K1tYAj.root --database niyWnEHmm37nkAcynzCsnH --execute INSERT INTO tenants (id, name, cnpj, city, state, status, strategy, createdAt, updatedAt) VALUES ('tenant_001', 'Tech Solutions Brasil', '12.345.678/0001-90', 'São Paulo', 'SP', 'active', 'shared_rls', NOW(), NOW()), ('tenant_002', 'Logística Moderna LTDA', '98.765.432/0001-10', 'Rio de Janeiro', 'RJ', 'active', 'shared_rls', NOW(), NOW()), ('tenant_003', 'Manufatura Premium', '55.444.333/0001-22', 'Belo Horizonte', 'MG', 'active', 'shared_rls', NOW(), NOW());",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 57
-}

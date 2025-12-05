@@ -24,7 +24,9 @@ export interface SendEmailOptions {
 export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
   try {
     if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
-      console.warn("[Email] SMTP credentials not configured, skipping email send");
+      console.warn(
+        "[Email] SMTP credentials not configured, skipping email send"
+      );
       return false;
     }
 
@@ -53,7 +55,13 @@ export async function sendCopsoqInvite(params: {
   inviteToken: string;
   expiresIn: number; // dias
 }): Promise<boolean> {
-  const { respondentEmail, respondentName, assessmentTitle, inviteToken, expiresIn } = params;
+  const {
+    respondentEmail,
+    respondentName,
+    assessmentTitle,
+    inviteToken,
+    expiresIn,
+  } = params;
 
   const inviteUrl = `${process.env.VITE_FRONTEND_URL || "http://localhost:3000"}/copsoq/respond/${inviteToken}`;
 
@@ -117,13 +125,15 @@ export async function sendCopsoqInvite(params: {
 /**
  * Envia email em lote para múltiplos respondentes
  */
-export async function sendBulkCopsoqInvites(invites: Array<{
-  respondentEmail: string;
-  respondentName: string;
-  assessmentTitle: string;
-  inviteToken: string;
-  expiresIn: number;
-}>): Promise<{ success: number; failed: number }> {
+export async function sendBulkCopsoqInvites(
+  invites: Array<{
+    respondentEmail: string;
+    respondentName: string;
+    assessmentTitle: string;
+    inviteToken: string;
+    expiresIn: number;
+  }>
+): Promise<{ success: number; failed: number }> {
   let success = 0;
   let failed = 0;
 
@@ -135,7 +145,7 @@ export async function sendBulkCopsoqInvites(invites: Array<{
       failed++;
     }
     // Aguarda 1 segundo entre emails para evitar rate limiting
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1000));
   }
 
   return { success, failed };
@@ -203,26 +213,37 @@ export async function sendReminderEmail(params: {
   reminderNumber: number;
   assessmentTitle: string;
 }): Promise<boolean> {
-  const { respondentEmail, respondentName, inviteToken, reminderNumber, assessmentTitle } = params;
+  const {
+    respondentEmail,
+    respondentName,
+    inviteToken,
+    reminderNumber,
+    assessmentTitle,
+  } = params;
 
   const inviteUrl = `${process.env.VITE_FRONTEND_URL || "http://localhost:3000"}/copsoq/respond/${inviteToken}`;
 
   const reminderMessages = {
     1: {
       title: "Lembrete: Avaliação COPSOQ-II Pendente",
-      message: "Notamos que você ainda não respondeu a avaliação. Gostaria de lembrar que sua participação é muito importante para nós.",
+      message:
+        "Notamos que você ainda não respondeu a avaliação. Gostaria de lembrar que sua participação é muito importante para nós.",
     },
     2: {
       title: "Último Lembrete: Avaliação COPSOQ-II",
-      message: "Esta é uma última oportunidade para responder a avaliação. Sua opinião é fundamental para melhorias no ambiente de trabalho.",
+      message:
+        "Esta é uma última oportunidade para responder a avaliação. Sua opinião é fundamental para melhorias no ambiente de trabalho.",
     },
     3: {
       title: "Avaliação COPSOQ-II Expirando em Breve",
-      message: "O prazo para responder a avaliação está se aproximando. Por favor, complete a avaliação nos próximos dias.",
+      message:
+        "O prazo para responder a avaliação está se aproximando. Por favor, complete a avaliação nos próximos dias.",
     },
   };
 
-  const reminder = reminderMessages[reminderNumber as keyof typeof reminderMessages] || reminderMessages[1];
+  const reminder =
+    reminderMessages[reminderNumber as keyof typeof reminderMessages] ||
+    reminderMessages[1];
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

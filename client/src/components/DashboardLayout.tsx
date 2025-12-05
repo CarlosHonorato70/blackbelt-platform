@@ -21,10 +21,29 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Building2, Download, Eye, FileText, LayoutDashboard, Lock, LogOut, Mail, PanelLeft, Users, UserSquare2, TestTube, HelpCircle, Clipboard, BarChart3, Bell, DollarSign, ShoppingCart } from "lucide-react";
+import {
+  Building2,
+  Download,
+  Eye,
+  FileText,
+  LayoutDashboard,
+  Lock,
+  LogOut,
+  Mail,
+  PanelLeft,
+  Users,
+  UserSquare2,
+  TestTube,
+  HelpCircle,
+  Clipboard,
+  BarChart3,
+  Bell,
+  DollarSign,
+  ShoppingCart,
+} from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
+import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { TenantSelector } from "./TenantSelector";
 import { TenantSelectionModal } from "./TenantSelectionModal";
 import { NotificationCenter } from "./NotificationCenter";
@@ -42,15 +61,34 @@ const menuItems = [
   { icon: Mail, label: "Enviar Convites", path: "/copsoq/invites" },
   { icon: BarChart3, label: "Rastreamento", path: "/copsoq/tracking" },
   { icon: Bell, label: "Lembretes Automáticos", path: "/reminder-management" },
-  { icon: FileText, label: "Relatórios Compliance", path: "/compliance-reports" },
+  {
+    icon: FileText,
+    label: "Relatórios Compliance",
+    path: "/compliance-reports",
+  },
   { icon: DollarSign, label: "Precificação", path: "/pricing-parameters" },
   { icon: ShoppingCart, label: "Serviços", path: "/services" },
   { icon: Building2, label: "Clientes", path: "/clients" },
   { icon: FileText, label: "Propostas", path: "/proposals" },
-  { icon: Lock, label: "Perfis e Permissões", path: "/roles-permissions", adminOnly: true },
+  {
+    icon: Lock,
+    label: "Perfis e Permissões",
+    path: "/roles-permissions",
+    adminOnly: true,
+  },
   { icon: Eye, label: "Auditoria", path: "/audit-logs", adminOnly: true },
-  { icon: Download, label: "Exportação LGPD", path: "/data-export", adminOnly: true },
-  { icon: TestTube, label: "Dashboard de Testes", path: "/test-dashboard", adminOnly: true },
+  {
+    icon: Download,
+    label: "Exportação LGPD",
+    path: "/data-export",
+    adminOnly: true,
+  },
+  {
+    icon: TestTube,
+    label: "Dashboard de Testes",
+    path: "/test-dashboard",
+    adminOnly: true,
+  },
   { icon: HelpCircle, label: "Ajuda e Suporte", path: "/help" },
 ];
 
@@ -75,7 +113,7 @@ export default function DashboardLayout({
   }, [sidebarWidth]);
 
   if (loading) {
-    return <DashboardLayoutSkeleton />
+    return <DashboardLayoutSkeleton />;
   }
 
   if (!user) {
@@ -237,24 +275,26 @@ function DashboardLayoutContent({
 
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
-              {menuItems.filter(item => !item.adminOnly || user?.role === 'admin').map(item => {
-                const isActive = location === item.path;
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      onClick={() => setLocation(item.path)}
-                      tooltip={item.label}
-                      className={`h-10 transition-all font-normal`}
-                    >
-                      <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
-                      />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              {menuItems
+                .filter(item => !item.adminOnly || user?.role === "admin")
+                .map(item => {
+                  const isActive = location === item.path;
+                  return (
+                    <SidebarMenuItem key={item.path}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        onClick={() => setLocation(item.path)}
+                        tooltip={item.label}
+                        className={`h-10 transition-all font-normal`}
+                      >
+                        <item.icon
+                          className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
+                        />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
             </SidebarMenu>
           </SidebarContent>
 

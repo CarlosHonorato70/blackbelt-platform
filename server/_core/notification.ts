@@ -67,7 +67,7 @@ export async function notifyOwner(
     // - Send to Slack webhook
     // - Store in database for dashboard
     // - Send SMS via Twilio
-    
+
     return true;
   } catch (error) {
     console.warn("[Notification] Error processing notification:", error);

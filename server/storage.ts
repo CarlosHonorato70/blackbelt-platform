@@ -25,21 +25,21 @@ export async function storagePut(
   contentType = "application/octet-stream"
 ): Promise<{ key: string; url: string }> {
   await ensureUploadDir();
-  
+
   const key = normalizeKey(relKey);
   const filePath = join(UPLOAD_DIR, key);
-  
+
   // Ensure directory exists
   const dir = filePath.substring(0, filePath.lastIndexOf("/"));
   await fs.mkdir(dir, { recursive: true });
-  
+
   // Write file
   if (typeof data === "string") {
     await fs.writeFile(filePath, data, "utf-8");
   } else {
     await fs.writeFile(filePath, data);
   }
-  
+
   // Return local URL
   const url = `/uploads/${key}`;
   return { key, url };
@@ -51,7 +51,7 @@ export async function storageGet(
 ): Promise<{ key: string; url: string }> {
   const key = normalizeKey(relKey);
   const url = `/uploads/${key}`;
-  
+
   return {
     key,
     url,

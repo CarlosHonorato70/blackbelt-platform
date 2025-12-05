@@ -1,12 +1,24 @@
 import { useState, useMemo } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { AlertCircle, CheckCircle, AlertTriangle, XCircle, Loader2 } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle,
+  AlertTriangle,
+  XCircle,
+  Loader2,
+} from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
@@ -35,7 +47,7 @@ export default function COPSOQ() {
   const questions = copsoqData.questions;
   const sections = useMemo(() => {
     const sectionMap: Record<string, typeof questions> = {};
-    questions.forEach((q) => {
+    questions.forEach(q => {
       if (!sectionMap[q.section]) sectionMap[q.section] = [];
       sectionMap[q.section].push(q);
     });
@@ -44,7 +56,7 @@ export default function COPSOQ() {
 
   const currentSectionData = sections[currentSection]?.[1];
   const progressPercent = Math.round(
-    ((Object.keys(responses).length / questions.length) * 100)
+    (Object.keys(responses).length / questions.length) * 100
   );
 
   const handleResponse = (questionId: number, value: number) => {
@@ -53,8 +65,8 @@ export default function COPSOQ() {
 
   const calculateScores = () => {
     const dimensionScores: Record<string, number[]> = {};
-    
-    questions.forEach((q) => {
+
+    questions.forEach(q => {
       if (!dimensionScores[q.dimension]) dimensionScores[q.dimension] = [];
       const score = responses[q.id] || 0;
       const finalScore = q.reverse ? 5 - score : score;
@@ -73,14 +85,40 @@ export default function COPSOQ() {
   };
 
   const getRiskLevel = (score: number) => {
-    if (score >= 80) return { level: "critical", label: "Crítico", color: "text-red-600", bg: "bg-red-50" };
-    if (score >= 60) return { level: "high", label: "Alto", color: "text-orange-600", bg: "bg-orange-50" };
-    if (score >= 40) return { level: "medium", label: "Médio", color: "text-yellow-600", bg: "bg-yellow-50" };
-    return { level: "low", label: "Baixo", color: "text-green-600", bg: "bg-green-50" };
+    if (score >= 80)
+      return {
+        level: "critical",
+        label: "Crítico",
+        color: "text-red-600",
+        bg: "bg-red-50",
+      };
+    if (score >= 60)
+      return {
+        level: "high",
+        label: "Alto",
+        color: "text-orange-600",
+        bg: "bg-orange-50",
+      };
+    if (score >= 40)
+      return {
+        level: "medium",
+        label: "Médio",
+        color: "text-yellow-600",
+        bg: "bg-yellow-50",
+      };
+    return {
+      level: "low",
+      label: "Baixo",
+      color: "text-green-600",
+      bg: "bg-green-50",
+    };
   };
 
   const scores = calculateScores();
-  const overallScore = Math.round(Object.values(scores).reduce((a, b) => a + b, 0) / Object.keys(scores).length);
+  const overallScore = Math.round(
+    Object.values(scores).reduce((a, b) => a + b, 0) /
+      Object.keys(scores).length
+  );
   const overallRisk = getRiskLevel(overallScore);
 
   const handleSubmit = async () => {
@@ -96,7 +134,6 @@ export default function COPSOQ() {
       await submitResponseMutation.mutateAsync({
         assessmentId,
         personId: personId || user.id,
-        tenantId: "default-tenant",
         responses: responses as Record<string, number>,
         ageGroup: respondentAge,
         gender: respondentGender,
@@ -107,7 +144,9 @@ export default function COPSOQ() {
 
       setActiveTab("results");
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Erro ao salvar avaliação");
+      setSubmitError(
+        error instanceof Error ? error.message : "Erro ao salvar avaliação"
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -117,7 +156,9 @@ export default function COPSOQ() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Avaliação COPSOQ-II</h1>
-        <p className="text-gray-600 mt-2">Formulário de Avaliação de Riscos Psicossociais - 76 Questões</p>
+        <p className="text-gray-600 mt-2">
+          Formulário de Avaliação de Riscos Psicossociais - 76 Questões
+        </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -132,7 +173,9 @@ export default function COPSOQ() {
             <Card>
               <CardHeader>
                 <CardTitle>Dados do Respondente</CardTitle>
-                <CardDescription>Informações básicas para contextualização da avaliação</CardDescription>
+                <CardDescription>
+                  Informações básicas para contextualização da avaliação
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -140,7 +183,7 @@ export default function COPSOQ() {
                     <Label>Nome Completo</Label>
                     <Input
                       value={respondentName}
-                      onChange={(e) => setRespondentName(e.target.value)}
+                      onChange={e => setRespondentName(e.target.value)}
                       placeholder="Nome do respondente"
                     />
                   </div>
@@ -148,7 +191,7 @@ export default function COPSOQ() {
                     <Label>Cargo/Posição</Label>
                     <Input
                       value={respondentRole}
-                      onChange={(e) => setRespondentRole(e.target.value)}
+                      onChange={e => setRespondentRole(e.target.value)}
                       placeholder="Cargo"
                     />
                   </div>
@@ -156,7 +199,7 @@ export default function COPSOQ() {
                     <Label>Faixa Etária</Label>
                     <select
                       value={respondentAge}
-                      onChange={(e) => setRespondentAge(e.target.value)}
+                      onChange={e => setRespondentAge(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     >
                       <option value="">Selecione...</option>
@@ -171,7 +214,7 @@ export default function COPSOQ() {
                     <Label>Gênero</Label>
                     <select
                       value={respondentGender}
-                      onChange={(e) => setRespondentGender(e.target.value)}
+                      onChange={e => setRespondentGender(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     >
                       <option value="">Selecione...</option>
@@ -185,7 +228,7 @@ export default function COPSOQ() {
                     <Input
                       type="number"
                       value={yearsInCompany}
-                      onChange={(e) => setYearsInCompany(e.target.value)}
+                      onChange={e => setYearsInCompany(e.target.value)}
                       placeholder="Anos"
                     />
                   </div>
@@ -194,64 +237,77 @@ export default function COPSOQ() {
             </Card>
           )}
 
-          {currentSection > 0 && currentSection <= sections.length && currentSectionData && (
-            <Card>
-              <CardHeader>
-                <CardTitle>{sections[currentSection - 1]?.[0]}</CardTitle>
-                <CardDescription>Avalie cada questão em uma escala de 1 a 5</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-8">
-                {currentSectionData.map((question) => (
-                  <div key={question.id} className="space-y-3 pb-6 border-b last:border-b-0">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{question.id}. {question.text}</p>
-                        <p className="text-xs text-gray-500 mt-1">Dimensão: {question.dimension}</p>
+          {currentSection > 0 &&
+            currentSection <= sections.length &&
+            currentSectionData && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>{sections[currentSection - 1]?.[0]}</CardTitle>
+                  <CardDescription>
+                    Avalie cada questão em uma escala de 1 a 5
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-8">
+                  {currentSectionData.map(question => (
+                    <div
+                      key={question.id}
+                      className="space-y-3 pb-6 border-b last:border-b-0"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">
+                            {question.id}. {question.text}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Dimensão: {question.dimension}
+                          </p>
+                        </div>
+                        <span className="text-lg font-bold text-blue-600 ml-4">
+                          {responses[question.id] || "-"}
+                        </span>
                       </div>
-                      <span className="text-lg font-bold text-blue-600 ml-4">
-                        {responses[question.id] || "-"}
-                      </span>
+                      <div className="flex gap-2 justify-start">
+                        {[1, 2, 3, 4, 5].map(value => (
+                          <button
+                            key={value}
+                            onClick={() => handleResponse(question.id, value)}
+                            className={`w-10 h-10 rounded-lg font-semibold text-sm transition-all ${
+                              responses[question.id] === value
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                            }`}
+                          >
+                            {value}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>Nunca</span>
+                        <span>Raramente</span>
+                        <span>Às vezes</span>
+                        <span>Frequentemente</span>
+                        <span>Sempre</span>
+                      </div>
                     </div>
-                    <div className="flex gap-2 justify-start">
-                      {[1, 2, 3, 4, 5].map((value) => (
-                        <button
-                          key={value}
-                          onClick={() => handleResponse(question.id, value)}
-                          className={`w-10 h-10 rounded-lg font-semibold text-sm transition-all ${
-                            responses[question.id] === value
-                              ? "bg-blue-600 text-white"
-                              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                          }`}
-                        >
-                          {value}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="flex justify-between text-xs text-gray-500">
-                      <span>Nunca</span>
-                      <span>Raramente</span>
-                      <span>Às vezes</span>
-                      <span>Frequentemente</span>
-                      <span>Sempre</span>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
+                  ))}
+                </CardContent>
+              </Card>
+            )}
 
           {currentSection === sections.length + 1 && (
             <Card>
               <CardHeader>
                 <CardTitle>Comentários Adicionais</CardTitle>
-                <CardDescription>Compartilhe suas observações e sugestões</CardDescription>
+                <CardDescription>
+                  Compartilhe suas observações e sugestões
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
                   <Label>Necessidades de Apoio em Saúde Mental</Label>
                   <Textarea
                     value={mentalHealthSupport}
-                    onChange={(e) => setMentalHealthSupport(e.target.value)}
+                    onChange={e => setMentalHealthSupport(e.target.value)}
                     placeholder="Descreva qualquer necessidade ou preocupação..."
                     rows={4}
                   />
@@ -260,7 +316,7 @@ export default function COPSOQ() {
                   <Label>Sugestões de Melhorias no Ambiente de Trabalho</Label>
                   <Textarea
                     value={workplaceImprovement}
-                    onChange={(e) => setWorkplaceImprovement(e.target.value)}
+                    onChange={e => setWorkplaceImprovement(e.target.value)}
                     placeholder="Compartilhe suas ideias para melhorias..."
                     rows={4}
                   />
@@ -283,9 +339,12 @@ export default function COPSOQ() {
               <div className="space-y-4">
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium">Progresso: {progressPercent}%</span>
+                    <span className="text-sm font-medium">
+                      Progresso: {progressPercent}%
+                    </span>
                     <span className="text-sm text-gray-600">
-                      {Object.keys(responses).length} de {questions.length} questões respondidas
+                      {Object.keys(responses).length} de {questions.length}{" "}
+                      questões respondidas
                     </span>
                   </div>
                   <Progress value={progressPercent} className="h-2" />
@@ -295,7 +354,9 @@ export default function COPSOQ() {
                 <div className="flex justify-between gap-4">
                   <Button
                     variant="outline"
-                    onClick={() => setCurrentSection(Math.max(0, currentSection - 1))}
+                    onClick={() =>
+                      setCurrentSection(Math.max(0, currentSection - 1))
+                    }
                     disabled={currentSection === 0}
                   >
                     Anterior
@@ -310,7 +371,10 @@ export default function COPSOQ() {
                       onClick={() => setCurrentSection(currentSection + 1)}
                       disabled={
                         currentSection === 0 &&
-                        (!respondentName || !respondentRole || !respondentAge || !respondentGender)
+                        (!respondentName ||
+                          !respondentRole ||
+                          !respondentAge ||
+                          !respondentGender)
                       }
                     >
                       Próximo
@@ -345,11 +409,17 @@ export default function COPSOQ() {
               <div className="flex justify-between items-center">
                 <div>
                   <CardTitle>Avaliação Geral</CardTitle>
-                  <CardDescription>Score consolidado de riscos psicossociais</CardDescription>
+                  <CardDescription>
+                    Score consolidado de riscos psicossociais
+                  </CardDescription>
                 </div>
                 <div className="text-right">
-                  <div className={`text-4xl font-bold ${overallRisk.color}`}>{overallScore}</div>
-                  <div className={`text-lg font-semibold ${overallRisk.color}`}>{overallRisk.label}</div>
+                  <div className={`text-4xl font-bold ${overallRisk.color}`}>
+                    {overallScore}
+                  </div>
+                  <div className={`text-lg font-semibold ${overallRisk.color}`}>
+                    {overallRisk.label}
+                  </div>
                 </div>
               </div>
             </CardHeader>
@@ -359,7 +429,14 @@ export default function COPSOQ() {
           <div className="grid grid-cols-2 gap-4">
             {Object.entries(scores).map(([dimension, score]) => {
               const risk = getRiskLevel(score);
-              const Icon = risk.level === "critical" ? XCircle : risk.level === "high" ? AlertTriangle : risk.level === "medium" ? AlertCircle : CheckCircle;
+              const Icon =
+                risk.level === "critical"
+                  ? XCircle
+                  : risk.level === "high"
+                    ? AlertTriangle
+                    : risk.level === "medium"
+                      ? AlertCircle
+                      : CheckCircle;
 
               return (
                 <Card key={dimension} className={risk.bg}>
@@ -367,19 +444,33 @@ export default function COPSOQ() {
                     <div className="flex items-start justify-between">
                       <div>
                         <h3 className="font-semibold">{dimension}</h3>
-                        <p className="text-sm text-gray-600">{copsoqData.dimensions[dimension as keyof typeof copsoqData.dimensions]}</p>
+                        <p className="text-sm text-gray-600">
+                          {
+                            copsoqData.dimensions[
+                              dimension as keyof typeof copsoqData.dimensions
+                            ]
+                          }
+                        </p>
                       </div>
                       <Icon className={`w-6 h-6 ${risk.color}`} />
                     </div>
                     <div className="mt-4">
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-medium">Score</span>
-                        <span className={`text-2xl font-bold ${risk.color}`}>{score}</span>
+                        <span className={`text-2xl font-bold ${risk.color}`}>
+                          {score}
+                        </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
                         <div
                           className={`h-2 rounded-full transition-all ${
-                            score >= 80 ? "bg-red-600" : score >= 60 ? "bg-orange-600" : score >= 40 ? "bg-yellow-600" : "bg-green-600"
+                            score >= 80
+                              ? "bg-red-600"
+                              : score >= 60
+                                ? "bg-orange-600"
+                                : score >= 40
+                                  ? "bg-yellow-600"
+                                  : "bg-green-600"
                           }`}
                           style={{ width: `${score}%` }}
                         />
@@ -395,12 +486,16 @@ export default function COPSOQ() {
           <Card>
             <CardHeader>
               <CardTitle>Recomendações</CardTitle>
-              <CardDescription>Ações sugeridas baseadas nos resultados</CardDescription>
+              <CardDescription>
+                Ações sugeridas baseadas nos resultados
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {overallRisk.level === "critical" && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-red-900 mb-2">Risco Crítico Detectado</h4>
+                  <h4 className="font-semibold text-red-900 mb-2">
+                    Risco Crítico Detectado
+                  </h4>
                   <ul className="text-sm text-red-800 space-y-1 list-disc list-inside">
                     <li>Implementar intervenções imediatas de saúde mental</li>
                     <li>Revisar carga de trabalho e prazos</li>
@@ -411,7 +506,9 @@ export default function COPSOQ() {
               )}
               {overallRisk.level === "high" && (
                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-orange-900 mb-2">Risco Alto Identificado</h4>
+                  <h4 className="font-semibold text-orange-900 mb-2">
+                    Risco Alto Identificado
+                  </h4>
                   <ul className="text-sm text-orange-800 space-y-1 list-disc list-inside">
                     <li>Planejar intervenções de gestão de estresse</li>
                     <li>Melhorar comunicação e transparência</li>
@@ -421,7 +518,9 @@ export default function COPSOQ() {
               )}
               {overallRisk.level === "medium" && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-yellow-900 mb-2">Risco Moderado Detectado</h4>
+                  <h4 className="font-semibold text-yellow-900 mb-2">
+                    Risco Moderado Detectado
+                  </h4>
                   <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
                     <li>Monitorar situação regularmente</li>
                     <li>Implementar melhorias incrementais</li>
@@ -431,7 +530,9 @@ export default function COPSOQ() {
               )}
               {overallRisk.level === "low" && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-green-900 mb-2">Risco Baixo</h4>
+                  <h4 className="font-semibold text-green-900 mb-2">
+                    Risco Baixo
+                  </h4>
                   <ul className="text-sm text-green-800 space-y-1 list-disc list-inside">
                     <li>Manter práticas atuais de bem-estar</li>
                     <li>Continuar monitoramento periódico</li>
@@ -444,7 +545,11 @@ export default function COPSOQ() {
 
           <div className="flex gap-2">
             <Button className="flex-1">Exportar Relatório PDF</Button>
-            <Button variant="outline" className="flex-1" onClick={() => setCurrentSection(0)}>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setCurrentSection(0)}
+            >
               Nova Avaliação
             </Button>
           </div>
