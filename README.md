@@ -14,10 +14,47 @@
 
 1. **Gestão de Riscos Psicossociais (NR-01)** - Conformidade com Portaria MTE nº 1.419/2024
 2. **Sistema de Precificação Comercial** - Cálculo automático de propostas e orçamentos
+3. **Sistema de Assinaturas** - Modelo de monetização com planos Starter, Pro e Enterprise
 
 A plataforma é **multi-tenant**, **type-safe**, e construída com as melhores práticas modernas de desenvolvimento web.
 
 > 🚀 **NOVO!** Quer fazer a plataforma rodar rapidamente? Veja o [**Guia Prático: Como Rodar**](COMO_RODAR.md)
+
+> 💰 **NOVIDADE!** Conheça nossos planos e preços: [**PRICING.md**](PRICING.md)
+
+---
+
+## 💎 Planos e Preços
+
+A Black Belt Platform oferece três planos para atender desde pequenas empresas até grandes corporações:
+
+### 🎯 Starter - R$ 99/mês
+Ideal para pequenas empresas e consultores independentes
+- 1 empresa
+- Até 5 usuários
+- 1 GB de armazenamento
+- Relatórios básicos
+- Suporte por email
+
+### 🚀 Pro - R$ 399/mês
+Para consultorias e empresas médias
+- Até 10 empresas
+- Até 50 usuários por empresa
+- 10 GB de armazenamento
+- Relatórios avançados + API
+- Suporte prioritário
+
+### 🏆 Enterprise - Customizado
+Para grandes corporações e holdings
+- Empresas ilimitadas
+- Usuários ilimitados
+- Armazenamento ilimitado
+- White-label + Webhooks
+- SLA 99.9% + Suporte dedicado
+
+**🎁 Teste Grátis:** 14 dias para Starter/Pro, 30 dias para Enterprise
+
+📖 **Veja detalhes completos em:** [PRICING.md](PRICING.md)
 
 ---
 
@@ -40,6 +77,15 @@ A plataforma é **multi-tenant**, **type-safe**, e construída com as melhores p
 - ✅ **Cálculo de Hora Técnica** - Cálculo automático com 4 regimes tributários
 - ✅ **Geração de Propostas** - Propostas comerciais com descontos e impostos
 - ✅ **Integração Avaliação → Proposta** - Recomendação automática de serviços
+
+### 💳 Módulo de Monetização (NOVO!)
+
+- ✅ **Sistema de Assinaturas** - Planos Starter, Pro e Enterprise
+- ✅ **Gestão de Limites** - Controle automático de uso por plano
+- ✅ **Período de Teste** - Trial gratuito de 14-30 dias
+- ✅ **Gateway de Pagamento** - Suporte para Stripe e Mercado Pago
+- ✅ **Faturamento Automatizado** - Cobrança mensal ou anual
+- ✅ **Métricas de Uso** - Rastreamento de consumo por tenant
 
 ### 🔐 Funcionalidades Transversais
 
@@ -222,17 +268,38 @@ A aplicação estará disponível em `http://localhost:3000`
 
 A documentação completa está disponível nos seguintes arquivos:
 
+### 📖 Documentação Geral
+
 | Arquivo                             | Descrição                                     |
 | ----------------------------------- | --------------------------------------------- |
-| **COMO_RODAR.md**                   | 🚀 **Guia prático: Como fazer a plataforma rodar** (NOVO!) |
+| **COMO_RODAR.md**                   | 🚀 **Guia prático: Como fazer a plataforma rodar** |
 | **SETUP_GUIDE.md**                  | 📖 Guia completo de instalação e configuração |
 | **TROUBLESHOOTING.md**              | 🔧 Solução de problemas e debugging           |
-| **TESTING.md**                      | 🧪 Documentação completa de testes            |
+
+### 💰 Documentação Comercial (NOVO!)
+
+| Arquivo                             | Descrição                                     |
+| ----------------------------------- | --------------------------------------------- |
+| **PRICING.md**                      | 💎 **Planos, preços e funcionalidades** (NOVO!) |
+| **LICENSE**                         | 📄 Licença MIT + opções comerciais            |
+| **TERMS_OF_SERVICE.md**             | 📋 Termos de serviço e condições de uso       |
+| **PRIVACY_POLICY.md**               | 🔒 Política de privacidade (LGPD compliant)   |
+
+### 🧪 Testes e Qualidade
+
+| Arquivo                             | Descrição                                     |
+| ----------------------------------- | --------------------------------------------- |
+| **TESTING.md**                      | 🧪 Documentação completa de testes (173 testes) |
 | **TESTING_QUICKSTART.md**           | ⚡ Guia rápido de testes                      |
+| **PLANO_TESTES_E2E.md**             | Plano de testes E2E com 21 casos de teste     |
+
+### 🏗️ Documentação Técnica
+
+| Arquivo                             | Descrição                                     |
+| ----------------------------------- | --------------------------------------------- |
 | **DOCUMENTACAO_TECNICA.md**         | Documentação técnica completa (30+ páginas)   |
 | **CODIGO_CONSOLIDADO.md**           | Código-fonte consolidado com anotações        |
 | **DFD_ARQUITETURA.md**              | 16 diagramas de fluxo de dados                |
-| **PLANO_TESTES_E2E.md**             | Plano de testes E2E com 21 casos de teste     |
 | **PROJETO_PLATAFORMA_UNIFICADA.md** | Projeto estratégico de integração             |
 | **CODIGO_FONTE_EMPRESAS.md**        | Análise detalhada da página de Empresas       |
 
@@ -489,9 +556,13 @@ VITE_APP_LOGO=https://...
 - [x] Sistema de Precificação
 - [x] Multi-tenant
 - [x] Autenticação OAuth
+- [x] Sistema de Assinaturas (Starter, Pro, Enterprise)
+- [x] Licenciamento e Termos Comerciais
 
 ### Fase 2 📋 (Em Progresso)
 
+- [x] Gestão de Limites por Plano
+- [ ] Integração Stripe/Mercado Pago (estrutura pronta)
 - [ ] Dashboard de Testes E2E
 - [ ] Integração Avaliação → Proposta
 - [ ] Exportação de Propostas (PDF)
@@ -499,10 +570,11 @@ VITE_APP_LOGO=https://...
 
 ### Fase 3 🔮 (Planejado)
 
+- [ ] Webhooks para eventos de pagamento
+- [ ] White-label (Enterprise)
 - [ ] Mobile App (React Native)
 - [ ] API Pública (REST)
-- [ ] Webhooks
-- [ ] Integração com CRM
+- [ ] Integração com CRM (Pipedrive, HubSpot)
 - [ ] Analytics Avançado
 - [ ] Machine Learning (Previsão de Riscos)
 
@@ -522,7 +594,13 @@ Contribuições são bem-vindas! Por favor:
 
 ## 📄 Licença
 
-Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
+Este projeto está licenciado sob a **Licença MIT** - veja o arquivo [LICENSE](LICENSE) para detalhes.
+
+### 💼 Licenciamento Comercial
+
+Para uso comercial, personalizações white-label ou suporte Enterprise, entre em contato:
+- 📧 Email: contato@blackbelt-consultoria.com
+- 📋 Veja: [TERMS_OF_SERVICE.md](TERMS_OF_SERVICE.md)
 
 ---
 
@@ -557,6 +635,7 @@ _Maestria se alcança através de técnica apurada, disciplina rigorosa e uma bu
 
 ---
 
-**Última atualização:** Novembro 2025  
+**Última atualização:** Dezembro 2025  
 **Versão:** 1.0.0  
-**Status:** Production Ready ✅
+**Status:** Production Ready ✅  
+**Comercial:** Planos disponíveis - [Ver Preços](PRICING.md)
