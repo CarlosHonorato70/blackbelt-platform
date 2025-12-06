@@ -160,7 +160,9 @@ export async function checkSubscriptionLimits(
 
     case "storage":
       current = usage?.storageUsedGB || 0;
-      max = context.plan.maxStorageGB * 100; // Converter para centavos
+      // Note: storageUsedGB in usage_metrics is stored in centavos (1 GB = 100 centavos) for precision
+      // Plan limits are in GB, so multiply by 100 to compare with usage
+      max = context.plan.maxStorageGB * 100;
       withinLimit = max === -1 || current < max;
       break;
 
