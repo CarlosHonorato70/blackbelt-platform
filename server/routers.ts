@@ -32,6 +32,7 @@ import { webhooksRouter } from "./routers/webhooksManagement";
 import { apiKeysRouter } from "./routers/apiKeys";
 import { twoFactorRouter } from "./routers/twoFactor";
 import { securityRouter } from "./routers/security";
+import { analyticsRouter } from "./routers/analytics";
 
 export const appRouter = router({
   system: systemRouter,
@@ -82,6 +83,9 @@ export const appRouter = router({
   // Phase 7: Security Improvements
   twoFactor: twoFactorRouter,
   security: securityRouter,
+
+  // Phase 8: Advanced Analytics
+  analytics: analyticsRouter,
 });
 
 export type AppRouter = typeof appRouter;
