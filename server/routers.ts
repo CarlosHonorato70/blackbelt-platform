@@ -23,6 +23,10 @@ import { complianceReportsRouter } from "./routers/complianceReports";
 import { authLocalRouter } from "./routers/auth-local";
 import { assessmentsRouter } from "./routers/assessments";
 import { webhookRouter } from "./routers/webhook";
+import { subscriptionsRouter } from "./routers/subscriptions";
+import { stripeRouter } from "./routers/stripe";
+import { mercadoPagoRouter } from "./routers/mercadopago";
+import { pdfExportsRouter } from "./routers/pdfExports";
 
 export const appRouter = router({
   system: systemRouter,
@@ -56,6 +60,12 @@ export const appRouter = router({
   // Routers de avaliações
   assessments: assessmentsRouter,
   webhook: webhookRouter,
+
+  // Routers de monetização
+  subscriptions: subscriptionsRouter,
+  stripe: stripeRouter,
+  mercadoPago: mercadoPagoRouter,
+  pdfExports: pdfExportsRouter,
 });
 
 export type AppRouter = typeof appRouter;

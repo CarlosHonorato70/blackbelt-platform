@@ -30,6 +30,11 @@ import Clients from "./pages/Clients";
 import PricingParameters from "./pages/PricingParameters";
 import Proposals from "./pages/Proposals";
 import ExecutiveDashboard from "./pages/ExecutiveDashboard";
+import Pricing from "./pages/subscription/Pricing";
+import Checkout from "./pages/subscription/Checkout";
+import SubscriptionDashboard from "./pages/subscription/SubscriptionDashboard";
+import SubscriptionSuccess from "./pages/subscription/SubscriptionSuccess";
+import SubscriptionFailure from "./pages/subscription/SubscriptionFailure";
 
 function Router() {
   return (
@@ -64,6 +69,13 @@ function Router() {
       <Route path="/clients" component={Clients} />
       <Route path="/pricing-parameters" component={PricingParameters} />
       <Route path="/proposals" component={Proposals} />
+
+      {/* Subscription Routes */}
+      <Route path="/pricing" component={Pricing} />
+      <Route path="/subscription/checkout" component={Checkout} />
+      <Route path="/subscription/dashboard" component={SubscriptionDashboard} />
+      <Route path="/subscription/success" component={SubscriptionSuccess} />
+      <Route path="/subscription/failure" component={SubscriptionFailure} />
 
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
