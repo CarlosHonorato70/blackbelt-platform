@@ -24,6 +24,8 @@ import { authLocalRouter } from "./routers/auth-local";
 import { assessmentsRouter } from "./routers/assessments";
 import { webhookRouter } from "./routers/webhook";
 import { subscriptionsRouter } from "./routers/subscriptions";
+import { stripeRouter } from "./routers/stripe";
+import { mercadoPagoRouter } from "./routers/mercadopago";
 
 export const appRouter = router({
   system: systemRouter,
@@ -60,6 +62,8 @@ export const appRouter = router({
 
   // Routers de monetização
   subscriptions: subscriptionsRouter,
+  stripe: stripeRouter,
+  mercadoPago: mercadoPagoRouter,
 });
 
 export type AppRouter = typeof appRouter;
