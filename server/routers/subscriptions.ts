@@ -30,6 +30,7 @@ export const subscriptionsRouter = router({
   listPublicPlans: publicProcedure.query(async () => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
+    
     const publicPlans = await db
       .select()
       .from(plans)
@@ -44,9 +45,10 @@ export const subscriptionsRouter = router({
    */
   getPlan: publicProcedure
     .input(z.object({ planId: z.string() }))
-    .query(async ({ const db = await getDb();
+    .query(async ({ input }) => {
+      const db = await getDb();
       if (!db) throw new Error("Database not available");
-      input }) => {
+      
       const [plan] = await db
         .select()
         .from(plans)
@@ -84,12 +86,13 @@ export const subscriptionsRouter = router({
   /**
    * Obter assinatura do tenant atual
    */
-  getCurrentSubscription: protectedProcedure.query(async ({ const db = await getDb();
-    if (!db) throw new Error("Database not available");
-    ctx }) => {
+  getCurrentSubscription: protectedProcedure.query(async ({ ctx }) => {
     if (!ctx.tenantId) {
       throw new Error("Tenant não selecionado");
     }
+
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
 
     const [subscription] = await db
       .select({
@@ -114,12 +117,13 @@ export const subscriptionsRouter = router({
         billingCycle: z.enum(["monthly", "yearly"]).default("monthly"),
       })
     )
-    .mutation(async ({ const db = await getDb();
-      if (!db) throw new Error("Database not available");
-      input, ctx }) => {
+    .mutation(async ({ input, ctx }) => {
       if (!ctx.tenantId) {
         throw new Error("Tenant não selecionado");
       }
+
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
 
       // Verificar se já existe assinatura
       const [existing] = await db
@@ -191,12 +195,13 @@ export const subscriptionsRouter = router({
         mercadoPagoSubscriptionId: z.string().optional(),
       })
     )
-    .mutation(async ({ const db = await getDb();
-      if (!db) throw new Error("Database not available");
-      input, ctx }) => {
+    .mutation(async ({ input, ctx }) => {
       if (!ctx.tenantId) {
         throw new Error("Tenant não selecionado");
       }
+
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
 
       await db
         .update(subscriptions)
@@ -212,12 +217,13 @@ export const subscriptionsRouter = router({
   /**
    * Cancelar assinatura (no final do período)
    */
-  cancelSubscription: protectedProcedure.mutation(async ({ const db = await getDb();
-    if (!db) throw new Error("Database not available");
-    ctx }) => {
+  cancelSubscription: protectedProcedure.mutation(async ({ ctx }) => {
     if (!ctx.tenantId) {
       throw new Error("Tenant não selecionado");
     }
+
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
 
     await db
       .update(subscriptions)
@@ -234,12 +240,13 @@ export const subscriptionsRouter = router({
   /**
    * Reativar assinatura cancelada
    */
-  reactivateSubscription: protectedProcedure.mutation(async ({ const db = await getDb();
-    if (!db) throw new Error("Database not available");
-    ctx }) => {
+  reactivateSubscription: protectedProcedure.mutation(async ({ ctx }) => {
     if (!ctx.tenantId) {
       throw new Error("Tenant não selecionado");
     }
+
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
 
     await db
       .update(subscriptions)
@@ -263,12 +270,13 @@ export const subscriptionsRouter = router({
         billingCycle: z.enum(["monthly", "yearly"]).optional(),
       })
     )
-    .mutation(async ({ const db = await getDb();
-      if (!db) throw new Error("Database not available");
-      input, ctx }) => {
+    .mutation(async ({ input, ctx }) => {
       if (!ctx.tenantId) {
         throw new Error("Tenant não selecionado");
       }
+
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
 
       // Buscar novo plano
       const [newPlan] = await db
@@ -323,12 +331,13 @@ export const subscriptionsRouter = router({
   /**
    * Verificar limites do plano atual
    */
-  checkLimits: protectedProcedure.query(async ({ const db = await getDb();
-    if (!db) throw new Error("Database not available");
-    ctx }) => {
+  checkLimits: protectedProcedure.query(async ({ ctx }) => {
     if (!ctx.tenantId) {
       throw new Error("Tenant não selecionado");
     }
+
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
 
     // Buscar assinatura e plano
     const [subscription] = await db
@@ -407,12 +416,13 @@ export const subscriptionsRouter = router({
         proposalsGenerated: z.number().optional(),
       })
     )
-    .mutation(async ({ const db = await getDb();
-      if (!db) throw new Error("Database not available");
-      input, ctx }) => {
+    .mutation(async ({ input, ctx }) => {
       if (!ctx.tenantId) {
         throw new Error("Tenant não selecionado");
       }
+
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
 
       const now = new Date();
       const periodStart = new Date(now);
@@ -455,12 +465,13 @@ export const subscriptionsRouter = router({
           .optional(),
       })
     )
-    .query(async ({ const db = await getDb();
-      if (!db) throw new Error("Database not available");
-      input, ctx }) => {
+    .query(async ({ input, ctx }) => {
       if (!ctx.tenantId) {
         throw new Error("Tenant não selecionado");
       }
+
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
 
       const conditions = [eq(invoices.tenantId, ctx.tenantId)];
       if (input.status) {
@@ -482,12 +493,13 @@ export const subscriptionsRouter = router({
    */
   getInvoice: protectedProcedure
     .input(z.object({ invoiceId: z.string() }))
-    .query(async ({ const db = await getDb();
-      if (!db) throw new Error("Database not available");
-      input, ctx }) => {
+    .query(async ({ input, ctx }) => {
       if (!ctx.tenantId) {
         throw new Error("Tenant não selecionado");
       }
+
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
 
       const [invoice] = await db
         .select()
