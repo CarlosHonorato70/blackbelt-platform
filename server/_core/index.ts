@@ -133,6 +133,13 @@ async function startServer() {
     })
   );
 
+  // ============================================================================
+  // PHASE 6: REST API v1 (Public API with API Key authentication)
+  // ============================================================================
+  
+  const restApiRouter = await import("../_core/restApi");
+  app.use("/api/v1", restApiRouter.default);
+
   // Mercado Pago webhook (can use parsed JSON body)
   app.post("/api/webhooks/mercadopago", async (req, res) => {
     try {

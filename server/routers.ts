@@ -27,6 +27,13 @@ import { subscriptionsRouter } from "./routers/subscriptions";
 import { stripeRouter } from "./routers/stripe";
 import { mercadoPagoRouter } from "./routers/mercadopago";
 import { pdfExportsRouter } from "./routers/pdfExports";
+import { brandingRouter } from "./routers/branding";
+import { webhooksRouter } from "./routers/webhooksManagement";
+import { apiKeysRouter } from "./routers/apiKeys";
+import { twoFactorRouter } from "./routers/twoFactor";
+import { securityRouter } from "./routers/security";
+import { analyticsRouter } from "./routers/analytics";
+import { onboardingRouter } from "./routers/onboarding";
 
 export const appRouter = router({
   system: systemRouter,
@@ -66,6 +73,23 @@ export const appRouter = router({
   stripe: stripeRouter,
   mercadoPago: mercadoPagoRouter,
   pdfExports: pdfExportsRouter,
+
+  // Phase 5: White-Label (Enterprise)
+  branding: brandingRouter,
+
+  // Phase 6: Webhooks and Public API (Enterprise)
+  webhooks: webhooksRouter,
+  apiKeys: apiKeysRouter,
+
+  // Phase 7: Security Improvements
+  twoFactor: twoFactorRouter,
+  security: securityRouter,
+
+  // Phase 8: Advanced Analytics
+  analytics: analyticsRouter,
+
+  // Phase 10: Automated Onboarding
+  onboarding: onboardingRouter,
 });
 
 export type AppRouter = typeof appRouter;

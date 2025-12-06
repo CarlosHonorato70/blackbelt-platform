@@ -9,6 +9,7 @@ import Tenants from "@/pages/Tenants";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { BrandingProvider } from "./contexts/BrandingContext";
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import ComplianceReports from "./pages/ComplianceReports";
@@ -35,6 +36,7 @@ import Checkout from "./pages/subscription/Checkout";
 import SubscriptionDashboard from "./pages/subscription/SubscriptionDashboard";
 import SubscriptionSuccess from "./pages/subscription/SubscriptionSuccess";
 import SubscriptionFailure from "./pages/subscription/SubscriptionFailure";
+import BrandingSettings from "./pages/BrandingSettings";
 
 function Router() {
   return (
@@ -77,6 +79,9 @@ function Router() {
       <Route path="/subscription/success" component={SubscriptionSuccess} />
       <Route path="/subscription/failure" component={SubscriptionFailure} />
 
+      {/* Phase 5: White-Label Settings (Enterprise) */}
+      <Route path="/settings/branding" component={BrandingSettings} />
+
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
@@ -87,10 +92,12 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+        <BrandingProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </BrandingProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
