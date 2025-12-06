@@ -27,6 +27,7 @@ import { subscriptionsRouter } from "./routers/subscriptions";
 import { stripeRouter } from "./routers/stripe";
 import { mercadoPagoRouter } from "./routers/mercadopago";
 import { pdfExportsRouter } from "./routers/pdfExports";
+import { brandingRouter } from "./routers/branding";
 
 export const appRouter = router({
   system: systemRouter,
@@ -66,6 +67,9 @@ export const appRouter = router({
   stripe: stripeRouter,
   mercadoPago: mercadoPagoRouter,
   pdfExports: pdfExportsRouter,
+
+  // Phase 5: White-Label (Enterprise)
+  branding: brandingRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -74,6 +74,17 @@ export const tenants = mysqlTable(
       .notNull(),
     schemaName: varchar("schemaName", { length: 100 }), // Apenas para dedicated_schema
 
+    // White-Label / Branding (Phase 5 - Enterprise)
+    logoUrl: varchar("logoUrl", { length: 500 }),
+    faviconUrl: varchar("faviconUrl", { length: 500 }),
+    primaryColor: varchar("primaryColor", { length: 7 }).default("#3b82f6"), // Hex color #RRGGBB
+    secondaryColor: varchar("secondaryColor", { length: 7 }).default("#10b981"), // Hex color #RRGGBB
+    customDomain: varchar("customDomain", { length: 255 }),
+    customDomainVerified: boolean("customDomainVerified").default(false),
+    emailSenderName: varchar("emailSenderName", { length: 255 }),
+    emailSenderEmail: varchar("emailSenderEmail", { length: 320 }),
+    whiteLabelEnabled: boolean("whiteLabelEnabled").default(false),
+
     // Metadados
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
@@ -81,6 +92,7 @@ export const tenants = mysqlTable(
   table => ({
     nameIdx: index("idx_tenant_name").on(table.name),
     statusIdx: index("idx_tenant_status").on(table.status),
+    customDomainIdx: index("idx_tenant_custom_domain").on(table.customDomain),
   })
 );
 
