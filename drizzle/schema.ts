@@ -660,3 +660,284 @@ export const assessmentProposals = mysqlTable(
 
 export type AssessmentProposal = typeof assessmentProposals.$inferSelect;
 export type InsertAssessmentProposal = typeof assessmentProposals.$inferInsert;
+
+// ============================================================================
+// MONETIZAÇÃO: Planos de Assinatura
+// ============================================================================
+
+export const plans = mysqlTable(
+  "plans",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+
+    name: varchar("name", { length: 100 }).notNull(), // Starter, Pro, Enterprise
+    displayName: varchar("displayName", { length: 100 }).notNull(),
+    description: text("description"),
+
+    // Preços em centavos (BRL)
+    monthlyPrice: int("monthlyPrice").notNull(), // Ex: 9900 = R$ 99,00
+    yearlyPrice: int("yearlyPrice").notNull(), // Ex: 99000 = R$ 990,00 (17% desconto)
+
+    // Limites
+    maxTenants: int("maxTenants").notNull(), // -1 = ilimitado
+    maxUsersPerTenant: int("maxUsersPerTenant").notNull(), // -1 = ilimitado
+    maxStorageGB: int("maxStorageGB").notNull(), // -1 = ilimitado
+    maxApiRequestsPerDay: int("maxApiRequestsPerDay").notNull(), // -1 = ilimitado
+
+    // Flags de funcionalidades
+    hasAdvancedReports: boolean("hasAdvancedReports").default(false).notNull(),
+    hasApiAccess: boolean("hasApiAccess").default(false).notNull(),
+    hasWebhooks: boolean("hasWebhooks").default(false).notNull(),
+    hasWhiteLabel: boolean("hasWhiteLabel").default(false).notNull(),
+    hasPrioritySupport: boolean("hasPrioritySupport").default(false).notNull(),
+    hasSLA: boolean("hasSLA").default(false).notNull(),
+
+    // Nível de SLA (em porcentagem de uptime)
+    slaUptime: int("slaUptime"), // Ex: 999 = 99.9%
+
+    // Período de trial (em dias)
+    trialDays: int("trialDays").default(14).notNull(),
+
+    // Status
+    isActive: boolean("isActive").default(true).notNull(),
+    isPublic: boolean("isPublic").default(true).notNull(), // Visível na página de preços
+
+    // Ordenação para exibição
+    sortOrder: int("sortOrder").default(0).notNull(),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  table => ({
+    nameIdx: index("idx_plan_name").on(table.name),
+    activeIdx: index("idx_plan_active").on(table.isActive),
+  })
+);
+
+export type Plan = typeof plans.$inferSelect;
+export type InsertPlan = typeof plans.$inferInsert;
+
+// ============================================================================
+// MONETIZAÇÃO: Assinaturas dos Tenants
+// ============================================================================
+
+export const subscriptions = mysqlTable(
+  "subscriptions",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull().unique(), // Um tenant tem uma assinatura
+    planId: varchar("planId", { length: 64 }).notNull(),
+
+    // Status da assinatura
+    status: mysqlEnum("status", [
+      "trialing",
+      "active",
+      "past_due",
+      "canceled",
+      "unpaid",
+    ])
+      .default("trialing")
+      .notNull(),
+
+    // Período de cobrança
+    billingCycle: mysqlEnum("billingCycle", ["monthly", "yearly"])
+      .default("monthly")
+      .notNull(),
+
+    // Datas
+    startDate: timestamp("startDate").defaultNow().notNull(),
+    currentPeriodStart: timestamp("currentPeriodStart").notNull(),
+    currentPeriodEnd: timestamp("currentPeriodEnd").notNull(),
+    trialEnd: timestamp("trialEnd"), // NULL se não está em trial
+    canceledAt: timestamp("canceledAt"),
+    endedAt: timestamp("endedAt"),
+
+    // Integração com gateway de pagamento
+    stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
+    stripeCustomerId: varchar("stripeCustomerId", { length: 255 }),
+    mercadoPagoSubscriptionId: varchar("mercadoPagoSubscriptionId", {
+      length: 255,
+    }),
+
+    // Preço praticado (snapshot do plano no momento da assinatura)
+    currentPrice: int("currentPrice").notNull(), // Em centavos
+
+    // Flags
+    autoRenew: boolean("autoRenew").default(true).notNull(),
+    cancelAtPeriodEnd: boolean("cancelAtPeriodEnd").default(false).notNull(),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_subscription_tenant").on(table.tenantId),
+    planIdx: index("idx_subscription_plan").on(table.planId),
+    statusIdx: index("idx_subscription_status").on(table.status),
+    stripeSubIdx: index("idx_subscription_stripe").on(
+      table.stripeSubscriptionId
+    ),
+  })
+);
+
+export type Subscription = typeof subscriptions.$inferSelect;
+export type InsertSubscription = typeof subscriptions.$inferInsert;
+
+// ============================================================================
+// MONETIZAÇÃO: Histórico de Faturas
+// ============================================================================
+
+export const invoices = mysqlTable(
+  "invoices",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+    subscriptionId: varchar("subscriptionId", { length: 64 }).notNull(),
+
+    // Identificadores externos
+    stripeInvoiceId: varchar("stripeInvoiceId", { length: 255 }),
+    mercadoPagoInvoiceId: varchar("mercadoPagoInvoiceId", { length: 255 }),
+
+    // Valores em centavos
+    subtotal: int("subtotal").notNull(),
+    discount: int("discount").default(0).notNull(),
+    tax: int("tax").default(0).notNull(),
+    total: int("total").notNull(),
+
+    // Status
+    status: mysqlEnum("status", ["draft", "open", "paid", "void", "uncollectible"])
+      .default("draft")
+      .notNull(),
+
+    // Descrição
+    description: text("description"),
+
+    // Datas
+    periodStart: timestamp("periodStart").notNull(),
+    periodEnd: timestamp("periodEnd").notNull(),
+    dueDate: timestamp("dueDate"),
+    paidAt: timestamp("paidAt"),
+
+    // Método de pagamento
+    paymentMethod: varchar("paymentMethod", { length: 50 }), // card, boleto, pix
+
+    // URL da fatura (para download)
+    invoiceUrl: varchar("invoiceUrl", { length: 500 }),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_invoice_tenant").on(table.tenantId),
+    subscriptionIdx: index("idx_invoice_subscription").on(table.subscriptionId),
+    statusIdx: index("idx_invoice_status").on(table.status),
+    dueDateIdx: index("idx_invoice_due_date").on(table.dueDate),
+  })
+);
+
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertInvoice = typeof invoices.$inferInsert;
+
+// ============================================================================
+// MONETIZAÇÃO: Uso e Métricas
+// ============================================================================
+
+export const usageMetrics = mysqlTable(
+  "usage_metrics",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+
+    // Período de medição
+    periodStart: timestamp("periodStart").notNull(),
+    periodEnd: timestamp("periodEnd").notNull(),
+
+    // Métricas
+    activeUsers: int("activeUsers").default(0).notNull(),
+    storageUsedGB: int("storageUsedGB").default(0).notNull(), // Em centavos de GB
+    apiRequests: int("apiRequests").default(0).notNull(),
+    assessmentsCreated: int("assessmentsCreated").default(0).notNull(),
+    proposalsGenerated: int("proposalsGenerated").default(0).notNull(),
+
+    // Metadata JSON para métricas adicionais
+    additionalMetrics: json("additionalMetrics"),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    tenantPeriodIdx: index("idx_usage_tenant_period").on(
+      table.tenantId,
+      table.periodStart
+    ),
+  })
+);
+
+export type UsageMetric = typeof usageMetrics.$inferSelect;
+export type InsertUsageMetric = typeof usageMetrics.$inferInsert;
+
+// ============================================================================
+// MONETIZAÇÃO: Features Flags (Controle de Funcionalidades)
+// ============================================================================
+
+export const featureFlags = mysqlTable(
+  "feature_flags",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+
+    name: varchar("name", { length: 100 }).notNull().unique(),
+    displayName: varchar("displayName", { length: 100 }).notNull(),
+    description: text("description"),
+
+    // Tipo de feature
+    category: mysqlEnum("category", [
+      "core",
+      "reports",
+      "integrations",
+      "customization",
+      "support",
+    ])
+      .default("core")
+      .notNull(),
+
+    // Status
+    isActive: boolean("isActive").default(true).notNull(),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  table => ({
+    nameIdx: index("idx_feature_name").on(table.name),
+    categoryIdx: index("idx_feature_category").on(table.category),
+  })
+);
+
+export type FeatureFlag = typeof featureFlags.$inferSelect;
+export type InsertFeatureFlag = typeof featureFlags.$inferInsert;
+
+// ============================================================================
+// MONETIZAÇÃO: Associação Plan-Features
+// ============================================================================
+
+export const planFeatures = mysqlTable(
+  "plan_features",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    planId: varchar("planId", { length: 64 }).notNull(),
+    featureId: varchar("featureId", { length: 64 }).notNull(),
+
+    // Flags
+    isEnabled: boolean("isEnabled").default(true).notNull(),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    planFeatureUnique: unique("uk_plan_feature").on(
+      table.planId,
+      table.featureId
+    ),
+    planIdx: index("idx_plan_feature_plan").on(table.planId),
+    featureIdx: index("idx_plan_feature_feature").on(table.featureId),
+  })
+);
+
+export type PlanFeature = typeof planFeatures.$inferSelect;
+export type InsertPlanFeature = typeof planFeatures.$inferInsert;
