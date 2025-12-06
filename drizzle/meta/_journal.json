@@ -57,6 +57,13 @@
       "when": 1764807723263,
       "tag": "0007_nappy_patriot",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1764987252242,
+      "tag": "0008_cute_morgan_stark",
+      "breakpoints": true
     }
   ]
 }
