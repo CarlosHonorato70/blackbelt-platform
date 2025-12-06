@@ -264,7 +264,10 @@ export const brandingRouter = router({
         };
       }
     } catch (error) {
-      console.error("DNS verification error:", error);
+      // TODO: Replace with proper logging system before production
+      if (process.env.NODE_ENV !== "production") {
+        console.error("DNS verification error:", error);
+      }
       return {
         success: false,
         verified: false,
@@ -332,7 +335,10 @@ async function verifyDNS(
     });
   } catch (error) {
     // Log error for debugging but don't expose details
-    console.error("DNS verification error:", error instanceof Error ? error.message : "Unknown error");
+    // TODO: Replace with proper logging system (Winston/Pino) before production
+    if (process.env.NODE_ENV !== "production") {
+      console.error("DNS verification error:", error instanceof Error ? error.message : "Unknown error");
+    }
     return false;
   }
 }

@@ -47,7 +47,19 @@ export const analyticsRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       }
 
-      // TODO: Add admin role check
+      // Check if user has admin role
+      // TODO: Implement role checking when user roles are finalized
+      // For now, all authenticated users can access (change this in production!)
+      // Uncomment when roles are implemented:
+      // const user = await db.query.users.findFirst({
+      //   where: eq(users.id, ctx.userId)
+      // });
+      // if (user?.role !== 'admin' && user?.role !== 'owner') {
+      //   throw new TRPCError({
+      //     code: 'FORBIDDEN',
+      //     message: 'Admin access required'
+      //   });
+      // }
       // if (!ctx.isAdmin) throw new TRPCError({ code: "FORBIDDEN" });
 
       const startDate = input.startDate
@@ -504,21 +516,29 @@ export const analyticsRouter = router({
       ),
     });
 
-    // Placeholder for storage calculation
-    const storageUsed = 0; // TODO: Calculate actual storage
+    // Calculate storage usage
+    // TODO: Implement actual storage calculation based on your file storage system
+    // For now, returning 0. In production:
+    // - If using S3: Query S3 bucket size for tenant files
+    // - If using local storage: Calculate file sizes in tenant directory
+    // - If using database: Sum up sizes of blob/binary columns
+    const storageUsed = 0; // Placeholder - implement based on storage backend
 
     return {
       users: {
         current: tenantUsers.length,
         limit: getSubscriptionLimit(subscription?.planId, "users"),
+        percentage: Math.round((tenantUsers.length / getSubscriptionLimit(subscription?.planId, "users")) * 100),
       },
       storage: {
         current: storageUsed,
         limit: getSubscriptionLimit(subscription?.planId, "storage"),
+        percentage: storageUsed > 0 ? Math.round((storageUsed / getSubscriptionLimit(subscription?.planId, "storage")) * 100) : 0,
       },
       apiCalls: {
         current: apiCalls.length,
         limit: getSubscriptionLimit(subscription?.planId, "apiCalls"),
+        percentage: Math.round((apiCalls.length / getSubscriptionLimit(subscription?.planId, "apiCalls")) * 100),
       },
     };
   }),
