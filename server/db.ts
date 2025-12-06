@@ -106,6 +106,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
         values.role = "admin";
         updateSet.role = "admin";
       }
+    }
     // Only set role if explicitly provided, don't override existing role
     if (user.role !== undefined) {
       values.role = user.role;
@@ -992,54 +993,6 @@ export async function createPricingParameters(data: {
   return paramId;
 }
 
-}
-
-export async function updateService(
-  id: string,
-  data: Partial<typeof services.$inferInsert>
-) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
-  await db
-    .update(services)
-    .set({ ...data, updatedAt: new Date() })
-    .where(eq(services.id, id));
-}
-
-export async function deleteService(id: string) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
-  await db.delete(services).where(eq(services.id, id));
-}
-
-// ============================================================================
-// PRECIFICAÇÃO: PRICING PARAMETERS
-// ============================================================================
-
-export async function createPricingParameters(data: {
-  tenantId: string;
-  monthlyFixedCost: number;
-  laborCost: number;
-  productiveHoursPerMonth: number;
-  defaultTaxRegime?: "MEI" | "SN" | "LP" | "autonomous";
-  volumeDiscounts?: Record<string, number>;
-  riskAdjustment?: number;
-  seniorityAdjustment?: number;
-  taxRates?: Record<string, number>;
-}) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
-  const paramId = nanoid();
-  await db.insert(pricingParameters).values({
-    id: paramId,
-    ...data,
-  } as any);
-
-  return paramId;
-}
 
 export async function getPricingParameters(tenantId: string) {
   const db = await getDb();
@@ -1303,6 +1256,37 @@ export async function getAssessmentProposals(assessmentId: string) {
     .from(assessmentProposals)
     .where(eq(assessmentProposals.assessmentId, assessmentId));
 }
+
+export async function getAssessment(assessmentId: string, tenantId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const { riskAssessments, riskAssessmentItems } = await import("../drizzle/schema_nr01");
+
+  const [assessment] = await db
+    .select()
+    .from(riskAssessments)
+    .where(
+      and(
+        eq(riskAssessments.id, assessmentId),
+        eq(riskAssessments.tenantId, tenantId)
+      )
+    );
+
+  if (!assessment) return null;
+
+  // Get assessment items
+  const items = await db
+    .select()
+    .from(riskAssessmentItems)
+    .where(eq(riskAssessmentItems.assessmentId, assessmentId));
+
+  return {
+    ...assessment,
+    items,
+  };
+}
+
 
 // ============================================================================
 // COPSOQ-II: AVALIAÇÕES DE RISCOS PSICOSSOCIAIS

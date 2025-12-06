@@ -62,11 +62,36 @@ import {
   generateAssessmentReport,
   exportToPDF,
 } from "@/lib/exportUtils";
+import { toast } from "sonner";
 
 export default function RiskAssessments() {
   const { selectedTenant } = useTenant();
   const [, setLocation] = useLocation();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [proposalDialogOpen, setProposalDialogOpen] = useState(false);
+  const [selectedAssessmentId, setSelectedAssessmentId] = useState("");
+  const [selectedClientId, setSelectedClientId] = useState("");
+  const [sendEmailChecked, setSendEmailChecked] = useState(true);
+  
+  const { data: clients } = trpc.clients.list.useQuery();
+  const generateProposalMutation = trpc.assessmentProposals.generateFromAssessment.useMutation({
+    onSuccess: (data) => {
+      toast.success(
+        `Proposta gerada com sucesso! ${data.emailSent ? "Email enviado." : ""}`,
+        {
+          description: `Valor: ${new Intl.NumberFormat("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+          }).format(data.totalValue / 100)}`,
+        }
+      );
+      setProposalDialogOpen(false);
+      setLocation(`/proposals`);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao gerar proposta");
+    },
+  });
 
   // Mock data - será substituído por tRPC queries quando o backend estiver pronto
   const assessments = selectedTenant
@@ -430,6 +455,15 @@ export default function RiskAssessments() {
                               <Download className="h-4 w-4 mr-2" />
                               Exportar Excel
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedAssessmentId(assessment.id);
+                                setProposalDialogOpen(true);
+                              }}
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              Gerar Proposta
+                            </DropdownMenuItem>
                             <DropdownMenuItem className="text-red-600">
                               <Trash2 className="h-4 w-4 mr-2" />
                               Excluir
@@ -454,6 +488,87 @@ export default function RiskAssessments() {
             )}
           </CardContent>
         </Card>
+
+        {/* Generate Proposal Dialog */}
+        <Dialog open={proposalDialogOpen} onOpenChange={setProposalDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Gerar Proposta Comercial</DialogTitle>
+              <DialogDescription>
+                Selecione o cliente para gerar automaticamente uma proposta baseada nos riscos identificados na avaliação.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="client">Cliente *</Label>
+                <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients?.map((client: any) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="sendEmail"
+                  checked={sendEmailChecked}
+                  onChange={(e) => setSendEmailChecked(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                <Label htmlFor="sendEmail" className="text-sm font-normal cursor-pointer">
+                  Enviar proposta por email automaticamente
+                </Label>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                <p className="text-sm text-blue-900">
+                  <strong>Como funciona:</strong>
+                  <br />
+                  • A proposta será gerada automaticamente com base no nível de risco identificado
+                  <br />
+                  • Serviços recomendados serão selecionados conforme a necessidade
+                  <br />
+                  • O cliente receberá um email com a proposta completa (se marcado)
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setProposalDialogOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!selectedClientId) {
+                    toast.error("Selecione um cliente");
+                    return;
+                  }
+                  generateProposalMutation.mutate({
+                    assessmentId: selectedAssessmentId,
+                    clientId: selectedClientId,
+                    sendEmail: sendEmailChecked,
+                  });
+                }}
+                disabled={generateProposalMutation.isPending}
+              >
+                {generateProposalMutation.isPending ? "Gerando..." : "Gerar Proposta"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

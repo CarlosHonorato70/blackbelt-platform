@@ -1,12 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
 import { protectedProcedure, router, tenantProcedure } from "../_core/trpc";
 import * as db from "../db";
 
 export const sectorsRouter = router({
   // Listar setores de um tenant
-  list: publicProcedure
   list: tenantProcedure
     .input(
       z.object({
@@ -16,11 +14,6 @@ export const sectorsRouter = router({
     .query(async ({ ctx, input }) => {
       // TODO: Verificar se usuário tem acesso a este tenant
 
-      const sectors = await db.listSectors(input.tenantId, input.search);
-
-      await db.createAuditLog({
-        tenantId: input.tenantId,
-        userId: ctx.user!.id,
       const sectors = await db.listSectors(ctx.tenantId!, input?.search);
 
       await db.createAuditLog({
@@ -39,7 +32,6 @@ export const sectorsRouter = router({
     }),
 
   // Obter um setor específico
-  get: publicProcedure
   get: tenantProcedure
     .input(
       z.object({
@@ -57,8 +49,6 @@ export const sectorsRouter = router({
       }
 
       await db.createAuditLog({
-        tenantId: input.tenantId,
-        userId: ctx.user!.id,
         tenantId: ctx.tenantId!,
         userId: ctx.user.id,
         action: "READ",
@@ -74,7 +64,6 @@ export const sectorsRouter = router({
     }),
 
   // Criar novo setor
-  create: publicProcedure
   create: tenantProcedure
     .input(
       z.object({
@@ -104,8 +93,6 @@ export const sectorsRouter = router({
       });
 
       await db.createAuditLog({
-        tenantId: input.tenantId,
-        userId: ctx.user!.id,
         tenantId: ctx.tenantId!,
         userId: ctx.user.id,
         action: "CREATE",
@@ -121,7 +108,6 @@ export const sectorsRouter = router({
     }),
 
   // Atualizar setor
-  update: publicProcedure
   update: tenantProcedure
     .input(
       z.object({
@@ -150,8 +136,6 @@ export const sectorsRouter = router({
       await db.updateSector(id, ctx.tenantId!, data);
 
       await db.createAuditLog({
-        tenantId,
-        userId: ctx.user!.id,
         tenantId: ctx.tenantId!,
         userId: ctx.user.id,
         action: "UPDATE",
@@ -167,7 +151,6 @@ export const sectorsRouter = router({
     }),
 
   // Deletar setor
-  delete: publicProcedure
   delete: tenantProcedure
     .input(
       z.object({
@@ -190,8 +173,6 @@ export const sectorsRouter = router({
       await db.deleteSector(input.id, ctx.tenantId!);
 
       await db.createAuditLog({
-        tenantId: input.tenantId,
-        userId: ctx.user!.id,
         tenantId: ctx.tenantId!,
         userId: ctx.user.id,
         action: "DELETE",

@@ -60,7 +60,6 @@ export default function Sectors() {
       utils.sectors.list.invalidate();
       setDialogMode("closed");
     },
-    onError: error => {
     onError: (error: any) => {
       toast.error(error.message || "Erro ao criar setor");
     },

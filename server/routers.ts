@@ -10,13 +10,13 @@ import {
   pricingRouter,
   proposalsRouter,
   servicesRouter,
+  pricingCalculationsRouter,
 } from "./routers/pricing";
 import { peopleRouter } from "./routers/people";
 import { sectorsRouter } from "./routers/sectors";
 import { tenantsRouter } from "./routers/tenants";
 import { riskAssessmentsRouter } from "./routers/riskAssessments";
 import { auditLogsRouter } from "./routers/auditLogs";
-import { pricingRouter } from "./routers/pricing";
 import { userInvitesRouter } from "./routers/userInvites";
 import { rolesPermissionsRouter } from "./routers/rolesPermissions";
 import { complianceReportsRouter } from "./routers/complianceReports";
@@ -41,18 +41,17 @@ export const appRouter = router({
 
   // Routers de precificação
   pricing: pricingRouter,
+  clients: clientsRouter,
+  services: servicesRouter,
+  pricingParameters: pricingParametersRouter,
+  proposals: proposalsRouter,
+  pricingCalculations: pricingCalculationsRouter,
+  assessmentProposals: assessmentProposalsRouter,
 
   // Routers de gestão
   auditLogs: auditLogsRouter,
   userInvites: userInvitesRouter,
   rolesPermissions: rolesPermissionsRouter,
-  // Routers de precificação
-  clients: clientsRouter,
-  services: servicesRouter,
-  pricingParameters: pricingParametersRouter,
-  proposals: proposalsRouter,
-  pricing: pricingRouter,
-  assessmentProposals: assessmentProposalsRouter,
 
   // Routers de avaliações
   assessments: assessmentsRouter,

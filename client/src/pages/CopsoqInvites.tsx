@@ -36,6 +36,8 @@ import {
   Clock,
   AlertCircle,
   Trash2,
+  Plus,
+  UserPlus,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -58,6 +60,12 @@ export default function CopsoqInvites() {
   const [selectedInvitee, setSelectedInvitee] = useState<Invitee | null>(null);
   const [inviteToCancel, setInviteToCancel] = useState<string | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  
+  // Manual entry fields
+  const [manualEmail, setManualEmail] = useState("");
+  const [manualName, setManualName] = useState("");
+  const [manualPosition, setManualPosition] = useState("");
+  const [manualSector, setManualSector] = useState("");
 
   const invitesQuery = trpc.assessments.listInvites.useQuery(
     undefined,
@@ -178,6 +186,42 @@ export default function CopsoqInvites() {
   const handleRemoveInvitee = (index: number) => {
     setInvitees(invitees.filter((_, i) => i !== index));
   };
+  
+  // Adicionar respondente manualmente
+  const handleAddManualInvitee = () => {
+    if (!manualEmail.trim() || !manualName.trim()) {
+      alert("Por favor, preencha pelo menos o email e o nome");
+      return;
+    }
+    
+    // Validar email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(manualEmail)) {
+      alert("Por favor, insira um email válido");
+      return;
+    }
+    
+    // Verificar duplicatas
+    if (invitees.some(inv => inv.email.toLowerCase() === manualEmail.toLowerCase())) {
+      alert("Este email já foi adicionado à lista");
+      return;
+    }
+    
+    const newInvitee: Invitee = {
+      email: manualEmail.trim(),
+      name: manualName.trim(),
+      position: manualPosition.trim() || undefined,
+      sector: manualSector.trim() || undefined,
+    };
+    
+    setInvitees([...invitees, newInvitee]);
+    
+    // Limpar campos
+    setManualEmail("");
+    setManualName("");
+    setManualPosition("");
+    setManualSector("");
+  };
 
   // Cancelar convite
   const handleCancelInvite = async () => {
@@ -230,36 +274,135 @@ export default function CopsoqInvites() {
         <TabsContent value="send" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>1. Importar Respondentes</CardTitle>
+              <CardTitle>1. Adicionar Respondentes</CardTitle>
               <CardDescription>
-                Carregue um arquivo Excel com email e nome dos respondentes
+                Adicione respondentes manualmente ou importe de um arquivo Excel
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <Input
-                    type="file"
-                    accept=".xlsx,.xls,.csv"
-                    onChange={handleFileUpload}
-                    className="cursor-pointer"
-                  />
-                  <p className="text-xs text-gray-600 mt-2">
-                    Formatos aceitos: .xlsx, .xls, .csv
-                  </p>
+            <CardContent className="space-y-6">
+              {/* ENTRADA MANUAL */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <UserPlus className="w-5 h-5 text-blue-600" />
+                  <h3 className="font-semibold text-sm">Adicionar Manualmente</h3>
                 </div>
-                <Button variant="outline" onClick={handleExportTemplate}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Template
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Email <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      type="email"
+                      placeholder="joao@empresa.com"
+                      value={manualEmail}
+                      onChange={e => setManualEmail(e.target.value)}
+                      onKeyPress={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddManualInvitee();
+                        }
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Nome <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      placeholder="João Silva"
+                      value={manualName}
+                      onChange={e => setManualName(e.target.value)}
+                      onKeyPress={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddManualInvitee();
+                        }
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Posição (opcional)
+                    </label>
+                    <Input
+                      placeholder="Gerente"
+                      value={manualPosition}
+                      onChange={e => setManualPosition(e.target.value)}
+                      onKeyPress={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddManualInvitee();
+                        }
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Setor (opcional)
+                    </label>
+                    <Input
+                      placeholder="TI"
+                      value={manualSector}
+                      onChange={e => setManualSector(e.target.value)}
+                      onKeyPress={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddManualInvitee();
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+                <Button
+                  onClick={handleAddManualInvitee}
+                  variant="outline"
+                  className="w-full md:w-auto"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar Respondente
                 </Button>
+              </div>
+
+              {/* DIVISOR */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-gray-500">OU</span>
+                </div>
+              </div>
+
+              {/* IMPORTAR EXCEL */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Upload className="w-5 h-5 text-blue-600" />
+                  <h3 className="font-semibold text-sm">Importar de Excel</h3>
+                </div>
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <Input
+                      type="file"
+                      accept=".xlsx,.xls,.csv"
+                      onChange={handleFileUpload}
+                      className="cursor-pointer"
+                    />
+                    <p className="text-xs text-gray-600 mt-2">
+                      Formatos aceitos: .xlsx, .xls, .csv
+                    </p>
+                  </div>
+                  <Button variant="outline" onClick={handleExportTemplate}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Template
+                  </Button>
+                </div>
               </div>
 
               {invitees.length > 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <p className="font-semibold text-blue-900">
                     {invitees.length} respondente
-                    {invitees.length !== 1 ? "s" : ""} importado
-                    {invitees.length !== 1 ? "s" : ""}
+                    {invitees.length !== 1 ? "s" : ""} na lista
                   </p>
                 </div>
               )}

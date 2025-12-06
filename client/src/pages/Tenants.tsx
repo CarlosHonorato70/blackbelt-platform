@@ -67,7 +67,6 @@ export default function Tenants() {
       utils.tenants.list.invalidate();
       setDialogMode("closed");
     },
-    onError: error => {
     onError: (error: any) => {
       toast.error(error.message || "Erro ao criar empresa");
     },
