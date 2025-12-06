@@ -1315,3 +1315,66 @@ export const loginAttempts = mysqlTable(
 
 export type LoginAttempt = typeof loginAttempts.$inferSelect;
 export type InsertLoginAttempt = typeof loginAttempts.$inferInsert;
+
+// ============================================================================
+// PHASE 10: Onboarding
+// ============================================================================
+
+/**
+ * Onboarding Progress - Track user onboarding wizard progress
+ */
+export const onboardingProgress = mysqlTable(
+  "onboarding_progress",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+    
+    currentStep: int("currentStep").default(1).notNull(),
+    completedSteps: json("completedSteps").notNull(), // Array of completed step numbers
+    checklistItems: json("checklistItems").notNull(), // Array of completed checklist item IDs
+    
+    skipped: boolean("skipped").default(false).notNull(),
+    completedAt: timestamp("completedAt"),
+    
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  table => ({
+    tenantIdx: unique("idx_onboarding_tenant").on(table.tenantId),
+    completedIdx: index("idx_onboarding_completed").on(table.completedAt),
+    skippedIdx: index("idx_onboarding_skipped").on(table.skipped),
+  })
+);
+
+export type OnboardingProgress = typeof onboardingProgress.$inferSelect;
+export type InsertOnboardingProgress = typeof onboardingProgress.$inferInsert;
+
+/**
+ * Industry Templates - Pre-configured templates for different industries
+ */
+export const industryTemplates = mysqlTable(
+  "industry_templates",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    name: varchar("name", { length: 100 }).notNull(),
+    slug: varchar("slug", { length: 100 }).notNull().unique(),
+    description: text("description"),
+    icon: varchar("icon", { length: 50 }),
+    
+    configuration: json("configuration").notNull(), // Compliance frameworks, assessment types, etc.
+    sampleData: json("sampleData"), // Sample assessments, policies, etc.
+    features: json("features"), // Recommended features for this industry
+    
+    isActive: boolean("isActive").default(true).notNull(),
+    
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  table => ({
+    slugIdx: index("idx_template_slug").on(table.slug),
+    activeIdx: index("idx_template_active").on(table.isActive),
+  })
+);
+
+export type IndustryTemplate = typeof industryTemplates.$inferSelect;
+export type InsertIndustryTemplate = typeof industryTemplates.$inferInsert;

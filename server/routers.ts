@@ -33,6 +33,7 @@ import { apiKeysRouter } from "./routers/apiKeys";
 import { twoFactorRouter } from "./routers/twoFactor";
 import { securityRouter } from "./routers/security";
 import { analyticsRouter } from "./routers/analytics";
+import { onboardingRouter } from "./routers/onboarding";
 
 export const appRouter = router({
   system: systemRouter,
@@ -86,6 +87,9 @@ export const appRouter = router({
 
   // Phase 8: Advanced Analytics
   analytics: analyticsRouter,
+
+  // Phase 10: Automated Onboarding
+  onboarding: onboardingRouter,
 });
 
 export type AppRouter = typeof appRouter;
