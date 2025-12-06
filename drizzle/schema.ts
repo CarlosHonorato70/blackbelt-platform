@@ -1028,3 +1028,136 @@ export const pdfExports = mysqlTable(
 
 export type PdfExport = typeof pdfExports.$inferSelect;
 export type InsertPdfExport = typeof pdfExports.$inferInsert;
+
+// ============================================================================
+// PHASE 6: WEBHOOKS E API PÚBLICA
+// ============================================================================
+
+/**
+ * Webhooks - Sistema de notificações para eventos da plataforma
+ */
+export const webhooks = mysqlTable(
+  "webhooks",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+    
+    name: varchar("name", { length: 255 }).notNull(),
+    url: varchar("url", { length: 500 }).notNull(),
+    secret: varchar("secret", { length: 128 }).notNull(), // Para HMAC signature
+    events: json("events").notNull(), // ['assessment.created', 'proposal.sent', ...]
+    active: boolean("active").default(true).notNull(),
+    description: text("description"),
+    
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_webhook_tenant").on(table.tenantId),
+    activeIdx: index("idx_webhook_active").on(table.active),
+  })
+);
+
+export type Webhook = typeof webhooks.$inferSelect;
+export type InsertWebhook = typeof webhooks.$inferInsert;
+
+/**
+ * Webhook Deliveries - Log de entregas de webhooks
+ */
+export const webhookDeliveries = mysqlTable(
+  "webhook_deliveries",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    webhookId: varchar("webhookId", { length: 64 }).notNull(),
+    
+    eventType: varchar("eventType", { length: 100 }).notNull(),
+    payload: json("payload").notNull(),
+    
+    // Resposta HTTP
+    responseStatus: int("responseStatus"),
+    responseBody: text("responseBody"),
+    responseHeaders: json("responseHeaders"),
+    
+    // Status e tentativas
+    deliveredAt: timestamp("deliveredAt"),
+    attempts: int("attempts").default(0).notNull(),
+    maxAttempts: int("maxAttempts").default(5).notNull(),
+    nextRetryAt: timestamp("nextRetryAt"),
+    lastError: text("lastError"),
+    success: boolean("success").default(false),
+    
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    webhookIdx: index("idx_delivery_webhook").on(table.webhookId),
+    eventIdx: index("idx_delivery_event").on(table.eventType),
+    nextRetryIdx: index("idx_delivery_next_retry").on(table.nextRetryAt),
+    createdIdx: index("idx_delivery_created").on(table.createdAt),
+  })
+);
+
+export type WebhookDelivery = typeof webhookDeliveries.$inferSelect;
+export type InsertWebhookDelivery = typeof webhookDeliveries.$inferInsert;
+
+/**
+ * API Keys - Chaves de autenticação para API REST pública
+ */
+export const apiKeys = mysqlTable(
+  "api_keys",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+    
+    name: varchar("name", { length: 255 }).notNull(),
+    keyHash: varchar("keyHash", { length: 64 }).notNull().unique(), // SHA-256 hash
+    keyPrefix: varchar("keyPrefix", { length: 16 }).notNull(), // Para exibição
+    scopes: json("scopes").notNull(), // ['assessments:read', 'proposals:write']
+    
+    lastUsedAt: timestamp("lastUsedAt"),
+    expiresAt: timestamp("expiresAt"),
+    active: boolean("active").default(true).notNull(),
+    description: text("description"),
+    rateLimit: int("rateLimit"), // Requests por hora (null = ilimitado)
+    
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_api_key_tenant").on(table.tenantId),
+    keyHashIdx: index("idx_api_key_hash").on(table.keyHash),
+    activeIdx: index("idx_api_key_active").on(table.active),
+    expiresIdx: index("idx_api_key_expires").on(table.expiresAt),
+  })
+);
+
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type InsertApiKey = typeof apiKeys.$inferInsert;
+
+/**
+ * API Key Usage - Log de uso das API keys (para rate limiting e analytics)
+ */
+export const apiKeyUsage = mysqlTable(
+  "api_key_usage",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    apiKeyId: varchar("apiKeyId", { length: 64 }).notNull(),
+    
+    endpoint: varchar("endpoint", { length: 255 }).notNull(),
+    method: varchar("method", { length: 10 }).notNull(),
+    statusCode: int("statusCode").notNull(),
+    requestDuration: int("requestDuration"), // Em milliseconds
+    
+    ipAddress: varchar("ipAddress", { length: 45 }),
+    userAgent: varchar("userAgent", { length: 500 }),
+    
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    apiKeyIdx: index("idx_api_usage_key").on(table.apiKeyId),
+    createdIdx: index("idx_api_usage_created").on(table.createdAt),
+    endpointIdx: index("idx_api_usage_endpoint").on(table.endpoint),
+  })
+);
+
+export type ApiKeyUsage = typeof apiKeyUsage.$inferSelect;
+export type InsertApiKeyUsage = typeof apiKeyUsage.$inferInsert;
