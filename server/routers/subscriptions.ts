@@ -6,7 +6,7 @@
 
 import { z } from "zod";
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
-import { db } from "../db";
+import { getDb } from "../db";
 import {
   plans,
   subscriptions,
@@ -28,6 +28,8 @@ export const subscriptionsRouter = router({
    * Listar planos públicos disponíveis
    */
   listPublicPlans: publicProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
     const publicPlans = await db
       .select()
       .from(plans)
@@ -42,7 +44,9 @@ export const subscriptionsRouter = router({
    */
   getPlan: publicProcedure
     .input(z.object({ planId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      input }) => {
       const [plan] = await db
         .select()
         .from(plans)
@@ -80,7 +84,9 @@ export const subscriptionsRouter = router({
   /**
    * Obter assinatura do tenant atual
    */
-  getCurrentSubscription: protectedProcedure.query(async ({ ctx }) => {
+  getCurrentSubscription: protectedProcedure.query(async ({ const db = await getDb();
+    if (!db) throw new Error("Database not available");
+    ctx }) => {
     if (!ctx.tenantId) {
       throw new Error("Tenant não selecionado");
     }
@@ -108,7 +114,9 @@ export const subscriptionsRouter = router({
         billingCycle: z.enum(["monthly", "yearly"]).default("monthly"),
       })
     )
-    .mutation(async ({ input, ctx }) => {
+    .mutation(async ({ const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      input, ctx }) => {
       if (!ctx.tenantId) {
         throw new Error("Tenant não selecionado");
       }
@@ -183,7 +191,9 @@ export const subscriptionsRouter = router({
         mercadoPagoSubscriptionId: z.string().optional(),
       })
     )
-    .mutation(async ({ input, ctx }) => {
+    .mutation(async ({ const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      input, ctx }) => {
       if (!ctx.tenantId) {
         throw new Error("Tenant não selecionado");
       }
@@ -202,7 +212,9 @@ export const subscriptionsRouter = router({
   /**
    * Cancelar assinatura (no final do período)
    */
-  cancelSubscription: protectedProcedure.mutation(async ({ ctx }) => {
+  cancelSubscription: protectedProcedure.mutation(async ({ const db = await getDb();
+    if (!db) throw new Error("Database not available");
+    ctx }) => {
     if (!ctx.tenantId) {
       throw new Error("Tenant não selecionado");
     }
@@ -222,7 +234,9 @@ export const subscriptionsRouter = router({
   /**
    * Reativar assinatura cancelada
    */
-  reactivateSubscription: protectedProcedure.mutation(async ({ ctx }) => {
+  reactivateSubscription: protectedProcedure.mutation(async ({ const db = await getDb();
+    if (!db) throw new Error("Database not available");
+    ctx }) => {
     if (!ctx.tenantId) {
       throw new Error("Tenant não selecionado");
     }
@@ -249,7 +263,9 @@ export const subscriptionsRouter = router({
         billingCycle: z.enum(["monthly", "yearly"]).optional(),
       })
     )
-    .mutation(async ({ input, ctx }) => {
+    .mutation(async ({ const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      input, ctx }) => {
       if (!ctx.tenantId) {
         throw new Error("Tenant não selecionado");
       }
@@ -307,7 +323,9 @@ export const subscriptionsRouter = router({
   /**
    * Verificar limites do plano atual
    */
-  checkLimits: protectedProcedure.query(async ({ ctx }) => {
+  checkLimits: protectedProcedure.query(async ({ const db = await getDb();
+    if (!db) throw new Error("Database not available");
+    ctx }) => {
     if (!ctx.tenantId) {
       throw new Error("Tenant não selecionado");
     }
@@ -389,7 +407,9 @@ export const subscriptionsRouter = router({
         proposalsGenerated: z.number().optional(),
       })
     )
-    .mutation(async ({ input, ctx }) => {
+    .mutation(async ({ const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      input, ctx }) => {
       if (!ctx.tenantId) {
         throw new Error("Tenant não selecionado");
       }
@@ -435,7 +455,9 @@ export const subscriptionsRouter = router({
           .optional(),
       })
     )
-    .query(async ({ input, ctx }) => {
+    .query(async ({ const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      input, ctx }) => {
       if (!ctx.tenantId) {
         throw new Error("Tenant não selecionado");
       }
@@ -460,7 +482,9 @@ export const subscriptionsRouter = router({
    */
   getInvoice: protectedProcedure
     .input(z.object({ invoiceId: z.string() }))
-    .query(async ({ input, ctx }) => {
+    .query(async ({ const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      input, ctx }) => {
       if (!ctx.tenantId) {
         throw new Error("Tenant não selecionado");
       }

@@ -5,7 +5,7 @@
  */
 
 import { TRPCError } from "@trpc/server";
-import { db } from "../db";
+import { getDb } from "../db";
 import { subscriptions, plans, usageMetrics } from "../../drizzle/schema";
 import { eq, and, gte, desc } from "drizzle-orm";
 
@@ -44,6 +44,11 @@ export interface SubscriptionContext {
 export async function getSubscriptionContext(
   tenantId: string
 ): Promise<SubscriptionContext | null> {
+  const db = await getDb();
+  if (!db) {
+    return null;
+  }
+
   const [result] = await db
     .select({
       subscription: subscriptions,
@@ -113,6 +118,14 @@ export async function checkSubscriptionLimits(
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
       message: "Assinatura inativa. Por favor, renove sua assinatura.",
+    });
+  }
+
+  const db = await getDb();
+  if (!db) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Banco de dados não disponível",
     });
   }
 
