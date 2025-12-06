@@ -26,6 +26,7 @@ import { webhookRouter } from "./routers/webhook";
 import { subscriptionsRouter } from "./routers/subscriptions";
 import { stripeRouter } from "./routers/stripe";
 import { mercadoPagoRouter } from "./routers/mercadopago";
+import { pdfExportsRouter } from "./routers/pdfExports";
 
 export const appRouter = router({
   system: systemRouter,
@@ -64,6 +65,7 @@ export const appRouter = router({
   subscriptions: subscriptionsRouter,
   stripe: stripeRouter,
   mercadoPago: mercadoPagoRouter,
+  pdfExports: pdfExportsRouter,
 });
 
 export type AppRouter = typeof appRouter;

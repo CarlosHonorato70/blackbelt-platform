@@ -941,3 +941,78 @@ export const planFeatures = mysqlTable(
 
 export type PlanFeature = typeof planFeatures.$inferSelect;
 export type InsertPlanFeature = typeof planFeatures.$inferInsert;
+
+// ============================================================================
+// MONETIZAÇÃO: Exportações PDF
+// ============================================================================
+
+export const pdfExports = mysqlTable(
+  "pdf_exports",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+    userId: varchar("userId", { length: 64 }).notNull(),
+
+    // Tipo de documento
+    documentType: mysqlEnum("documentType", [
+      "proposal",
+      "assessment",
+      "report",
+      "invoice",
+      "contract",
+    ]).notNull(),
+
+    // Referência ao documento original
+    documentId: varchar("documentId", { length: 64 }).notNull(),
+
+    // Informações do arquivo
+    filename: varchar("filename", { length: 255 }).notNull(),
+    fileSize: int("fileSize").notNull(), // Em bytes
+    mimeType: varchar("mimeType", { length: 100 }).default("application/pdf").notNull(),
+
+    // URLs de armazenamento
+    s3Key: varchar("s3Key", { length: 500 }), // Chave no S3
+    s3Bucket: varchar("s3Bucket", { length: 100 }), // Bucket do S3
+    url: varchar("url", { length: 1000 }), // URL pública ou assinada
+
+    // Status
+    status: mysqlEnum("status", ["pending", "processing", "completed", "failed", "expired"])
+      .default("pending")
+      .notNull(),
+
+    // Metadados
+    metadata: json("metadata"), // Dados extras (título, destinatário, etc)
+    errorMessage: text("errorMessage"), // Mensagem de erro se falhou
+
+    // Branding aplicado (para Enterprise)
+    brandingApplied: boolean("brandingApplied").default(false).notNull(),
+    customLogo: varchar("customLogo", { length: 500 }), // URL do logo customizado
+    customColors: json("customColors"), // { primary, secondary, etc }
+
+    // Envio por email
+    emailSent: boolean("emailSent").default(false).notNull(),
+    emailTo: varchar("emailTo", { length: 320 }),
+    emailSentAt: timestamp("emailSentAt"),
+
+    // Expiração (para URLs assinadas temporárias)
+    expiresAt: timestamp("expiresAt"),
+
+    // Download tracking
+    downloadCount: int("downloadCount").default(0).notNull(),
+    lastDownloadedAt: timestamp("lastDownloadedAt"),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_pdf_export_tenant").on(table.tenantId),
+    userIdx: index("idx_pdf_export_user").on(table.userId),
+    docTypeIdx: index("idx_pdf_export_doc_type").on(table.documentType),
+    docIdIdx: index("idx_pdf_export_doc_id").on(table.documentId),
+    statusIdx: index("idx_pdf_export_status").on(table.status),
+    createdIdx: index("idx_pdf_export_created").on(table.createdAt),
+  })
+);
+
+export type PdfExport = typeof pdfExports.$inferSelect;
+export type InsertPdfExport = typeof pdfExports.$inferInsert;
