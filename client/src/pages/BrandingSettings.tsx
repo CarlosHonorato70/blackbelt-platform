@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,7 +49,7 @@ export default function BrandingSettings() {
   );
 
   // Update form when data loads
-  useState(() => {
+  useEffect(() => {
     if (brandingData) {
       setLogoUrl(brandingData.logoUrl || "");
       setFaviconUrl(brandingData.faviconUrl || "");
@@ -58,7 +58,7 @@ export default function BrandingSettings() {
       setEmailSenderName(brandingData.emailSenderName || "");
       setEmailSenderEmail(brandingData.emailSenderEmail || "");
     }
-  });
+  }, [brandingData]);
 
   const updateMutation = trpc.branding.updateBranding.useMutation({
     onSuccess: () => {
