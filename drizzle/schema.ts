@@ -1161,3 +1161,157 @@ export const apiKeyUsage = mysqlTable(
 
 export type ApiKeyUsage = typeof apiKeyUsage.$inferSelect;
 export type InsertApiKeyUsage = typeof apiKeyUsage.$inferInsert;
+
+// ============================================================================
+// PHASE 7: SECURITY IMPROVEMENTS
+// ============================================================================
+
+/**
+ * User 2FA - Two-Factor Authentication configuration
+ */
+export const user2FA = mysqlTable(
+  "user_2fa",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    userId: varchar("userId", { length: 64 }).notNull().unique(),
+    
+    secret: varchar("secret", { length: 128 }).notNull(), // TOTP secret
+    enabled: boolean("enabled").default(false).notNull(),
+    backupCodes: json("backupCodes"), // Array of hashed backup codes
+    verifiedAt: timestamp("verifiedAt"),
+    
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  table => ({
+    userIdx: index("idx_2fa_user").on(table.userId),
+    enabledIdx: index("idx_2fa_enabled").on(table.enabled),
+  })
+);
+
+export type User2FA = typeof user2FA.$inferSelect;
+export type InsertUser2FA = typeof user2FA.$inferInsert;
+
+/**
+ * IP Whitelist - Allowed IP addresses per tenant (Enterprise feature)
+ */
+export const ipWhitelist = mysqlTable(
+  "ip_whitelist",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+    
+    ipAddress: varchar("ipAddress", { length: 45 }).notNull(), // IPv4 or IPv6
+    description: varchar("description", { length: 255 }),
+    active: boolean("active").default(true).notNull(),
+    createdBy: varchar("createdBy", { length: 64 }),
+    
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_ip_whitelist_tenant").on(table.tenantId),
+    ipIdx: index("idx_ip_whitelist_ip").on(table.ipAddress),
+    activeIdx: index("idx_ip_whitelist_active").on(table.active),
+  })
+);
+
+export type IpWhitelist = typeof ipWhitelist.$inferSelect;
+export type InsertIpWhitelist = typeof ipWhitelist.$inferInsert;
+
+/**
+ * Sessions - Active user sessions for session management
+ */
+export const sessions = mysqlTable(
+  "sessions",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    userId: varchar("userId", { length: 64 }).notNull(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+    
+    token: varchar("token", { length: 255 }).notNull().unique(),
+    ipAddress: varchar("ipAddress", { length: 45 }),
+    userAgent: varchar("userAgent", { length: 500 }),
+    deviceInfo: json("deviceInfo"), // Browser, OS, device type
+    
+    lastActivity: timestamp("lastActivity").defaultNow().notNull(),
+    expiresAt: timestamp("expiresAt").notNull(),
+    active: boolean("active").default(true).notNull(),
+    
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    userIdx: index("idx_session_user").on(table.userId),
+    tenantIdx: index("idx_session_tenant").on(table.tenantId),
+    tokenIdx: index("idx_session_token").on(table.token),
+    expiresIdx: index("idx_session_expires").on(table.expiresAt),
+    activeIdx: index("idx_session_active").on(table.active),
+  })
+);
+
+export type Session = typeof sessions.$inferSelect;
+export type InsertSession = typeof sessions.$inferInsert;
+
+/**
+ * Security Alerts - Security-related alerts and notifications
+ */
+export const securityAlerts = mysqlTable(
+  "security_alerts",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+    userId: varchar("userId", { length: 64 }),
+    
+    alertType: varchar("alertType", { length: 50 }).notNull(), // suspicious_login, failed_2fa, etc.
+    severity: mysqlEnum("severity", ["low", "medium", "high", "critical"]).notNull(),
+    message: text("message").notNull(),
+    metadata: json("metadata"), // Additional alert data
+    ipAddress: varchar("ipAddress", { length: 45 }),
+    
+    resolved: boolean("resolved").default(false).notNull(),
+    resolvedAt: timestamp("resolvedAt"),
+    resolvedBy: varchar("resolvedBy", { length: 64 }),
+    
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_security_alert_tenant").on(table.tenantId),
+    userIdx: index("idx_security_alert_user").on(table.userId),
+    typeIdx: index("idx_security_alert_type").on(table.alertType),
+    severityIdx: index("idx_security_alert_severity").on(table.severity),
+    resolvedIdx: index("idx_security_alert_resolved").on(table.resolved),
+    createdIdx: index("idx_security_alert_created").on(table.createdAt),
+  })
+);
+
+export type SecurityAlert = typeof securityAlerts.$inferSelect;
+export type InsertSecurityAlert = typeof securityAlerts.$inferInsert;
+
+/**
+ * Login Attempts - Track login attempts for security monitoring
+ */
+export const loginAttempts = mysqlTable(
+  "login_attempts",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    email: varchar("email", { length: 320 }).notNull(),
+    userId: varchar("userId", { length: 64 }),
+    
+    success: boolean("success").notNull(),
+    ipAddress: varchar("ipAddress", { length: 45 }),
+    userAgent: varchar("userAgent", { length: 500 }),
+    failureReason: varchar("failureReason", { length: 100 }), // invalid_password, 2fa_failed, etc.
+    
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    emailIdx: index("idx_login_attempt_email").on(table.email),
+    userIdx: index("idx_login_attempt_user").on(table.userId),
+    ipIdx: index("idx_login_attempt_ip").on(table.ipAddress),
+    createdIdx: index("idx_login_attempt_created").on(table.createdAt),
+    successIdx: index("idx_login_attempt_success").on(table.success),
+  })
+);
+
+export type LoginAttempt = typeof loginAttempts.$inferSelect;
+export type InsertLoginAttempt = typeof loginAttempts.$inferInsert;

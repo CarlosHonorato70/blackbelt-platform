@@ -30,6 +30,8 @@ import { pdfExportsRouter } from "./routers/pdfExports";
 import { brandingRouter } from "./routers/branding";
 import { webhooksRouter } from "./routers/webhooksManagement";
 import { apiKeysRouter } from "./routers/apiKeys";
+import { twoFactorRouter } from "./routers/twoFactor";
+import { securityRouter } from "./routers/security";
 
 export const appRouter = router({
   system: systemRouter,
@@ -76,6 +78,10 @@ export const appRouter = router({
   // Phase 6: Webhooks and Public API (Enterprise)
   webhooks: webhooksRouter,
   apiKeys: apiKeysRouter,
+
+  // Phase 7: Security Improvements
+  twoFactor: twoFactorRouter,
+  security: securityRouter,
 });
 
 export type AppRouter = typeof appRouter;
