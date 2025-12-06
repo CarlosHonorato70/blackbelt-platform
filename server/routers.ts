@@ -28,6 +28,8 @@ import { stripeRouter } from "./routers/stripe";
 import { mercadoPagoRouter } from "./routers/mercadopago";
 import { pdfExportsRouter } from "./routers/pdfExports";
 import { brandingRouter } from "./routers/branding";
+import { webhooksRouter } from "./routers/webhooksManagement";
+import { apiKeysRouter } from "./routers/apiKeys";
 
 export const appRouter = router({
   system: systemRouter,
@@ -70,6 +72,10 @@ export const appRouter = router({
 
   // Phase 5: White-Label (Enterprise)
   branding: brandingRouter,
+
+  // Phase 6: Webhooks and Public API (Enterprise)
+  webhooks: webhooksRouter,
+  apiKeys: apiKeysRouter,
 });
 
 export type AppRouter = typeof appRouter;
