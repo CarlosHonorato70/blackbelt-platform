@@ -1,4 +1,4 @@
-import { router, protectedProcedure } from "../trpc";
+import { router, protectedProcedure } from "../_core/trpc";
 import { z } from "zod";
 import { db } from "../db";
 import { onboardingProgress, industryTemplates, tenants } from "../../drizzle/schema";
