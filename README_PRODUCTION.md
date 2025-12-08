@@ -5,9 +5,9 @@ Este documento descreve como funciona o deploy automático proposto e como impla
 ## O que o workflow faz
 1. Ao dar push na branch `main`:
    - Constrói a imagem Docker usando `Dockerfile.production`.
-   - Publica a imagem no GitHub Container Registry (GHCR) com a tag `ghcr.io/<owner>/blackbelt-platform:<sha>`.
+   - Publica a imagem no GitHub Container Registry (GHCR) com a tag `ghcr.io/<github-username>/blackbelt-platform:<commit-sha>` (onde `<github-username>` é o owner do repositório).
    - Copia `docker-compose.production.yml` para o servidor via SCP.
-   - Executa comandos remotos (docker compose pull && docker compose up -d).
+   - Executa comandos remotos (docker compose pull && docker compose up -d) passando a imagem correta via variável de ambiente.
 
 ## Secrets necessários (GitHub → Settings → Secrets and variables → Actions)
 - GHCR_TOKEN — token com permissão `write:packages` para publicar imagens em ghcr.io.
@@ -31,6 +31,7 @@ Este documento descreve como funciona o deploy automático proposto e como impla
 ## Passo-a-passo para deploy manual (se preferir não usar Actions)
 1. Construa a imagem localmente ou use a imagem publicada:
    ```bash
+   # Substituir <owner> pelo username do GitHub (ex: carloshonorato70)
    docker build -f Dockerfile.production -t ghcr.io/<owner>/blackbelt-platform:latest .
    docker push ghcr.io/<owner>/blackbelt-platform:latest
    ```
@@ -43,6 +44,8 @@ Este documento descreve como funciona o deploy automático proposto e como impla
 3. Conecte-se ao servidor via SSH e execute:
    ```bash
    cd /home/deploy/blackbelt
+   # Defina a imagem a ser usada (ou deixe usar a padrão do docker-compose)
+   export DOCKER_IMAGE=ghcr.io/<owner>/blackbelt-platform:latest
    docker compose pull
    docker compose up -d --remove-orphans
    docker image prune -f
@@ -100,6 +103,40 @@ Este script executa automaticamente:
    sudo mkdir -p docker/nginx/ssl
    sudo cp /etc/letsencrypt/live/seu-dominio.com/*.pem docker/nginx/ssl/
    ```
+
+## Variáveis de ambiente importantes
+
+### No servidor (.env)
+O arquivo `.env` no servidor deve conter todas as variáveis necessárias para a aplicação:
+
+```bash
+# Banco de dados
+MONGO_ROOT_USER=admin
+MONGO_ROOT_PASSWORD=senha_segura
+MONGO_DATABASE=blackbelt
+
+# Autenticação
+JWT_SECRET=seu_jwt_secret_aqui
+SESSION_SECRET=seu_session_secret_aqui
+
+# Email (SMTP)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=seu_email@gmail.com
+SMTP_PASSWORD=sua_senha_app
+SMTP_FROM=noreply@blackbelt.com.br
+
+# Aplicação
+CORS_ORIGIN=https://seu-dominio.com
+VITE_APP_TITLE="Black Belt Platform"
+VITE_APP_LOGO="/logo.png"
+
+# Imagem Docker (opcional - sobrescreve a padrão do docker-compose)
+DOCKER_IMAGE=ghcr.io/carloshonorato70/blackbelt-platform:latest
+```
+
+### Passada pelo workflow
+O workflow passa automaticamente a variável `DOCKER_IMAGE` com a imagem correta (incluindo o SHA do commit) para garantir que a versão exata seja deployada.
 
 ## Autenticação no GHCR
 

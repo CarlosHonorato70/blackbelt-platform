@@ -43,7 +43,7 @@ jobs:
 
       - name: Set image output
         id: set-image
-        run: echo "::set-output name=image::ghcr.io/${{ github.repository_owner }}/blackbelt-platform:${{ github.sha }}"
+        run: echo "image=ghcr.io/${{ github.repository_owner }}/blackbelt-platform:${{ github.sha }}" >> $GITHUB_OUTPUT
 
   deploy:
     name: Deploy to remote server via SSH
@@ -56,7 +56,7 @@ jobs:
         run: echo "Deploying image ${{ needs.build-and-push.outputs.image }}"
 
       - name: Copy docker-compose.production.yml to server
-        uses: appleboy/scp-action@v0.1.5
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
@@ -66,15 +66,19 @@ jobs:
           target: "${{ secrets.DEPLOY_PATH }}"
 
       - name: Run remote deploy commands (pull + up)
-        uses: appleboy/ssh-action@v0.1.7
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          DOCKER_IMAGE: ${{ needs.build-and-push.outputs.image }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           port: ${{ secrets.SSH_PORT || 22 }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: DOCKER_IMAGE
           script: |
             set -e
             cd "${{ secrets.DEPLOY_PATH }}"
-            docker compose pull || true
+            export DOCKER_IMAGE="${DOCKER_IMAGE}"
+            docker compose pull
             docker compose up -d --remove-orphans
             docker image prune -f
