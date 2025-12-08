@@ -1,4 +1,6 @@
-# Etapa 1 - Instala dependências (inclusive dev) em imagem leve para cache eficiente
+# ───────────────────────────────────────────────────────────────
+# 1) STAGE: deps — instala todas dependências + pnpm
+# ───────────────────────────────────────────────────────────────
 FROM node:22-alpine AS deps
 
 WORKDIR /app
@@ -10,45 +12,51 @@ RUN npm install -g pnpm@10.4.1
 COPY package.json pnpm-lock.yaml ./
 COPY patches ./patches
 
-# Instala todas dependências (inclui devDependencies)
+# Instala dependências (dev + prod)
 RUN pnpm install --frozen-lockfile
 
 
-# Etapa 2 - Builder: gera frontend e backend
+# ───────────────────────────────────────────────────────────────
+# 2) STAGE: builder — compila frontend + backend
+# ───────────────────────────────────────────────────────────────
 FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copia node_modules completo da etapa anterior
+# Instala pnpm no builder também (necessário!)
+RUN npm install -g pnpm@10.4.1
+
+# Copia node_modules inteiro
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copia todo o código-fonte
+# Copia o código-fonte
 COPY . .
 
-# Copia patches novamente
-COPY patches ./patches
-
-# Build: frontend (Vite) + backend (ESBuild)
+# Buildar frontend + backend
 RUN pnpm build
 
 
-# Etapa 3 - Runtime: imagem final, apenas produção
+# ───────────────────────────────────────────────────────────────
+# 3) STAGE: runtime — imagem final
+# ───────────────────────────────────────────────────────────────
 FROM node:22-alpine AS runtime
 
 WORKDIR /app
 
-# Copia somente as dependências de produção
+# Instala pnpm global (runtime precisa dele!)
+RUN npm install -g pnpm@10.4.1
+
+# Instala somente dependências produção
+COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --prod --frozen-lockfile
 
-# Copia o dist gerado do backend
+# Copia dist do builder (APENAS back-end!)
 COPY --from=builder /app/dist ./dist
 
-# ❗ Importante: SEU PROJETO NÃO TEM /client/dist — removemos essa linha
+# (frontend já está dentro de /dist/public gerado pelo Vite)
 
-COPY patches ./patches
-
-# Expõe a porta
+# Porta exposta
 EXPOSE 3000
 
-# Comando de inicialização — ajuste se necessário
+# Comando de inicialização
 CMD ["node", "dist/index.js"]
