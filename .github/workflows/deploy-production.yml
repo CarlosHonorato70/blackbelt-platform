@@ -1,220 +1,80 @@
-name: Deploy to Production
+name: Build and Deploy (production)
 
 on:
   push:
     branches:
       - main
-    tags:
-      - 'v*.*.*'
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deployment environment'
-        required: true
-        default: 'production'
-        type: choice
-        options:
-          - production
-          - staging
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
-  test:
-    name: Run Tests
+  build-and-push:
+    name: Build and push Docker image
     runs-on: ubuntu-latest
-    
+    outputs:
+      image: ${{ steps.set-image.outputs.image }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.x
-          cache: 'pnpm'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Type check
-        run: pnpm tsc --noEmit
-
-      - name: Run tests
-        run: pnpm test
-        continue-on-error: true
-
-  build:
-    name: Build Application
-    runs-on: ubuntu-latest
-    needs: test
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.x
-          cache: 'pnpm'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build application
-        run: pnpm build
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts
-          path: |
-            dist/
-            client/dist/
-          retention-days: 7
-
-  docker:
-    name: Build and Push Docker Image
-    runs-on: ubuntu-latest
-    needs: build
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ secrets.DOCKER_USERNAME }}/blackbelt-platform
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix={{branch}}-
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v4
         with:
           context: .
           file: ./Dockerfile.production
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/blackbelt-platform:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/blackbelt-platform:buildcache,mode=max
+          tags: ghcr.io/${{ github.repository_owner }}/blackbelt-platform:${{ github.sha }}
+          platforms: linux/amd64,linux/arm64
+
+      - name: Set image output
+        id: set-image
+        run: echo "::set-output name=image::ghcr.io/${{ github.repository_owner }}/blackbelt-platform:${{ github.sha }}"
 
   deploy:
-    name: Deploy to Server
+    name: Deploy to remote server via SSH
+    needs: build-and-push
     runs-on: ubuntu-latest
-    needs: docker
-    environment:
-      name: ${{ github.event.inputs.environment || 'production' }}
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.8.0
+      - name: Wait for previous job
+        run: echo "Deploying image ${{ needs.build-and-push.outputs.image }}"
+
+      - name: Copy docker-compose.production.yml to server
+        uses: appleboy/scp-action@v0.1.5
         with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "docker-compose.production.yml"
+          target: "${{ secrets.DEPLOY_PATH }}"
 
-      - name: Add server to known hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Deploy to server
-        env:
-          SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-        run: |
-          ssh $SERVER_USER@$SERVER_HOST << 'EOF'
+      - name: Run remote deploy commands (pull + up)
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
             set -e
-            cd ${{ secrets.DEPLOY_PATH }}
-            
-            # Pull latest code
-            git pull origin main
-            
-            # Pull latest Docker image
-            docker compose -f docker-compose.production.yml pull
-            
-            # Stop old containers
-            docker compose -f docker-compose.production.yml down
-            
-            # Start new containers
-            docker compose -f docker-compose.production.yml up -d
-            
-            # Wait for health checks
-            sleep 30
-            
-            # Check container status
-            docker compose -f docker-compose.production.yml ps
-            
-            # Show logs
-            docker compose -f docker-compose.production.yml logs --tail=50
-          EOF
-
-      - name: Health check
-        run: |
-          sleep 10
-          curl -f https://${{ secrets.PRODUCTION_URL }}/health || exit 1
-
-      - name: Notify deployment
-        if: always()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          text: 'Deployment to ${{ github.event.inputs.environment || 'production' }} ${{ job.status }}'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
-
-  rollback:
-    name: Rollback on Failure
-    runs-on: ubuntu-latest
-    needs: deploy
-    if: failure()
-    
-    steps:
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.8.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Rollback deployment
-        env:
-          SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-        run: |
-          ssh $SERVER_USER@$SERVER_HOST << 'EOF'
-            set -e
-            cd ${{ secrets.DEPLOY_PATH }}
-            
-            # Rollback to previous version
-            docker compose -f docker-compose.production.yml down
-            git reset --hard HEAD~1
-            docker compose -f docker-compose.production.yml up -d
-          EOF
+            cd "${{ secrets.DEPLOY_PATH }}"
+            docker compose pull || true
+            docker compose up -d --remove-orphans
+            docker image prune -f

@@ -1,308 +1,156 @@
-# 🏢 Black Belt Platform - NR-01 Psychosocial Risk Assessment
+# Deploy para Produção (GitHub Actions → GHCR → SSH → Docker Compose)
 
-[![CI](https://github.com/CarlosHonorato70/blackbelt-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/CarlosHonorato70/blackbelt-platform/actions/workflows/ci.yml)
-[![Tests](https://github.com/CarlosHonorato70/blackbelt-platform/actions/workflows/test.yml/badge.svg)](https://github.com/CarlosHonorato70/blackbelt-platform/actions/workflows/test.yml)
-[![Security](https://github.com/CarlosHonorato70/blackbelt-platform/actions/workflows/security.yml/badge.svg)](https://github.com/CarlosHonorato70/blackbelt-platform/actions/workflows/security.yml)
+Este documento descreve como funciona o deploy automático proposto e como implantar manualmente se necessário.
 
-Plataforma completa para gestão de avaliações de riscos psicossociais conforme NR-01, incluindo questionário COPSOQ-II, geração automática de propostas comerciais e sistema de precificação inteligente.
+## O que o workflow faz
+1. Ao dar push na branch `main`:
+   - Constrói a imagem Docker usando `Dockerfile.production`.
+   - Publica a imagem no GitHub Container Registry (GHCR) com a tag `ghcr.io/<owner>/blackbelt-platform:<sha>`.
+   - Copia `docker-compose.production.yml` para o servidor via SCP.
+   - Executa comandos remotos (docker compose pull && docker compose up -d).
 
-## ✨ Características Principais
+## Secrets necessários (GitHub → Settings → Secrets and variables → Actions)
+- GHCR_TOKEN — token com permissão `write:packages` para publicar imagens em ghcr.io.
+- SSH_PRIVATE_KEY — chave privada PEM do usuário que fará SSH (sem passphrase preferível).
+- SSH_HOST — host/IP do servidor de destino.
+- SSH_PORT — (opcional) porta SSH (padrão 22).
+- SSH_USER — usuário SSH que realizará o deploy (ex.: deploy).
+- DEPLOY_PATH — pasta remota onde ficará `docker-compose.production.yml` (ex.: `/home/deploy/blackbelt`).
+- Variáveis de aplicação (DB/segredos): recomenda-se manter estas no servidor (arquivo `.env` protegido) ou em um secret manager:
+  - DATABASE_URL
+  - JWT_SECRET
+  - OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET
+  - OUTRAS variáveis quaisquer necessárias
 
-- 🔐 **Multi-tenant** com isolamento completo de dados
-- 📋 **COPSOQ-II** - Questionário completo com 76 questões e 12 dimensões psicossociais
-- ⚠️ **Avaliações NR-01** - Sistema completo de avaliação de riscos
-- 💰 **Precificação Inteligente** - Geração automática de propostas baseadas em risco
-- 📧 **Sistema de Email** - Templates profissionais para propostas e convites
-- 🔒 **Segurança Robusta** - Rate limiting, CORS, headers de segurança
-- 📊 **Dashboards** - Visualização de indicadores e métricas
-- 🧪 **149 Testes** - Cobertura completa (unit, integration, E2E)
+## Requisitos no servidor de destino
+- Docker (compatível com Compose v2)
+- Docker Compose (comando `docker compose` disponível)
+- Usuário SSH com permissão para executar Docker (membro do grupo `docker` ou sudo sem senha configurado)
+- Espaço em disco suficiente e conectividade para puxar imagens
 
-## 🚀 Quick Start
+## Passo-a-passo para deploy manual (se preferir não usar Actions)
+1. Construa a imagem localmente ou use a imagem publicada:
+   ```bash
+   docker build -f Dockerfile.production -t ghcr.io/<owner>/blackbelt-platform:latest .
+   docker push ghcr.io/<owner>/blackbelt-platform:latest
+   ```
 
-### Desenvolvimento Local
+2. Copie o arquivo docker-compose.production.yml para o servidor:
+   ```bash
+   scp docker-compose.production.yml user@host:/home/deploy/blackbelt/
+   ```
 
-```bash
-# Clone o repositório
-git clone https://github.com/CarlosHonorato70/blackbelt-platform.git
-cd blackbelt-platform
+3. Conecte-se ao servidor via SSH e execute:
+   ```bash
+   cd /home/deploy/blackbelt
+   docker compose pull
+   docker compose up -d --remove-orphans
+   docker image prune -f
+   ```
 
-# Instale as dependências
-pnpm install
-
-# Configure as variáveis de ambiente
-cp .env.example .env
-# Edite .env com suas configurações
-
-# Inicie o banco de dados com Docker
-pnpm docker:up
-
-# Execute as migrações
-pnpm db:push
-
-# Inicie o servidor de desenvolvimento
-pnpm dev
-```
-
-Acesse: http://localhost:5173
-
-### Produção com Docker
-
-```bash
-# Clone e configure
-git clone https://github.com/CarlosHonorato70/blackbelt-platform.git
-cd blackbelt-platform
-cp .env.production.template .env
-
-# Configure SSL (Let's Encrypt recomendado)
-sudo certbot certonly --standalone -d seudomain.com
-
-# Copie certificados
-sudo mkdir -p docker/nginx/ssl
-sudo cp /etc/letsencrypt/live/seudomain.com/*.pem docker/nginx/ssl/
-
-# Inicie os serviços
-docker compose -f docker-compose.production.yml up -d
-
-# Verifique o status
-docker compose -f docker-compose.production.yml ps
-```
-
-Ver [PRODUCTION_DEPLOYMENT.md](./PRODUCTION_DEPLOYMENT.md) para guia completo.
-
-## 📚 Documentação
-
-- **[Guia do Usuário](./USER_GUIDE.md)** - Manual completo em português
-- **[API Documentation](./API_DOCUMENTATION.md)** - Referência completa da API tRPC
-- **[Developer Guide](./DEVELOPER_GUIDE.md)** - Arquitetura e padrões de desenvolvimento
-- **[Security Documentation](./SECURITY_DOCUMENTATION.md)** - Segurança e compliance
-- **[Deployment Guide](./DEPLOYMENT_GUIDE.md)** - Deploy para produção detalhado
-- **[Production Deployment](./PRODUCTION_DEPLOYMENT.md)** - Guia rápido de deploy
-
-## 🏗️ Arquitetura
-
-### Stack Tecnológica
-
-**Frontend:**
-- React 18 + TypeScript
-- Vite (build tool)
-- TanStack Query (React Query)
-- Radix UI + Tailwind CSS
-- React Hook Form + Zod
-
-**Backend:**
-- Node.js 22 + TypeScript
-- tRPC (type-safe API)
-- Express.js
-- Drizzle ORM
-- MongoDB
-
-**Infraestrutura:**
-- Docker + Docker Compose
-- Nginx (reverse proxy)
-- GitHub Actions (CI/CD)
-- Let's Encrypt (SSL)
-
-### Estrutura do Projeto
-
-```
-blackbelt-platform/
-├── client/                 # Frontend React
-│   ├── src/
-│   │   ├── pages/         # Páginas da aplicação
-│   │   ├── components/    # Componentes reutilizáveis
-│   │   └── lib/           # Utilitários e tRPC client
-├── server/                # Backend Node.js
-│   ├── _core/            # Core do servidor
-│   │   ├── index.ts      # Entry point
-│   │   ├── security.ts   # Middleware de segurança
-│   │   └── email.ts      # Sistema de email
-│   ├── routers/          # Routers tRPC
-│   ├── db.ts             # Database layer
-│   └── __tests__/        # Testes
-├── docker/               # Configurações Docker
-│   ├── nginx/           # Nginx configs
-│   └── scripts/         # Scripts de deploy
-└── shared/              # Código compartilhado
-```
-
-## 🧪 Testes
+## Script de deploy remoto
+Um script auxiliar está disponível em `scripts/deploy_remote.sh` para facilitar o deploy manual no servidor remoto:
 
 ```bash
-# Executar todos os testes
-pnpm test
-
-# Testes unitários
-pnpm test:unit
-
-# Testes de integração
-pnpm test:integration
-
-# Testes E2E
-pnpm test:e2e
-
-# Coverage
-pnpm test:coverage
+# No servidor remoto, execute:
+./scripts/deploy_remote.sh /home/deploy/blackbelt
 ```
 
-**Status dos Testes:**
-- ✅ 149 testes passando (100%)
-- Unit Tests: 33 testes
-- Validation Tests: 57 testes
-- Pricing Tests: 23 testes
-- E2E Tests: 36 testes
+Este script executa automaticamente:
+- `docker compose pull` - Puxa as últimas imagens
+- `docker compose up -d --remove-orphans` - Atualiza os containers
+- `docker image prune -f` - Remove imagens antigas
 
-## 🔒 Segurança
+## Configuração inicial do servidor
 
-A plataforma implementa múltiplas camadas de segurança:
+1. **Instalar Docker e Docker Compose:**
+   ```bash
+   curl -fsSL https://get.docker.com -o get-docker.sh
+   sudo sh get-docker.sh
+   sudo usermod -aG docker $USER
+   ```
 
-- **Rate Limiting**: 5 configurações diferentes por tipo de endpoint
-- **CORS**: Validação de origem com whitelist
-- **Headers de Segurança**: Helmet (CSP, HSTS, XSS Protection)
-- **Autenticação**: OAuth 2.0 + JWT
-- **Autorização**: RBAC + ABAC
-- **Criptografia**: Dados sensíveis em repouso e em trânsito
-- **Auditoria**: Logs completos de todas as ações
-- **Isolamento Multi-tenant**: Segregação completa de dados
+2. **Criar estrutura de diretórios:**
+   ```bash
+   mkdir -p /home/deploy/blackbelt
+   cd /home/deploy/blackbelt
+   ```
 
-Ver [SECURITY_DOCUMENTATION.md](./SECURITY_DOCUMENTATION.md) para detalhes.
+3. **Configurar arquivo .env no servidor:**
+   ```bash
+   # Criar .env com variáveis de ambiente necessárias
+   cat > .env << 'EOF'
+   MONGO_ROOT_USER=admin
+   MONGO_ROOT_PASSWORD=senha_segura
+   MONGO_DATABASE=blackbelt
+   JWT_SECRET=seu_jwt_secret_aqui
+   SESSION_SECRET=seu_session_secret_aqui
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USER=seu_email@gmail.com
+   SMTP_PASSWORD=sua_senha_app
+   SMTP_FROM=noreply@blackbelt.com.br
+   CORS_ORIGIN=https://seu-dominio.com
+   EOF
+   ```
 
-## 🚢 Deploy e CI/CD
+4. **Configurar SSL (Let's Encrypt):**
+   ```bash
+   sudo certbot certonly --standalone -d seu-dominio.com
+   sudo mkdir -p docker/nginx/ssl
+   sudo cp /etc/letsencrypt/live/seu-dominio.com/*.pem docker/nginx/ssl/
+   ```
 
-### Deploy Automático
+## Autenticação no GHCR
 
-O projeto inclui GitHub Actions configurado para deploy automático:
-
-1. **Push para `main`** → Deploy para produção
-2. **Tags `v*.*.*`** → Release versionado
-3. **Pull Requests** → Testes automáticos
-
-### Deploy Manual
+Para fazer pull das imagens privadas do GHCR no servidor:
 
 ```bash
-# Build da aplicação
-pnpm build
-
-# Deploy com Docker
-docker compose -f docker-compose.production.yml up -d
-
-# Ou deploy manual
-NODE_ENV=production node dist/index.js
+# Criar um Personal Access Token no GitHub com permissão read:packages
+echo "SEU_TOKEN_AQUI" | docker login ghcr.io -u SEU_USERNAME --password-stdin
 ```
 
-### Comandos Úteis
+## Troubleshooting
+
+### Erro ao fazer pull da imagem
+- Verifique se o usuário está autenticado no GHCR: `docker login ghcr.io`
+- Verifique se a imagem existe: `docker pull ghcr.io/<owner>/blackbelt-platform:<sha>`
+
+### Permissão negada ao executar docker
+- Adicione o usuário ao grupo docker: `sudo usermod -aG docker $USER`
+- Faça logout e login novamente
+
+### Containers não iniciam
+- Verifique os logs: `docker compose logs -f`
+- Verifique se todas as variáveis de ambiente estão configuradas no .env
+- Verifique se as portas não estão em uso: `sudo netstat -tulpn | grep :80`
+
+## Rollback
+
+Para reverter para uma versão anterior:
 
 ```bash
-# Backup do banco
-docker compose -f docker-compose.production.yml run --rm mongodb-backup
+cd /home/deploy/blackbelt
+# Edite docker-compose.production.yml para usar a tag anterior
+# Ou especifique a imagem diretamente:
+docker compose pull
+docker compose up -d --remove-orphans
+```
 
-# Restore do banco
-docker/scripts/restore.sh /backups/backup_file.tar.gz
+## Monitoramento
+
+Após o deploy, verifique:
+
+```bash
+# Status dos containers
+docker compose ps
+
+# Logs em tempo real
+docker compose logs -f
 
 # Health check
-docker/scripts/health-check.sh
+curl http://localhost:3000/health
 
-# Migrações
-docker/scripts/migrate.sh
-
-# Logs
-docker compose -f docker-compose.production.yml logs -f
-
-# Restart
-docker compose -f docker-compose.production.yml restart
+# Uso de recursos
+docker stats
 ```
-
-## 📊 Funcionalidades
-
-### Módulo NR-01
-
-- Avaliação de riscos psicossociais
-- Gestão de fatores de risco
-- Matriz de severidade/probabilidade
-- Planos de ação e intervenções
-- Relatórios de compliance
-- Exportação (PDF, Excel, JSON)
-
-### Módulo COPSOQ-II
-
-- Questionário completo (76 questões)
-- 12 dimensões psicossociais
-- Convites em massa por email
-- Sistema de lembretes automáticos
-- Agregação de respostas
-- Classificação de risco organizacional
-- Relatórios com estatísticas
-
-### Módulo de Precificação
-
-- Cadastro de clientes e serviços
-- Cálculo automático de preços
-- Impostos por regime tributário
-- Geração de propostas comerciais
-- Integração com avaliações
-- Email automático de propostas
-
-### Funcionalidades Gerais
-
-- Multi-tenant com seleção visual
-- Gestão de usuários e permissões (RBAC/ABAC)
-- Dashboard com indicadores
-- Auditoria completa (logs)
-- Notificações em tempo real
-- Exportação de dados (LGPD)
-- Guia interativo para novos usuários
-
-## 🌍 Ambientes
-
-- **Desenvolvimento**: http://localhost:5173
-- **Produção**: https://seudomain.com
-- **API**: https://seudomain.com/api
-- **Health Check**: https://seudomain.com/health
-
-## 📈 Monitoramento
-
-O sistema inclui:
-
-- Health checks automáticos (HTTP, Database, Resources)
-- Logs estruturados com rotação
-- Métricas de performance (Docker stats)
-- Dashboard de segurança
-- Alertas de backup e falhas
-
-## 🤝 Contribuindo
-
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
-
-## 📝 Licença
-
-Este projeto é propriedade da Black Belt Consultoria. Todos os direitos reservados.
-
-## 👥 Equipe
-
-- **Carlos Honorato** - Founder & Lead Developer
-- **GitHub Copilot** - AI Development Assistant
-
-## 📞 Suporte
-
-- 📧 Email: suporte@blackbelt.com.br
-- 🐛 Issues: [GitHub Issues](https://github.com/CarlosHonorato70/blackbelt-platform/issues)
-- 📖 Docs: Ver links de documentação acima
-
-## 🎯 Roadmap
-
-- [x] #37 - Permissões Multi-Tenant
-- [x] #38 - Avaliações NR-01 (Backend + Frontend)
-- [x] #39 - Convites COPSOQ (com lembretes)
-- [x] #40 - Integração Avaliação → Proposta → Email
-- [x] #41 - Testes E2E Finais
-- [x] #42 - Segurança e Limitação de Taxa
-- [x] #43 - Documentação Completa
-- [x] #44 - Implantação e Produção
-- [ ] Melhorias futuras: Redis, Email Queue, S3, Analytics avançados
-
----
-
-**Black Belt Consultoria** - Excelência em Gestão de Riscos Psicossociais
