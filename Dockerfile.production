@@ -1,5 +1,8 @@
 # Multi-stage production-optimized Dockerfile for Black Belt Platform
+
+##############################
 # Stage 1: Dependencies
+##############################
 FROM node:22-alpine AS deps
 WORKDIR /app
 
@@ -8,55 +11,64 @@ RUN npm install -g pnpm@8
 
 # Copy dependency files
 COPY package.json pnpm-lock.yaml ./
+COPY patches ./patches
 
 # Install all dependencies (including devDependencies for build)
 RUN pnpm install --frozen-lockfile
 
+
+##############################
 # Stage 2: Builder
+##############################
 FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Install pnpm
 RUN npm install -g pnpm@8
 
-# Copy dependencies from deps stage
+# Copy deps from previous stage
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy source code
+# Copy the full project
 COPY . .
+COPY patches ./patches
 
 # Build frontend and backend
 RUN pnpm build
 
-# Stage 3: Production runtime
+
+##############################
+# Stage 3: Production Runtime
+##############################
 FROM node:22-alpine AS runtime
 WORKDIR /app
 
-# Install pnpm and production dependencies only
+# Install pnpm
 RUN npm install -g pnpm@8
 
 # Copy dependency files
 COPY package.json pnpm-lock.yaml ./
+COPY patches ./patches
 
-# Install production dependencies only
+# Install ONLY production dependencies
 RUN pnpm install --prod --frozen-lockfile
 
 # Copy built assets from builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/client/dist ./client/dist
 
-# Copy necessary config files
+# Config files required by your app
 COPY drizzle.config.ts ./
 COPY tsconfig.json ./
 
-# Create non-root user for security
+# Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001 && \
     chown -R nodejs:nodejs /app
 
 USER nodejs
 
-# Expose application port
+# Expose port
 EXPOSE 3000
 
 # Health check
