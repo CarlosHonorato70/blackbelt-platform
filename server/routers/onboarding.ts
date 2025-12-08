@@ -1,162 +1,15 @@
 import { router, protectedProcedure } from "../_core/trpc";
-import { z } from "zod";
 import { getDb } from "../db";
-import { onboardingProgress, industryTemplates, tenants } from "../../drizzle/schema";
-import { eq, and } from "drizzle-orm";
+import { onboardingProgress, industryTemplates } from "../../drizzle/schema";
+import { eq } from "drizzle-orm";
 
-// Industry template configurations
-const INDUSTRY_TEMPLATES = [
-  {
-    name: "Healthcare",
-    slug: "healthcare",
-    description: "HIPAA compliance and patient data protection",
-    icon: "🏥",
-    configuration: {
-      complianceFrameworks: ["HIPAA", "HITECH"],
-      assessmentTypes: ["Patient Data Security", "Medical Records Audit", "PHI Protection"],
-      policies: ["Privacy Policy", "Data Breach Response", "Patient Rights"],
-    },
-    features: ["encryption", "access_logs", "audit_trail"],
-  },
-  {
-    name: "Finance",
-    slug: "finance",
-    description: "Financial compliance and SOC 2 standards",
-    icon: "💰",
-    configuration: {
-      complianceFrameworks: ["SOC 2", "PCI-DSS", "GLBA"],
-      assessmentTypes: ["Financial Controls", "Transaction Security", "Data Protection"],
-      policies: ["Financial Privacy", "Payment Security", "Fraud Prevention"],
-    },
-    features: ["encryption", "transaction_logs", "2fa_required"],
-  },
-  {
-    name: "Technology",
-    slug: "technology",
-    description: "ISO 27001 and GDPR compliance",
-    icon: "💻",
-    configuration: {
-      complianceFrameworks: ["ISO 27001", "GDPR", "SOC 2"],
-      assessmentTypes: ["Security Assessment", "Data Privacy", "Access Control"],
-      policies: ["Information Security", "Data Protection", "Incident Response"],
-    },
-    features: ["encryption", "audit_trail", "api_security"],
-  },
-  {
-    name: "Manufacturing",
-    slug: "manufacturing",
-    description: "ISO 9001 and safety protocols",
-    icon: "🏭",
-    configuration: {
-      complianceFrameworks: ["ISO 9001", "OSHA", "Environmental Standards"],
-      assessmentTypes: ["Quality Control", "Safety Audit", "Environmental Impact"],
-      policies: ["Safety Procedures", "Quality Management", "Environmental Policy"],
-    },
-    features: ["document_control", "change_management", "audit_trail"],
-  },
-  {
-    name: "Retail",
-    slug: "retail",
-    description: "PCI-DSS and consumer protection",
-    icon: "🛒",
-    configuration: {
-      complianceFrameworks: ["PCI-DSS", "Consumer Protection", "LGPD"],
-      assessmentTypes: ["Payment Security", "Customer Data", "Store Operations"],
-      policies: ["Payment Processing", "Customer Privacy", "Return Policy"],
-    },
-    features: ["payment_security", "customer_data_protection"],
-  },
-  {
-    name: "Education",
-    slug: "education",
-    description: "FERPA and student data privacy",
-    icon: "🎓",
-    configuration: {
-      complianceFrameworks: ["FERPA", "COPPA", "Data Privacy"],
-      assessmentTypes: ["Student Data Protection", "Educational Records", "Campus Security"],
-      policies: ["Student Privacy", "Data Access", "Educational Standards"],
-    },
-    features: ["student_data_protection", "access_control"],
-  },
-  {
-    name: "Government",
-    slug: "government",
-    description: "NIST and government security frameworks",
-    icon: "🏛️",
-    configuration: {
-      complianceFrameworks: ["NIST", "FedRAMP", "FISMA"],
-      assessmentTypes: ["Security Controls", "Risk Assessment", "Compliance Audit"],
-      policies: ["Information Security", "Access Control", "Incident Response"],
-    },
-    features: ["high_security", "audit_trail", "encryption"],
-  },
-  {
-    name: "Legal",
-    slug: "legal",
-    description: "Client confidentiality and data protection",
-    icon: "⚖️",
-    configuration: {
-      complianceFrameworks: ["Attorney-Client Privilege", "Data Protection", "Ethics Rules"],
-      assessmentTypes: ["Client Data Security", "Document Management", "Conflict Check"],
-      policies: ["Confidentiality", "Document Retention", "Ethics Compliance"],
-    },
-    features: ["document_encryption", "access_logs", "client_portal"],
-  },
-  {
-    name: "Real Estate",
-    slug: "real_estate",
-    description: "Property compliance and contracts",
-    icon: "🏠",
-    configuration: {
-      complianceFrameworks: ["Fair Housing", "Property Laws", "Contract Standards"],
-      assessmentTypes: ["Property Inspection", "Document Compliance", "Transaction Review"],
-      policies: ["Fair Housing", "Disclosure Requirements", "Contract Standards"],
-    },
-    features: ["document_management", "e-signature", "transaction_tracking"],
-  },
-  {
-    name: "Consulting",
-    slug: "consulting",
-    description: "Professional services and SOPs",
-    icon: "📊",
-    configuration: {
-      complianceFrameworks: ["Professional Standards", "Quality Management"],
-      assessmentTypes: ["Client Engagement", "Project Compliance", "Quality Review"],
-      policies: ["Professional Standards", "Client Confidentiality", "Service Delivery"],
-    },
-    features: ["project_management", "time_tracking", "client_portal"],
-  },
-  {
-    name: "E-commerce",
-    slug: "ecommerce",
-    description: "Payment security and LGPD compliance",
-    icon: "🛍️",
-    configuration: {
-      complianceFrameworks: ["PCI-DSS", "LGPD", "Consumer Protection"],
-      assessmentTypes: ["Payment Security", "Customer Data", "Order Processing"],
-      policies: ["Privacy Policy", "Terms of Service", "Return Policy"],
-    },
-    features: ["payment_security", "customer_data_protection", "order_management"],
-  },
-  {
-    name: "Generic",
-    slug: "generic",
-    description: "Basic compliance starter template",
-    icon: "📋",
-    configuration: {
-      complianceFrameworks: ["Basic Compliance", "Best Practices"],
-      assessmentTypes: ["General Assessment", "Risk Review", "Policy Check"],
-      policies: ["General Policy", "Data Protection", "Security"],
-    },
-    features: ["basic_features"],
-  },
-];
-
-// Checklist items
-const CHECKLIST_ITEMS = [
-  { id: "profile", label: "Complete company profile", description: "Add company details and logo" },
-  { id: "team", label: "Invite team members", description: "Add users to your organization" },
-  { id: "assessment", label: "Create first assessment", description: "Start your first compliance assessment" },
+/**
+ * Lista estática de passos do onboarding
+ */
+const ONBOARDING_STEPS = [
+  { id: "company", label: "Complete company profile", description: "Add your company information." },
+  { id: "sectors", label: "Create sectors", description: "Register your company's organizational sectors." },
+  { id: "people", label: "Add people", description: "Add employees to the system." },
   { id: "branding", label: "Configure branding", description: "Customize logo and colors (Enterprise only)" },
   { id: "webhooks", label: "Set up webhooks", description: "Configure API integrations (optional)" },
   { id: "2fa", label: "Enable 2FA", description: "Secure your account with two-factor authentication" },
@@ -167,20 +20,22 @@ const CHECKLIST_ITEMS = [
 ];
 
 export const onboardingRouter = router({
-  // Get current onboarding progress
+
+  /**
+   * GET — Retorna o progresso atual
+   */
   getProgress: protectedProcedure.query(async ({ ctx }) => {
     const tenantId = ctx.user.tenantId;
+    const db = await getDb();
 
-    let progress = const db = await getDb();
-      await db
+    let progress = await db
       .select()
       .from(onboardingProgress)
       .where(eq(onboardingProgress.tenantId, tenantId))
       .limit(1);
 
-    // Initialize if not exists
+    // Se não existir progresso → cria
     if (progress.length === 0) {
-      const db = await getDb();
       await db.insert(onboardingProgress).values({
         tenantId,
         currentStep: 1,
@@ -189,98 +44,33 @@ export const onboardingRouter = router({
         skipped: false,
       });
 
-      progress = const db = await getDb();
-      await db
+      progress = await db
         .select()
         .from(onboardingProgress)
         .where(eq(onboardingProgress.tenantId, tenantId))
         .limit(1);
     }
 
-    const data = progress[0];
-    
     return {
-      id: data.id,
-      currentStep: data.currentStep,
-      completedSteps: JSON.parse(data.completedSteps as string),
-      checklistItems: JSON.parse(data.checklistItems as string),
-      skipped: data.skipped,
-      completedAt: data.completedAt,
-      isComplete: !!data.completedAt,
-      totalSteps: 5,
+      ...progress[0],
+      completedSteps: JSON.parse(progress[0].completedSteps),
+      checklistItems: JSON.parse(progress[0].checklistItems),
+      steps: ONBOARDING_STEPS,
     };
   }),
 
-  // Update wizard step
-  updateStep: protectedProcedure
-    .input(
-      z.object({
-        step: z.number().min(1).max(5),
-        data: z.record(z.any()).optional(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.user.tenantId;
-
-      const progress = const db = await getDb();
-      await db
-        .select()
-        .from(onboardingProgress)
-        .where(eq(onboardingProgress.tenantId, tenantId))
-        .limit(1);
-
-      if (progress.length === 0) {
-        throw new Error("Onboarding not initialized");
-      }
-
-      const currentData = progress[0];
-      const completedSteps = JSON.parse(currentData.completedSteps as string) as number[];
-
-      // Add step to completed if not already there
-      if (!completedSteps.includes(input.step)) {
-        completedSteps.push(input.step);
-      }
-
-      // Update current step to next
-      const nextStep = Math.min(input.step + 1, 5);
-
-      const db = await getDb();
-      await db
-        .update(onboardingProgress)
-        .set({
-          currentStep: nextStep,
-          completedSteps: JSON.stringify(completedSteps),
-          updatedAt: new Date(),
-        })
-        .where(eq(onboardingProgress.id, currentData.id));
-
-      // Apply step-specific actions
-      if (input.step === 1 && input.data) {
-        // Step 1: Update company profile
-        const db = await getDb();
-      await db
-          .update(tenants)
-          .set({
-            name: input.data.companyName || currentData.name,
-            industry: input.data.industry,
-            updatedAt: new Date(),
-          })
-          .where(eq(tenants.id, tenantId));
-      }
-
-      return { success: true, nextStep };
-    }),
-
-  // Complete onboarding
-  completeOnboarding: protectedProcedure.mutation(async ({ ctx }) => {
+  /**
+   * Atualiza etapa atual
+   */
+  updateStep: protectedProcedure.mutation(async ({ ctx, input }) => {
+    const { step } = input as { step: number };
     const tenantId = ctx.user.tenantId;
-
     const db = await getDb();
-      await db
+
+    await db
       .update(onboardingProgress)
       .set({
-        currentStep: 5,
-        completedAt: new Date(),
+        currentStep: step,
         updatedAt: new Date(),
       })
       .where(eq(onboardingProgress.tenantId, tenantId));
@@ -288,173 +78,61 @@ export const onboardingRouter = router({
     return { success: true };
   }),
 
-  // Get industry templates
-  getIndustryTemplates: protectedProcedure.query(async () => {
-    // In production, these would come from database
-    // For now, return the static templates
-    return INDUSTRY_TEMPLATES.map((template) => ({
-      ...template,
-      isActive: true,
-    }));
-  }),
-
-  // Apply industry template
-  applyTemplate: protectedProcedure
-    .input(
-      z.object({
-        templateSlug: z.string(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.user.tenantId;
-
-      const template = INDUSTRY_TEMPLATES.find((t) => t.slug === input.templateSlug);
-
-      if (!template) {
-        throw new Error("Template not found");
-      }
-
-      // Update tenant with industry
-      const db = await getDb();
-      await db
-        .update(tenants)
-        .set({
-          industry: template.name,
-          updatedAt: new Date(),
-        })
-        .where(eq(tenants.id, tenantId));
-
-      // Mark step 2 as complete
-      const progress = const db = await getDb();
-      await db
-        .select()
-        .from(onboardingProgress)
-        .where(eq(onboardingProgress.tenantId, tenantId))
-        .limit(1);
-
-      if (progress.length > 0) {
-        const currentData = progress[0];
-        const completedSteps = JSON.parse(currentData.completedSteps as string) as number[];
-
-        if (!completedSteps.includes(2)) {
-          completedSteps.push(2);
-        }
-
-        const db = await getDb();
-      await db
-          .update(onboardingProgress)
-          .set({
-            currentStep: 3,
-            completedSteps: JSON.stringify(completedSteps),
-            updatedAt: new Date(),
-          })
-          .where(eq(onboardingProgress.id, currentData.id));
-      }
-
-      return {
-        success: true,
-        appliedTemplate: template.name,
-        configuration: template.configuration,
-      };
-    }),
-
-  // Get checklist
-  getChecklist: protectedProcedure.query(async ({ ctx }) => {
+  /**
+   * Marca item como concluído
+   */
+  completeChecklistItem: protectedProcedure.mutation(async ({ ctx, input }) => {
+    const { itemId } = input as { itemId: string };
     const tenantId = ctx.user.tenantId;
+    const db = await getDb();
 
-    const progress = const db = await getDb();
-      await db
+    const [progress] = await db
       .select()
       .from(onboardingProgress)
-      .where(eq(onboardingProgress.tenantId, tenantId))
-      .limit(1);
+      .where(eq(onboardingProgress.tenantId, tenantId));
 
-    let completedItems: string[] = [];
-    if (progress.length > 0) {
-      completedItems = JSON.parse(progress[0].checklistItems as string);
-    }
+    if (!progress) return { success: false };
 
-    const items = CHECKLIST_ITEMS.map((item) => ({
-      ...item,
-      completed: completedItems.includes(item.id),
-    }));
+    const items = JSON.parse(progress.checklistItems);
+    if (!items.includes(itemId)) items.push(itemId);
 
-    const completedCount = completedItems.length;
-    const totalCount = CHECKLIST_ITEMS.length;
-    const percentage = Math.round((completedCount / totalCount) * 100);
+    await db
+      .update(onboardingProgress)
+      .set({
+        checklistItems: JSON.stringify(items),
+        updatedAt: new Date(),
+      })
+      .where(eq(onboardingProgress.tenantId, tenantId));
 
-    return {
-      items,
-      completedCount,
-      totalCount,
-      percentage,
-      allComplete: completedCount === totalCount,
-    };
+    return { success: true };
   }),
 
-  // Complete checklist item
-  completeChecklistItem: protectedProcedure
-    .input(
-      z.object({
-        itemId: z.string(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.user.tenantId;
-
-      const progress = const db = await getDb();
-      await db
-        .select()
-        .from(onboardingProgress)
-        .where(eq(onboardingProgress.tenantId, tenantId))
-        .limit(1);
-
-      if (progress.length === 0) {
-        throw new Error("Onboarding not initialized");
-      }
-
-      const currentData = progress[0];
-      const completedItems = JSON.parse(currentData.checklistItems as string) as string[];
-
-      if (!completedItems.includes(input.itemId)) {
-        completedItems.push(input.itemId);
-      }
-
-      const db = await getDb();
-      await db
-        .update(onboardingProgress)
-        .set({
-          checklistItems: JSON.stringify(completedItems),
-          updatedAt: new Date(),
-        })
-        .where(eq(onboardingProgress.id, currentData.id));
-
-      return { success: true, completedItems };
-    }),
-
-  // Skip onboarding
+  /**
+   * Pular onboarding
+   */
   skipOnboarding: protectedProcedure.mutation(async ({ ctx }) => {
     const tenantId = ctx.user.tenantId;
-
     const db = await getDb();
-      await db
+
+    await db
       .update(onboardingProgress)
       .set({
         skipped: true,
         completedAt: new Date(),
-        updatedAt: new Date(),
       })
       .where(eq(onboardingProgress.tenantId, tenantId));
 
     return { success: true };
   }),
 
-  // Reset onboarding
+  /**
+   * Resetar onboarding
+   */
   resetOnboarding: protectedProcedure.mutation(async ({ ctx }) => {
     const tenantId = ctx.user.tenantId;
-
     const db = await getDb();
-      await db
+
+    await db
       .update(onboardingProgress)
       .set({
         currentStep: 1,
@@ -462,10 +140,37 @@ export const onboardingRouter = router({
         checklistItems: JSON.stringify([]),
         skipped: false,
         completedAt: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(onboardingProgress.tenantId, tenantId));
+
+    return { success: true };
+
+  getIndustryTemplates: protectedProcedure.query(async () => {
+    return await db.select().from(industryTemplates);
+  }),
+
+  /**
+   */
+  applyTemplate: protectedProcedure.mutation(async ({ ctx, input }) => {
+    const tenantId = ctx.user.tenantId;
+    const db = await getDb();
+
+    const [template] = await db
+      .from(industryTemplates)
+      .where(eq(industryTemplates.id, templateId));
+    if (!template) return { success: false };
+
+    // Aqui você pode implementar a lógica real de template
 
     return { success: true };
   }),
 });
+
+      .select()
+    const { templateId } = input as { templateId: string };
+   * Aplica template
+    const db = await getDb();
+   */
+   * Lista templates de indústria
+  /**
+  }),
+      .where(eq(onboardingProgress.tenantId, tenantId));
+        updatedAt: new Date(),
