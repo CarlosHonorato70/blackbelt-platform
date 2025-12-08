@@ -277,7 +277,10 @@ O script irá configurar automaticamente:
 - ✅ Configurações do servidor
 - ✅ Notificações Slack (opcional)
 
-📖 **Documentação completa:** [GUIA_SETUP_AUTOMATICO_SECRETS.md](GUIA_SETUP_AUTOMATICO_SECRETS.md)
+📖 **Documentação:**
+- [GUIA_PASSO_A_PASSO_INICIANTE.md](GUIA_PASSO_A_PASSO_INICIANTE.md) - 🎓 **Guia para iniciantes** (recomendado!)
+- [GUIA_SETUP_AUTOMATICO_SECRETS.md](GUIA_SETUP_AUTOMATICO_SECRETS.md) - Guia completo técnico
+- [EXEMPLO_SETUP_SECRETS.md](EXEMPLO_SETUP_SECRETS.md) - Exemplos de uso
 
 ---
 
@@ -324,7 +327,9 @@ A documentação completa está disponível nos seguintes arquivos:
 
 | Arquivo                                  | Descrição                                     |
 | ---------------------------------------- | --------------------------------------------- |
-| **GUIA_SETUP_AUTOMATICO_SECRETS.md**    | ⚡ **Setup automático de GitHub Secrets** (NOVO!) |
+| **GUIA_PASSO_A_PASSO_INICIANTE.md**     | 🎓 **Guia para iniciantes - passo a passo** (NOVO!) |
+| **GUIA_SETUP_AUTOMATICO_SECRETS.md**    | ⚡ Setup automático de GitHub Secrets         |
+| **EXEMPLO_SETUP_SECRETS.md**            | 📝 Exemplos de uso do script de secrets      |
 | **GUIA_CONFIGURACAO_SECRETS_GITHUB.md** | 🔐 Guia manual detalhado de configuração de secrets |
 | **PRODUCTION_DEPLOYMENT.md**            | 🏭 Guia de deploy em produção                 |
 | **DEPLOYMENT_GUIDE.md**                 | 📦 Guia completo de deployment                |
