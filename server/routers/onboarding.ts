@@ -3,9 +3,6 @@ import { getDb } from "../db";
 import { onboardingProgress, industryTemplates } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 
-/**
- * Lista estática de passos do onboarding
- */
 const ONBOARDING_STEPS = [
   { id: "company", label: "Complete company profile", description: "Add your company information." },
   { id: "sectors", label: "Create sectors", description: "Register your company's organizational sectors." },
@@ -21,9 +18,6 @@ const ONBOARDING_STEPS = [
 
 export const onboardingRouter = router({
 
-  /**
-   * GET — Retorna o progresso atual
-   */
   getProgress: protectedProcedure.query(async ({ ctx }) => {
     const tenantId = ctx.user.tenantId;
     const db = await getDb();
@@ -34,7 +28,6 @@ export const onboardingRouter = router({
       .where(eq(onboardingProgress.tenantId, tenantId))
       .limit(1);
 
-    // Se não existir progresso → cria
     if (progress.length === 0) {
       await db.insert(onboardingProgress).values({
         tenantId,
@@ -59,9 +52,6 @@ export const onboardingRouter = router({
     };
   }),
 
-  /**
-   * Atualiza etapa atual
-   */
   updateStep: protectedProcedure.mutation(async ({ ctx, input }) => {
     const { step } = input as { step: number };
     const tenantId = ctx.user.tenantId;
@@ -78,9 +68,6 @@ export const onboardingRouter = router({
     return { success: true };
   }),
 
-  /**
-   * Marca item como concluído
-   */
   completeChecklistItem: protectedProcedure.mutation(async ({ ctx, input }) => {
     const { itemId } = input as { itemId: string };
     const tenantId = ctx.user.tenantId;
@@ -107,9 +94,6 @@ export const onboardingRouter = router({
     return { success: true };
   }),
 
-  /**
-   * Pular onboarding
-   */
   skipOnboarding: protectedProcedure.mutation(async ({ ctx }) => {
     const tenantId = ctx.user.tenantId;
     const db = await getDb();
@@ -125,9 +109,6 @@ export const onboardingRouter = router({
     return { success: true };
   }),
 
-  /**
-   * Resetar onboarding
-   */
   resetOnboarding: protectedProcedure.mutation(async ({ ctx }) => {
     const tenantId = ctx.user.tenantId;
     const db = await getDb();
@@ -140,37 +121,31 @@ export const onboardingRouter = router({
         checklistItems: JSON.stringify([]),
         skipped: false,
         completedAt: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(onboardingProgress.tenantId, tenantId));
 
     return { success: true };
+  }),
 
   getIndustryTemplates: protectedProcedure.query(async () => {
+    const db = await getDb();
     return await db.select().from(industryTemplates);
   }),
 
-  /**
-   */
   applyTemplate: protectedProcedure.mutation(async ({ ctx, input }) => {
     const tenantId = ctx.user.tenantId;
+    const { templateId } = input as { templateId: string };
     const db = await getDb();
 
     const [template] = await db
+      .select()
       .from(industryTemplates)
       .where(eq(industryTemplates.id, templateId));
-    if (!template) return { success: false };
 
-    // Aqui você pode implementar a lógica real de template
+    if (!template) return { success: false };
 
     return { success: true };
   }),
-});
 
-      .select()
-    const { templateId } = input as { templateId: string };
-   * Aplica template
-    const db = await getDb();
-   */
-   * Lista templates de indústria
-  /**
-  }),
-      .where(eq(onboardingProgress.tenantId, tenantId));
-        updatedAt: new Date(),
+});
