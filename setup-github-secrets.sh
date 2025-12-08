@@ -126,6 +126,9 @@ generate_ssh_key() {
         fi
     fi
     
+    # Nota de Segurança: A chave é gerada sem passphrase para permitir
+    # automação de deploy no CI/CD. A chave privada fica armazenada
+    # como secret criptografado no GitHub.
     print_info "Gerando nova chave SSH: $key_path"
     ssh-keygen -t ed25519 -f "$key_path" -N "" -C "github-actions-blackbelt"
     print_success "Chave SSH gerada com sucesso!"
@@ -211,6 +214,8 @@ if [ "$registry_choice" = "1" ]; then
     # Extrair username do repositório
     GITHUB_USERNAME=$(echo "$REPO" | cut -d'/' -f1)
     
+    # Criar secrets (DOCKER_USERNAME e DOCKER_PASSWORD são aliases
+    # para compatibilidade com workflows existentes que usam Docker Hub)
     create_secret "GHCR_TOKEN" "$GHCR_TOKEN" "$REPO"
     create_secret "DOCKER_USERNAME" "$GITHUB_USERNAME" "$REPO"
     create_secret "DOCKER_PASSWORD" "$GHCR_TOKEN" "$REPO"
@@ -342,14 +347,15 @@ print_info "Próximos passos:"
 echo "  1. Verifique se todos os secrets foram criados corretamente"
 echo "  2. Teste a conexão SSH com o servidor"
 echo "  3. Execute um workflow manual para validar a configuração"
-echo "  4. Consulte GUIA_CONFIGURACAO_SECRETS_GITHUB.md para mais detalhes"
+echo "  4. Consulte GUIA_SETUP_AUTOMATICO_SECRETS.md para mais detalhes"
 echo ""
 
 # Testar conexão SSH (opcional)
 read -p "Deseja testar a conexão SSH com o servidor agora? (s/n): " test_ssh
 if [[ $test_ssh =~ ^[Ss]$ ]]; then
     print_info "Testando conexão SSH..."
-    if ssh -i "$SSH_KEY_PATH" -p "$SSH_PORT" -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER@$SSH_HOST" "echo 'Conexão SSH bem-sucedida!'" 2>/dev/null; then
+    # Usar StrictHostKeyChecking=accept-new para melhor segurança em primeira conexão
+    if ssh -i "$SSH_KEY_PATH" -p "$SSH_PORT" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "$SSH_USER@$SSH_HOST" "echo 'Conexão SSH bem-sucedida!'" 2>/dev/null; then
         print_success "Conexão SSH funcionando corretamente!"
     else
         print_error "Falha na conexão SSH. Verifique:"
