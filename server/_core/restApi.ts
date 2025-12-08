@@ -7,7 +7,7 @@
 
 import express from "express";
 import { getDb } from "../db";
-import { apiKeys, apiKeyUsage, assessments, proposals } from "../../drizzle/schema";
+import { apiKeys, apiKeyUsage, riskAssessments, proposals } from "../../drizzle/schema";
 import { eq, and, isNull, gte } from "drizzle-orm";
 import crypto from "crypto";
 import { nanoid } from "nanoid";
@@ -170,9 +170,9 @@ router.use(apiRateLimiter);
 // ============================================================================
 
 /**
- * GET /api/v1/assessments - Listar avaliações
+ * GET /api/v1/riskAssessments - Listar avaliações
  */
-router.get("/assessments", requireScope("assessments:read"), async (req, res) => {
+router.get("/riskAssessments", requireScope("riskAssessments:read"), async (req, res) => {
   try {
     const db = await getDb();
     if (!db) {
@@ -183,11 +183,11 @@ router.get("/assessments", requireScope("assessments:read"), async (req, res) =>
     const page = parseInt(req.query.page as string) || 1;
     const perPage = Math.min(parseInt(req.query.perPage as string) || 20, 100);
 
-    const results = await db.query.assessments.findMany({
-      where: eq(assessments.tenantId, tenantId),
+    const results = await db.query.riskAssessments.findMany({
+      where: eq(riskAssessments.tenantId, tenantId),
       limit: perPage,
       offset: (page - 1) * perPage,
-      orderBy: (assessments, { desc }) => [desc(assessments.createdAt)],
+      orderBy: (riskAssessments, { desc }) => [desc(riskAssessments.createdAt)],
     });
 
     res.json({
@@ -199,15 +199,15 @@ router.get("/assessments", requireScope("assessments:read"), async (req, res) =>
       },
     });
   } catch (error) {
-    console.error("Error fetching assessments:", error);
+    console.error("Error fetching riskAssessments:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
 /**
- * GET /api/v1/assessments/:id - Obter avaliação específica
+ * GET /api/v1/riskAssessments/:id - Obter avaliação específica
  */
-router.get("/assessments/:id", requireScope("assessments:read"), async (req, res) => {
+router.get("/riskAssessments/:id", requireScope("riskAssessments:read"), async (req, res) => {
   try {
     const db = await getDb();
     if (!db) {
@@ -215,10 +215,10 @@ router.get("/assessments/:id", requireScope("assessments:read"), async (req, res
     }
 
     const tenantId = (req as any).tenantId;
-    const assessment = await db.query.assessments.findFirst({
+    const assessment = await db.query.riskAssessments.findFirst({
       where: and(
-        eq(assessments.id, req.params.id),
-        eq(assessments.tenantId, tenantId)
+        eq(riskAssessments.id, req.params.id),
+        eq(riskAssessments.tenantId, tenantId)
       ),
     });
 

@@ -3,7 +3,7 @@
  * 
  * Provides comprehensive analytics for:
  * - Administrators (MRR, churn, conversion, ARPU, LTV)
- * - Clients (assessments, proposals, resource usage, ROI)
+ * - Clients (riskAssessments, proposals, resource usage, ROI)
  */
 
 import { z } from "zod";
@@ -12,7 +12,7 @@ import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import {
   subscriptions,
-  assessments,
+  riskAssessments,
   proposals,
   users,
   tenants,
@@ -387,7 +387,7 @@ export const analyticsRouter = router({
   // ============================================================================
 
   /**
-   * Get assessments completed by period
+   * Get riskAssessments completed by period
    */
   getClientAssessments: protectedProcedure
     .input(dateRangeSchema)
@@ -402,25 +402,25 @@ export const analyticsRouter = router({
         : new Date(new Date().setMonth(new Date().getMonth() - 6));
       const endDate = input.endDate ? new Date(input.endDate) : new Date();
 
-      // Get assessments for tenant
-      const tenantAssessments = await db.query.assessments.findMany({
+      // Get riskAssessments for tenant
+      const tenantAssessments = await db.query.riskAssessments.findMany({
         where: and(
-          eq(assessments.tenantId, ctx.tenantId),
-          gte(assessments.createdAt, startDate),
-          lte(assessments.createdAt, endDate)
+          eq(riskAssessments.tenantId, ctx.tenantId),
+          gte(riskAssessments.createdAt, startDate),
+          lte(riskAssessments.createdAt, endDate)
         ),
       });
 
       // Group by month
-      const assessmentsByMonth: Record<string, number> = {};
+      const riskAssessmentsByMonth: Record<string, number> = {};
       tenantAssessments.forEach((assessment) => {
         const month = new Date(assessment.createdAt).toISOString().substring(0, 7);
-        assessmentsByMonth[month] = (assessmentsByMonth[month] || 0) + 1;
+        riskAssessmentsByMonth[month] = (riskAssessmentsByMonth[month] || 0) + 1;
       });
 
       return {
         total: tenantAssessments.length,
-        byMonth: Object.entries(assessmentsByMonth)
+        byMonth: Object.entries(riskAssessmentsByMonth)
           .map(([month, count]) => ({ month, count }))
           .sort((a, b) => a.month.localeCompare(b.month)),
       };
@@ -564,9 +564,9 @@ export const analyticsRouter = router({
       ? calculateMonthlyAmount(subscription.amount, subscription.interval)
       : 0;
 
-    // Count assessments (compliance = avoided penalties)
-    const totalAssessments = await db.query.assessments.findMany({
-      where: eq(assessments.tenantId, ctx.tenantId),
+    // Count riskAssessments (compliance = avoided penalties)
+    const totalAssessments = await db.query.riskAssessments.findMany({
+      where: eq(riskAssessments.tenantId, ctx.tenantId),
     });
 
     // Estimate savings (avg penalty = R$ 5,000 per non-compliance)
@@ -581,7 +581,7 @@ export const analyticsRouter = router({
       roi,
       monthlyCost,
       estimatedSavings,
-      assessmentsCompleted: totalAssessments.length,
+      riskAssessmentsCompleted: totalAssessments.length,
     };
   }),
 });
