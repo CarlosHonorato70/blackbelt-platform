@@ -8,6 +8,7 @@ import rateLimit from "express-rate-limit";
 import slowDown from "express-slow-down";
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -96,16 +97,22 @@ app.use((req, res, next) => {
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    // Serve arquivos estáticos da pasta 'public' dentro de 'dist'
-    // O Vite geralmente gera 'dist/index.html' e 'dist/assets'
-    // Ajuste o caminho conforme sua estrutura de build
-    const distPath = path.join(__dirname, "..", "public"); // Tenta achar a pasta public no nível acima de server/
+    // CORREÇÃO DO CAMINHO:
+    // O build gera 'dist/public'. O servidor roda em 'dist/index.js'.
+    // Então 'public' está na mesma pasta que '__dirname'.
+    const distPath = path.join(__dirname, "public");
     
-    // Serve arquivos estáticos
+    // Verificação de segurança para debug no log do Render
+    if (fs.existsSync(distPath)) {
+      log(`Serving static files from: ${distPath}`);
+    } else {
+      log(`WARNING: Static path not found: ${distPath}`);
+    }
+
+    // Serve arquivos estáticos (JS, CSS, Imagens)
     app.use(express.static(distPath));
 
-    // Fallback para SPA (Single Page Application)
-    // Qualquer rota não-API retorna o index.html
+    // Fallback para SPA: Qualquer rota que não seja API retorna o index.html
     app.get("*", (req, res) => {
       if (!req.path.startsWith("/api")) {
         res.sendFile(path.join(distPath, "index.html"));
