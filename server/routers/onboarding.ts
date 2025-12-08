@@ -1,6 +1,6 @@
 import { router, protectedProcedure } from "../_core/trpc";
 import { z } from "zod";
-import { db } from "../db";
+import { getDb } from "../db";
 import { onboardingProgress, industryTemplates, tenants } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -171,7 +171,8 @@ export const onboardingRouter = router({
   getProgress: protectedProcedure.query(async ({ ctx }) => {
     const tenantId = ctx.user.tenantId;
 
-    let progress = await db
+    let progress = const db = await getDb();
+      await db
       .select()
       .from(onboardingProgress)
       .where(eq(onboardingProgress.tenantId, tenantId))
@@ -179,6 +180,7 @@ export const onboardingRouter = router({
 
     // Initialize if not exists
     if (progress.length === 0) {
+      const db = await getDb();
       await db.insert(onboardingProgress).values({
         tenantId,
         currentStep: 1,
@@ -187,7 +189,8 @@ export const onboardingRouter = router({
         skipped: false,
       });
 
-      progress = await db
+      progress = const db = await getDb();
+      await db
         .select()
         .from(onboardingProgress)
         .where(eq(onboardingProgress.tenantId, tenantId))
@@ -219,7 +222,8 @@ export const onboardingRouter = router({
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.user.tenantId;
 
-      const progress = await db
+      const progress = const db = await getDb();
+      await db
         .select()
         .from(onboardingProgress)
         .where(eq(onboardingProgress.tenantId, tenantId))
@@ -240,6 +244,7 @@ export const onboardingRouter = router({
       // Update current step to next
       const nextStep = Math.min(input.step + 1, 5);
 
+      const db = await getDb();
       await db
         .update(onboardingProgress)
         .set({
@@ -252,7 +257,8 @@ export const onboardingRouter = router({
       // Apply step-specific actions
       if (input.step === 1 && input.data) {
         // Step 1: Update company profile
-        await db
+        const db = await getDb();
+      await db
           .update(tenants)
           .set({
             name: input.data.companyName || currentData.name,
@@ -269,7 +275,8 @@ export const onboardingRouter = router({
   completeOnboarding: protectedProcedure.mutation(async ({ ctx }) => {
     const tenantId = ctx.user.tenantId;
 
-    await db
+    const db = await getDb();
+      await db
       .update(onboardingProgress)
       .set({
         currentStep: 5,
@@ -308,6 +315,7 @@ export const onboardingRouter = router({
       }
 
       // Update tenant with industry
+      const db = await getDb();
       await db
         .update(tenants)
         .set({
@@ -317,7 +325,8 @@ export const onboardingRouter = router({
         .where(eq(tenants.id, tenantId));
 
       // Mark step 2 as complete
-      const progress = await db
+      const progress = const db = await getDb();
+      await db
         .select()
         .from(onboardingProgress)
         .where(eq(onboardingProgress.tenantId, tenantId))
@@ -331,7 +340,8 @@ export const onboardingRouter = router({
           completedSteps.push(2);
         }
 
-        await db
+        const db = await getDb();
+      await db
           .update(onboardingProgress)
           .set({
             currentStep: 3,
@@ -352,7 +362,8 @@ export const onboardingRouter = router({
   getChecklist: protectedProcedure.query(async ({ ctx }) => {
     const tenantId = ctx.user.tenantId;
 
-    const progress = await db
+    const progress = const db = await getDb();
+      await db
       .select()
       .from(onboardingProgress)
       .where(eq(onboardingProgress.tenantId, tenantId))
@@ -391,7 +402,8 @@ export const onboardingRouter = router({
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.user.tenantId;
 
-      const progress = await db
+      const progress = const db = await getDb();
+      await db
         .select()
         .from(onboardingProgress)
         .where(eq(onboardingProgress.tenantId, tenantId))
@@ -408,6 +420,7 @@ export const onboardingRouter = router({
         completedItems.push(input.itemId);
       }
 
+      const db = await getDb();
       await db
         .update(onboardingProgress)
         .set({
@@ -423,7 +436,8 @@ export const onboardingRouter = router({
   skipOnboarding: protectedProcedure.mutation(async ({ ctx }) => {
     const tenantId = ctx.user.tenantId;
 
-    await db
+    const db = await getDb();
+      await db
       .update(onboardingProgress)
       .set({
         skipped: true,
@@ -439,7 +453,8 @@ export const onboardingRouter = router({
   resetOnboarding: protectedProcedure.mutation(async ({ ctx }) => {
     const tenantId = ctx.user.tenantId;
 
-    await db
+    const db = await getDb();
+      await db
       .update(onboardingProgress)
       .set({
         currentStep: 1,
