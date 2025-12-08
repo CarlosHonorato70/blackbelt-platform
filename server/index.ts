@@ -6,40 +6,43 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import slowDown from "express-slow-down";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
 // Configuração de segurança básica
 app.use(helmet({
-  contentSecurityPolicy: false, // Desativa CSP para evitar conflitos com Vite em dev
+  contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
 }));
 
-// Configuração de CORS - Permissiva para evitar erros em produção
+// Configuração de CORS
 app.use(cors({
-  origin: true, // Permite qualquer origem (útil para debug e produção inicial)
+  origin: true,
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
 }));
 
-// Rate Limiting - Proteção contra DDoS
+// Rate Limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // limite de 100 requisições por IP
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Muitas requisições, tente novamente mais tarde." }
 });
 
-// Speed Limiting - Desacelera requisições excessivas
 const speedLimiter = slowDown({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  delayAfter: 50, // começa a desacelerar após 50 requisições
-  delayMs: () => 500 // adiciona 500ms de delay por requisição
+  windowMs: 15 * 60 * 1000,
+  delayAfter: 50,
+  delayMs: () => 500
 });
 
-// Aplica limitadores apenas em rotas de API
 app.use("/api", limiter);
 app.use("/api", speedLimiter);
 
@@ -65,11 +68,9 @@ app.use((req, res, next) => {
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
-
       if (logLine.length > 80) {
         logLine = logLine.slice(0, 79) + "…";
       }
-
       log(logLine);
     }
   });
@@ -87,27 +88,32 @@ app.use((req, res, next) => {
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
-    // Não logar stack trace em produção para erros comuns
-    if (status >= 500) {
-      console.error(err);
-    }
-
+    if (status >= 500) console.error(err);
     res.status(status).json({ message });
   });
 
-  // Configuração do Vite ou arquivos estáticos
+  // SERVIR FRONTEND EM PRODUÇÃO
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    serveStatic(app);
+    // Serve arquivos estáticos da pasta 'public' dentro de 'dist'
+    // O Vite geralmente gera 'dist/index.html' e 'dist/assets'
+    // Ajuste o caminho conforme sua estrutura de build
+    const distPath = path.join(__dirname, "..", "public"); // Tenta achar a pasta public no nível acima de server/
+    
+    // Serve arquivos estáticos
+    app.use(express.static(distPath));
+
+    // Fallback para SPA (Single Page Application)
+    // Qualquer rota não-API retorna o index.html
+    app.get("*", (req, res) => {
+      if (!req.path.startsWith("/api")) {
+        res.sendFile(path.join(distPath, "index.html"));
+      }
+    });
   }
 
-  // Inicialização do servidor
-  // IMPORTANTE: Usa a porta definida no ambiente ou 8080 como fallback
   const PORT = parseInt(process.env.PORT || "8080", 10);
-  
-  // Garante que o host seja 0.0.0.0 para Docker/Render
   const HOST = "0.0.0.0";
 
   server.listen(PORT, HOST, () => {
