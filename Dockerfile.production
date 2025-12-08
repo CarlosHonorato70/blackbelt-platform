@@ -17,5 +17,11 @@ RUN npm install -g pnpm@10.4.1
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --prod
 COPY --from=builder /app/dist ./dist
+
+# Configurações de Ambiente Padrão para evitar erro NaN
+ENV PORT=3000
+ENV HOST=0.0.0.0
+ENV NODE_ENV=production
+
 EXPOSE 3000
 CMD ["node", "dist/index.js"]
