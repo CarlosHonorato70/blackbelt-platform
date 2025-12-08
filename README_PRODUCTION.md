@@ -5,7 +5,7 @@ Este documento descreve como funciona o deploy automático proposto e como impla
 ## O que o workflow faz
 1. Ao dar push na branch `main`:
    - Constrói a imagem Docker usando `Dockerfile.production`.
-   - Publica a imagem no GitHub Container Registry (GHCR) com a tag `ghcr.io/<github-username>/blackbelt-platform:<commit-sha>` (onde `<github-username>` é o owner do repositório).
+   - Publica a imagem no GitHub Container Registry (GHCR) com a tag `ghcr.io/<owner>/blackbelt-platform:<commit-sha>` (onde `<owner>` é o username/organization owner do repositório no GitHub).
    - Copia `docker-compose.production.yml` para o servidor via SCP.
    - Executa comandos remotos (docker compose pull && docker compose up -d) passando a imagem correta via variável de ambiente.
 
