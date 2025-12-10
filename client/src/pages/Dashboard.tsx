@@ -34,7 +34,6 @@ export default function Dashboard() {
     );
   }
 
-  // Mock data - será substituído por dados reais do backend
   const metrics = [
     {
       title: "Avaliações Realizadas",
@@ -97,7 +96,6 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* KPI Cards */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           {metrics.map(metric => {
             const Icon = metric.icon;
@@ -123,7 +121,6 @@ export default function Dashboard() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
-          {/* Distribuição de Riscos por Nível */}
           <Card>
             <CardHeader>
               <CardTitle>Distribuição de Riscos por Nível</CardTitle>
@@ -151,7 +148,6 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Riscos por Categoria */}
           <Card>
             <CardHeader>
               <CardTitle>Riscos por Categoria</CardTitle>
@@ -179,7 +175,6 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Indicadores de Saúde Mental */}
         <Card>
           <CardHeader>
             <CardTitle>Indicadores de Saúde Mental</CardTitle>
@@ -234,7 +229,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Conformidade NR-01 */}
         <Card>
           <CardHeader>
             <CardTitle>Status de Conformidade NR-01</CardTitle>
