@@ -1,84 +1,147 @@
-import { getLoginUrl } from "@/const";
-import { trpc } from "@/lib/trpc";
-import { TRPCClientError } from "@trpc/client";
-import { useCallback, useEffect, useMemo } from "react";
+import { useState, useEffect, useContext, createContext, ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 
-type UseAuthOptions = {
-  redirectOnUnauthenticated?: boolean;
-  redirectPath?: string;
-};
+// Tipos
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
 
-export function useAuth(options?: UseAuthOptions) {
-  const { redirectOnUnauthenticated = false, redirectPath = getLoginUrl() } =
-    options ?? {};
-  const utils = trpc.useUtils();
+interface AuthState {
+  user: User | null;
+  token: string | null;
+  loading: boolean;
+  error: string | null;
+}
 
-  const meQuery = trpc.auth.me.useQuery(undefined, {
-    retry: false,
-    refetchOnWindowFocus: false,
+interface AuthActions {
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => void;
+  clearError: () => void;
+}
+
+type AuthContextValue = AuthState & AuthActions;
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+// Provider
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<AuthState>({
+    user: null,
+    token: null,
+    loading: true,
+    error: null,
   });
-
-  const logoutMutation = trpc.auth.logout.useMutation({
-    onSuccess: () => {
-      utils.auth.me.setData(undefined, null);
-    },
-  });
-
-  const logout = useCallback(async () => {
-    try {
-      await logoutMutation.mutateAsync();
-    } catch (error: unknown) {
-      if (
-        error instanceof TRPCClientError &&
-        error.data?.code === "UNAUTHORIZED"
-      ) {
-        return;
-      }
-      throw error;
-    } finally {
-      utils.auth.me.setData(undefined, null);
-      await utils.auth.me.invalidate();
-    }
-  }, [logoutMutation, utils]);
-
-  const state = useMemo(() => {
-    localStorage.setItem(
-      "manus-runtime-user-info",
-      JSON.stringify(meQuery.data)
-    );
-    return {
-      user: meQuery.data ?? null,
-      loading: meQuery.isLoading || logoutMutation.isPending,
-      error: meQuery.error ?? logoutMutation.error ?? null,
-      isAuthenticated: Boolean(meQuery.data),
-    };
-  }, [
-    meQuery.data,
-    meQuery.error,
-    meQuery.isLoading,
-    logoutMutation.error,
-    logoutMutation.isPending,
-  ]);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (!redirectOnUnauthenticated) return;
-    if (meQuery.isLoading || logoutMutation.isPending) return;
-    if (state.user) return;
-    if (typeof window === "undefined") return;
-    if (window.location.pathname === redirectPath) return;
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      validateToken(token);
+    } else {
+      setState(prev => ({ ...prev, loading: false }));
+    }
+  }, []);
 
-    window.location.href = redirectPath;
-  }, [
-    redirectOnUnauthenticated,
-    redirectPath,
-    logoutMutation.isPending,
-    meQuery.isLoading,
-    state.user,
-  ]);
+  const validateToken = async (token: string) => {
+    try {
+      const response = await fetch("/api/auth/me", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
-  return {
-    ...state,
-    refresh: () => meQuery.refetch(),
-    logout,
+      if (response.ok) {
+        const data = await response.json();
+        setState({ user: data.user || null, token, loading: false, error: null });
+      } else {
+        handleAuthError("Token inválido");
+      }
+    } catch (error) {
+      handleAuthError("Erro de conexão");
+    }
   };
+
+  const handleAuthError = (message: string) => {
+    localStorage.removeItem("authToken");
+    setState(prev => ({ ...prev, user: null, token: null, loading: false, error: message }));
+  };
+
+  const login = async (email: string, password: string): Promise<boolean> => {
+    setState(prev => ({ ...prev, loading: true, error: null }));
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.token) {
+        localStorage.setItem("authToken", data.token);
+        setState({ user: data.user, token: data.token, loading: false, error: null });
+        navigate("/dashboard", { replace: true });
+        return true;
+      } else {
+        setState(prev => ({ ...prev, error: data.message || "Credenciais inválidas", loading: false }));
+        return false;
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro de rede";
+      setState(prev => ({ ...prev, error: message, loading: false }));
+      return false;
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem("authToken");
+    setState({ user: null, token: null, loading: false, error: null });
+    navigate("/", { replace: true });
+  };
+
+  const clearError = () => {
+    setState(prev => ({ ...prev, error: null }));
+  };
+
+  return (
+    <AuthContext.Provider value={{ ...state, login, logout, clearError }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+// Hook principal
+export function useAuth(): AuthContextValue {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth deve ser usado dentro de um AuthProvider");
+  }
+  return context;
+}
+
+// Hook auxiliar
+export function useIsAuthenticated() {
+  const { user, loading } = useAuth();
+  return { isAuthenticated: !!user && !loading, user, loading };
+}
+
+export function useLogout() {
+  const { logout } = useAuth();
+  return logout;
+}
+
+export function handleApiError(error: unknown, defaultMessage: string = "Erro na requisição"): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === "string") {
+    return error;
+  }
+  return defaultMessage;
 }
