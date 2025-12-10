@@ -3,30 +3,63 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { createServer } from "http";
 import cors from "cors";
-import helmet from "helmet"; // Import mantido, mas não usado no middleware principal temporariamente
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import slowDown from "express-slow-down";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
+import { exec } from "child_process";
+import { promisify } from "util";
 
+const execAsync = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// --- DEBUG CRÍTICO ---
-const dbUrl = process.env.DATABASE_URL || "";
-console.log("--- DEBUG DE CONEXÃO ---");
-console.log(`DATABASE_URL definida? ${dbUrl ? "SIM" : "NÃO"}`);
-console.log(`DATABASE_URL começa com: ${dbUrl.substring(0, 10)}...`);
-console.log(`DATABASE_URL contém 'render.com'? ${dbUrl.includes("render.com") ? "SIM" : "NÃO"}`);
-console.log("------------------------");
-// ---------------------
+// 1. SEGURANÇA COMERCIAL (CSP CONFIGURADO)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://translate.googleapis.com", "https://translate.google.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://translate.googleapis.com", "https://www.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https://www.gstatic.com", "https://translate.googleapis.com"],
+      connectSrc: ["'self'", "https://blackbelt-backend.onrender.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
 
-// 1. LIBERAÇÃO TOTAL (TEMPORÁRIA PARA TESTE)
-app.use(cors()); // Libera tudo. Se der erro de CORS agora, é cache do navegador.
+// Configuração de CORS
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+}));
 
-// Desativa Helmet temporariamente para garantir que nada bloqueie
-// app.use(helmet(...)); 
+// Rate Limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Muitas requisições, tente novamente mais tarde." }
+});
+
+const speedLimiter = slowDown({
+  windowMs: 15 * 60 * 1000,
+  delayAfter: 50,
+  delayMs: () => 500
+});
+
+app.use("/api", limiter);
+app.use("/api", speedLimiter);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -46,7 +79,14 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
+      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) {
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      }
+      if (logLine.length > 80) {
+        logLine = logLine.slice(0, 79) + "…";
+      }
+      log(logLine);
     }
   });
 
@@ -56,36 +96,63 @@ app.use((req, res, next) => {
 (async () => {
   const server = createServer(app);
 
+  // 0. AUTO-MIGRAÇÃO DO BANCO DE DADOS
+  // Executa apenas em produção para garantir que as tabelas existam
+  if (process.env.NODE_ENV !== "development") {
+    try {
+      log("🔄 Running database migrations...");
+      // Executa o comando definido no package.json
+      await execAsync("npm run db:push");
+      log("✅ Database migrations completed successfully!");
+    } catch (error) {
+      log("⚠️ Migration warning (check logs if tables are missing): " + error);
+    }
+  }
+
+  // Registra as rotas da API
   registerRoutes(app);
 
+  // Tratamento de erros global
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-    console.error(err);
+    console.error(`[SERVER ERROR] ${status} - ${message}`);
+    if (err.stack) console.error(err.stack);
     res.status(status).json({ message });
   });
 
+  // 2. SERVIR FRONTEND EM PRODUÇÃO
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    // Tenta achar a pasta public
     const possiblePaths = [
       path.join(__dirname, "public"),      
       path.join(__dirname, "..", "public"), 
       path.join(process.cwd(), "dist", "public") 
     ];
+
     let distPath = possiblePaths.find(p => fs.existsSync(p));
 
     if (distPath) {
-      log(`Serving static files from: ${distPath}`);
-      app.use(express.static(distPath));
+      log(`✅ Serving static files from: ${distPath}`);
+      
+      app.use(express.static(distPath, {
+        maxAge: "1d",
+        immutable: true
+      }));
+
       app.get("*", (req, res) => {
         if (!req.path.startsWith("/api")) {
           res.sendFile(path.join(distPath!, "index.html"));
         }
       });
     } else {
-      log(`ERROR: Public folder not found.`);
+      log(`❌ CRITICAL: Could not find 'public' folder. Checked: ${possiblePaths.join(", ")}`);
+      app.get("*", (req, res) => {
+        if (!req.path.startsWith("/api")) {
+          res.status(500).send("System Error: Frontend build not found.");
+        }
+      });
     }
   }
 
