@@ -15,24 +15,40 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// Configuração de segurança básica
+// 1. SEGURANÇA COMERCIAL (CSP CONFIGURADO)
+// Em vez de desativar, configuramos explicitamente o que é permitido.
 app.use(helmet({
-  contentSecurityPolicy: false,
-  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      // Permite scripts do próprio site e do Google (Translate/Analytics)
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://translate.googleapis.com", "https://translate.google.com"],
+      // Permite estilos do próprio site, do Google e estilos inline (comum em React)
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://translate.googleapis.com", "https://www.gstatic.com"],
+      // Permite imagens do próprio site, dados (base64) e do Google
+      imgSrc: ["'self'", "data:", "https://www.gstatic.com", "https://translate.googleapis.com"],
+      // Permite conexões (API) para o próprio backend
+      connectSrc: ["'self'", "https://blackbelt-backend.onrender.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Necessário desativar para alguns recursos externos carregarem
 }));
 
 // Configuração de CORS
 app.use(cors({
-  origin: true,
+  origin: true, // Em produção, idealmente troque pelo domínio exato do frontend se estiver separado
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
 }));
 
-// Rate Limiting
+// Rate Limiting (Proteção contra DDoS/Brute Force)
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // limite de 100 requisições por IP
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Muitas requisições, tente novamente mais tarde." }
@@ -89,35 +105,45 @@ app.use((req, res, next) => {
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-    if (status >= 500) console.error(err);
+    console.error(`[SERVER ERROR] ${status} - ${message}`);
+    if (err.stack) console.error(err.stack);
     res.status(status).json({ message });
   });
 
-  // SERVIR FRONTEND EM PRODUÇÃO
+  // 2. SERVIR FRONTEND EM PRODUÇÃO (CORREÇÃO DE CAMINHO ROBUSTA)
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    // CORREÇÃO DO CAMINHO:
-    // O build gera 'dist/public'. O servidor roda em 'dist/index.js'.
-    // Então 'public' está na mesma pasta que '__dirname'.
-    const distPath = path.join(__dirname, "public");
-    
-    // Verificação de segurança para debug no log do Render
-    if (fs.existsSync(distPath)) {
-      log(`Serving static files from: ${distPath}`);
+    // Tenta localizar a pasta 'public' em múltiplos locais possíveis
+    const possiblePaths = [
+      path.join(__dirname, "public"),      
+      path.join(__dirname, "..", "public"), 
+      path.join(process.cwd(), "dist", "public") 
+    ];
+
+    let distPath = possiblePaths.find(p => fs.existsSync(p));
+
+    if (distPath) {
+      log(`✅ Serving static files from: ${distPath}`);
+      
+      app.use(express.static(distPath, {
+        maxAge: "1d",
+        immutable: true
+      }));
+
+      app.get("*", (req, res) => {
+        if (!req.path.startsWith("/api")) {
+          res.sendFile(path.join(distPath!, "index.html"));
+        }
+      });
     } else {
-      log(`WARNING: Static path not found: ${distPath}`);
+      log(`❌ CRITICAL: Could not find 'public' folder. Checked: ${possiblePaths.join(", ")}`);
+      app.get("*", (req, res) => {
+        if (!req.path.startsWith("/api")) {
+          res.status(500).send("System Error: Frontend build not found.");
+        }
+      });
     }
-
-    // Serve arquivos estáticos (JS, CSS, Imagens)
-    app.use(express.static(distPath));
-
-    // Fallback para SPA: Qualquer rota que não seja API retorna o index.html
-    app.get("*", (req, res) => {
-      if (!req.path.startsWith("/api")) {
-        res.sendFile(path.join(distPath, "index.html"));
-      }
-    });
   }
 
   const PORT = parseInt(process.env.PORT || "8080", 10);
