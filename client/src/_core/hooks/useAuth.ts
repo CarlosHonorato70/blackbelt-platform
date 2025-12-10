@@ -107,9 +107,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({ ...prev, error: null }));
   };
 
-  const value = { ...state, login, logout, clearError };
+  const authValue: AuthContextValue = {
+    ...state,
+    login,
+    logout,
+    clearError,
+  };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={authValue}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth(): AuthContextValue {
