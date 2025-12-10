@@ -57,22 +57,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await response.json();
         setState({ user: data.user || null, token, loading: false, error: null });
       } else {
-        handleAuthError("Token inválido ou expirado");
+        handleAuthError("Token inválido");
       }
     } catch (error) {
-      handleAuthError("Erro de conexão ao validar sessão");
+      handleAuthError("Erro de conexão");
     }
   };
 
   const handleAuthError = (message: string) => {
     localStorage.removeItem("authToken");
-    setState((prev) => ({
-      ...prev,
-      user: null,
-      token: null,
-      loading: false,
-      error: message,
-    }));
+    setState((prev) => ({ ...prev, user: null, token: null, loading: false, error: message }));
   };
 
   const login = async (email: string, password: string): Promise<boolean> => {
@@ -89,25 +83,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.ok && data.token) {
         localStorage.setItem("authToken", data.token);
-        setState({
-          user: data.user,
-          token: data.token,
-          loading: false,
-          error: null,
-        });
+        setState({ user: data.user, token: data.token, loading: false, error: null });
         navigate("/dashboard", { replace: true });
         return true;
       } else {
-        setState((prev) => ({
-          ...prev,
-          error: data.message || "Credenciais inválidas",
-          loading: false,
-        }));
+        setState((prev) => ({ ...prev, error: data.message || "Credenciais inválidas", loading: false }));
         return false;
       }
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Erro de rede ao fazer login";
+      const message = error instanceof Error ? error.message : "Erro de rede";
       setState((prev) => ({ ...prev, error: message, loading: false }));
       return false;
     }
@@ -123,12 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({ ...prev, error: null }));
   };
 
-  const value = {
-    ...state,
-    login,
-    logout,
-    clearError,
-  };
+  const value = { ...state, login, logout, clearError };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
@@ -144,9 +123,4 @@ export function useAuth(): AuthContextValue {
 export function useIsAuthenticated() {
   const { user, loading } = useAuth();
   return { isAuthenticated: !!user && !loading, user, loading };
-}
-
-export function useLogout() {
-  const { logout } = useAuth();
-  return logout;
 }
