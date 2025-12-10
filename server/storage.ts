@@ -50,7 +50,6 @@ export async function storageGet(
   relKey: string,
   _expiresIn = 300
 ): Promise<{ key: string; url: string }> {
-  const { baseUrl, apiKey } = getStorageConfig();
   const key = normalizeKey(relKey);
   const url = `/uploads/${key}`;
 

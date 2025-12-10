@@ -7,8 +7,8 @@ let eq: any;
 
 async function initDB() {
   if (!db) {
-    const dbModule = await import("../db/index.js");
-    const schemaModule = await import("../db/schema.js");
+    const dbModule = await import("./db.js");
+    const schemaModule = await import("../drizzle/schema.js");
     const drizzleModule = await import("drizzle-orm");
     db = dbModule.db;
     users = schemaModule.users;
