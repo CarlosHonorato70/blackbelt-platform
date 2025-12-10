@@ -1,7 +1,20 @@
 import type { Express, Request, Response, NextFunction } from "express";
-import { db } from "../drizzle/db";
-import { users } from "../drizzle/schema";
-import { eq } from "drizzle-orm";
+
+// Lazy load do DB para evitar problemas de bundle no esbuild
+let db: any;
+let users: any;
+let eq: any;
+
+async function initDB() {
+  if (!db) {
+    const dbModule = await import("../db/index.js");
+    const schemaModule = await import("../db/schema.js");
+    const drizzleModule = await import("drizzle-orm");
+    db = dbModule.db;
+    users = schemaModule.users;
+    eq = drizzleModule.eq;
+  }
+}
 
 // Middleware de validação de entrada
 function validateLoginInput(req: Request, res: Response, next: NextFunction) {
@@ -108,6 +121,8 @@ export function registerRoutes(app: Express) {
     const { email, password } = req.body;
     
     try {
+      await initDB();
+      
       // Busca usuário no banco
       const userResult = await db
         .select()
@@ -158,6 +173,7 @@ export function registerRoutes(app: Express) {
 
   app.get("/api/auth/me", authenticateToken, async (req, res) => {
     try {
+      await initDB();
       const userId = (req as any).user.id;
 
       // Busca dados atualizados do usuário
@@ -224,6 +240,7 @@ export function registerRoutes(app: Express) {
   
   app.get("/api/users", authenticateToken, async (req, res) => {
     try {
+      await initDB();
       const requestingUser = (req as any).user;
 
       // Verifica se usuário tem permissão (apenas admin)
@@ -258,6 +275,7 @@ export function registerRoutes(app: Express) {
 
   app.get("/api/users/:id", authenticateToken, async (req, res) => {
     try {
+      await initDB();
       const { id } = req.params;
       const requestingUser = (req as any).user;
 
@@ -307,14 +325,15 @@ export function registerRoutes(app: Express) {
   
   app.get("/api/dashboard/stats", authenticateToken, async (req, res) => {
     try {
+      await initDB();
       const totalUsers = await db.select().from(users);
 
       res.json({
         success: true,
         stats: {
           totalUsers: totalUsers.length,
-          activeUsers: totalUsers.filter(u => u.role !== "inactive").length,
-          adminUsers: totalUsers.filter(u => u.role === "admin").length,
+          activeUsers: totalUsers.filter((u: any) => u.role !== "inactive").length,
+          adminUsers: totalUsers.filter((u: any) => u.role === "admin").length,
           timestamp: new Date().toISOString()
         }
       });
