@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "../_core/hooks/useAuth";
+import { AuthProvider, useAuth } from "./_core/hooks/useAuth";
 
-// Loading
 function Loading() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -11,7 +10,6 @@ function Loading() {
   );
 }
 
-// Protected Route
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
   
@@ -21,7 +19,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// App Content
 function AppContent() {
   const [count, setCount] = useState(0);
   const { user, error, clearError } = useAuth();
@@ -111,7 +108,6 @@ function AppContent() {
   );
 }
 
-// App principal
 function App() {
   return (
     <Router>
