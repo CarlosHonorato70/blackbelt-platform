@@ -40,7 +40,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useAuth } from "@/_core/hooks/useAuth.tsx";
 import * as XLSX from "xlsx";
 
 interface Invitee {

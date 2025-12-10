@@ -1,4 +1,4 @@
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useAuth } from "@/_core/hooks/useAuth.tsx";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
   Card,

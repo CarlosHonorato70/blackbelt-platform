@@ -20,7 +20,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useAuth } from "@/_core/hooks/useAuth.tsx";
 import { useLocation } from "wouter";
 import copsoqData from "../../../server/data/copsoq-76-questions.json";
 

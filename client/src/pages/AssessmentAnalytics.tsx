@@ -25,7 +25,7 @@ import {
 } from "recharts";
 import { Download, TrendingUp, Users, AlertTriangle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useAuth } from "@/_core/hooks/useAuth.tsx";
 
 export default function AssessmentAnalytics() {
   const { user } = useAuth();

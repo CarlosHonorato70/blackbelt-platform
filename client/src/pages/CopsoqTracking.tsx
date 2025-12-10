@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useAuth } from "@/_core/hooks/useAuth.tsx";
 
 export default function CopsoqTracking() {
   const { user } = useAuth();
