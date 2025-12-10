@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext, createContext, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
+// Tipos
 export interface User {
   id: string;
   name: string;
@@ -25,6 +26,7 @@ type AuthContextValue = AuthState & AuthActions;
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+// Provider
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     user: null,
@@ -39,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (token) {
       validateToken(token);
     } else {
-      setState((prev) => ({ ...prev, loading: false }));
+      setState(prev => ({ ...prev, loading: false }));
     }
   }, []);
 
@@ -48,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await fetch("/api/auth/me", {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${token}`,
+          "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
@@ -57,26 +59,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await response.json();
         setState({ user: data.user || null, token, loading: false, error: null });
       } else {
-        handleAuthError("Token inválido ou expirado");
+        handleAuthError("Token inválido");
       }
     } catch (error) {
-      handleAuthError("Erro de conexão ao validar sessão");
+      handleAuthError("Erro de conexão");
     }
   };
 
   const handleAuthError = (message: string) => {
     localStorage.removeItem("authToken");
-    setState((prev) => ({
-      ...prev,
-      user: null,
-      token: null,
-      loading: false,
-      error: message,
-    }));
+    setState(prev => ({ ...prev, user: null, token: null, loading: false, error: message }));
   };
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    setState((prev) => ({ ...prev, loading: true, error: null }));
+    setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -89,26 +85,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.ok && data.token) {
         localStorage.setItem("authToken", data.token);
-        setState({
-          user: data.user,
-          token: data.token,
-          loading: false,
-          error: null,
-        });
+        setState({ user: data.user, token: data.token, loading: false, error: null });
         navigate("/dashboard", { replace: true });
         return true;
       } else {
-        setState((prev) => ({
-          ...prev,
-          error: data.message || "Credenciais inválidas",
-          loading: false,
-        }));
+        setState(prev => ({ ...prev, error: data.message || "Credenciais inválidas", loading: false }));
         return false;
       }
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Erro de rede ao fazer login";
-      setState((prev) => ({ ...prev, error: message, loading: false }));
+      const message = error instanceof Error ? error.message : "Erro de rede";
+      setState(prev => ({ ...prev, error: message, loading: false }));
       return false;
     }
   };
@@ -120,19 +106,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const clearError = () => {
-    setState((prev) => ({ ...prev, error: null }));
+    setState(prev => ({ ...prev, error: null }));
   };
 
-  const value = {
-    ...state,
-    login,
-    logout,
-    clearError,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ ...state, login, logout, clearError }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
+// Hook principal
 export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -141,6 +125,7 @@ export function useAuth(): AuthContextValue {
   return context;
 }
 
+// Hook auxiliar
 export function useIsAuthenticated() {
   const { user, loading } = useAuth();
   return { isAuthenticated: !!user && !loading, user, loading };
@@ -149,4 +134,14 @@ export function useIsAuthenticated() {
 export function useLogout() {
   const { logout } = useAuth();
   return logout;
+}
+
+export function handleApiError(error: unknown, defaultMessage: string = "Erro na requisição"): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === "string") {
+    return error;
+  }
+  return defaultMessage;
 }
