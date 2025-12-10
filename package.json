@@ -40,6 +40,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-query": "^5.90.2",
     "@trpc/server": "^11.0.0",
+    "@vitejs/plugin-react": "^4.7.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -72,6 +73,7 @@
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.2",
+    "vite": "^5.4.20",
     "wouter": "^3.7.1",
     "zod": "^3.25.76"
   },
@@ -84,14 +86,12 @@
     "@types/pg": "^8.15.6",
     "@types/react": "^18.3.27",
     "@types/react-dom": "^18.3.7",
-    "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.21",
     "drizzle-kit": "^0.27.2",
     "esbuild": "^0.24.2",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
     "tsx": "^4.20.6",
-    "typescript": "^5.9.3",
-    "vite": "^5.4.20"
+    "typescript": "^5.9.3"
   }
 }
