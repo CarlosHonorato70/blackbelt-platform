@@ -10,9 +10,10 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "strict": false,
+    "noImplicitAny": false,
     "allowImportingTsExtensions": false,
     "noEmit": false
   },
-  "include": ["server/index.ts", "server/routes.ts", "server/vite.ts"],
-  "exclude": ["node_modules", "dist", "client", "server/routers", "server/storage.ts"]
+  "include": ["server/**/*"],
+  "exclude": ["node_modules", "dist", "client"]
 }
