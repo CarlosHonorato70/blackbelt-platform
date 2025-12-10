@@ -1,105 +1,68 @@
-import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
-import People from "@/pages/People";
-import RiskAssessments from "@/pages/RiskAssessments";
-import RiskAssessmentForm from "@/pages/RiskAssessmentForm";
-import Sectors from "@/pages/Sectors";
-import Tenants from "@/pages/Tenants";
-import { Route, Switch } from "wouter";
-import ErrorBoundary from "./components/ErrorBoundary";
-import { ThemeProvider } from "./contexts/ThemeContext";
-import { BrandingProvider } from "./contexts/BrandingContext";
-import Home from "./pages/Home";
-import Dashboard from "./pages/Dashboard";
-import ComplianceReports from "./pages/ComplianceReports";
-import UserInvites from "./pages/UserInvites";
-import RolesPermissions from "./pages/RolesPermissions";
-import AuditLogs from "./pages/AuditLogs";
-import DataExport from "./pages/DataExport";
-import TestDashboard from "./pages/TestDashboard";
-import SecurityDashboard from "./pages/SecurityDashboard";
-import Login from "./pages/Login";
-import COPSOQ from "./pages/COPSOQ";
-import CopsoqTracking from "./pages/CopsoqTracking";
-import AssessmentHistory from "./pages/AssessmentHistory";
-import AssessmentAnalytics from "./pages/AssessmentAnalytics";
-import CopsoqInvites from "./pages/CopsoqInvites";
-import ReminderManagement from "./pages/ReminderManagement";
-import Services from "./pages/Services";
-import Clients from "./pages/Clients";
-import PricingParameters from "./pages/PricingParameters";
-import Proposals from "./pages/Proposals";
-import ExecutiveDashboard from "./pages/ExecutiveDashboard";
-import Pricing from "./pages/subscription/Pricing";
-import Checkout from "./pages/subscription/Checkout";
-import SubscriptionDashboard from "./pages/subscription/SubscriptionDashboard";
-import SubscriptionSuccess from "./pages/subscription/SubscriptionSuccess";
-import SubscriptionFailure from "./pages/subscription/SubscriptionFailure";
-import BrandingSettings from "./pages/BrandingSettings";
-
-function Router() {
-  return (
-    <Switch>
-      <Route path={"/"} component={Dashboard} />
-      <Route path={"/home"} component={Home} />
-      <Route path={"/login"} component={Login} />
-      <Route path={"/"} component={Home} />
-      <Route path={"/dashboard"} component={Dashboard} />
-      <Route path={"/executive"} component={ExecutiveDashboard} />
-      <Route path={"/compliance-reports"} component={ComplianceReports} />
-      <Route path={"/user-invites"} component={UserInvites} />
-      <Route path={"/roles-permissions"} component={RolesPermissions} />
-      <Route path={"/audit-logs"} component={AuditLogs} />
-      <Route path={"/data-export"} component={DataExport} />
-      <Route path={"/test-dashboard"} component={TestDashboard} />
-      <Route path={"/security"} component={SecurityDashboard} />
-
-      <Route path={"/tenants"} component={Tenants} />
-      <Route path={"/sectors"} component={Sectors} />
-      <Route path={"/people"} component={People} />
-      <Route path={"/risk-assessments"} component={RiskAssessments} />
-      <Route path={"/risk-assessments/new"} component={RiskAssessmentForm} />
-      <Route path="/copsoq" component={COPSOQ} />
-      <Route path="/copsoq-tracking" component={CopsoqTracking} />
-      <Route path="/reminder-management" component={ReminderManagement} />
-      <Route path="/copsoq/history" component={AssessmentHistory} />
-      <Route path="/copsoq/analytics" component={AssessmentAnalytics} />
-      <Route path="/copsoq/invites" component={CopsoqInvites} />
-
-      <Route path="/services" component={Services} />
-      <Route path="/clients" component={Clients} />
-      <Route path="/pricing-parameters" component={PricingParameters} />
-      <Route path="/proposals" component={Proposals} />
-
-      {/* Subscription Routes */}
-      <Route path="/pricing" component={Pricing} />
-      <Route path="/subscription/checkout" component={Checkout} />
-      <Route path="/subscription/dashboard" component={SubscriptionDashboard} />
-      <Route path="/subscription/success" component={SubscriptionSuccess} />
-      <Route path="/subscription/failure" component={SubscriptionFailure} />
-
-      {/* Phase 5: White-Label Settings (Enterprise) */}
-      <Route path="/settings/branding" component={BrandingSettings} />
-
-      <Route path={"/404"} component={NotFound} />
-      <Route component={NotFound} />
-    </Switch>
-  );
-}
+import { useState } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 function App() {
+  const [count, setCount] = useState(0);
+
   return (
-    <ErrorBoundary>
-      <ThemeProvider defaultTheme="light">
-        <BrandingProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </BrandingProvider>
-      </ThemeProvider>
-    </ErrorBoundary>
+    <Router>
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between h-16">
+              <div className="flex items-center">
+                <h1 className="text-xl font-semibold text-gray-900">
+                  Black Belt Platform
+                </h1>
+              </div>
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => setCount((count) => count + 1)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                >
+                  Count: {count}
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+          <div className="px-4 py-6 sm:px-0">
+            <div className="border-4 border-dashed border-gray-200 rounded-lg h-96 flex items-center justify-center">
+              <div className="text-center">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Bem-vindo à Black Belt Platform
+                </h3>
+                <p className="text-gray-500 mb-4">
+                  Sistema de gestão de consultoria em conformidade e segurança
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <a
+                    href="/api/health"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    Testar API
+                  </a>
+                  <button
+                    onClick={() => setCount((count) => count + 1)}
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    Incrementar Contador ({count})
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      <Routes>
+        <Route path="/" element={<div>Home Page</div>} />
+        <Route path="/dashboard" element={<div>Dashboard</div>} />
+        <Route path="/api/*" element={<div>API Routes</div>} />
+      </Routes>
+    </Router>
   );
 }
 
