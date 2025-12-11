@@ -34,7 +34,13 @@ await build({
     'express-rate-limit',
     'express-slow-down',
     'better-sqlite3',
-    'pg-native'
+    'pg-native',
+    'dotenv',
+    'dotenv/config',
+    'pdfkit',
+    '@babel/*',
+    '../drizzle/db',
+    './drizzle/db',
   ],
   alias: {
     '@/_core': './server/_core',
