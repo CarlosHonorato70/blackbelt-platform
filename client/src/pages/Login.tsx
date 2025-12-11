@@ -17,22 +17,20 @@ export default function Login() {
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: () => {
       toast.success("Login realizado com sucesso!");
-      window.location.href = "/dashboard"; // Force reload para garantir cookie
+      window.location.href = "/dashboard";
     },
     onError: (error: any) => {
       setError("Email ou senha inválidos");
-      toast.error("Email ou senha inválidos");
     },
   });
 
   const registerMutation = trpc.auth.register.useMutation({
     onSuccess: () => {
       toast.success("Conta criada com sucesso!");
-      window.location.href = "/dashboard"; // Force reload para garantir cookie
+      window.location.href = "/dashboard";
     },
     onError: (error: any) => {
       setError(error.message || "Erro ao criar conta");
-      toast.error(error.message || "Erro ao criar conta");
     },
   });
 
@@ -48,25 +46,33 @@ export default function Login() {
         await registerMutation.mutateAsync({ email, password, name });
       }
     } catch (err) {
-      // Erro já tratado no onError
+      // Erro já tratado
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-purple-900 via-purple-700 to-purple-600 p-4">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{
+        background: 'linear-gradient(180deg, #4C1D95 0%, #5B21B6 50%, #6D28D9 100%)'
+      }}
+    >
       <div className="w-full max-w-md">
-        {/* Card de Login - IDÊNTICO À IMAGEM */}
-        <div className="bg-white rounded-xl shadow-2xl p-8">
+        {/* Card - Fundo Lavanda/Cinza Claro */}
+        <div 
+          className="rounded-2xl shadow-2xl p-10"
+          style={{ backgroundColor: '#E9E3F0' }}
+        >
           {/* Título */}
           <h1 className="text-2xl font-bold text-gray-800 text-center mb-2">
             {mode === "login" ? "Faça login na sua conta" : "Crie sua conta"}
           </h1>
 
-          {/* Mensagem de Erro - VERMELHO BRILHANTE */}
+          {/* Mensagem de Erro - Vermelho Brilhante */}
           {error && (
-            <p className="text-red-600 text-sm text-center mb-4">
+            <p className="text-red-600 text-sm text-center mb-6 font-medium">
               {error}
             </p>
           )}
@@ -81,7 +87,7 @@ export default function Login() {
                 onChange={e => setName(e.target.value)}
                 required={mode === "register"}
                 disabled={isLoading}
-                className="h-12 rounded-lg border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                className="h-12 rounded-lg border-gray-300 bg-white"
               />
             )}
 
@@ -92,7 +98,7 @@ export default function Login() {
               onChange={e => setEmail(e.target.value)}
               required
               disabled={isLoading}
-              className="h-12 rounded-lg border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+              className="h-12 rounded-lg border-gray-300 bg-white"
             />
 
             <Input
@@ -102,19 +108,20 @@ export default function Login() {
               onChange={e => setPassword(e.target.value)}
               required
               disabled={isLoading}
-              className="h-12 rounded-lg border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+              className="h-12 rounded-lg border-gray-300 bg-white"
             />
 
             <Button
               type="submit"
-              className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg shadow-md transition-colors"
+              className="w-full h-12 text-white font-semibold rounded-lg shadow-md"
+              style={{ backgroundColor: '#7C3AED' }}
               disabled={isLoading}
             >
               {isLoading ? "Carregando..." : mode === "login" ? "Entrar" : "Criar Conta"}
             </Button>
           </form>
 
-          {/* Links - IDÊNTICOS À IMAGEM */}
+          {/* Links */}
           <div className="mt-6 text-center space-y-2">
             <button
               type="button"
@@ -122,16 +129,16 @@ export default function Login() {
                 setMode(mode === "login" ? "register" : "login");
                 setError("");
               }}
-              className="text-sm text-gray-700 hover:text-gray-900"
+              className="text-sm text-gray-700"
               disabled={isLoading}
             >
               {mode === "login" ? (
                 <>
-                  Primeira vez? <span className="text-purple-600 font-semibold underline">Cadastre-se</span>
+                  Primeira vez? <span className="font-bold">Cadastre-se</span>
                 </>
               ) : (
                 <>
-                  Já tem conta? <span className="text-purple-600 font-semibold underline">Faça login</span>
+                  Já tem conta? <span className="font-bold">Faça login</span>
                 </>
               )}
             </button>
@@ -140,7 +147,7 @@ export default function Login() {
               <div>
                 <button
                   type="button"
-                  className="text-sm text-purple-600 hover:text-purple-700 font-medium underline"
+                  className="text-sm text-blue-500 hover:text-blue-600"
                   disabled={isLoading}
                 >
                   Recuperar Senha
