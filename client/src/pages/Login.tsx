@@ -60,7 +60,7 @@ export default function Login() {
       }}
     >
       <div className="w-full max-w-md">
-        {/* Card - Fundo Lavanda/Cinza Claro */}
+        {/* Card - Fundo Lavanda/Cinza Claro EXATO DA IMAGEM */}
         <div 
           className="rounded-2xl shadow-2xl p-10"
           style={{ backgroundColor: '#E9E3F0' }}
@@ -113,7 +113,7 @@ export default function Login() {
 
             <Button
               type="submit"
-              className="w-full h-12 text-white font-semibold rounded-lg shadow-md"
+              className="w-full h-12 text-white font-semibold rounded-lg shadow-md hover:opacity-90"
               style={{ backgroundColor: '#7C3AED' }}
               disabled={isLoading}
             >
@@ -121,7 +121,7 @@ export default function Login() {
             </Button>
           </form>
 
-          {/* Links */}
+          {/* Links EXATOS DA IMAGEM */}
           <div className="mt-6 text-center space-y-2">
             <button
               type="button"
