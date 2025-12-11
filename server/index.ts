@@ -1,24 +1,24 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes.js";
-import { setupVite, serveStatic, log } from "./vite.js";
-import { createServer } from "http";
-import cors from "cors";
-import helmet from "helmet";
-import rateLimit from "express-rate-limit";
-import slowDown from "express-slow-down";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import fs from "fs";
-import { exec } from "child_process";
-import { promisify } from "util";
+import { createServer as createViteServer } from "vite";
+import { setupVite } from "./vite";
+import { registerRoutes } from "./routes";
+import { db } from "../db";
+import { log } from "@/_core";
+import helmet from "helmet";
+import cors from "cors";
+import rateLimit from "express-rate-limit";
+import slowDown from "express-slow-down";
 
-const execAsync = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+const server = createServer(app);
 
-// 1. SEGURANÇA COMERCIAL (CSP CONFIGURADO)
+// Segurança
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -35,7 +35,7 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
-// Configuração de CORS
+// CORS
 app.use(cors({
   origin: true,
   credentials: true,
@@ -94,25 +94,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = createServer(app);
-
-  // 0. AUTO-MIGRAÇÃO DO BANCO DE DADOS
-  // Executa apenas em produção para garantir que as tabelas existam
-  if (process.env.NODE_ENV !== "development") {
-    try {
-      log("🔄 Running database migrations...");
-      // Executa o comando definido no package.json
-      await execAsync("npm run db:push");
-      log("✅ Database migrations completed successfully!");
-    } catch (error) {
-      log("⚠️ Migration warning (check logs if tables are missing): " + error);
-    }
-  }
-
-  // Registra as rotas da API
-  registerRoutes(app);
-
-  // Tratamento de erros global
+  // 1. REGISTRAR ROTAS DA API
+  const routes = registerRoutes(app);
+  
+  // Error handler
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
@@ -121,45 +106,61 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
   });
 
-  // 2. SERVIR FRONTEND EM PRODUÇÃO
+  // 2. SERVIR FRONTEND
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     const possiblePaths = [
-      path.join(__dirname, "public"),      
-      path.join(__dirname, "..", "public"), 
-      path.join(process.cwd(), "dist", "public") 
+      path.join(__dirname, "public"),
+      path.join(__dirname, "..", "public"),
+      path.join(process.cwd(), "dist", "public")
     ];
 
     let distPath = possiblePaths.find(p => fs.existsSync(p));
 
     if (distPath) {
-      log(`✅ Serving static files from: ${distPath}`);
+      log(`✅ Servindo arquivos estáticos de: ${distPath}`);
       
+      // Serve arquivos estáticos
       app.use(express.static(distPath, {
         maxAge: "1d",
         immutable: true
       }));
 
-      app.get("*", (req, res) => {
-        if (!req.path.startsWith("/api")) {
-          res.sendFile(path.join(distPath!, "index.html"));
+      // SPA FALLBACK - CRÍTICO PARA REACT ROUTER
+      app.get("*", (req, res, next) => {
+        // Se for rota de API, pula
+        if (req.path.startsWith("/api")) {
+          return next();
+        }
+        
+        // Para todas as outras rotas, serve o index.html
+        const indexPath = path.join(distPath!, "index.html");
+        
+        if (fs.existsSync(indexPath)) {
+          res.sendFile(indexPath);
+        } else {
+          res.status(500).send("Frontend build not found");
         }
       });
     } else {
       log(`❌ CRITICAL: Could not find 'public' folder. Checked: ${possiblePaths.join(", ")}`);
-      app.get("*", (req, res) => {
-        if (!req.path.startsWith("/api")) {
-          res.status(500).send("System Error: Frontend build not found.");
+      app.get("*", (req, res, next) => {
+        if (req.path.startsWith("/api")) {
+          return next();
         }
+        res.status(500).send("System Error: Frontend build not found.");
       });
     }
   }
 
   const PORT = parseInt(process.env.PORT || "8080", 10);
-  const HOST = "0.0.0.0";
-
-  server.listen(PORT, HOST, () => {
-    log(`Server running on http://${HOST}:${PORT}/`);
+  
+  server.listen(PORT, "0.0.0.0", () => {
+    log(`Servidor em execução em http://0.0.0.0:${PORT}/`);
   });
 })();
+
+function createServer(app: express.Application) {
+  return require("http").createServer(app);
+}
