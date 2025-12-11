@@ -8,28 +8,14 @@ const __dirname = dirname(__filename);
 
 console.log('🔨 Building backend...');
 
-// Plugin para resolver aliases @/ e @/_core
-const aliasPlugin = {
-  name: 'alias',
-  setup(build) {
-    build.onResolve({ filter: /^@\/_core/ }, args => {
-      return { path: join(__dirname, 'server/_core', args.path.replace('@/_core', '')), external: false };
-    });
-    build.onResolve({ filter: /^@\// }, args => {
-      return { path: join(__dirname, args.path.replace('@/', '')), external: false };
-    });
-  }
-};
-
-// Build dos arquivos principais
+// Build do index.ts com bundle para resolver aliases
 await build({
   entryPoints: ['server/index.ts'],
-  bundle: false,
+  bundle: true,
   platform: 'node',
   target: 'node22',
   format: 'esm',
-  outdir: 'dist',
-  plugins: [aliasPlugin],
+  outfile: 'dist/index.js',
   external: [
     'express',
     'vite',
@@ -46,19 +32,24 @@ await build({
     'helmet',
     'cors',
     'express-rate-limit',
-    'express-slow-down'
-  ]
+    'express-slow-down',
+    'better-sqlite3',
+    'pg-native'
+  ],
+  alias: {
+    '@/_core': './server/_core',
+    '@': '.'
+  }
 });
 
-// Build dos módulos auxiliares
+// Build dos módulos auxiliares SEM bundle
 await build({
   entryPoints: ['server/routes.ts', 'server/vite.ts', 'server/db.ts'],
   bundle: false,
   platform: 'node',
   target: 'node22',
   format: 'esm',
-  outdir: 'dist',
-  plugins: [aliasPlugin]
+  outdir: 'dist'
 });
 
 console.log('✓ Copiando arquivos auxiliares...');
@@ -76,7 +67,7 @@ async function copyDir(src, dest) {
       await copyDir(srcPath, destPath);
     } else {
       await copyFile(srcPath, destPath);
-      console.log(`✓ Copiado: ${srcPath} → ${destPath}`);
+      console.log(`✓ Copiado: ${srcPath}`);
     }
   }
 }
