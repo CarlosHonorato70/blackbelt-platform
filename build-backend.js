@@ -10,6 +10,24 @@ console.log('🔨 Building backend...');
 
 // Lista completa de módulos externos (não fazer bundle)
 const externalModules = [
+  // Módulos nativos do Node.js
+  'http',
+  'https',
+  'fs',
+  'path',
+  'net',
+  'crypto',
+  'stream',
+  'util',
+  'events',
+  'buffer',
+  'url',
+  'querystring',
+  'zlib',
+  'os',
+  'child_process',
+  
+  // Dependências externas
   'express',
   'vite',
   'drizzle-orm',
