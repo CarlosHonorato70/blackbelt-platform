@@ -1,3 +1,4 @@
+import { createServer as createHttpServer } from "http";
 import express, { type Request, Response, NextFunction } from "express";
 import fs from "fs";
 import path from "path";
@@ -15,7 +16,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const server = createServer(app);
+const server = createHttpServer(app);
 
 // Segurança
 app.use(helmet({
@@ -160,6 +161,3 @@ app.use((req, res, next) => {
   });
 })();
 
-function createServer(app: express.Application) {
-  return require("http").createServer(app);
-}
