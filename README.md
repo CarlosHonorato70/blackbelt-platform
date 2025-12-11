@@ -265,7 +265,8 @@ A aplicação estará disponível em `http://localhost:3000`
 
 ### 🚀 Deploy em Produção
 
-- [**RENDER_DEPLOYMENT_GUIDE.md**](RENDER_DEPLOYMENT_GUIDE.md) - 🌐 **Deploy no Render** (Recomendado - PostgreSQL gratuito)
+- [**RENDER_DEPLOYMENT_GUIDE.md**](RENDER_DEPLOYMENT_GUIDE.md) - 🌐 **Deploy no Render** (Recomendado - PostgreSQL)
+- [**RENDER_SQLITE_GUIDE.md**](RENDER_SQLITE_GUIDE.md) - 🗄️ **Deploy com SQLite** (Armazenamento local - Economize US$ 6/mês)
 - [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) - Guia completo de deploy (VPS, Docker, etc)
 - [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md) - Referência rápida para produção
 

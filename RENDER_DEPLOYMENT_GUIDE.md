@@ -2,6 +2,8 @@
 
 Este guia explica como fazer o deploy da Black Belt Platform no [Render](https://render.com/), uma plataforma moderna de hospedagem com suporte nativo a Docker e PostgreSQL.
 
+> 💡 **Quer usar armazenamento local ao invés do PostgreSQL?** Veja o [**Guia SQLite**](RENDER_SQLITE_GUIDE.md) para usar banco de dados em arquivo e economizar US$ 6/mês.
+
 ## 📋 Pré-requisitos
 
 - [ ] Conta no [Render](https://render.com/) (plano gratuito disponível)
@@ -289,6 +291,16 @@ Para reverter para uma versão anterior:
 | Web Service | Standard | US$ 25/mês |
 | PostgreSQL | Standard | US$ 20/mês |
 | **Total** | | **US$ 45/mês** |
+
+### 💡 Opção Econômica: SQLite com Render Disk
+
+| Recurso | Plano | Custo |
+|---------|-------|-------|
+| Web Service | Starter | US$ 7/mês |
+| Render Disk (1GB) | Storage | US$ 1/mês |
+| **Total** | | **US$ 8/mês** |
+
+**Economize US$ 6/mês** usando SQLite com armazenamento local! Veja o [**Guia SQLite**](RENDER_SQLITE_GUIDE.md) para detalhes.
 
 **Nota**: Render oferece crédito gratuito de US$ 5/mês para novos usuários.
 
