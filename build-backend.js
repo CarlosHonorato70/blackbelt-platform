@@ -1,73 +1,95 @@
 import { build } from 'esbuild';
-import { copyFileSync, mkdirSync, readdirSync, existsSync } from 'fs';
+import { copyFile, mkdir, readdir } from 'fs/promises';
 import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 console.log('🔨 Building backend...');
 
-function copyDir(src, dest) {
-  mkdirSync(dest, { recursive: true });
-  const entries = readdirSync(src, { withFileTypes: true });
+// Plugin para resolver aliases @/ e @/_core
+const aliasPlugin = {
+  name: 'alias',
+  setup(build) {
+    build.onResolve({ filter: /^@\/_core/ }, args => {
+      return { path: join(__dirname, 'server/_core', args.path.replace('@/_core', '')), external: false };
+    });
+    build.onResolve({ filter: /^@\// }, args => {
+      return { path: join(__dirname, args.path.replace('@/', '')), external: false };
+    });
+  }
+};
+
+// Build dos arquivos principais
+await build({
+  entryPoints: ['server/index.ts'],
+  bundle: false,
+  platform: 'node',
+  target: 'node22',
+  format: 'esm',
+  outdir: 'dist',
+  plugins: [aliasPlugin],
+  external: [
+    'express',
+    'vite',
+    'drizzle-orm',
+    'postgres',
+    '@trpc/server',
+    'zod',
+    'bcryptjs',
+    'jsonwebtoken',
+    'nodemailer',
+    'stripe',
+    'mercadopago',
+    '@aws-sdk/*',
+    'helmet',
+    'cors',
+    'express-rate-limit',
+    'express-slow-down'
+  ]
+});
+
+// Build dos módulos auxiliares
+await build({
+  entryPoints: ['server/routes.ts', 'server/vite.ts', 'server/db.ts'],
+  bundle: false,
+  platform: 'node',
+  target: 'node22',
+  format: 'esm',
+  outdir: 'dist',
+  plugins: [aliasPlugin]
+});
+
+console.log('✓ Copiando arquivos auxiliares...');
+
+// Copia arquivos necessários
+async function copyDir(src, dest) {
+  await mkdir(dest, { recursive: true });
+  const entries = await readdir(src, { withFileTypes: true });
   
   for (const entry of entries) {
     const srcPath = join(src, entry.name);
     const destPath = join(dest, entry.name);
     
     if (entry.isDirectory()) {
-      copyDir(srcPath, destPath);
+      await copyDir(srcPath, destPath);
     } else {
-      copyFileSync(srcPath, destPath);
-      console.log(`✓ Copiado: ${srcPath}`);
+      await copyFile(srcPath, destPath);
+      console.log(`✓ Copiado: ${srcPath} → ${destPath}`);
     }
   }
 }
 
-try {
-  // Build apenas do index.ts
-  await build({
-    entryPoints: ['server/index.ts'],
-    bundle: false,
-    platform: 'node',
-    target: 'node22',
-    format: 'esm',
-    outdir: 'dist',
-    sourcemap: true,
-    logLevel: 'info'
-  });
+// Copia diretórios necessários
+await copyDir('drizzle', 'dist/drizzle');
+await copyDir('server/_core', 'dist/server/_core');
+await copyDir('server/routers', 'dist/server/routers');
+await copyDir('server/data', 'dist/server/data');
+await copyDir('server/__tests__', 'dist/server/__tests__');
 
-  // Build dos outros arquivos principais
-  await build({
-    entryPoints: ['server/routes.ts', 'server/vite.ts', 'server/db.ts'],
-    bundle: false,
-    platform: 'node',
-    target: 'node22',
-    format: 'esm',
-    outdir: 'dist',
-    sourcemap: true,
-    logLevel: 'info'
-  });
+// Copia arquivos individuais
+await copyFile('server/storage.ts', 'dist/storage.js');
+await copyFile('server/routers.ts', 'dist/routers.js');
 
-  // Copia pastas completas
-  copyDir('drizzle', 'dist/drizzle');
-  
-  // Copia subpastas do server
-  if (existsSync('server/_core')) copyDir('server/_core', 'dist/_core');
-  if (existsSync('server/routers')) copyDir('server/routers', 'dist/routers');
-  if (existsSync('server/data')) copyDir('server/data', 'dist/data');
-  if (existsSync('server/__tests__')) copyDir('server/__tests__', 'dist/__tests__');
-
-  // Copia arquivos individuais do server
-  const serverFiles = ['storage.ts', 'routers.ts'];
-  serverFiles.forEach(file => {
-    const src = join('server', file);
-    const dest = join('dist', file.replace('.ts', '.js'));
-    if (existsSync(src)) {
-      copyFileSync(src, dest);
-      console.log(`✓ Copiado: ${src} → ${dest}`);
-    }
-  });
-
-  console.log('✅ Backend build completed!');
-} catch (error) {
-  console.error('❌ Build failed:', error);
-  process.exit(1);
-}
+console.log('✅ Backend build completed!');
