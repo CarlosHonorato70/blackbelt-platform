@@ -6,7 +6,6 @@ import { createServer as createViteServer } from "vite";
 import { setupVite } from "./vite.js";
 import { registerRoutes } from "./routes.js";
 import { db } from "../db.js";
-import { log } from "@/_core";
 import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
@@ -86,7 +85,7 @@ app.use((req, res, next) => {
       if (logLine.length > 80) {
         logLine = logLine.slice(0, 79) + "…";
       }
-      log(logLine);
+      console.log(logLine);
     }
   });
 
@@ -119,7 +118,7 @@ app.use((req, res, next) => {
     let distPath = possiblePaths.find(p => fs.existsSync(p));
 
     if (distPath) {
-      log(`✅ Servindo arquivos estáticos de: ${distPath}`);
+      console.log(`✅ Servindo arquivos estáticos de: ${distPath}`);
       
       // Serve arquivos estáticos
       app.use(express.static(distPath, {
@@ -144,7 +143,7 @@ app.use((req, res, next) => {
         }
       });
     } else {
-      log(`❌ CRITICAL: Could not find 'public' folder. Checked: ${possiblePaths.join(", ")}`);
+      console.log(`❌ CRITICAL: Could not find 'public' folder. Checked: ${possiblePaths.join(", ")}`);
       app.get("*", (req, res, next) => {
         if (req.path.startsWith("/api")) {
           return next();
@@ -157,7 +156,7 @@ app.use((req, res, next) => {
   const PORT = parseInt(process.env.PORT || "8080", 10);
   
   server.listen(PORT, "0.0.0.0", () => {
-    log(`Servidor em execução em http://0.0.0.0:${PORT}/`);
+    console.log(`Servidor em execução em http://0.0.0.0:${PORT}/`);
   });
 })();
 
