@@ -25,6 +25,33 @@ const requireUser = t.middleware(async ({ ctx, next }) => {
 
 export const protectedProcedure = t.procedure.use(requireUser);
 
+// Middleware de tenant (para multi-tenancy)
+const requireTenant = t.middleware(async ({ ctx, next }) => {
+  if (!ctx.user) {
+    throw new TRPCError({ 
+      code: "UNAUTHORIZED", 
+      message: "Você precisa estar autenticado" 
+    });
+  }
+
+  if (!ctx.user.tenantId) {
+    throw new TRPCError({ 
+      code: "FORBIDDEN", 
+      message: "Você precisa estar associado a uma organização" 
+    });
+  }
+
+  return next({
+    ctx: {
+      ...ctx,
+      user: ctx.user,
+      tenantId: ctx.user.tenantId,
+    },
+  });
+});
+
+export const tenantProcedure = t.procedure.use(requireTenant);
+
 const NOT_ADMIN_ERR_MSG = "Você precisa ser um administrador para acessar este recurso";
 
 export const adminProcedure = t.procedure.use(

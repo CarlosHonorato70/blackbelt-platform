@@ -7,7 +7,7 @@ let eq: any;
 
 async function initDB() {
   if (!db) {
-    const dbModule = await import("../drizzle/db");
+    const dbModule = await import("./db");
     const schemaModule = await import("../drizzle/schema");
     const drizzleModule = await import("drizzle-orm");
     db = dbModule.db;
