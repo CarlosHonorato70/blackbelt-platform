@@ -8,7 +8,35 @@ const __dirname = dirname(__filename);
 
 console.log('🔨 Building backend...');
 
-// Build do index.ts com bundle para resolver aliases
+// Lista completa de módulos externos (não fazer bundle)
+const externalModules = [
+  'express',
+  'vite',
+  'drizzle-orm',
+  'postgres',
+  '@trpc/server',
+  'zod',
+  'bcryptjs',
+  'jsonwebtoken',
+  'nodemailer',
+  'stripe',
+  'mercadopago',
+  '@aws-sdk/*',
+  'helmet',
+  'cors',
+  'express-rate-limit',
+  'express-slow-down',
+  'better-sqlite3',
+  'pg-native',
+  'dotenv',
+  'dotenv/config',
+  'pdfkit',
+  '@babel/core',
+  '@babel/preset-typescript',
+  '@babel/preset-env',
+];
+
+// Build do index.ts com bundle
 await build({
   entryPoints: ['server/index.ts'],
   bundle: true,
@@ -16,36 +44,13 @@ await build({
   target: 'node22',
   format: 'esm',
   outfile: 'dist/index.js',
-  external: [
-    'express',
-    'vite',
-    'drizzle-orm',
-    'postgres',
-    '@trpc/server',
-    'zod',
-    'bcryptjs',
-    'jsonwebtoken',
-    'nodemailer',
-    'stripe',
-    'mercadopago',
-    '@aws-sdk/*',
-    'helmet',
-    'cors',
-    'express-rate-limit',
-    'express-slow-down',
-    'better-sqlite3',
-    'pg-native',
-    'dotenv',
-    'dotenv/config',
-    'pdfkit',
-    '@babel/*',
-    '../drizzle/db',
-    './drizzle/db',
-  ],
+  external: externalModules,
   alias: {
     '@/_core': './server/_core',
-    '@': '.'
-  }
+    '@': '.',
+  },
+  // Resolver paths relativos
+  resolveExtensions: ['.ts', '.js', '.json'],
 });
 
 // Build dos módulos auxiliares SEM bundle
@@ -55,12 +60,12 @@ await build({
   platform: 'node',
   target: 'node22',
   format: 'esm',
-  outdir: 'dist'
+  outdir: 'dist',
 });
 
 console.log('✓ Copiando arquivos auxiliares...');
 
-// Copia arquivos necessários
+// Função para copiar diretórios recursivamente
 async function copyDir(src, dest) {
   await mkdir(dest, { recursive: true });
   const entries = await readdir(src, { withFileTypes: true });
