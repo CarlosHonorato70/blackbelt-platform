@@ -1,34 +1,31 @@
-import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from "@shared/const";
 import { initTRPC, TRPCError } from "@trpc/server";
-import superjson from "superjson";
-import type { TrpcContext } from "./context";
+import type { Context } from "./context";
 
-const t = initTRPC.context<TrpcContext>().create({
-  transformer: superjson,
-});
+const t = initTRPC.context<Context>().create();
 
 export const router = t.router;
 export const publicProcedure = t.procedure;
 
-export const mockUser = {
-  id: "mock-user-id",
-  email: "mock@blackbelt.com",
-  name: "Mock User",
-  role: "admin", // Definir como admin para ter acesso a tudo
-  tenantId: "mock-tenant-id",
-};
+// Middleware de autenticação REAL
+const requireUser = t.middleware(async ({ ctx, next }) => {
+  if (!ctx.user) {
+    throw new TRPCError({ 
+      code: "UNAUTHORIZED", 
+      message: "Você precisa estar autenticado para acessar este recurso" 
+    });
+  }
 
-const mockRequireUser = t.middleware(async ({ ctx, next }) => {
-  // Ignorar a verificação de autenticação e injetar um usuário mock
   return next({
     ctx: {
       ...ctx,
-      user: mockUser,
+      user: ctx.user,
     },
   });
 });
 
-export const protectedProcedure = t.procedure.use(mockRequireUser);
+export const protectedProcedure = t.procedure.use(requireUser);
+
+const NOT_ADMIN_ERR_MSG = "Você precisa ser um administrador para acessar este recurso";
 
 export const adminProcedure = t.procedure.use(
   t.middleware(async opts => {
@@ -46,44 +43,3 @@ export const adminProcedure = t.procedure.use(
     });
   })
 );
-
-/**
- * Middleware to enforce tenant isolation
- * Requires both authentication and a valid tenantId
- */
-const requireTenant = t.middleware(async opts => {
-  const { ctx, next } = opts;
-
-  if (!ctx.user) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
-  }
-
-  if (!ctx.tenantId) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Tenant ID is required. Please select a company.",
-    });
-  }
-
-  // Verify user has access to this tenant
-  if (ctx.userRoles.length === 0 && ctx.user.role !== "admin") {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: "You don't have access to this tenant.",
-    });
-  }
-
-  return next({
-    ctx: {
-      ...ctx,
-      user: ctx.user,
-      tenantId: ctx.tenantId,
-    },
-  });
-});
-
-/**
- * Procedure that requires tenant context
- * Use this for all multi-tenant operations
- */
-export const tenantProcedure = t.procedure.use(requireTenant);

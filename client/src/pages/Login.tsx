@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -120,6 +121,7 @@ function LoginForm({
 }
 
 export default function Login() {
+  const navigate = useNavigate();
   const [, setLocation] = useLocation();
   const [mode, setMode] = useState<AuthMode>("login");
   const [isLoading, setIsLoading] = useState(false);
@@ -127,7 +129,7 @@ export default function Login() {
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: () => {
       toast.success("Login realizado com sucesso!");
-      setLocation("/");
+      navigate("/dashboard", { replace: true });
     },
     onError: (error: any) => {
       toast.error(error.message || "Erro ao fazer login");
@@ -137,7 +139,7 @@ export default function Login() {
   const registerMutation = trpc.auth.register.useMutation({
     onSuccess: () => {
       toast.success("Conta criada com sucesso!");
-      setLocation("/");
+      navigate("/dashboard", { replace: true });
     },
     onError: (error: any) => {
       toast.error(error.message || "Erro ao registrar");
