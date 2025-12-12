@@ -31,9 +31,7 @@ services:
 
   # Application Backend
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.production
+    image: ${DOCKER_IMAGE:-ghcr.io/carloshonorato70/blackbelt-platform:latest}
     container_name: blackbelt-backend-prod
     restart: always
     environment:
