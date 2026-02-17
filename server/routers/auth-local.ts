@@ -4,24 +4,24 @@ import * as db from "../db";
 import { nanoid } from "nanoid";
 import bcrypt from "bcryptjs";
 import { COOKIE_NAME } from "@shared/const";
-import { getSessionCookieOptions } from "../_core/cookies";
+import { getSessionCookieOptions, createSessionToken } from "../_core/cookies";
 
 export const authLocalRouter = router({
   register: publicProcedure
     .input(
       z.object({
-        name: z.string().min(2),
-        email: z.string().email(),
-        password: z.string().min(6),
+        name: z.string().min(2, "Nome deve ter no minimo 2 caracteres"),
+        email: z.string().email("Email invalido"),
+        password: z.string().min(8, "Senha deve ter no minimo 8 caracteres"),
       })
     )
     .mutation(async ({ input, ctx }) => {
       const existing = await db.getUserByEmail(input.email);
       if (existing) {
-        throw new Error("Email já cadastrado");
+        throw new Error("Email ja cadastrado");
       }
 
-      const passwordHash = await bcrypt.hash(input.password, 10);
+      const passwordHash = await bcrypt.hash(input.password, 12);
       const userId = nanoid();
 
       await db.upsertUser({
@@ -32,9 +32,10 @@ export const authLocalRouter = router({
         loginMethod: "local",
       });
 
-      // Set cookie with just the user ID
+      // Cria token de sessao OPACO e ASSINADO (nao userId bruto)
+      const sessionToken = createSessionToken(userId);
       const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.cookie(COOKIE_NAME, userId, cookieOptions);
+      ctx.res.cookie(COOKIE_NAME, sessionToken, cookieOptions);
 
       return { success: true };
     }),
@@ -52,8 +53,10 @@ export const authLocalRouter = router({
         throw new Error("Email ou senha incorretos");
       }
 
+      // Cria token de sessao OPACO e ASSINADO
+      const sessionToken = createSessionToken(user.id);
       const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.cookie(COOKIE_NAME, user.id, cookieOptions);
+      ctx.res.cookie(COOKIE_NAME, sessionToken, cookieOptions);
 
       return { success: true };
     }),

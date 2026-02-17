@@ -7,14 +7,11 @@ dist/
 build/
 *.dist
 
-# Environment variables
+# Environment variables — NUNCA commitar .env com credenciais reais
 test-routers.ts
-.env.local
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
 
 # IDE and editor files
 .vscode/
@@ -111,12 +108,16 @@ temp/
 # Manus cache/logs
 .manus/
 
+# Claude Code internal data
+.claude/
+
+# Debug artifacts
+md_to_png_debug_files/
+devnull
+
 # Docker volumes and data
 docker/backups/*
 !docker/backups/.gitkeep
 docker/nginx/ssl/*
 !docker/nginx/ssl/.gitkeep
 
-# Production environment files (keep templates)
-.env.production
-!.env.production.template

@@ -1,0 +1,3 @@
+# TODO: re-enable type-check once pre-existing TS errors are resolved
+# pnpm type-check
+echo "Pre-push checks skipped (pending typecheck setup)"

@@ -1,9 +1,9 @@
 /**
  * Phase 7: Two-Factor Authentication (2FA/MFA) Router
- * 
+ *
  * Implements TOTP-based two-factor authentication with:
- * - QR code generation for authenticator apps
- * - Backup codes for recovery
+ * - QR code generation for authenticator apps (base32 compativel)
+ * - Backup codes com bcrypt para recovery
  * - Enable/disable 2FA
  * - Verification during login
  */
@@ -16,30 +16,84 @@ import { user2FA, users } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 
-// TOTP implementation (simplified - in production use otplib)
+// TOTP implementation (RFC 6238 compativel com Google Authenticator)
 const TOTP_WINDOW = 30; // 30 second window
 const TOTP_DIGITS = 6;
 
+// ============================================================================
+// BASE32 ENCODING/DECODING (RFC 4648 - compativel com Google Authenticator)
+// ============================================================================
+
+const BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+
 /**
- * Generate TOTP secret (base32 encoded)
+ * Encode Buffer para base32 (RFC 4648)
+ * Google Authenticator, Authy, etc. exigem base32.
  */
-function generateSecret(): string {
-  const buffer = crypto.randomBytes(20);
-  return buffer.toString("base64").replace(/=/g, "");
+function base32Encode(buffer: Buffer): string {
+  let bits = "";
+  for (const byte of buffer) {
+    bits += byte.toString(2).padStart(8, "0");
+  }
+
+  let result = "";
+  for (let i = 0; i < bits.length; i += 5) {
+    const chunk = bits.substring(i, i + 5).padEnd(5, "0");
+    result += BASE32_ALPHABET[parseInt(chunk, 2)];
+  }
+
+  return result;
 }
 
 /**
- * Generate TOTP code from secret
+ * Decode base32 para Buffer
+ */
+function base32Decode(encoded: string): Buffer {
+  const cleaned = encoded.replace(/=+$/, "").toUpperCase();
+  let bits = "";
+
+  for (const char of cleaned) {
+    const index = BASE32_ALPHABET.indexOf(char);
+    if (index === -1) throw new Error(`Caractere base32 invalido: ${char}`);
+    bits += index.toString(2).padStart(5, "0");
+  }
+
+  const bytes: number[] = [];
+  for (let i = 0; i + 8 <= bits.length; i += 8) {
+    bytes.push(parseInt(bits.substring(i, i + 8), 2));
+  }
+
+  return Buffer.from(bytes);
+}
+
+// ============================================================================
+// TOTP FUNCTIONS
+// ============================================================================
+
+/**
+ * Generate TOTP secret (base32 encoded, 20 bytes = 160 bits)
+ * Compativel com Google Authenticator, Authy, etc.
+ */
+function generateSecret(): string {
+  const buffer = crypto.randomBytes(20);
+  return base32Encode(buffer);
+}
+
+/**
+ * Generate TOTP code from secret (base32 encoded)
  */
 function generateTOTP(secret: string, timeStep?: number): string {
   const time = timeStep || Math.floor(Date.now() / 1000 / TOTP_WINDOW);
-  const hmac = crypto.createHmac("sha1", Buffer.from(secret, "base64"));
-  
+  const secretBuffer = base32Decode(secret);
+  const hmac = crypto.createHmac("sha1", secretBuffer);
+
   const timeBuffer = Buffer.alloc(8);
-  timeBuffer.writeUInt32BE(time, 4);
+  timeBuffer.writeUInt32BE(0, 0); // high 32 bits
+  timeBuffer.writeUInt32BE(time, 4); // low 32 bits
   hmac.update(timeBuffer);
-  
+
   const hash = hmac.digest();
   const offset = hash[hash.length - 1] & 0xf;
   const code = (
@@ -48,29 +102,36 @@ function generateTOTP(secret: string, timeStep?: number): string {
     ((hash[offset + 2] & 0xff) << 8) |
     (hash[offset + 3] & 0xff)
   );
-  
+
   return (code % Math.pow(10, TOTP_DIGITS)).toString().padStart(TOTP_DIGITS, "0");
 }
 
 /**
- * Verify TOTP code
+ * Verify TOTP code com janela de tolerancia
  */
 function verifyTOTP(secret: string, code: string, window: number = 1): boolean {
   const currentTime = Math.floor(Date.now() / 1000 / TOTP_WINDOW);
-  
-  // Check current time and ±window
+
   for (let i = -window; i <= window; i++) {
     const expectedCode = generateTOTP(secret, currentTime + i);
-    if (expectedCode === code) {
+    // Comparacao timing-safe para evitar timing attacks
+    if (
+      expectedCode.length === code.length &&
+      crypto.timingSafeEqual(Buffer.from(expectedCode), Buffer.from(code))
+    ) {
       return true;
     }
   }
-  
+
   return false;
 }
 
+// ============================================================================
+// BACKUP CODES (com bcrypt)
+// ============================================================================
+
 /**
- * Generate backup codes (8 codes, 10 characters each)
+ * Generate backup codes (8 codes, formato XXXXX-XXXXX)
  */
 function generateBackupCodes(count: number = 8): string[] {
   const codes: string[] = [];
@@ -82,28 +143,50 @@ function generateBackupCodes(count: number = 8): string[] {
 }
 
 /**
- * Hash backup code for storage
+ * Hash backup code com bcrypt (em vez de SHA-256)
+ * Bcrypt adiciona salt automatico e e resistente a rainbow tables.
  */
-function hashBackupCode(code: string): string {
-  return crypto.createHash("sha256").update(code).digest("hex");
+async function hashBackupCode(code: string): Promise<string> {
+  return bcrypt.hash(code.toUpperCase().trim(), 10);
 }
 
 /**
- * Generate QR code data URL for authenticator app
+ * Verifica um backup code contra uma lista de hashes bcrypt.
+ * Retorna o indice do match ou -1 se nao encontrado.
  */
-function generateQRCodeDataURL(secret: string, email: string, issuer: string = "BlackBelt Platform"): string {
-  // In production, use qrcode library to generate actual QR code image
-  // For now, return the otpauth URL
-  const otpauthUrl = `otpauth://totp/${issuer}:${email}?secret=${secret}&issuer=${issuer}`;
-  
-  // Simplified: return URL that can be used with QR code generator
-  // In real implementation: use qrcode.toDataURL(otpauthUrl)
-  return otpauthUrl;
+async function verifyBackupCode(
+  code: string,
+  hashedCodes: string[]
+): Promise<number> {
+  const normalizedCode = code.toUpperCase().trim();
+  for (let i = 0; i < hashedCodes.length; i++) {
+    const match = await bcrypt.compare(normalizedCode, hashedCodes[i]);
+    if (match) return i;
+  }
+  return -1;
 }
 
+// ============================================================================
+// QR CODE URL
+// ============================================================================
+
 /**
- * 2FA Router
+ * Generate otpauth URL para QR code (compativel com Google Authenticator)
  */
+function generateOtpauthURL(
+  secret: string,
+  email: string,
+  issuer: string = "BlackBelt Platform"
+): string {
+  const encodedIssuer = encodeURIComponent(issuer);
+  const encodedEmail = encodeURIComponent(email);
+  return `otpauth://totp/${encodedIssuer}:${encodedEmail}?secret=${secret}&issuer=${encodedIssuer}&algorithm=SHA1&digits=${TOTP_DIGITS}&period=${TOTP_WINDOW}`;
+}
+
+// ============================================================================
+// 2FA ROUTER
+// ============================================================================
+
 export const twoFactorRouter = router({
   /**
    * Get 2FA status for current user
@@ -114,9 +197,11 @@ export const twoFactorRouter = router({
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
     }
 
-    const twoFA = await db.query.user2FA.findFirst({
-      where: eq(user2FA.userId, ctx.userId),
-    });
+    const [twoFA] = await db
+      .select()
+      .from(user2FA)
+      .where(eq(user2FA.userId, ctx.user.id))
+      .limit(1);
 
     return {
       enabled: twoFA?.enabled || false,
@@ -133,50 +218,53 @@ export const twoFactorRouter = router({
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
     }
 
-    // Check if 2FA already enabled
-    const existing = await db.query.user2FA.findFirst({
-      where: eq(user2FA.userId, ctx.userId),
-    });
+    const [existing] = await db
+      .select()
+      .from(user2FA)
+      .where(eq(user2FA.userId, ctx.user.id))
+      .limit(1);
 
     if (existing?.enabled) {
       throw new TRPCError({
         code: "BAD_REQUEST",
-        message: "2FA is already enabled",
+        message: "2FA ja esta ativado",
       });
     }
 
     // Get user email
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, ctx.userId),
-    });
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, ctx.user.id))
+      .limit(1);
 
     if (!user) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      throw new TRPCError({ code: "NOT_FOUND", message: "Usuario nao encontrado" });
     }
 
-    // Generate secret
+    // Generate base32 secret (compativel com Google Authenticator)
     const secret = generateSecret();
-    const qrCodeURL = generateQRCodeDataURL(secret, user.email || "user@blackbelt.com");
+    const qrCodeURL = generateOtpauthURL(secret, user.email || "user@blackbelt.com");
 
     // Save secret (not enabled yet - needs verification)
     if (existing) {
       await db
         .update(user2FA)
         .set({ secret, enabled: false, updatedAt: new Date() })
-        .where(eq(user2FA.userId, ctx.userId));
+        .where(eq(user2FA.userId, ctx.user.id));
     } else {
       await db.insert(user2FA).values({
         id: nanoid(),
-        userId: ctx.userId,
+        userId: ctx.user.id,
         secret,
         enabled: false,
       });
     }
 
     return {
-      secret, // Show to user for manual entry
-      qrCodeURL, // Use to generate QR code on frontend
-      message: "Scan QR code with your authenticator app",
+      secret, // Para entrada manual no app
+      qrCodeURL, // Para gerar QR code no frontend
+      message: "Escaneie o QR code com seu app autenticador",
     };
   }),
 
@@ -195,21 +283,23 @@ export const twoFactorRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       }
 
-      const twoFA = await db.query.user2FA.findFirst({
-        where: eq(user2FA.userId, ctx.userId),
-      });
+      const [twoFA] = await db
+        .select()
+        .from(user2FA)
+        .where(eq(user2FA.userId, ctx.user.id))
+        .limit(1);
 
       if (!twoFA) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "2FA not initialized. Call enable first.",
+          message: "2FA nao inicializado. Chame enable primeiro.",
         });
       }
 
       if (twoFA.enabled) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "2FA is already enabled",
+          message: "2FA ja esta ativado",
         });
       }
 
@@ -219,13 +309,15 @@ export const twoFactorRouter = router({
       if (!isValid) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Invalid verification code",
+          message: "Codigo de verificacao invalido",
         });
       }
 
-      // Generate backup codes
+      // Generate backup codes e hash com bcrypt
       const backupCodes = generateBackupCodes();
-      const hashedBackupCodes = backupCodes.map(hashBackupCode);
+      const hashedBackupCodes = await Promise.all(
+        backupCodes.map((code) => hashBackupCode(code))
+      );
 
       // Enable 2FA
       await db
@@ -236,12 +328,12 @@ export const twoFactorRouter = router({
           verifiedAt: new Date(),
           updatedAt: new Date(),
         })
-        .where(eq(user2FA.userId, ctx.userId));
+        .where(eq(user2FA.userId, ctx.user.id));
 
       return {
         success: true,
-        backupCodes, // Show to user ONCE
-        message: "2FA enabled successfully. Save your backup codes securely.",
+        backupCodes, // Mostrar ao usuario UMA VEZ
+        message: "2FA ativado com sucesso. Salve seus codigos de backup em local seguro.",
       };
     }),
 
@@ -251,7 +343,7 @@ export const twoFactorRouter = router({
   verifyCode: protectedProcedure
     .input(
       z.object({
-        code: z.string().min(6).max(12), // TOTP or backup code
+        code: z.string().min(6).max(12), // TOTP ou backup code
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -260,31 +352,32 @@ export const twoFactorRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       }
 
-      const twoFA = await db.query.user2FA.findFirst({
-        where: eq(user2FA.userId, ctx.userId),
-      });
+      const [twoFA] = await db
+        .select()
+        .from(user2FA)
+        .where(eq(user2FA.userId, ctx.user.id))
+        .limit(1);
 
       if (!twoFA?.enabled) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "2FA is not enabled",
+          message: "2FA nao esta ativado",
         });
       }
 
       // Try TOTP code first
-      if (input.code.length === 6) {
+      if (input.code.length === 6 && /^\d{6}$/.test(input.code)) {
         const isValid = verifyTOTP(twoFA.secret, input.code);
         if (isValid) {
-          return { success: true, method: "totp" };
+          return { success: true, method: "totp" as const };
         }
       }
 
       // Try backup code
       if (input.code.includes("-")) {
-        const hashedCode = hashBackupCode(input.code);
         const backupCodes = JSON.parse(twoFA.backupCodes as string) as string[];
-        
-        const codeIndex = backupCodes.indexOf(hashedCode);
+        const codeIndex = await verifyBackupCode(input.code, backupCodes);
+
         if (codeIndex !== -1) {
           // Remove used backup code
           backupCodes.splice(codeIndex, 1);
@@ -294,11 +387,11 @@ export const twoFactorRouter = router({
               backupCodes: JSON.stringify(backupCodes),
               updatedAt: new Date(),
             })
-            .where(eq(user2FA.userId, ctx.userId));
-          
+            .where(eq(user2FA.userId, ctx.user.id));
+
           return {
             success: true,
-            method: "backup",
+            method: "backup" as const,
             remainingBackupCodes: backupCodes.length,
           };
         }
@@ -306,7 +399,7 @@ export const twoFactorRouter = router({
 
       throw new TRPCError({
         code: "BAD_REQUEST",
-        message: "Invalid verification code",
+        message: "Codigo de verificacao invalido",
       });
     }),
 
@@ -316,7 +409,7 @@ export const twoFactorRouter = router({
   disable: protectedProcedure
     .input(
       z.object({
-        code: z.string().min(6), // Require 2FA code to disable
+        code: z.string().min(6), // Requer codigo 2FA para desativar
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -325,30 +418,39 @@ export const twoFactorRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       }
 
-      const twoFA = await db.query.user2FA.findFirst({
-        where: eq(user2FA.userId, ctx.userId),
-      });
+      const [twoFA] = await db
+        .select()
+        .from(user2FA)
+        .where(eq(user2FA.userId, ctx.user.id))
+        .limit(1);
 
       if (!twoFA?.enabled) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "2FA is not enabled",
+          message: "2FA nao esta ativado",
         });
       }
 
       // Verify code before disabling
-      const isValid = verifyTOTP(twoFA.secret, input.code);
-      if (!isValid) {
-        // Also check backup codes
-        const hashedCode = hashBackupCode(input.code);
+      let isValid = false;
+
+      // Try TOTP
+      if (input.code.length === 6 && /^\d{6}$/.test(input.code)) {
+        isValid = verifyTOTP(twoFA.secret, input.code);
+      }
+
+      // Try backup code if TOTP didn't match
+      if (!isValid && input.code.includes("-")) {
         const backupCodes = JSON.parse(twoFA.backupCodes as string) as string[];
-        
-        if (!backupCodes.includes(hashedCode)) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Invalid verification code",
-          });
-        }
+        const codeIndex = await verifyBackupCode(input.code, backupCodes);
+        isValid = codeIndex !== -1;
+      }
+
+      if (!isValid) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Codigo de verificacao invalido",
+        });
       }
 
       // Disable 2FA
@@ -359,11 +461,11 @@ export const twoFactorRouter = router({
           backupCodes: null,
           updatedAt: new Date(),
         })
-        .where(eq(user2FA.userId, ctx.userId));
+        .where(eq(user2FA.userId, ctx.user.id));
 
       return {
         success: true,
-        message: "2FA disabled successfully",
+        message: "2FA desativado com sucesso",
       };
     }),
 
@@ -382,14 +484,16 @@ export const twoFactorRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       }
 
-      const twoFA = await db.query.user2FA.findFirst({
-        where: eq(user2FA.userId, ctx.userId),
-      });
+      const [twoFA] = await db
+        .select()
+        .from(user2FA)
+        .where(eq(user2FA.userId, ctx.user.id))
+        .limit(1);
 
       if (!twoFA?.enabled) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "2FA is not enabled",
+          message: "2FA nao esta ativado",
         });
       }
 
@@ -398,13 +502,15 @@ export const twoFactorRouter = router({
       if (!isValid) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Invalid verification code",
+          message: "Codigo de verificacao invalido",
         });
       }
 
-      // Generate new backup codes
+      // Generate new backup codes com bcrypt
       const backupCodes = generateBackupCodes();
-      const hashedBackupCodes = backupCodes.map(hashBackupCode);
+      const hashedBackupCodes = await Promise.all(
+        backupCodes.map((code) => hashBackupCode(code))
+      );
 
       await db
         .update(user2FA)
@@ -412,12 +518,12 @@ export const twoFactorRouter = router({
           backupCodes: JSON.stringify(hashedBackupCodes),
           updatedAt: new Date(),
         })
-        .where(eq(user2FA.userId, ctx.userId));
+        .where(eq(user2FA.userId, ctx.user.id));
 
       return {
         success: true,
         backupCodes,
-        message: "Backup codes regenerated. Save them securely.",
+        message: "Codigos de backup regenerados. Salve-os em local seguro.",
       };
     }),
 });

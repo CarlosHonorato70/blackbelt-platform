@@ -2,32 +2,32 @@ import {
   boolean,
   timestamp,
   index,
-  integer,
-  jsonb,
-  pgTable,
+  int,
+  json,
+  mysqlTable,
   text,
   unique,
   varchar,
-} from "drizzle-orm/pg-core";
+} from "drizzle-orm/mysql-core";
 
 /**
- * SCHEMA MULTI-TENANT - BLACK BELT PLATFORM (POSTGRESQL VERSION)
+ * SCHEMA MULTI-TENANT - BLACK BELT PLATFORM (MYSQL/MARIADB - XAMPP)
  *
  * Arquitetura: Row-Level Security (RLS) com coluna tenant_id
- * Todas as tabelas de dados de negócio incluem tenant_id para isolamento
+ * Todas as tabelas de dados de negocio incluem tenant_id para isolamento
  */
 
 // ============================================================================
-// CORE: Usuários e Autenticação
+// CORE: Usuarios e Autenticacao
 // ============================================================================
 
-export const users = pgTable("users", {
+export const users = mysqlTable("users", {
   id: varchar("id", { length: 64 }).primaryKey(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  passwordHash: varchar("passwordHash", { length: 255 }), // Para autenticação local
-  role: text("role").default("user").notNull(), // 'user' | 'admin'
+  passwordHash: varchar("passwordHash", { length: 255 }),
+  role: text("role").default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow(),
 });
@@ -35,51 +35,46 @@ export const users = pgTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// Exportar schemas NR-01 (Você precisará converter este arquivo também se ele usar mysqlTable)
+// Exportar schemas NR-01 (ja em formato MySQL)
 export * from "./schema_nr01";
 
 // ============================================================================
 // MULTI-TENANT: Empresas (Tenants)
 // ============================================================================
 
-export const tenants = pgTable(
+export const tenants = mysqlTable(
   "tenants",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
-    cnpj: varchar("cnpj", { length: 18 }).notNull().unique(), // XX.XXX.XXX/XXXX-XX
+    cnpj: varchar("cnpj", { length: 18 }).notNull().unique(),
 
-    // Endereço
     street: varchar("street", { length: 255 }),
     number: varchar("number", { length: 20 }),
     complement: varchar("complement", { length: 100 }),
     neighborhood: varchar("neighborhood", { length: 100 }),
     city: varchar("city", { length: 100 }),
-    state: varchar("state", { length: 2 }), // UF
-    zipCode: varchar("zipCode", { length: 10 }), // CEP
+    state: varchar("state", { length: 2 }),
+    zipCode: varchar("zipCode", { length: 10 }),
 
-    // Contato principal
     contactName: varchar("contactName", { length: 255 }),
     contactEmail: varchar("contactEmail", { length: 320 }),
     contactPhone: varchar("contactPhone", { length: 20 }),
 
-    // Status e estratégia
-    status: text("status").default("active").notNull(), // 'active', 'inactive', 'suspended'
-    strategy: text("strategy").default("shared_rls").notNull(), // 'shared_rls', 'dedicated_schema'
-    schemaName: varchar("schemaName", { length: 100 }), // Apenas para dedicated_schema
+    status: text("status").default("active").notNull(),
+    strategy: text("strategy").default("shared_rls").notNull(),
+    schemaName: varchar("schemaName", { length: 100 }),
 
-    // White-Label / Branding (Phase 5 - Enterprise)
     logoUrl: varchar("logoUrl", { length: 500 }),
     faviconUrl: varchar("faviconUrl", { length: 500 }),
-    primaryColor: varchar("primaryColor", { length: 7 }).default("#3b82f6"), // Hex color #RRGGBB
-    secondaryColor: varchar("secondaryColor", { length: 7 }).default("#10b981"), // Hex color #RRGGBB
+    primaryColor: varchar("primaryColor", { length: 7 }).default("#3b82f6"),
+    secondaryColor: varchar("secondaryColor", { length: 7 }).default("#10b981"),
     customDomain: varchar("customDomain", { length: 255 }),
     customDomainVerified: boolean("customDomainVerified").default(false),
     emailSenderName: varchar("emailSenderName", { length: 255 }),
     emailSenderEmail: varchar("emailSenderEmail", { length: 320 }),
     whiteLabelEnabled: boolean("whiteLabelEnabled").default(false),
 
-    // Metadados
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
@@ -94,26 +89,21 @@ export type Tenant = typeof tenants.$inferSelect;
 export type InsertTenant = typeof tenants.$inferInsert;
 
 // ============================================================================
-// CONFIGURAÇÕES POR TENANT
+// CONFIGURACOES POR TENANT
 // ============================================================================
 
-export const tenantSettings = pgTable(
+export const tenantSettings = mysqlTable(
   "tenant_settings",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     tenantId: varchar("tenantId", { length: 64 }).notNull(),
-
     settingKey: varchar("settingKey", { length: 100 }).notNull(),
-    settingValue: jsonb("settingValue").notNull(), // { max_users: 100, features: [...], branding: {...} }
-
+    settingValue: json("settingValue").notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
   (table) => ({
-    tenantKeyUnique: unique("uk_tenant_setting").on(
-      table.tenantId,
-      table.settingKey
-    ),
+    tenantKeyUnique: unique("uk_tenant_setting").on(table.tenantId, table.settingKey),
     tenantIdx: index("idx_setting_tenant").on(table.tenantId),
   })
 );
@@ -125,29 +115,22 @@ export type InsertTenantSetting = typeof tenantSettings.$inferInsert;
 // SETORES (por tenant)
 // ============================================================================
 
-export const sectors = pgTable(
+export const sectors = mysqlTable(
   "sectors",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     tenantId: varchar("tenantId", { length: 64 }).notNull(),
-
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
     responsibleName: varchar("responsibleName", { length: 255 }),
-
-    // Campos opcionais para expansão futura
-    unit: varchar("unit", { length: 100 }), // Unidade/filial
-    shift: varchar("shift", { length: 50 }), // Turno
-
+    unit: varchar("unit", { length: 100 }),
+    shift: varchar("shift", { length: 50 }),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
   (table) => ({
     tenantIdx: index("idx_sector_tenant").on(table.tenantId),
-    tenantNameIdx: index("idx_sector_tenant_name").on(
-      table.tenantId,
-      table.name
-    ),
+    tenantNameIdx: index("idx_sector_tenant_name").on(table.tenantId, table.name),
   })
 );
 
@@ -158,29 +141,23 @@ export type InsertSector = typeof sectors.$inferInsert;
 // COLABORADORES (por tenant e setor)
 // ============================================================================
 
-export const people = pgTable(
+export const people = mysqlTable(
   "people",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     tenantId: varchar("tenantId", { length: 64 }).notNull(),
     sectorId: varchar("sectorId", { length: 64 }),
-
     name: varchar("name", { length: 255 }).notNull(),
-    position: varchar("position", { length: 255 }), // Cargo/função
+    position: varchar("position", { length: 255 }),
     email: varchar("email", { length: 320 }),
     phone: varchar("phone", { length: 20 }),
-
-    employmentType: text("employmentType").default("own").notNull(), // 'own', 'outsourced'
-
+    employmentType: text("employmentType").default("own").notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
   (table) => ({
     tenantIdx: index("idx_people_tenant").on(table.tenantId),
-    tenantSectorIdx: index("idx_people_tenant_sector").on(
-      table.tenantId,
-      table.sectorId
-    ),
+    tenantSectorIdx: index("idx_people_tenant_sector").on(table.tenantId, table.sectorId),
     emailIdx: index("idx_people_email").on(table.email),
   })
 );
@@ -192,18 +169,14 @@ export type InsertPerson = typeof people.$inferInsert;
 // RBAC: Roles (Perfis de Acesso)
 // ============================================================================
 
-export const roles = pgTable(
+export const roles = mysqlTable(
   "roles",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
-
     systemName: varchar("systemName", { length: 100 }).notNull().unique(),
     displayName: varchar("displayName", { length: 100 }).notNull(),
     description: text("description"),
-
-    // Escopo: global (Black Belt) ou por tenant
-    scope: text("scope").default("tenant").notNull(), // 'global', 'tenant'
-
+    scope: text("scope").default("tenant").notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   (table) => ({
@@ -215,26 +188,21 @@ export type Role = typeof roles.$inferSelect;
 export type InsertRole = typeof roles.$inferInsert;
 
 // ============================================================================
-// PERMISSÕES (granulares)
+// PERMISSOES (granulares)
 // ============================================================================
 
-export const permissions = pgTable(
+export const permissions = mysqlTable(
   "permissions",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
-
-    name: varchar("name", { length: 100 }).notNull().unique(), // ex: "colaboradores.create"
-    resource: varchar("resource", { length: 50 }).notNull(), // ex: "colaboradores"
-    action: varchar("action", { length: 50 }).notNull(), // ex: "create", "read", "update", "delete"
+    name: varchar("name", { length: 100 }).notNull().unique(),
+    resource: varchar("resource", { length: 50 }).notNull(),
+    action: varchar("action", { length: 50 }).notNull(),
     description: text("description"),
-
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   (table) => ({
-    resourceActionIdx: index("idx_perm_resource_action").on(
-      table.resource,
-      table.action
-    ),
+    resourceActionIdx: index("idx_perm_resource_action").on(table.resource, table.action),
   })
 );
 
@@ -242,21 +210,17 @@ export type Permission = typeof permissions.$inferSelect;
 export type InsertPermission = typeof permissions.$inferInsert;
 
 // ============================================================================
-// ROLE-PERMISSION (associação com condições ABAC)
+// ROLE-PERMISSION (associacao com condicoes ABAC)
 // ============================================================================
 
-export const rolePermissions = pgTable(
+export const rolePermissions = mysqlTable(
   "role_permissions",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
-
     roleId: varchar("roleId", { length: 64 }).notNull(),
     permissionId: varchar("permissionId", { length: 64 }).notNull(),
-    tenantId: varchar("tenantId", { length: 64 }), // NULL para permissões globais
-
-    // Condições ABAC (JSON): { "sector_id": "uuid", "own_data_only": true }
-    conditions: jsonb("conditions"),
-
+    tenantId: varchar("tenantId", { length: 64 }),
+    conditions: json("conditions"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   (table) => ({
@@ -269,25 +233,20 @@ export type RolePermission = typeof rolePermissions.$inferSelect;
 export type InsertRolePermission = typeof rolePermissions.$inferInsert;
 
 // ============================================================================
-// USER-ROLE (associação usuário-perfil-tenant)
+// USER-ROLE (associacao usuario-perfil-tenant)
 // ============================================================================
 
-export const userRoles = pgTable(
+export const userRoles = mysqlTable(
   "user_roles",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
-
     userId: varchar("userId", { length: 64 }).notNull(),
     roleId: varchar("roleId", { length: 64 }).notNull(),
-    tenantId: varchar("tenantId", { length: 64 }), // NULL para roles globais (Black Belt)
-
+    tenantId: varchar("tenantId", { length: 64 }),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   (table) => ({
-    userTenantIdx: index("idx_user_role_tenant").on(
-      table.userId,
-      table.tenantId
-    ),
+    userTenantIdx: index("idx_user_role_tenant").on(table.userId, table.tenantId),
     userRoleIdx: index("idx_user_role").on(table.userId, table.roleId),
   })
 );
@@ -296,38 +255,27 @@ export type UserRole = typeof userRoles.$inferSelect;
 export type InsertUserRole = typeof userRoles.$inferInsert;
 
 // ============================================================================
-// AUDITORIA (trilha completa de ações)
+// AUDITORIA (trilha completa de acoes)
 // ============================================================================
 
-export const auditLogs = pgTable(
+export const auditLogs = mysqlTable(
   "audit_logs",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
-
-    tenantId: varchar("tenantId", { length: 64 }), // NULL para ações globais
+    tenantId: varchar("tenantId", { length: 64 }),
     userId: varchar("userId", { length: 64 }).notNull(),
-
-    action: varchar("action", { length: 50 }).notNull(), // CREATE, READ, UPDATE, DELETE
-    entityType: varchar("entityType", { length: 100 }).notNull(), // tenants, sectors, people, etc.
+    action: varchar("action", { length: 50 }).notNull(),
+    entityType: varchar("entityType", { length: 100 }).notNull(),
     entityId: varchar("entityId", { length: 64 }),
-
-    oldValues: jsonb("oldValues"), // Valores antes da mudança
-    newValues: jsonb("newValues"), // Valores depois da mudança
-
-    ipAddress: varchar("ipAddress", { length: 45 }), // IPv4 ou IPv6
+    oldValues: json("oldValues"),
+    newValues: json("newValues"),
+    ipAddress: varchar("ipAddress", { length: 45 }),
     userAgent: text("userAgent"),
-
     timestamp: timestamp("timestamp").defaultNow().notNull(),
   },
   (table) => ({
-    tenantTimestampIdx: index("idx_audit_tenant_time").on(
-      table.tenantId,
-      table.timestamp
-    ),
-    userTimestampIdx: index("idx_audit_user_time").on(
-      table.userId,
-      table.timestamp
-    ),
+    tenantTimestampIdx: index("idx_audit_tenant_time").on(table.tenantId, table.timestamp),
+    userTimestampIdx: index("idx_audit_user_time").on(table.userId, table.timestamp),
     entityIdx: index("idx_audit_entity").on(table.entityType, table.entityId),
   })
 );
@@ -339,31 +287,23 @@ export type InsertAuditLog = typeof auditLogs.$inferInsert;
 // LGPD: Consentimentos
 // ============================================================================
 
-export const dataConsents = pgTable(
+export const dataConsents = mysqlTable(
   "data_consents",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
-
     tenantId: varchar("tenantId", { length: 64 }).notNull(),
     personId: varchar("personId", { length: 64 }).notNull(),
-
-    consentType: varchar("consentType", { length: 50 }).notNull(), // data_processing, marketing, etc.
+    consentType: varchar("consentType", { length: 50 }).notNull(),
     granted: boolean("granted").notNull(),
-
     grantedAt: timestamp("grantedAt"),
     revokedAt: timestamp("revokedAt"),
-
     ipAddress: varchar("ipAddress", { length: 45 }),
     userAgent: text("userAgent"),
-    version: varchar("version", { length: 20 }), // Versão do termo aceito
-
+    version: varchar("version", { length: 20 }),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   (table) => ({
-    personConsentIdx: index("idx_consent_person").on(
-      table.personId,
-      table.consentType
-    ),
+    personConsentIdx: index("idx_consent_person").on(table.personId, table.consentType),
     tenantIdx: index("idx_consent_tenant").on(table.tenantId),
   })
 );
@@ -372,32 +312,25 @@ export type DataConsent = typeof dataConsents.$inferSelect;
 export type InsertDataConsent = typeof dataConsents.$inferInsert;
 
 // ============================================================================
-// CONVITES DE USUÁRIOS
+// CONVITES DE USUARIOS
 // ============================================================================
 
-export const userInvites = pgTable(
+export const userInvites = mysqlTable(
   "user_invites",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
-
-    tenantId: varchar("tenantId", { length: 64 }), // NULL para convites Black Belt
+    tenantId: varchar("tenantId", { length: 64 }),
     email: varchar("email", { length: 320 }).notNull(),
     roleId: varchar("roleId", { length: 64 }).notNull(),
-
     token: varchar("token", { length: 255 }).notNull().unique(),
-    status: text("status").default("pending").notNull(), // 'pending', 'accepted', 'expired', 'cancelled'
-
+    status: text("status").default("pending").notNull(),
     invitedBy: varchar("invitedBy", { length: 64 }).notNull(),
     expiresAt: timestamp("expiresAt").notNull(),
     acceptedAt: timestamp("acceptedAt"),
-
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   (table) => ({
-    emailStatusIdx: index("idx_invite_email_status").on(
-      table.email,
-      table.status
-    ),
+    emailStatusIdx: index("idx_invite_email_status").on(table.email, table.status),
     tenantIdx: index("idx_invite_tenant").on(table.tenantId),
     tokenIdx: index("idx_invite_token").on(table.token),
   })
@@ -407,26 +340,21 @@ export type UserInvite = typeof userInvites.$inferSelect;
 export type InsertUserInvite = typeof userInvites.$inferInsert;
 
 // ============================================================================
-// PRECIFICAÇÃO: Clientes (para propostas comerciais)
+// PRECIFICACAO: Clientes
 // ============================================================================
 
-export const clients = pgTable(
+export const clients = mysqlTable(
   "clients",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     tenantId: varchar("tenantId", { length: 64 }).notNull(),
-
     name: varchar("name", { length: 255 }).notNull(),
     cnpj: varchar("cnpj", { length: 18 }),
-    industry: varchar("industry", { length: 100 }), // Setor da indústria
-    companySize: text("companySize"), // 'micro', 'small', 'medium', 'large'
-
-    // Contato
+    industry: varchar("industry", { length: 100 }),
+    companySize: text("companySize"),
     contactName: varchar("contactName", { length: 255 }),
     contactEmail: varchar("contactEmail", { length: 320 }),
     contactPhone: varchar("contactPhone", { length: 20 }),
-
-    // Endereço
     street: varchar("street", { length: 255 }),
     number: varchar("number", { length: 20 }),
     complement: varchar("complement", { length: 100 }),
@@ -434,9 +362,7 @@ export const clients = pgTable(
     city: varchar("city", { length: 100 }),
     state: varchar("state", { length: 2 }),
     zipCode: varchar("zipCode", { length: 10 }),
-
-    status: text("status").default("active").notNull(), // 'active', 'inactive'
-
+    status: text("status").default("active").notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
@@ -451,26 +377,21 @@ export type Client = typeof clients.$inferSelect;
 export type InsertClient = typeof clients.$inferInsert;
 
 // ============================================================================
-// PRECIFICAÇÃO: Serviços Oferecidos
+// PRECIFICACAO: Servicos Oferecidos
 // ============================================================================
 
-export const services = pgTable(
+export const services = mysqlTable(
   "services",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     tenantId: varchar("tenantId", { length: 64 }).notNull(),
-
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
-    category: varchar("category", { length: 100 }).notNull(), // Gestão de Riscos, Treinamento, etc.
-
-    unit: text("unit").default("hour").notNull(), // 'hour', 'day', 'project', 'month'
-
-    minPrice: integer("minPrice").notNull(), // Em centavos (ex: 5000 = R$ 50,00)
-    maxPrice: integer("maxPrice").notNull(),
-
+    category: varchar("category", { length: 100 }).notNull(),
+    unit: text("unit").default("hour").notNull(),
+    minPrice: int("minPrice").notNull(),
+    maxPrice: int("maxPrice").notNull(),
     isActive: boolean("isActive").default(true).notNull(),
-
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
@@ -484,33 +405,22 @@ export type Service = typeof services.$inferSelect;
 export type InsertService = typeof services.$inferInsert;
 
 // ============================================================================
-// PRECIFICAÇÃO: Parâmetros de Precificação (por tenant)
+// PRECIFICACAO: Parametros de Precificacao (por tenant)
 // ============================================================================
 
-export const pricingParameters = pgTable(
+export const pricingParameters = mysqlTable(
   "pricing_parameters",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     tenantId: varchar("tenantId", { length: 64 }).notNull().unique(),
-
-    // Custos base
-    monthlyFixedCost: integer("monthlyFixedCost").notNull(), // Em centavos
-    laborCost: integer("laborCost").notNull(), // Custo de mão de obra por hora em centavos
-    productiveHoursPerMonth: integer("productiveHoursPerMonth").notNull(), // Ex: 160 horas
-
-    // Regime tributário padrão
-    defaultTaxRegime: text("defaultTaxRegime").default("SN").notNull(), // 'MEI', 'SN', 'LP', 'autonomous'
-
-    // Descontos por volume (JSON)
-    volumeDiscounts: jsonb("volumeDiscounts"),
-
-    // Ajustes percentuais
-    riskAdjustment: integer("riskAdjustment").default(100).notNull(), // 100 = 1.0x (sem ajuste)
-    seniorityAdjustment: integer("seniorityAdjustment").default(100).notNull(),
-
-    // Alíquotas tributárias por regime (em centavos por real)
-    taxRates: jsonb("taxRates"),
-
+    monthlyFixedCost: int("monthlyFixedCost").notNull(),
+    laborCost: int("laborCost").notNull(),
+    productiveHoursPerMonth: int("productiveHoursPerMonth").notNull(),
+    defaultTaxRegime: text("defaultTaxRegime").default("SN").notNull(),
+    volumeDiscounts: json("volumeDiscounts"),
+    riskAdjustment: int("riskAdjustment").default(100).notNull(),
+    seniorityAdjustment: int("seniorityAdjustment").default(100).notNull(),
+    taxRates: json("taxRates"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
@@ -523,45 +433,33 @@ export type PricingParameter = typeof pricingParameters.$inferSelect;
 export type InsertPricingParameter = typeof pricingParameters.$inferInsert;
 
 // ============================================================================
-// PRECIFICAÇÃO: Propostas Comerciais
+// PRECIFICACAO: Propostas Comerciais
 // ============================================================================
 
-export const proposals = pgTable(
+export const proposals = mysqlTable(
   "proposals",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     tenantId: varchar("tenantId", { length: 64 }).notNull(),
     clientId: varchar("clientId", { length: 64 }).notNull(),
-
     title: varchar("title", { length: 255 }).notNull(),
     description: text("description"),
-
-    status: text("status").default("draft").notNull(), // 'draft', 'sent', 'accepted', 'rejected', 'expired'
-
-    // Cálculos
-    subtotal: integer("subtotal").notNull(), // Em centavos
-    discount: integer("discount").default(0).notNull(), // Em centavos
-    discountPercent: integer("discountPercent").default(0).notNull(), // Em centavos de percentual
-    taxes: integer("taxes").default(0).notNull(), // Em centavos
-    totalValue: integer("totalValue").notNull(), // Em centavos
-
-    // Regime tributário utilizado
-    taxRegime: text("taxRegime").notNull(), // 'MEI', 'SN', 'LP', 'autonomous'
-
-    // Datas
+    status: text("status").default("draft").notNull(),
+    subtotal: int("subtotal").notNull(),
+    discount: int("discount").default(0).notNull(),
+    discountPercent: int("discountPercent").default(0).notNull(),
+    taxes: int("taxes").default(0).notNull(),
+    totalValue: int("totalValue").notNull(),
+    taxRegime: text("taxRegime").notNull(),
     validUntil: timestamp("validUntil"),
     generatedAt: timestamp("generatedAt").defaultNow().notNull(),
     sentAt: timestamp("sentAt"),
     respondedAt: timestamp("respondedAt"),
-
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
   (table) => ({
-    tenantClientIdx: index("idx_proposal_tenant_client").on(
-      table.tenantId,
-      table.clientId
-    ),
+    tenantClientIdx: index("idx_proposal_tenant_client").on(table.tenantId, table.clientId),
     statusIdx: index("idx_proposal_status").on(table.status),
     dateIdx: index("idx_proposal_date").on(table.generatedAt),
   })
@@ -571,25 +469,20 @@ export type Proposal = typeof proposals.$inferSelect;
 export type InsertProposal = typeof proposals.$inferInsert;
 
 // ============================================================================
-// PRECIFICAÇÃO: Itens das Propostas
+// PRECIFICACAO: Itens das Propostas
 // ============================================================================
 
-export const proposalItems = pgTable(
+export const proposalItems = mysqlTable(
   "proposal_items",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     proposalId: varchar("proposalId", { length: 64 }).notNull(),
     serviceId: varchar("serviceId", { length: 64 }).notNull(),
-
-    serviceName: varchar("serviceName", { length: 255 }).notNull(), // Snapshot do nome do serviço
-
-    quantity: integer("quantity").notNull(), // Em centavos de unidade
-    unitPrice: integer("unitPrice").notNull(), // Preço por unidade em centavos
-
-    // Cálculos
-    subtotal: integer("subtotal").notNull(), // quantity * unitPrice
-    technicalHours: integer("technicalHours"), // Horas técnicas (se aplicável)
-
+    serviceName: varchar("serviceName", { length: 255 }).notNull(),
+    quantity: int("quantity").notNull(),
+    unitPrice: int("unitPrice").notNull(),
+    subtotal: int("subtotal").notNull(),
+    technicalHours: int("technicalHours"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   (table) => ({
@@ -602,29 +495,23 @@ export type ProposalItem = typeof proposalItems.$inferSelect;
 export type InsertProposalItem = typeof proposalItems.$inferInsert;
 
 // ============================================================================
-// PRECIFICAÇÃO: Vinculação de Avaliações com Propostas
+// PRECIFICACAO: Vinculacao de Avaliacoes com Propostas
 // ============================================================================
 
-export const assessmentProposals = pgTable(
+export const assessmentProposals = mysqlTable(
   "assessment_proposals",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     tenantId: varchar("tenantId", { length: 64 }).notNull(),
-
-    assessmentId: varchar("assessmentId", { length: 64 }).notNull(), // FK para riskAssessments
+    assessmentId: varchar("assessmentId", { length: 64 }).notNull(),
     proposalId: varchar("proposalId", { length: 64 }).notNull(),
-
-    // Recomendações baseadas em risco
-    recommendedServices: jsonb("recommendedServices"), // Array de serviços recomendados
-    riskLevel: text("riskLevel").notNull(), // 'low', 'medium', 'high'
-
+    recommendedServices: json("recommendedServices"),
+    riskLevel: text("riskLevel").notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   (table) => ({
     tenantIdx: index("idx_assess_proposal_tenant").on(table.tenantId),
-    assessmentIdx: index("idx_assess_proposal_assessment").on(
-      table.assessmentId
-    ),
+    assessmentIdx: index("idx_assess_proposal_assessment").on(table.assessmentId),
     proposalIdx: index("idx_assess_proposal_proposal").on(table.proposalId),
   })
 );
@@ -633,49 +520,33 @@ export type AssessmentProposal = typeof assessmentProposals.$inferSelect;
 export type InsertAssessmentProposal = typeof assessmentProposals.$inferInsert;
 
 // ============================================================================
-// MONETIZAÇÃO: Planos de Assinatura
+// MONETIZACAO: Planos de Assinatura
 // ============================================================================
 
-export const plans = pgTable(
+export const plans = mysqlTable(
   "plans",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
-
-    name: varchar("name", { length: 100 }).notNull(), // Starter, Pro, Enterprise
+    name: varchar("name", { length: 100 }).notNull(),
     displayName: varchar("displayName", { length: 100 }).notNull(),
     description: text("description"),
-
-    // Preços em centavos (BRL)
-    monthlyPrice: integer("monthlyPrice").notNull(),
-    yearlyPrice: integer("yearlyPrice").notNull(),
-
-    // Limites
-    maxTenants: integer("maxTenants").notNull(), // -1 = ilimitado
-    maxUsersPerTenant: integer("maxUsersPerTenant").notNull(), // -1 = ilimitado
-    maxStorageGB: integer("maxStorageGB").notNull(), // -1 = ilimitado
-    maxApiRequestsPerDay: integer("maxApiRequestsPerDay").notNull(), // -1 = ilimitado
-
-    // Flags de funcionalidades
+    monthlyPrice: int("monthlyPrice").notNull(),
+    yearlyPrice: int("yearlyPrice").notNull(),
+    maxTenants: int("maxTenants").notNull(),
+    maxUsersPerTenant: int("maxUsersPerTenant").notNull(),
+    maxStorageGB: int("maxStorageGB").notNull(),
+    maxApiRequestsPerDay: int("maxApiRequestsPerDay").notNull(),
     hasAdvancedReports: boolean("hasAdvancedReports").default(false).notNull(),
     hasApiAccess: boolean("hasApiAccess").default(false).notNull(),
     hasWebhooks: boolean("hasWebhooks").default(false).notNull(),
     hasWhiteLabel: boolean("hasWhiteLabel").default(false).notNull(),
     hasPrioritySupport: boolean("hasPrioritySupport").default(false).notNull(),
     hasSLA: boolean("hasSLA").default(false).notNull(),
-
-    // Nível de SLA (em porcentagem de uptime)
-    slaUptime: integer("slaUptime"), // Ex: 999 = 99.9%
-
-    // Período de trial (em dias)
-    trialDays: integer("trialDays").default(14).notNull(),
-
-    // Status
+    slaUptime: int("slaUptime"),
+    trialDays: int("trialDays").default(14).notNull(),
     isActive: boolean("isActive").default(true).notNull(),
     isPublic: boolean("isPublic").default(true).notNull(),
-
-    // Ordenação para exibição
-    sortOrder: integer("sortOrder").default(0).notNull(),
-
+    sortOrder: int("sortOrder").default(0).notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
@@ -689,44 +560,29 @@ export type Plan = typeof plans.$inferSelect;
 export type InsertPlan = typeof plans.$inferInsert;
 
 // ============================================================================
-// MONETIZAÇÃO: Assinaturas dos Tenants
+// MONETIZACAO: Assinaturas dos Tenants
 // ============================================================================
 
-export const subscriptions = pgTable(
+export const subscriptions = mysqlTable(
   "subscriptions",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     tenantId: varchar("tenantId", { length: 64 }).notNull().unique(),
     planId: varchar("planId", { length: 64 }).notNull(),
-
-    // Status da assinatura
-    status: text("status").default("trialing").notNull(), // 'trialing', 'active', 'past_due', 'canceled', 'unpaid'
-
-    // Período de cobrança
-    billingCycle: text("billingCycle").default("monthly").notNull(), // 'monthly', 'yearly'
-
-    // Datas
+    status: text("status").default("trialing").notNull(),
+    billingCycle: text("billingCycle").default("monthly").notNull(),
     startDate: timestamp("startDate").defaultNow().notNull(),
     currentPeriodStart: timestamp("currentPeriodStart").notNull(),
     currentPeriodEnd: timestamp("currentPeriodEnd").notNull(),
     trialEnd: timestamp("trialEnd"),
     canceledAt: timestamp("canceledAt"),
     endedAt: timestamp("endedAt"),
-
-    // Integração com gateway de pagamento
     stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
     stripeCustomerId: varchar("stripeCustomerId", { length: 255 }),
-    mercadoPagoSubscriptionId: varchar("mercadoPagoSubscriptionId", {
-      length: 255,
-    }),
-
-    // Preço praticado
-    currentPrice: integer("currentPrice").notNull(),
-
-    // Flags
+    mercadoPagoSubscriptionId: varchar("mercadoPagoSubscriptionId", { length: 255 }),
+    currentPrice: int("currentPrice").notNull(),
     autoRenew: boolean("autoRenew").default(true).notNull(),
     cancelAtPeriodEnd: boolean("cancelAtPeriodEnd").default(false).notNull(),
-
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
@@ -734,9 +590,7 @@ export const subscriptions = pgTable(
     tenantIdx: index("idx_subscription_tenant").on(table.tenantId),
     planIdx: index("idx_subscription_plan").on(table.planId),
     statusIdx: index("idx_subscription_status").on(table.status),
-    stripeSubIdx: index("idx_subscription_stripe").on(
-      table.stripeSubscriptionId
-    ),
+    stripeSubIdx: index("idx_subscription_stripe").on(table.stripeSubscriptionId),
   })
 );
 
@@ -744,44 +598,29 @@ export type Subscription = typeof subscriptions.$inferSelect;
 export type InsertSubscription = typeof subscriptions.$inferInsert;
 
 // ============================================================================
-// MONETIZAÇÃO: Histórico de Faturas
+// MONETIZACAO: Historico de Faturas
 // ============================================================================
 
-export const invoices = pgTable(
+export const invoices = mysqlTable(
   "invoices",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     tenantId: varchar("tenantId", { length: 64 }).notNull(),
     subscriptionId: varchar("subscriptionId", { length: 64 }).notNull(),
-
-    // Identificadores externos
     stripeInvoiceId: varchar("stripeInvoiceId", { length: 255 }),
     mercadoPagoInvoiceId: varchar("mercadoPagoInvoiceId", { length: 255 }),
-
-    // Valores em centavos
-    subtotal: integer("subtotal").notNull(),
-    discount: integer("discount").default(0).notNull(),
-    tax: integer("tax").default(0).notNull(),
-    total: integer("total").notNull(),
-
-    // Status
-    status: text("status").default("draft").notNull(), // 'draft', 'open', 'paid', 'void', 'uncollectible'
-
-    // Descrição
+    subtotal: int("subtotal").notNull(),
+    discount: int("discount").default(0).notNull(),
+    tax: int("tax").default(0).notNull(),
+    total: int("total").notNull(),
+    status: text("status").default("draft").notNull(),
     description: text("description"),
-
-    // Datas
     periodStart: timestamp("periodStart").notNull(),
     periodEnd: timestamp("periodEnd").notNull(),
     dueDate: timestamp("dueDate"),
     paidAt: timestamp("paidAt"),
-
-    // Método de pagamento
     paymentMethod: varchar("paymentMethod", { length: 50 }),
-
-    // URL da fatura
     invoiceUrl: varchar("invoiceUrl", { length: 500 }),
-
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
@@ -797,36 +636,26 @@ export type Invoice = typeof invoices.$inferSelect;
 export type InsertInvoice = typeof invoices.$inferInsert;
 
 // ============================================================================
-// MONETIZAÇÃO: Uso e Métricas
+// MONETIZACAO: Uso e Metricas
 // ============================================================================
 
-export const usageMetrics = pgTable(
+export const usageMetrics = mysqlTable(
   "usage_metrics",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     tenantId: varchar("tenantId", { length: 64 }).notNull(),
-
-    // Período de medição
     periodStart: timestamp("periodStart").notNull(),
     periodEnd: timestamp("periodEnd").notNull(),
-
-    // Métricas
-    activeUsers: integer("activeUsers").default(0).notNull(),
-    storageUsedGB: integer("storageUsedGB").default(0).notNull(),
-    apiRequests: integer("apiRequests").default(0).notNull(),
-    assessmentsCreated: integer("assessmentsCreated").default(0).notNull(),
-    proposalsGenerated: integer("proposalsGenerated").default(0).notNull(),
-
-    // Metadata JSON
-    additionalMetrics: jsonb("additionalMetrics"),
-
+    activeUsers: int("activeUsers").default(0).notNull(),
+    storageUsedGB: int("storageUsedGB").default(0).notNull(),
+    apiRequests: int("apiRequests").default(0).notNull(),
+    assessmentsCreated: int("assessmentsCreated").default(0).notNull(),
+    proposalsGenerated: int("proposalsGenerated").default(0).notNull(),
+    additionalMetrics: json("additionalMetrics"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   (table) => ({
-    tenantPeriodIdx: index("idx_usage_tenant_period").on(
-      table.tenantId,
-      table.periodStart
-    ),
+    tenantPeriodIdx: index("idx_usage_tenant_period").on(table.tenantId, table.periodStart),
   })
 );
 
@@ -834,24 +663,18 @@ export type UsageMetric = typeof usageMetrics.$inferSelect;
 export type InsertUsageMetric = typeof usageMetrics.$inferInsert;
 
 // ============================================================================
-// MONETIZAÇÃO: Features Flags
+// MONETIZACAO: Feature Flags
 // ============================================================================
 
-export const featureFlags = pgTable(
+export const featureFlags = mysqlTable(
   "feature_flags",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
-
     name: varchar("name", { length: 100 }).notNull().unique(),
     displayName: varchar("displayName", { length: 100 }).notNull(),
     description: text("description"),
-
-    // Tipo de feature
-    category: text("category").default("core").notNull(), // 'core', 'reports', etc.
-
-    // Status
+    category: text("category").default("core").notNull(),
     isActive: boolean("isActive").default(true).notNull(),
-
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
@@ -865,26 +688,20 @@ export type FeatureFlag = typeof featureFlags.$inferSelect;
 export type InsertFeatureFlag = typeof featureFlags.$inferInsert;
 
 // ============================================================================
-// MONETIZAÇÃO: Associação Plan-Features
+// MONETIZACAO: Associacao Plan-Features
 // ============================================================================
 
-export const planFeatures = pgTable(
+export const planFeatures = mysqlTable(
   "plan_features",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     planId: varchar("planId", { length: 64 }).notNull(),
     featureId: varchar("featureId", { length: 64 }).notNull(),
-
-    // Flags
     isEnabled: boolean("isEnabled").default(true).notNull(),
-
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   (table) => ({
-    planFeatureUnique: unique("uk_plan_feature").on(
-      table.planId,
-      table.featureId
-    ),
+    planFeatureUnique: unique("uk_plan_feature").on(table.planId, table.featureId),
     planIdx: index("idx_plan_feature_plan").on(table.planId),
     featureIdx: index("idx_plan_feature_feature").on(table.featureId),
   })
@@ -894,56 +711,35 @@ export type PlanFeature = typeof planFeatures.$inferSelect;
 export type InsertPlanFeature = typeof planFeatures.$inferInsert;
 
 // ============================================================================
-// MONETIZAÇÃO: Exportações PDF
+// MONETIZACAO: Exportacoes PDF
 // ============================================================================
 
-export const pdfExports = pgTable(
+export const pdfExports = mysqlTable(
   "pdf_exports",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     tenantId: varchar("tenantId", { length: 64 }).notNull(),
     userId: varchar("userId", { length: 64 }).notNull(),
-
-    // Tipo de documento
-    documentType: text("documentType").notNull(), // 'proposal', 'assessment', etc.
-
-    // Referência ao documento original
+    documentType: text("documentType").notNull(),
     documentId: varchar("documentId", { length: 64 }).notNull(),
-
-    // Informações do arquivo
     filename: varchar("filename", { length: 255 }).notNull(),
-    fileSize: integer("fileSize").notNull(),
+    fileSize: int("fileSize").notNull(),
     mimeType: varchar("mimeType", { length: 100 }).default("application/pdf").notNull(),
-
-    // URLs de armazenamento
     s3Key: varchar("s3Key", { length: 500 }),
     s3Bucket: varchar("s3Bucket", { length: 100 }),
     url: varchar("url", { length: 1000 }),
-
-    // Status
-    status: text("status").default("pending").notNull(), // 'pending', 'processing', etc.
-
-    // Metadados
-    metadata: jsonb("metadata"),
+    status: text("status").default("pending").notNull(),
+    metadata: json("metadata"),
     errorMessage: text("errorMessage"),
-
-    // Branding
     brandingApplied: boolean("brandingApplied").default(false).notNull(),
     customLogo: varchar("customLogo", { length: 500 }),
-    customColors: jsonb("customColors"),
-
-    // Envio por email
+    customColors: json("customColors"),
     emailSent: boolean("emailSent").default(false).notNull(),
     emailTo: varchar("emailTo", { length: 320 }),
     emailSentAt: timestamp("emailSentAt"),
-
-    // Expiração
     expiresAt: timestamp("expiresAt"),
-
-    // Download tracking
-    downloadCount: integer("downloadCount").default(0).notNull(),
+    downloadCount: int("downloadCount").default(0).notNull(),
     lastDownloadedAt: timestamp("lastDownloadedAt"),
-
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
@@ -961,22 +757,20 @@ export type PdfExport = typeof pdfExports.$inferSelect;
 export type InsertPdfExport = typeof pdfExports.$inferInsert;
 
 // ============================================================================
-// PHASE 6: WEBHOOKS E API PÚBLICA
+// PHASE 6: WEBHOOKS E API PUBLICA
 // ============================================================================
 
-export const webhooks = pgTable(
+export const webhooks = mysqlTable(
   "webhooks",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     tenantId: varchar("tenantId", { length: 64 }).notNull(),
-    
     name: varchar("name", { length: 255 }).notNull(),
     url: varchar("url", { length: 500 }).notNull(),
     secret: varchar("secret", { length: 128 }).notNull(),
-    events: jsonb("events").notNull(),
+    events: json("events").notNull(),
     active: boolean("active").default(true).notNull(),
     description: text("description"),
-    
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
@@ -989,26 +783,22 @@ export const webhooks = pgTable(
 export type Webhook = typeof webhooks.$inferSelect;
 export type InsertWebhook = typeof webhooks.$inferInsert;
 
-export const webhookDeliveries = pgTable(
+export const webhookDeliveries = mysqlTable(
   "webhook_deliveries",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     webhookId: varchar("webhookId", { length: 64 }).notNull(),
-    
     eventType: varchar("eventType", { length: 100 }).notNull(),
-    payload: jsonb("payload").notNull(),
-    
-    responseStatus: integer("responseStatus"),
+    payload: json("payload").notNull(),
+    responseStatus: int("responseStatus"),
     responseBody: text("responseBody"),
-    responseHeaders: jsonb("responseHeaders"),
-    
+    responseHeaders: json("responseHeaders"),
     deliveredAt: timestamp("deliveredAt"),
-    attempts: integer("attempts").default(0).notNull(),
-    maxAttempts: integer("maxAttempts").default(5).notNull(),
+    attempts: int("attempts").default(0).notNull(),
+    maxAttempts: int("maxAttempts").default(5).notNull(),
     nextRetryAt: timestamp("nextRetryAt"),
     lastError: text("lastError"),
     success: boolean("success").default(false),
-    
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   (table) => ({
@@ -1022,23 +812,20 @@ export const webhookDeliveries = pgTable(
 export type WebhookDelivery = typeof webhookDeliveries.$inferSelect;
 export type InsertWebhookDelivery = typeof webhookDeliveries.$inferInsert;
 
-export const apiKeys = pgTable(
+export const apiKeys = mysqlTable(
   "api_keys",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     tenantId: varchar("tenantId", { length: 64 }).notNull(),
-    
     name: varchar("name", { length: 255 }).notNull(),
     keyHash: varchar("keyHash", { length: 64 }).notNull().unique(),
     keyPrefix: varchar("keyPrefix", { length: 16 }).notNull(),
-    scopes: jsonb("scopes").notNull(),
-    
+    scopes: json("scopes").notNull(),
     lastUsedAt: timestamp("lastUsedAt"),
     expiresAt: timestamp("expiresAt"),
     active: boolean("active").default(true).notNull(),
     description: text("description"),
-    rateLimit: integer("rateLimit"),
-    
+    rateLimit: int("rateLimit"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
@@ -1053,20 +840,17 @@ export const apiKeys = pgTable(
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type InsertApiKey = typeof apiKeys.$inferInsert;
 
-export const apiKeyUsage = pgTable(
+export const apiKeyUsage = mysqlTable(
   "api_key_usage",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     apiKeyId: varchar("apiKeyId", { length: 64 }).notNull(),
-    
     endpoint: varchar("endpoint", { length: 255 }).notNull(),
     method: varchar("method", { length: 10 }).notNull(),
-    statusCode: integer("statusCode").notNull(),
-    requestDuration: integer("requestDuration"),
-    
+    statusCode: int("statusCode").notNull(),
+    requestDuration: int("requestDuration"),
     ipAddress: varchar("ipAddress", { length: 45 }),
     userAgent: varchar("userAgent", { length: 500 }),
-    
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   (table) => ({
@@ -1083,17 +867,15 @@ export type InsertApiKeyUsage = typeof apiKeyUsage.$inferInsert;
 // PHASE 7: SECURITY IMPROVEMENTS
 // ============================================================================
 
-export const user2FA = pgTable(
+export const user2FA = mysqlTable(
   "user_2fa",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     userId: varchar("userId", { length: 64 }).notNull().unique(),
-    
     secret: varchar("secret", { length: 128 }).notNull(),
     enabled: boolean("enabled").default(false).notNull(),
-    backupCodes: jsonb("backupCodes"),
+    backupCodes: json("backupCodes"),
     verifiedAt: timestamp("verifiedAt"),
-    
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
@@ -1106,17 +888,15 @@ export const user2FA = pgTable(
 export type User2FA = typeof user2FA.$inferSelect;
 export type InsertUser2FA = typeof user2FA.$inferInsert;
 
-export const ipWhitelist = pgTable(
+export const ipWhitelist = mysqlTable(
   "ip_whitelist",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     tenantId: varchar("tenantId", { length: 64 }).notNull(),
-    
     ipAddress: varchar("ipAddress", { length: 45 }).notNull(),
     description: varchar("description", { length: 255 }),
     active: boolean("active").default(true).notNull(),
     createdBy: varchar("createdBy", { length: 64 }),
-    
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
@@ -1130,22 +910,19 @@ export const ipWhitelist = pgTable(
 export type IpWhitelist = typeof ipWhitelist.$inferSelect;
 export type InsertIpWhitelist = typeof ipWhitelist.$inferInsert;
 
-export const sessions = pgTable(
+export const sessions = mysqlTable(
   "sessions",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     userId: varchar("userId", { length: 64 }).notNull(),
     tenantId: varchar("tenantId", { length: 64 }).notNull(),
-    
     token: varchar("token", { length: 255 }).notNull().unique(),
     ipAddress: varchar("ipAddress", { length: 45 }),
     userAgent: varchar("userAgent", { length: 500 }),
-    deviceInfo: jsonb("deviceInfo"),
-    
+    deviceInfo: json("deviceInfo"),
     lastActivity: timestamp("lastActivity").defaultNow().notNull(),
     expiresAt: timestamp("expiresAt").notNull(),
     active: boolean("active").default(true).notNull(),
-    
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   (table) => ({
@@ -1160,23 +937,20 @@ export const sessions = pgTable(
 export type Session = typeof sessions.$inferSelect;
 export type InsertSession = typeof sessions.$inferInsert;
 
-export const securityAlerts = pgTable(
+export const securityAlerts = mysqlTable(
   "security_alerts",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     tenantId: varchar("tenantId", { length: 64 }).notNull(),
     userId: varchar("userId", { length: 64 }),
-    
     alertType: varchar("alertType", { length: 50 }).notNull(),
-    severity: text("severity").notNull(), // 'low', 'medium', 'high', 'critical'
+    severity: text("severity").notNull(),
     message: text("message").notNull(),
-    metadata: jsonb("metadata"),
+    metadata: json("metadata"),
     ipAddress: varchar("ipAddress", { length: 45 }),
-    
     resolved: boolean("resolved").default(false).notNull(),
     resolvedAt: timestamp("resolvedAt"),
     resolvedBy: varchar("resolvedBy", { length: 64 }),
-    
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   (table) => ({
@@ -1192,18 +966,16 @@ export const securityAlerts = pgTable(
 export type SecurityAlert = typeof securityAlerts.$inferSelect;
 export type InsertSecurityAlert = typeof securityAlerts.$inferInsert;
 
-export const loginAttempts = pgTable(
+export const loginAttempts = mysqlTable(
   "login_attempts",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     email: varchar("email", { length: 320 }).notNull(),
     userId: varchar("userId", { length: 64 }),
-    
     success: boolean("success").notNull(),
     ipAddress: varchar("ipAddress", { length: 45 }),
     userAgent: varchar("userAgent", { length: 500 }),
     failureReason: varchar("failureReason", { length: 100 }),
-    
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   (table) => ({
@@ -1222,24 +994,20 @@ export type InsertLoginAttempt = typeof loginAttempts.$inferInsert;
 // PHASE 10: Onboarding
 // ============================================================================
 
-export const onboardingProgress = pgTable(
+export const onboardingProgress = mysqlTable(
   "onboarding_progress",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
-    tenantId: varchar("tenantId", { length: 64 }).notNull(),
-    
-    currentStep: integer("currentStep").default(1).notNull(),
-    completedSteps: jsonb("completedSteps").notNull(),
-    checklistItems: jsonb("checklistItems").notNull(),
-    
+    tenantId: varchar("tenantId", { length: 64 }).notNull().unique(),
+    currentStep: int("currentStep").default(1).notNull(),
+    completedSteps: json("completedSteps").notNull(),
+    checklistItems: json("checklistItems").notNull(),
     skipped: boolean("skipped").default(false).notNull(),
     completedAt: timestamp("completedAt"),
-    
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
   (table) => ({
-    tenantIdx: unique("idx_onboarding_tenant").on(table.tenantId),
     completedIdx: index("idx_onboarding_completed").on(table.completedAt),
     skippedIdx: index("idx_onboarding_skipped").on(table.skipped),
   })
@@ -1248,7 +1016,7 @@ export const onboardingProgress = pgTable(
 export type OnboardingProgress = typeof onboardingProgress.$inferSelect;
 export type InsertOnboardingProgress = typeof onboardingProgress.$inferInsert;
 
-export const industryTemplates = pgTable(
+export const industryTemplates = mysqlTable(
   "industry_templates",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
@@ -1256,13 +1024,10 @@ export const industryTemplates = pgTable(
     slug: varchar("slug", { length: 100 }).notNull().unique(),
     description: text("description"),
     icon: varchar("icon", { length: 50 }),
-    
-    configuration: jsonb("configuration").notNull(),
-    sampleData: jsonb("sampleData"),
-    features: jsonb("features"),
-    
+    configuration: json("configuration").notNull(),
+    sampleData: json("sampleData"),
+    features: json("features"),
     isActive: boolean("isActive").default(true).notNull(),
-    
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },

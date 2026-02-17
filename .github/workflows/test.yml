@@ -12,8 +12,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout código
+      - name: Checkout codigo
         uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -21,16 +26,11 @@ jobs:
           node-version: 22.x
           cache: "pnpm"
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
-      - name: Instalar dependências
+      - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
-      - name: Executar testes unitários
-        run: pnpm test:unit
+      - name: Executar testes unitarios
+        run: pnpm test:run
         continue-on-error: true
 
   integration-tests:
@@ -53,8 +53,13 @@ jobs:
           - 3306:3306
 
     steps:
-      - name: Checkout código
+      - name: Checkout codigo
         uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -62,12 +67,7 @@ jobs:
           node-version: 22.x
           cache: "pnpm"
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
-      - name: Instalar dependências
+      - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
       - name: Setup banco de testes
@@ -76,8 +76,8 @@ jobs:
           DATABASE_URL: mysql://blackbelt:blackbelt123@localhost:3306/blackbelt_test
         continue-on-error: true
 
-      - name: Executar testes de integração
-        run: pnpm test:integration
+      - name: Executar testes de integracao
+        run: pnpm test:run
         env:
           DATABASE_URL: mysql://blackbelt:blackbelt123@localhost:3306/blackbelt_test
         continue-on-error: true

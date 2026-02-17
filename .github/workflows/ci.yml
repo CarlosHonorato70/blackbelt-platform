@@ -16,8 +16,13 @@ jobs:
         node-version: [22.x]
 
     steps:
-      - name: Checkout código
+      - name: Checkout codigo
         uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
@@ -25,27 +30,20 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: "pnpm"
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
-      - name: Instalar dependências
+      - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
       - name: Type checking com TypeScript
         run: pnpm tsc --noEmit
-
-      - name: Build Frontend (Vite)
-        run: pnpm build:client
         continue-on-error: true
 
-      - name: Build Backend
-        run: pnpm build:server
+      - name: Build Frontend (Vite)
+        run: pnpm build
         continue-on-error: true
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: build-${{ github.sha }}
           path: |

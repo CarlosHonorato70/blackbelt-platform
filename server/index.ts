@@ -1,16 +1,22 @@
+import "dotenv/config";
 import { createServer as createHttpServer } from "http";
 import express, { type Request, Response, NextFunction } from "express";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { createServer as createViteServer } from "vite";
 import { setupVite } from "./vite.js";
 import { registerRoutes } from "./routes.js";
-import { db } from "../db.js";
 import helmet from "helmet";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import slowDown from "express-slow-down";
+import { ENV } from "./_core/env";
+
+// tRPC
+import * as trpcExpress from "@trpc/server/adapters/express";
+import { appRouter } from "./routers";
+import { createContext } from "./_core/context";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,125 +24,186 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = createHttpServer(app);
 
-// Segurança
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://translate.googleapis.com", "https://translate.google.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://translate.googleapis.com", "https://www.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https://www.gstatic.com", "https://translate.googleapis.com"],
-      connectSrc: ["'self'", "https://blackbelt-backend.onrender.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      objectSrc: ["'none'"],
-      upgradeInsecureRequests: [],
+// ============================================
+// SEGURANCA: Helmet (CSP)
+// ============================================
+
+const isProduction = ENV.isProduction;
+
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: isProduction
+          ? ["'self'"]
+          : ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://fonts.googleapis.com",
+        ],
+        imgSrc: ["'self'", "data:", "blob:"],
+        connectSrc: [
+          "'self'",
+          ENV.frontendUrl,
+        ].filter(Boolean),
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: isProduction ? [] : null,
+      },
     },
-  },
-  crossOriginEmbedderPolicy: false,
-}));
+    crossOriginEmbedderPolicy: false,
+  })
+);
 
-// CORS
-app.use(cors({
-  origin: true,
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
-}));
+// ============================================
+// CORS RESTRITIVO
+// ============================================
 
-// Rate Limiting
-const limiter = rateLimit({
+const allowedOrigins = [
+  ENV.frontendUrl,
+  "http://localhost:5000",
+  "http://localhost:5173",
+].filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Permitir requests sem origin (curl, mobile, server-to-server)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      callback(new Error(`Origin ${origin} nao permitida pelo CORS`));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  })
+);
+
+// ============================================
+// RATE LIMITING
+// ============================================
+
+const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { message: "Muitas requisições, tente novamente mais tarde." }
+  message: { message: "Muitas requisicoes, tente novamente mais tarde." },
+  skip: (req) => req.path === "/api/health",
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Muitas tentativas de login. Aguarde 15 minutos." },
 });
 
 const speedLimiter = slowDown({
   windowMs: 15 * 60 * 1000,
   delayAfter: 50,
-  delayMs: () => 500
+  delayMs: () => 500,
 });
 
-app.use("/api", limiter);
+app.use("/api", apiLimiter);
 app.use("/api", speedLimiter);
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// ============================================
+// STRIPE WEBHOOK - precisa do raw body ANTES do express.json()
+// ============================================
+app.use("/api/webhooks/stripe", express.raw({ type: "application/json" }));
 
-// Middleware de log
+// ============================================
+// BODY PARSING & COOKIES
+// ============================================
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
+
+// ============================================
+// LOGGING (sem expor dados sensiveis)
+// ============================================
+
 app.use((req, res, next) => {
   const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
 
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-      console.log(logLine);
+    if (req.path.startsWith("/api")) {
+      console.log(
+        `${req.method} ${req.path} ${res.statusCode} ${duration}ms`
+      );
     }
   });
 
   next();
 });
 
+// ============================================
+// INICIALIZACAO
+// ============================================
+
 (async () => {
-  // 1. REGISTRAR ROTAS DA API
-  const routes = registerRoutes(app);
-  
-  // Error handler
+  // 1. REGISTRAR ROTAS REST (health + webhooks)
+  registerRoutes(app);
+
+  // 2. REGISTRAR tRPC
+  app.use(
+    "/api/trpc",
+    trpcExpress.createExpressMiddleware({
+      router: appRouter,
+      createContext,
+    })
+  );
+
+  // 3. ERROR HANDLER GLOBAL
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    console.error(`[SERVER ERROR] ${status} - ${message}`);
-    if (err.stack) console.error(err.stack);
+    const message =
+      isProduction && status === 500
+        ? "Erro interno do servidor"
+        : err.message || "Internal Server Error";
+
+    console.error(`[ERROR] ${status} - ${err.message}`);
+    if (!isProduction && err.stack) console.error(err.stack);
+
     res.status(status).json({ message });
   });
 
-  // 2. SERVIR FRONTEND
-  if (app.get("env") === "development") {
+  // 4. SERVIR FRONTEND
+  if (!isProduction) {
     await setupVite(app, server);
   } else {
     const possiblePaths = [
       path.join(__dirname, "public"),
       path.join(__dirname, "..", "public"),
-      path.join(process.cwd(), "dist", "public")
+      path.join(process.cwd(), "dist", "public"),
     ];
 
-    let distPath = possiblePaths.find(p => fs.existsSync(p));
+    const distPath = possiblePaths.find((p) => fs.existsSync(p));
 
     if (distPath) {
-      console.log(`✅ Servindo arquivos estáticos de: ${distPath}`);
-      
-      // Serve arquivos estáticos
-      app.use(express.static(distPath, {
-        maxAge: "1d",
-        immutable: true
-      }));
+      console.log(`Servindo arquivos estaticos de: ${distPath}`);
 
-      // SPA FALLBACK - CRÍTICO PARA REACT ROUTER
+      app.use(
+        express.static(distPath, {
+          maxAge: "1d",
+          immutable: true,
+        })
+      );
+
+      // SPA fallback
       app.get("*", (req, res, next) => {
-        // Se for rota de API, pula
-        if (req.path.startsWith("/api")) {
-          return next();
-        }
-        
-        // Para todas as outras rotas, serve o index.html
+        if (req.path.startsWith("/api")) return next();
+
         const indexPath = path.join(distPath!, "index.html");
-        
         if (fs.existsSync(indexPath)) {
           res.sendFile(indexPath);
         } else {
@@ -144,20 +211,17 @@ app.use((req, res, next) => {
         }
       });
     } else {
-      console.log(`❌ CRITICAL: Could not find 'public' folder. Checked: ${possiblePaths.join(", ")}`);
-      app.get("*", (req, res, next) => {
-        if (req.path.startsWith("/api")) {
-          return next();
-        }
-        res.status(500).send("System Error: Frontend build not found.");
-      });
+      console.error(
+        `CRITICAL: Frontend build nao encontrado. Caminhos verificados: ${possiblePaths.join(", ")}`
+      );
     }
   }
 
-  const PORT = parseInt(process.env.PORT || "8080", 10);
-  
+  // 5. START
+  const PORT = ENV.port;
+
   server.listen(PORT, "0.0.0.0", () => {
-    console.log(`Servidor em execução em http://0.0.0.0:${PORT}/`);
+    console.log(`Servidor rodando em http://0.0.0.0:${PORT}/`);
+    console.log(`Ambiente: ${ENV.nodeEnv}`);
   });
 })();
-
