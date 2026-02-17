@@ -5,7 +5,7 @@
  */
 
 import { z } from "zod";
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, tenantProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import { apiKeys, apiKeyUsage } from "../../drizzle/schema";
@@ -35,7 +35,7 @@ export const apiKeysRouter = router({
   /**
    * Listar API keys do tenant (sem mostrar chaves completas)
    */
-  list: protectedProcedure.query(async ({ ctx }) => {
+  list: tenantProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) {
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -56,7 +56,7 @@ export const apiKeysRouter = router({
   /**
    * Criar nova API key
    */
-  create: protectedProcedure
+  create: tenantProcedure
     .input(
       z.object({
         name: z.string().min(1).max(255),
@@ -109,7 +109,7 @@ export const apiKeysRouter = router({
   /**
    * Atualizar API key (não pode mudar a chave em si)
    */
-  update: protectedProcedure
+  update: tenantProcedure
     .input(
       z.object({
         id: z.string(),
@@ -152,7 +152,7 @@ export const apiKeysRouter = router({
   /**
    * Deletar API key
    */
-  delete: protectedProcedure
+  delete: tenantProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
@@ -179,7 +179,7 @@ export const apiKeysRouter = router({
   /**
    * Obter estatísticas de uso de uma API key
    */
-  getUsage: protectedProcedure
+  getUsage: tenantProcedure
     .input(
       z.object({
         id: z.string(),
@@ -240,7 +240,7 @@ export const apiKeysRouter = router({
   /**
    * Rotacionar API key (gerar nova chave mantendo o ID)
    */
-  rotate: protectedProcedure
+  rotate: tenantProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();

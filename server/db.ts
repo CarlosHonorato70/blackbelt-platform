@@ -4,6 +4,7 @@ import mysql from "mysql2/promise";
 import { nanoid } from "nanoid";
 import * as schema from "../drizzle/schema";
 import * as schemaNr01 from "../drizzle/schema_nr01";
+import * as relations from "../drizzle/relations";
 import {
   assessmentProposals,
   auditLogs,
@@ -42,7 +43,7 @@ import {
 import { ENV } from "./_core/env";
 
 // Schema completo para Drizzle relational API (db.query.*)
-const fullSchema = { ...schema, ...schemaNr01 };
+const fullSchema = { ...schema, ...schemaNr01, ...relations };
 
 let _db: ReturnType<typeof drizzle<typeof fullSchema>> | null = null;
 

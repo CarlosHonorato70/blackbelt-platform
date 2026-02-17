@@ -5,7 +5,7 @@
  */
 
 import { z } from "zod";
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, tenantProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import { webhooks, webhookDeliveries } from "../../drizzle/schema";
@@ -36,7 +36,7 @@ export const webhooksRouter = router({
   /**
    * Listar webhooks do tenant
    */
-  list: protectedProcedure.query(async ({ ctx }) => {
+  list: tenantProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) {
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -57,7 +57,7 @@ export const webhooksRouter = router({
   /**
    * Obter detalhes de um webhook
    */
-  get: protectedProcedure
+  get: tenantProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
       const db = await getDb();
@@ -84,7 +84,7 @@ export const webhooksRouter = router({
   /**
    * Criar novo webhook
    */
-  create: protectedProcedure
+  create: tenantProcedure
     .input(
       z.object({
         name: z.string().min(1).max(255),
@@ -124,7 +124,7 @@ export const webhooksRouter = router({
   /**
    * Atualizar webhook
    */
-  update: protectedProcedure
+  update: tenantProcedure
     .input(
       z.object({
         id: z.string(),
@@ -167,7 +167,7 @@ export const webhooksRouter = router({
   /**
    * Deletar webhook
    */
-  delete: protectedProcedure
+  delete: tenantProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
@@ -194,7 +194,7 @@ export const webhooksRouter = router({
   /**
    * Listar deliveries de um webhook
    */
-  listDeliveries: protectedProcedure
+  listDeliveries: tenantProcedure
     .input(
       z.object({
         webhookId: z.string(),
@@ -239,7 +239,7 @@ export const webhooksRouter = router({
   /**
    * Retentar delivery manualmente
    */
-  retryDelivery: protectedProcedure
+  retryDelivery: tenantProcedure
     .input(z.object({ deliveryId: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
@@ -283,7 +283,7 @@ export const webhooksRouter = router({
   /**
    * Testar webhook com payload de exemplo
    */
-  test: protectedProcedure
+  test: tenantProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
@@ -332,7 +332,7 @@ export const webhooksRouter = router({
   /**
    * Obter estatísticas de webhooks
    */
-  getStats: protectedProcedure.query(async ({ ctx }) => {
+  getStats: tenantProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) {
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
