@@ -19,15 +19,27 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
-  
-  // Busca o usuário via TRPC (usa cookie automaticamente)
-  const { data: user, isLoading, refetch } = trpc.auth.me.useQuery(undefined, {
-    retry: false,
+
+  // Busca o usuario via tRPC (usa cookie automaticamente)
+  const { data: user, isLoading, refetch, error } = trpc.auth.me.useQuery(undefined, {
+    retry: 1,
+    retryDelay: 1000,
     refetchOnWindowFocus: false,
   });
 
+  // Log de erros de autenticacao (sem expor ao usuario)
+  if (error) {
+    console.warn("[Auth] Falha ao verificar sessao:", error.message);
+  }
+
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
+      refetch();
+      navigate("/login", { replace: true });
+    },
+    onError: (err: { message: string }) => {
+      console.error("[Auth] Erro ao fazer logout:", err.message);
+      // Mesmo se o logout falhar no servidor, limpar estado local
       refetch();
       navigate("/login", { replace: true });
     },

@@ -1,6 +1,6 @@
 import { and, desc, eq, like, or, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
+import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 import { nanoid } from "nanoid";
 import {
   assessmentProposals,
@@ -31,7 +31,7 @@ import {
   userInvites,
   userRoles,
   users,
-} from "../drizzle/schema"; // Ajuste o caminho se necessário
+} from "../drizzle/schema";
 import {
   copsoqAssessments,
   copsoqResponses,
@@ -39,16 +39,16 @@ import {
 } from "../drizzle/schema_nr01";
 import { ENV } from "./_core/env";
 
-const { Pool } = pg;
-
 let _db: ReturnType<typeof drizzle> | null = null;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      const pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+      const pool = mysql.createPool({
+        uri: process.env.DATABASE_URL,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
       });
       _db = drizzle(pool);
     } catch (error) {
@@ -57,6 +57,11 @@ export async function getDb() {
     }
   }
   return _db;
+}
+
+// Alias para compatibilidade com context.ts
+export async function getUserById(id: string) {
+  return getUser(id);
 }
 
 // ============================================================================
@@ -101,14 +106,6 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.lastSignedIn = user.lastSignedIn;
     }
 
-    if (user.role === undefined) {
-      if (user.id === ENV.ownerId) {
-        user.role = "admin";
-        values.role = "admin";
-        updateSet.role = "admin";
-      }
-    }
-    
     if (user.role !== undefined) {
       values.role = user.role;
       updateSet.role = user.role;
@@ -118,9 +115,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.lastSignedIn = new Date();
     }
 
-    // Postgres usa ON CONFLICT em vez de ON DUPLICATE KEY UPDATE
-    await db.insert(users).values(values).onConflictDoUpdate({
-      target: users.id,
+    // MySQL usa ON DUPLICATE KEY UPDATE
+    await db.insert(users).values(values).onDuplicateKeyUpdate({
       set: updateSet,
     });
   } catch (error) {
@@ -287,7 +283,3 @@ export async function setTenantSetting(
     });
   }
 }
-
-// ... (O RESTANTE DO ARQUIVO É IDÊNTICO AO ORIGINAL, POIS O DRIZZLE ABSTRAI O RESTO)
-// ... Copie o restante das funções (createSector, listPeople, etc.) do seu arquivo original
-// ... A única mudança crítica foi no upsertUser (ON CONFLICT) e na conexão (Pool)

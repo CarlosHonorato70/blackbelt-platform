@@ -347,16 +347,12 @@ export function validateTenantIsolation(
 
 /**
  * Health check endpoint (bypasses rate limiting)
+ * NAO expoe dados internos de seguranca (IPs bloqueados, memoria, etc.)
  */
-export function healthCheck(req: Request, res: Response) {
-  const health = {
+export function healthCheck(_req: Request, res: Response) {
+  res.status(200).json({
     status: "healthy",
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    memory: process.memoryUsage(),
-    blockedIPs: blockedIPs.size,
-    suspiciousIPs: suspiciousIPs.size,
-  };
-
-  res.status(200).json(health);
+    uptime: Math.floor(process.uptime()),
+  });
 }
