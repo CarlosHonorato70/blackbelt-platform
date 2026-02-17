@@ -2,6 +2,8 @@ import { and, desc, eq, like, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import { nanoid } from "nanoid";
+import * as schema from "../drizzle/schema";
+import * as schemaNr01 from "../drizzle/schema_nr01";
 import {
   assessmentProposals,
   auditLogs,
@@ -39,7 +41,10 @@ import {
 } from "../drizzle/schema_nr01";
 import { ENV } from "./_core/env";
 
-let _db: ReturnType<typeof drizzle> | null = null;
+// Schema completo para Drizzle relational API (db.query.*)
+const fullSchema = { ...schema, ...schemaNr01 };
+
+let _db: ReturnType<typeof drizzle<typeof fullSchema>> | null = null;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
@@ -50,7 +55,7 @@ export async function getDb() {
         connectionLimit: 10,
         queueLimit: 0,
       });
-      _db = drizzle(pool);
+      _db = drizzle(pool, { schema: fullSchema, mode: "default" });
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -88,6 +93,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       "email",
       "loginMethod",
       "passwordHash",
+      "tenantId",
     ] as const;
     type TextField = (typeof textFields)[number];
 
