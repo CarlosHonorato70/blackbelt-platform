@@ -9,7 +9,7 @@
  */
 
 import { z } from "zod";
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, protectedProcedure, tenantProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import {
@@ -32,7 +32,7 @@ export const securityRouter = router({
   /**
    * List IP whitelist entries for tenant
    */
-  listWhitelistedIPs: protectedProcedure.query(async ({ ctx }) => {
+  listWhitelistedIPs: tenantProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) {
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -49,7 +49,7 @@ export const securityRouter = router({
   /**
    * Add IP to whitelist
    */
-  addWhitelistedIP: protectedProcedure
+  addWhitelistedIP: tenantProcedure
     .input(
       z.object({
         ipAddress: z.string().regex(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$|^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/),
@@ -83,7 +83,7 @@ export const securityRouter = router({
         tenantId: ctx.tenantId,
         ipAddress: input.ipAddress,
         description: input.description || null,
-        createdBy: ctx.userId,
+        createdBy: ctx.user.id,
         active: true,
       });
 
@@ -93,7 +93,7 @@ export const securityRouter = router({
   /**
    * Remove IP from whitelist
    */
-  removeWhitelistedIP: protectedProcedure
+  removeWhitelistedIP: tenantProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
@@ -111,7 +111,7 @@ export const securityRouter = router({
   /**
    * Toggle IP whitelist entry active status
    */
-  toggleWhitelistedIP: protectedProcedure
+  toggleWhitelistedIP: tenantProcedure
     .input(z.object({ id: z.string(), active: z.boolean() }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
@@ -142,7 +142,7 @@ export const securityRouter = router({
 
     const userSessions = await db.query.sessions.findMany({
       where: and(
-        eq(sessions.userId, ctx.userId),
+        eq(sessions.userId, ctx.user.id),
         eq(sessions.active, true),
         gte(sessions.expiresAt, new Date())
       ),
@@ -168,7 +168,7 @@ export const securityRouter = router({
 
       // Verify session belongs to user
       const session = await db.query.sessions.findFirst({
-        where: and(eq(sessions.id, input.sessionId), eq(sessions.userId, ctx.userId)),
+        where: and(eq(sessions.id, input.sessionId), eq(sessions.userId, ctx.user.id)),
       });
 
       if (!session) {
@@ -197,7 +197,7 @@ export const securityRouter = router({
       await db
         .update(sessions)
         .set({ active: false })
-        .where(and(eq(sessions.userId, ctx.userId)));
+        .where(and(eq(sessions.userId, ctx.user.id)));
 
       // Reactivate current session
       await db
@@ -215,7 +215,7 @@ export const securityRouter = router({
   /**
    * List security alerts for tenant
    */
-  listAlerts: protectedProcedure
+  listAlerts: tenantProcedure
     .input(
       z.object({
         resolved: z.boolean().optional(),
@@ -256,7 +256,7 @@ export const securityRouter = router({
   /**
    * Resolve a security alert
    */
-  resolveAlert: protectedProcedure
+  resolveAlert: tenantProcedure
     .input(z.object({ alertId: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
@@ -269,7 +269,7 @@ export const securityRouter = router({
         .set({
           resolved: true,
           resolvedAt: new Date(),
-          resolvedBy: ctx.userId,
+          resolvedBy: ctx.user.id,
         })
         .where(
           and(eq(securityAlerts.id, input.alertId), eq(securityAlerts.tenantId, ctx.tenantId))
@@ -281,7 +281,7 @@ export const securityRouter = router({
   /**
    * Get security stats for tenant
    */
-  getSecurityStats: protectedProcedure.query(async ({ ctx }) => {
+  getSecurityStats: tenantProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) {
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -355,7 +355,7 @@ export const securityRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       }
 
-      const conditions = [eq(loginAttempts.userId, ctx.userId)];
+      const conditions = [eq(loginAttempts.userId, ctx.user.id)];
       
       if (input.success !== undefined) {
         conditions.push(eq(loginAttempts.success, input.success));

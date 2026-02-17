@@ -1,4 +1,5 @@
 import "dotenv/config";
+import * as Sentry from "@sentry/node";
 import { createServer as createHttpServer } from "http";
 import express, { type Request, Response, NextFunction } from "express";
 import fs from "fs";
@@ -12,11 +13,24 @@ import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import slowDown from "express-slow-down";
 import { ENV } from "./_core/env";
+import { log } from "./_core/logger";
 
 // tRPC
 import * as trpcExpress from "@trpc/server/adapters/express";
 import { appRouter } from "./routers";
 import { createContext } from "./_core/context";
+
+// ============================================
+// SENTRY ERROR TRACKING
+// ============================================
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || "development",
+    tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
+  });
+  log.info("Sentry initialized", { environment: process.env.NODE_ENV });
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -114,6 +128,7 @@ const speedLimiter = slowDown({
 
 app.use("/api", apiLimiter);
 app.use("/api", speedLimiter);
+app.use("/api/trpc/auth.", authLimiter);
 
 // ============================================
 // STRIPE WEBHOOK - precisa do raw body ANTES do express.json()
@@ -137,9 +152,7 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (req.path.startsWith("/api")) {
-      console.log(
-        `${req.method} ${req.path} ${res.statusCode} ${duration}ms`
-      );
+      log.http(`${req.method} ${req.path} ${res.statusCode} ${duration}ms`);
     }
   });
 
@@ -171,8 +184,11 @@ app.use((req, res, next) => {
         ? "Erro interno do servidor"
         : err.message || "Internal Server Error";
 
-    console.error(`[ERROR] ${status} - ${err.message}`);
-    if (!isProduction && err.stack) console.error(err.stack);
+    log.error(`[ERROR] ${status} - ${err.message}`, { stack: err.stack });
+
+    if (status >= 500 && process.env.SENTRY_DSN) {
+      Sentry.captureException(err);
+    }
 
     res.status(status).json({ message });
   });
@@ -190,7 +206,7 @@ app.use((req, res, next) => {
     const distPath = possiblePaths.find((p) => fs.existsSync(p));
 
     if (distPath) {
-      console.log(`Servindo arquivos estaticos de: ${distPath}`);
+      log.info(`Servindo arquivos estaticos de: ${distPath}`);
 
       app.use(
         express.static(distPath, {
@@ -211,7 +227,7 @@ app.use((req, res, next) => {
         }
       });
     } else {
-      console.error(
+      log.error(
         `CRITICAL: Frontend build nao encontrado. Caminhos verificados: ${possiblePaths.join(", ")}`
       );
     }
@@ -221,7 +237,7 @@ app.use((req, res, next) => {
   const PORT = ENV.port;
 
   server.listen(PORT, "0.0.0.0", () => {
-    console.log(`Servidor rodando em http://0.0.0.0:${PORT}/`);
-    console.log(`Ambiente: ${ENV.nodeEnv}`);
+    log.info(`Servidor rodando em http://0.0.0.0:${PORT}/`);
+    log.info(`Ambiente: ${ENV.nodeEnv}`);
   });
 })();

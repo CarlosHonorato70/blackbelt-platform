@@ -6,12 +6,12 @@
 import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
 
-// Email configuration
-const EMAIL_HOST = process.env.EMAIL_HOST || "smtp.gmail.com";
-const EMAIL_PORT = parseInt(process.env.EMAIL_PORT || "587");
-const EMAIL_USER = process.env.EMAIL_USER;
-const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD;
-const EMAIL_FROM = process.env.EMAIL_FROM || EMAIL_USER;
+// Email configuration (unified — uses SMTP_* env vars same as email.ts)
+const EMAIL_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
+const EMAIL_PORT = parseInt(process.env.SMTP_PORT || "587");
+const EMAIL_USER = process.env.SMTP_USER;
+const EMAIL_PASSWORD = process.env.SMTP_PASSWORD;
+const EMAIL_FROM = process.env.SMTP_FROM || EMAIL_USER;
 
 let transporter: Transporter | null = null;
 

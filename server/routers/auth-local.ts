@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { nanoid } from "nanoid";
@@ -13,12 +14,16 @@ export const authLocalRouter = router({
         name: z.string().min(2, "Nome deve ter no minimo 2 caracteres"),
         email: z.string().email("Email invalido"),
         password: z.string().min(8, "Senha deve ter no minimo 8 caracteres"),
+        tenantId: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
       const existing = await db.getUserByEmail(input.email);
       if (existing) {
-        throw new Error("Email ja cadastrado");
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Email ja cadastrado",
+        });
       }
 
       const passwordHash = await bcrypt.hash(input.password, 12);
@@ -30,6 +35,7 @@ export const authLocalRouter = router({
         email: input.email,
         passwordHash,
         loginMethod: "local",
+        tenantId: input.tenantId || null,
       });
 
       // Cria token de sessao OPACO e ASSINADO (nao userId bruto)
@@ -45,13 +51,25 @@ export const authLocalRouter = router({
     .mutation(async ({ input, ctx }) => {
       const user = await db.getUserByEmail(input.email);
       if (!user || !user.passwordHash) {
-        throw new Error("Email ou senha incorretos");
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Email ou senha incorretos",
+        });
       }
 
       const valid = await bcrypt.compare(input.password, user.passwordHash);
       if (!valid) {
-        throw new Error("Email ou senha incorretos");
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Email ou senha incorretos",
+        });
       }
+
+      // Atualiza lastSignedIn
+      await db.upsertUser({
+        id: user.id,
+        lastSignedIn: new Date(),
+      });
 
       // Cria token de sessao OPACO e ASSINADO
       const sessionToken = createSessionToken(user.id);
@@ -61,7 +79,17 @@ export const authLocalRouter = router({
       return { success: true };
     }),
 
-  me: publicProcedure.query(({ ctx }) => ctx.user || null),
+  me: publicProcedure.query(({ ctx }) => {
+    if (!ctx.user) return null;
+    // Retorna dados seguros do usuario (sem passwordHash)
+    return {
+      id: ctx.user.id,
+      name: ctx.user.name,
+      email: ctx.user.email,
+      role: ctx.user.role,
+      tenantId: ctx.user.tenantId,
+    };
+  }),
 
   logout: publicProcedure.mutation(({ ctx }) => {
     const cookieOptions = getSessionCookieOptions(ctx.req);

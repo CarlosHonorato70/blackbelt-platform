@@ -1,16 +1,15 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { publicProcedure, router, protectedProcedure } from "../_core/trpc";
+import { router, protectedProcedure } from "../_core/trpc";
 import * as db from "../db";
 
-// Validação de CNPJ
+// Validacao de CNPJ
 function validateCNPJ(cnpj: string): boolean {
   const cleaned = cnpj.replace(/[^\d]/g, "");
 
   if (cleaned.length !== 14) return false;
-  if (/^(\d)\1+$/.test(cleaned)) return false; // Todos dígitos iguais
+  if (/^(\d)\1+$/.test(cleaned)) return false;
 
-  // Validação dos dígitos verificadores
   let sum = 0;
   let weight = 5;
   for (let i = 0; i < 12; i++) {
@@ -34,7 +33,7 @@ function validateCNPJ(cnpj: string): boolean {
 
 export const tenantsRouter = router({
   // Listar tenants (apenas admin ou consultor BB)
-  list: publicProcedure
+  list: protectedProcedure
     .input(
       z
         .object({
@@ -44,16 +43,11 @@ export const tenantsRouter = router({
         .optional()
     )
     .query(async ({ ctx, input }) => {
-      // TODO: Verificar se usuário tem permissão (admin ou consultor BB)
-      // A autenticação foi desabilitada, permitindo acesso livre.
-      // O mock user tem role 'admin', então a verificação será ignorada.
+      const tenantsList = await db.listTenants(input);
 
-      const tenants = await db.listTenants(input);
-
-      // Criar audit log
       await db.createAuditLog({
         tenantId: null,
-        userId: ctx.user!.id,
+        userId: ctx.user.id,
         action: "READ",
         entityType: "tenants",
         entityId: null,
@@ -63,11 +57,11 @@ export const tenantsRouter = router({
         userAgent: ctx.req.headers["user-agent"],
       });
 
-      return tenants;
+      return tenantsList;
     }),
 
-  // Obter um tenant específico
-  get: publicProcedure
+  // Obter um tenant especifico
+  get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const tenant = await db.getTenant(input.id);
@@ -75,15 +69,13 @@ export const tenantsRouter = router({
       if (!tenant) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Empresa não encontrada",
+          message: "Empresa nao encontrada",
         });
       }
 
-      // TODO: Verificar se usuário tem acesso a este tenant
-
       await db.createAuditLog({
         tenantId: tenant.id,
-        userId: ctx.user!.id,
+        userId: ctx.user.id,
         action: "READ",
         entityType: "tenants",
         entityId: tenant.id,
@@ -96,12 +88,12 @@ export const tenantsRouter = router({
       return tenant;
     }),
 
-  // Criar novo tenant
-  create: publicProcedure
+  // Criar novo tenant (apenas admin)
+  create: protectedProcedure
     .input(
       z.object({
-        name: z.string().min(1, "Nome é obrigatório"),
-        cnpj: z.string().min(14, "CNPJ inválido"),
+        name: z.string().min(1, "Nome e obrigatorio"),
+        cnpj: z.string().min(14, "CNPJ invalido"),
         street: z.string().optional(),
         number: z.string().optional(),
         complement: z.string().optional(),
@@ -118,28 +110,24 @@ export const tenantsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Apenas admin pode criar tenants
-      if (ctx.user!.role !== "admin") {
+      if (ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
       }
 
-      // Validar CNPJ
       if (!validateCNPJ(input.cnpj)) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "CNPJ inválido" });
+        throw new TRPCError({ code: "BAD_REQUEST", message: "CNPJ invalido" });
       }
 
-      // Verificar se CNPJ já existe
       const existing = await db.getTenantByCNPJ(input.cnpj);
       if (existing) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: "CNPJ já cadastrado",
+          message: "CNPJ ja cadastrado",
         });
       }
 
       const tenant = await db.createTenant(input);
 
-      // Criar configurações padrão
       await db.setTenantSetting(tenant.id, "max_users", 100);
       await db.setTenantSetting(tenant.id, "features", [
         "nr01",
@@ -148,7 +136,7 @@ export const tenantsRouter = router({
 
       await db.createAuditLog({
         tenantId: tenant.id,
-        userId: ctx.user!.id,
+        userId: ctx.user.id,
         action: "CREATE",
         entityType: "tenants",
         entityId: tenant.id,
@@ -161,8 +149,8 @@ export const tenantsRouter = router({
       return tenant;
     }),
 
-  // Atualizar tenant
-  update: publicProcedure
+  // Atualizar tenant (apenas admin)
+  update: protectedProcedure
     .input(
       z.object({
         id: z.string(),
@@ -181,23 +169,26 @@ export const tenantsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // Apenas admin pode atualizar tenants
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
+      }
+
       const { id, ...data } = input;
 
       const tenant = await db.getTenant(id);
       if (!tenant) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Empresa não encontrada",
+          message: "Empresa nao encontrada",
         });
       }
-
-      // TODO: Verificar permissões (admin ou admin da empresa)
 
       await db.updateTenant(id, data);
 
       await db.createAuditLog({
         tenantId: id,
-        userId: ctx.user!.id,
+        userId: ctx.user.id,
         action: "UPDATE",
         entityType: "tenants",
         entityId: id,
@@ -210,7 +201,7 @@ export const tenantsRouter = router({
       return { success: true };
     }),
 
-  // Deletar tenant
+  // Deletar tenant (apenas admin)
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -222,7 +213,7 @@ export const tenantsRouter = router({
       if (!tenant) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Empresa não encontrada",
+          message: "Empresa nao encontrada",
         });
       }
 
@@ -243,15 +234,12 @@ export const tenantsRouter = router({
       return { success: true };
     }),
 
-  // Obter configurações do tenant
-  getSettings: publicProcedure
+  // Obter configuracoes do tenant
+  getSettings: protectedProcedure
     .input(z.object({ tenantId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      // TODO: Verificar permissões
+    .query(async ({ input }) => {
+      const settings: Record<string, unknown> = {};
 
-      const settings: Record<string, any> = {};
-
-      // Buscar todas as configurações (simplificado)
       const maxUsers = await db.getTenantSetting(input.tenantId, "max_users");
       const features = await db.getTenantSetting(input.tenantId, "features");
 
@@ -261,8 +249,8 @@ export const tenantsRouter = router({
       return settings;
     }),
 
-  // Atualizar configuração do tenant
-  updateSetting: publicProcedure
+  // Atualizar configuracao do tenant (apenas admin)
+  updateSetting: protectedProcedure
     .input(
       z.object({
         tenantId: z.string(),
@@ -271,8 +259,7 @@ export const tenantsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Apenas admin pode alterar configurações
-      if (ctx.user!.role !== "admin") {
+      if (ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
       }
 
@@ -280,7 +267,7 @@ export const tenantsRouter = router({
 
       await db.createAuditLog({
         tenantId: input.tenantId,
-        userId: ctx.user!.id,
+        userId: ctx.user.id,
         action: "UPDATE",
         entityType: "tenant_settings",
         entityId: input.tenantId,

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, tenantProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import { tenants } from "../../drizzle/schema";
@@ -20,7 +20,7 @@ export const brandingRouter = router({
   /**
    * Get current branding configuration
    */
-  getBranding: protectedProcedure.query(async ({ ctx }) => {
+  getBranding: tenantProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) {
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -51,7 +51,7 @@ export const brandingRouter = router({
   /**
    * Update branding configuration (requires Enterprise plan)
    */
-  updateBranding: protectedProcedure
+  updateBranding: tenantProcedure
     .input(
       z.object({
         logoUrl: z.string().url().optional(),
@@ -120,7 +120,7 @@ export const brandingRouter = router({
   /**
    * Configure custom domain
    */
-  setCustomDomain: protectedProcedure
+  setCustomDomain: tenantProcedure
     .input(
       z.object({
         domain: z
@@ -210,7 +210,7 @@ export const brandingRouter = router({
    * - 5 second timeout per verification
    * - Strict CNAME validation
    */
-  verifyCustomDomain: protectedProcedure.mutation(async ({ ctx }) => {
+  verifyCustomDomain: tenantProcedure.mutation(async ({ ctx }) => {
     const db = await getDb();
     if (!db) {
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -279,7 +279,7 @@ export const brandingRouter = router({
   /**
    * Remove custom domain
    */
-  removeCustomDomain: protectedProcedure.mutation(async ({ ctx }) => {
+  removeCustomDomain: tenantProcedure.mutation(async ({ ctx }) => {
     const db = await getDb();
     if (!db) {
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });

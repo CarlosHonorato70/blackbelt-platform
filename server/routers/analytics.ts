@@ -7,7 +7,7 @@
  */
 
 import { z } from "zod";
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, adminProcedure, tenantProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import {
@@ -39,28 +39,13 @@ export const analyticsRouter = router({
   /**
    * Get MRR (Monthly Recurring Revenue)
    */
-  getAdminMRR: protectedProcedure
+  getAdminMRR: adminProcedure
     .input(dateRangeSchema)
     .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) {
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       }
-
-      // Check if user has admin role
-      // TODO: Implement role checking when user roles are finalized
-      // For now, all authenticated users can access (change this in production!)
-      // Uncomment when roles are implemented:
-      // const user = await db.query.users.findFirst({
-      //   where: eq(users.id, ctx.userId)
-      // });
-      // if (user?.role !== 'admin' && user?.role !== 'owner') {
-      //   throw new TRPCError({
-      //     code: 'FORBIDDEN',
-      //     message: 'Admin access required'
-      //   });
-      // }
-      // if (!ctx.isAdmin) throw new TRPCError({ code: "FORBIDDEN" });
 
       const startDate = input.startDate
         ? new Date(input.startDate)
@@ -108,7 +93,7 @@ export const analyticsRouter = router({
   /**
    * Get Churn Rate
    */
-  getAdminChurnRate: protectedProcedure
+  getAdminChurnRate: adminProcedure
     .input(dateRangeSchema)
     .query(async ({ input, ctx }) => {
       const db = await getDb();
@@ -170,7 +155,7 @@ export const analyticsRouter = router({
   /**
    * Get Conversion Rate (trial → paid)
    */
-  getAdminConversionRate: protectedProcedure
+  getAdminConversionRate: adminProcedure
     .input(dateRangeSchema)
     .query(async ({ input, ctx }) => {
       const db = await getDb();
@@ -233,7 +218,7 @@ export const analyticsRouter = router({
   /**
    * Get ARPU (Average Revenue Per User)
    */
-  getAdminARPU: protectedProcedure
+  getAdminARPU: adminProcedure
     .input(dateRangeSchema)
     .query(async ({ input, ctx }) => {
       const db = await getDb();
@@ -277,7 +262,7 @@ export const analyticsRouter = router({
   /**
    * Get LTV (Lifetime Value)
    */
-  getAdminLTV: protectedProcedure.query(async ({ ctx }) => {
+  getAdminLTV: adminProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) {
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -324,7 +309,7 @@ export const analyticsRouter = router({
   /**
    * Get popular plans
    */
-  getAdminPopularPlans: protectedProcedure.query(async ({ ctx }) => {
+  getAdminPopularPlans: adminProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) {
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -350,7 +335,7 @@ export const analyticsRouter = router({
   /**
    * Get user growth
    */
-  getAdminUserGrowth: protectedProcedure
+  getAdminUserGrowth: adminProcedure
     .input(dateRangeSchema)
     .query(async ({ input, ctx }) => {
       const db = await getDb();
@@ -389,7 +374,7 @@ export const analyticsRouter = router({
   /**
    * Get riskAssessments completed by period
    */
-  getClientAssessments: protectedProcedure
+  getClientAssessments: tenantProcedure
     .input(dateRangeSchema)
     .query(async ({ input, ctx }) => {
       const db = await getDb();
@@ -429,7 +414,7 @@ export const analyticsRouter = router({
   /**
    * Get proposals generated and acceptance rate
    */
-  getClientProposals: protectedProcedure
+  getClientProposals: tenantProcedure
     .input(dateRangeSchema)
     .query(async ({ input, ctx }) => {
       const db = await getDb();
@@ -491,7 +476,7 @@ export const analyticsRouter = router({
   /**
    * Get resource usage (users, storage, API)
    */
-  getClientResourceUsage: protectedProcedure.query(async ({ ctx }) => {
+  getClientResourceUsage: tenantProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) {
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -546,7 +531,7 @@ export const analyticsRouter = router({
   /**
    * Get estimated ROI
    */
-  getClientROI: protectedProcedure.query(async ({ ctx }) => {
+  getClientROI: tenantProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) {
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
