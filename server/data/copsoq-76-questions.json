@@ -1,0 +1,520 @@
+{
+  "questions": [
+    {
+      "id": 1,
+      "text": "A sua carga de trabalho acumula-se por ser mal distribuida.",
+      "dimension": "Demanda",
+      "section": "Condicoes de Trabalho"
+    },
+    {
+      "id": 2,
+      "text": "Com que frequencia nao tem tempo para completar todas as tarefas do seu trabalho.",
+      "dimension": "Demanda",
+      "section": "Condicoes de Trabalho"
+    },
+    {
+      "id": 3,
+      "text": "Precisa fazer horas-extra.",
+      "dimension": "Demanda",
+      "section": "Condicoes de Trabalho"
+    },
+    {
+      "id": 4,
+      "text": "Precisa trabalhar muito rapidamente.",
+      "dimension": "Demanda",
+      "section": "Condicoes de Trabalho"
+    },
+    {
+      "id": 5,
+      "text": "O seu trabalho exige a sua atencao constante.",
+      "dimension": "Demanda",
+      "section": "Condicoes de Trabalho"
+    },
+    {
+      "id": 6,
+      "text": "O seu trabalho requer que seja bom a propor novas ideias.",
+      "dimension": "Controle",
+      "section": "Condicoes de Trabalho"
+    },
+    {
+      "id": 7,
+      "text": "O seu trabalho exige que tome decisoes dificeis.",
+      "dimension": "Controle",
+      "section": "Condicoes de Trabalho"
+    },
+    {
+      "id": 8,
+      "text": "O seu trabalho exige emocionalmente de si.",
+      "dimension": "Controle",
+      "section": "Condicoes de Trabalho"
+    },
+    {
+      "id": 9,
+      "text": "Tem um elevado grau de influencia no seu trabalho.",
+      "dimension": "Controle",
+      "section": "Condicoes de Trabalho",
+      "reverse": true
+    },
+    {
+      "id": 10,
+      "text": "Participa na escolha das pessoas com quem trabalha.",
+      "dimension": "Controle",
+      "section": "Condicoes de Trabalho",
+      "reverse": true
+    },
+    {
+      "id": 11,
+      "text": "Pode influenciar a quantidade de trabalho que lhe compete a si.",
+      "dimension": "Controle",
+      "section": "Condicoes de Trabalho",
+      "reverse": true
+    },
+    {
+      "id": 12,
+      "text": "Tem alguma influencia sobre o tipo de tarefas que faz.",
+      "dimension": "Controle",
+      "section": "Condicoes de Trabalho",
+      "reverse": true
+    },
+    {
+      "id": 13,
+      "text": "O seu trabalho exige que tenha iniciativa.",
+      "dimension": "Controle",
+      "section": "Condicoes de Trabalho",
+      "reverse": true
+    },
+    {
+      "id": 14,
+      "text": "O seu trabalho permite-lhe aprender coisas novas.",
+      "dimension": "Controle",
+      "section": "Condicoes de Trabalho",
+      "reverse": true
+    },
+    {
+      "id": 15,
+      "text": "O seu trabalho permite-lhe usar as suas habilidades ou pericias.",
+      "dimension": "Controle",
+      "section": "Condicoes de Trabalho",
+      "reverse": true
+    },
+    {
+      "id": 16,
+      "text": "No seu local de trabalho, e informado com antecedencia sobre decisoes importantes, mudancas ou planos para o futuro.",
+      "dimension": "Apoio",
+      "section": "Informacao e Comunicacao",
+      "reverse": true
+    },
+    {
+      "id": 17,
+      "text": "Recebe toda a informacao de que necessita para fazer bem o seu trabalho.",
+      "dimension": "Apoio",
+      "section": "Informacao e Comunicacao",
+      "reverse": true
+    },
+    {
+      "id": 18,
+      "text": "O seu trabalho apresenta objetivos claros.",
+      "dimension": "Apoio",
+      "section": "Informacao e Comunicacao",
+      "reverse": true
+    },
+    {
+      "id": 19,
+      "text": "Sabe exatamente quais as suas responsabilidades.",
+      "dimension": "Apoio",
+      "section": "Informacao e Comunicacao",
+      "reverse": true
+    },
+    {
+      "id": 20,
+      "text": "Sabe exatamente o que e esperado de si.",
+      "dimension": "Apoio",
+      "section": "Informacao e Comunicacao",
+      "reverse": true
+    },
+    {
+      "id": 21,
+      "text": "O seu trabalho e reconhecido e apreciado pela gerencia.",
+      "dimension": "Lideranca",
+      "section": "Lideranca e Apoio",
+      "reverse": true
+    },
+    {
+      "id": 22,
+      "text": "A gerencia do seu local de trabalho respeita-o.",
+      "dimension": "Lideranca",
+      "section": "Lideranca e Apoio",
+      "reverse": true
+    },
+    {
+      "id": 23,
+      "text": "E tratado de forma justa no seu local de trabalho.",
+      "dimension": "Lideranca",
+      "section": "Lideranca e Apoio",
+      "reverse": true
+    },
+    {
+      "id": 24,
+      "text": "Faz coisas no seu trabalho que uns concordam, mas outros nao.",
+      "dimension": "Lideranca",
+      "section": "Lideranca e Apoio"
+    },
+    {
+      "id": 25,
+      "text": "Por vezes, tem que fazer coisas que deveriam ser feitas de outra maneira.",
+      "dimension": "Lideranca",
+      "section": "Lideranca e Apoio"
+    },
+    {
+      "id": 26,
+      "text": "Por vezes, tem que fazer coisas que considera desnecessarias.",
+      "dimension": "Lideranca",
+      "section": "Lideranca e Apoio"
+    },
+    {
+      "id": 27,
+      "text": "Com que frequencia tem ajuda e apoio dos seus colegas de trabalho?",
+      "dimension": "Comunidade",
+      "section": "Relacoes Sociais",
+      "reverse": true
+    },
+    {
+      "id": 28,
+      "text": "Com que frequencia os seus colegas estao dispostos a ouvi-lo sobre os seus problemas de trabalho?",
+      "dimension": "Comunidade",
+      "section": "Relacoes Sociais",
+      "reverse": true
+    },
+    {
+      "id": 29,
+      "text": "Com que frequencia os seus colegas falam consigo acerca do seu desempenho laboral?",
+      "dimension": "Comunidade",
+      "section": "Relacoes Sociais",
+      "reverse": true
+    },
+    {
+      "id": 30,
+      "text": "Com que frequencia o seu superior imediato fala consigo sobre como esta a decorrer o seu trabalho?",
+      "dimension": "Lideranca",
+      "section": "Lideranca e Apoio",
+      "reverse": true
+    },
+    {
+      "id": 31,
+      "text": "Com que frequencia tem ajuda e apoio do seu superior imediato?",
+      "dimension": "Lideranca",
+      "section": "Lideranca e Apoio",
+      "reverse": true
+    },
+    {
+      "id": 32,
+      "text": "Com que frequencia e que o seu superior imediato fala consigo em relacao ao seu desempenho laboral?",
+      "dimension": "Lideranca",
+      "section": "Lideranca e Apoio",
+      "reverse": true
+    },
+    {
+      "id": 33,
+      "text": "Existe um bom ambiente de trabalho entre si e os seus colegas.",
+      "dimension": "Comunidade",
+      "section": "Relacoes Sociais",
+      "reverse": true
+    },
+    {
+      "id": 34,
+      "text": "Existe uma boa cooperacao entre os colegas de trabalho.",
+      "dimension": "Comunidade",
+      "section": "Relacoes Sociais",
+      "reverse": true
+    },
+    {
+      "id": 35,
+      "text": "No seu local de trabalho sente-se parte de uma comunidade.",
+      "dimension": "Comunidade",
+      "section": "Relacoes Sociais",
+      "reverse": true
+    },
+    {
+      "id": 36,
+      "text": "Seu chefe oferece aos individuos e ao grupo boas oportunidades de desenvolvimento.",
+      "dimension": "Lideranca",
+      "section": "Lideranca e Apoio",
+      "reverse": true
+    },
+    {
+      "id": 37,
+      "text": "Seu chefe da prioridade a satisfacao no trabalho.",
+      "dimension": "Lideranca",
+      "section": "Lideranca e Apoio",
+      "reverse": true
+    },
+    {
+      "id": 38,
+      "text": "Seu chefe e bom no planejamento do trabalho.",
+      "dimension": "Lideranca",
+      "section": "Lideranca e Apoio",
+      "reverse": true
+    },
+    {
+      "id": 39,
+      "text": "Seu chefe e bom a resolver conflitos.",
+      "dimension": "Lideranca",
+      "section": "Lideranca e Apoio",
+      "reverse": true
+    },
+    {
+      "id": 40,
+      "text": "Os funcionarios ocultam informacoes uns dos outros.",
+      "dimension": "Confianca",
+      "section": "Confianca e Justica"
+    },
+    {
+      "id": 41,
+      "text": "Os funcionarios ocultam informacao a gerencia.",
+      "dimension": "Confianca",
+      "section": "Confianca e Justica"
+    },
+    {
+      "id": 42,
+      "text": "Os funcionarios confiam uns nos outros de um modo geral.",
+      "dimension": "Confianca",
+      "section": "Confianca e Justica",
+      "reverse": true
+    },
+    {
+      "id": 43,
+      "text": "A gerencia confia nos seus funcionarios para fazerem o seu trabalho bem.",
+      "dimension": "Confianca",
+      "section": "Confianca e Justica",
+      "reverse": true
+    },
+    {
+      "id": 44,
+      "text": "Confia na informacao que lhe e transmitida pela gerencia.",
+      "dimension": "Confianca",
+      "section": "Confianca e Justica",
+      "reverse": true
+    },
+    {
+      "id": 45,
+      "text": "A gerencia oculta informacao aos seus funcionarios.",
+      "dimension": "Confianca",
+      "section": "Confianca e Justica"
+    },
+    {
+      "id": 46,
+      "text": "Os conflitos sao resolvidos de uma forma justa.",
+      "dimension": "Justica",
+      "section": "Confianca e Justica",
+      "reverse": true
+    },
+    {
+      "id": 47,
+      "text": "As sugestoes dos funcionarios sao tratadas de forma seria pela gerencia.",
+      "dimension": "Justica",
+      "section": "Confianca e Justica",
+      "reverse": true
+    },
+    {
+      "id": 48,
+      "text": "O trabalho e igualmente distribuido pelos funcionarios.",
+      "dimension": "Justica",
+      "section": "Confianca e Justica",
+      "reverse": true
+    },
+    {
+      "id": 49,
+      "text": "Sou sempre capaz de resolver problemas, se tentar o suficiente.",
+      "dimension": "Significado",
+      "section": "Significado e Bem-estar",
+      "reverse": true
+    },
+    {
+      "id": 50,
+      "text": "E-me facil seguir os meus planos e atingir os meus objetivos.",
+      "dimension": "Significado",
+      "section": "Significado e Bem-estar",
+      "reverse": true
+    },
+    {
+      "id": 51,
+      "text": "O seu trabalho tem algum significado para si.",
+      "dimension": "Significado",
+      "section": "Significado e Bem-estar",
+      "reverse": true
+    },
+    {
+      "id": 52,
+      "text": "Sente que o seu trabalho e importante.",
+      "dimension": "Significado",
+      "section": "Significado e Bem-estar",
+      "reverse": true
+    },
+    {
+      "id": 53,
+      "text": "Sente-se motivado e envolvido com o seu trabalho.",
+      "dimension": "Significado",
+      "section": "Significado e Bem-estar",
+      "reverse": true
+    },
+    {
+      "id": 54,
+      "text": "Gosta de falar com os outros sobre o seu local de trabalho.",
+      "dimension": "Significado",
+      "section": "Significado e Bem-estar",
+      "reverse": true
+    },
+    {
+      "id": 55,
+      "text": "Sente que os problemas do seu local de trabalho sao seus tambem.",
+      "dimension": "Significado",
+      "section": "Significado e Bem-estar",
+      "reverse": true
+    },
+    {
+      "id": 56,
+      "text": "Sente-se satisfeito com as suas perspectivas de trabalho?",
+      "dimension": "Significado",
+      "section": "Significado e Bem-estar",
+      "reverse": true
+    },
+    {
+      "id": 57,
+      "text": "Sente-se satisfeito com as condicoes fisicas do seu local de trabalho?",
+      "dimension": "Significado",
+      "section": "Significado e Bem-estar",
+      "reverse": true
+    },
+    {
+      "id": 58,
+      "text": "Sente-se satisfeito com a forma como as suas capacidades sao utilizadas?",
+      "dimension": "Significado",
+      "section": "Significado e Bem-estar",
+      "reverse": true
+    },
+    {
+      "id": 59,
+      "text": "Sente-se satisfeito com seu trabalho de uma forma global?",
+      "dimension": "Significado",
+      "section": "Significado e Bem-estar",
+      "reverse": true
+    },
+    {
+      "id": 60,
+      "text": "Sente-se preocupado em ficar desempregado?",
+      "dimension": "Inseguranca",
+      "section": "Inseguranca no Emprego"
+    },
+    {
+      "id": 61,
+      "text": "Em geral, sente que a sua saude e: Excelente, Muito boa, Boa, Razoavel, Deficitaria",
+      "dimension": "SaudeMental",
+      "section": "Saude e Bem-estar",
+      "reverse": true
+    },
+    {
+      "id": 62,
+      "text": "Sente que o seu trabalho lhe exige muita energia que acaba por afetar a sua vida privada negativamente.",
+      "dimension": "Burnout",
+      "section": "Saude e Bem-estar"
+    },
+    {
+      "id": 63,
+      "text": "Sente que o seu trabalho lhe exige muito tempo que acaba por afetar a sua vida privada negativamente.",
+      "dimension": "Burnout",
+      "section": "Saude e Bem-estar"
+    },
+    {
+      "id": 64,
+      "text": "A sua familia e os seus amigos dizem-lhe que trabalha demais?",
+      "dimension": "Burnout",
+      "section": "Saude e Bem-estar"
+    },
+    {
+      "id": 65,
+      "text": "Dificuldades para adormecer.",
+      "dimension": "SaudeMental",
+      "section": "Saude e Bem-estar"
+    },
+    {
+      "id": 66,
+      "text": "Acordou varias vezes durante a noite e depois nao conseguia adormecer novamente.",
+      "dimension": "SaudeMental",
+      "section": "Saude e Bem-estar"
+    },
+    {
+      "id": 67,
+      "text": "Fisicamente exausto.",
+      "dimension": "SaudeMental",
+      "section": "Saude e Bem-estar"
+    },
+    {
+      "id": 68,
+      "text": "Emocionalmente exausto.",
+      "dimension": "SaudeMental",
+      "section": "Saude e Bem-estar"
+    },
+    {
+      "id": 69,
+      "text": "Irritado.",
+      "dimension": "SaudeMental",
+      "section": "Saude e Bem-estar"
+    },
+    {
+      "id": 70,
+      "text": "Ansioso.",
+      "dimension": "SaudeMental",
+      "section": "Saude e Bem-estar"
+    },
+    {
+      "id": 71,
+      "text": "Triste.",
+      "dimension": "SaudeMental",
+      "section": "Saude e Bem-estar"
+    },
+    {
+      "id": 72,
+      "text": "Falta de interesse por coisas cotidianas.",
+      "dimension": "SaudeMental",
+      "section": "Saude e Bem-estar"
+    },
+    {
+      "id": 73,
+      "text": "Tem sido alvo de insultos ou provocacoes verbais?",
+      "dimension": "Violencia",
+      "section": "Violencia e Assedio"
+    },
+    {
+      "id": 74,
+      "text": "Tem sido exposto a assedio sexual indesejado?",
+      "dimension": "Violencia",
+      "section": "Violencia e Assedio"
+    },
+    {
+      "id": 75,
+      "text": "Tem sido exposto a ameacas de violencia?",
+      "dimension": "Violencia",
+      "section": "Violencia e Assedio"
+    },
+    {
+      "id": 76,
+      "text": "Tem sido exposto a violencia fisica?",
+      "dimension": "Violencia",
+      "section": "Violencia e Assedio"
+    }
+  ],
+  "dimensions": {
+    "Demanda": "Demanda de Trabalho",
+    "Controle": "Controle e Autonomia",
+    "Apoio": "Apoio Social e Informacao",
+    "Lideranca": "Lideranca e Reconhecimento",
+    "Comunidade": "Comunidade e Pertencimento",
+    "Significado": "Significado do Trabalho",
+    "Confianca": "Confianca Organizacional",
+    "Justica": "Justica e Equidade",
+    "Inseguranca": "Inseguranca no Emprego",
+    "SaudeMental": "Saude Mental e Bem-estar",
+    "Burnout": "Burnout e Exaustao",
+    "Violencia": "Violencia e Assedio"
+  }
+}

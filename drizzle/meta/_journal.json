@@ -1,0 +1,69 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1760640934853,
+      "tag": "0000_wealthy_ozymandias",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1760641008263,
+      "tag": "0001_woozy_blade",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1760700022525,
+      "tag": "0002_same_anita_blake",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1763033334266,
+      "tag": "0003_bored_ego",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1764789164968,
+      "tag": "0004_ordinary_blacklash",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1764805817141,
+      "tag": "0005_flawless_speed",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1764806944795,
+      "tag": "0006_fluffy_johnny_storm",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1764807723263,
+      "tag": "0007_nappy_patriot",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1764987252242,
+      "tag": "0008_cute_morgan_stark",
+      "breakpoints": true
+    }
+  ]
+}

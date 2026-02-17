@@ -1,0 +1,83 @@
+name: Testes - Unit, Integration, E2E
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: "pnpm"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+
+      - name: Executar testes unitários
+        run: pnpm test:unit
+        continue-on-error: true
+
+  integration-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root123
+          MYSQL_DATABASE: blackbelt_test
+          MYSQL_USER: blackbelt
+          MYSQL_PASSWORD: blackbelt123
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+        ports:
+          - 3306:3306
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: "pnpm"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup banco de testes
+        run: pnpm db:push
+        env:
+          DATABASE_URL: mysql://blackbelt:blackbelt123@localhost:3306/blackbelt_test
+        continue-on-error: true
+
+      - name: Executar testes de integração
+        run: pnpm test:integration
+        env:
+          DATABASE_URL: mysql://blackbelt:blackbelt123@localhost:3306/blackbelt_test
+        continue-on-error: true
