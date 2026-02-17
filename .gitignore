@@ -115,9 +115,6 @@ temp/
 md_to_png_debug_files/
 devnull
 
-# Docker volumes and data
-docker/backups/*
-!docker/backups/.gitkeep
-docker/nginx/ssl/*
-!docker/nginx/ssl/.gitkeep
+# Uploads (arquivos locais do XAMPP)
+uploads/
 

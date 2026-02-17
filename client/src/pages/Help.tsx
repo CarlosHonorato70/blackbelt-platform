@@ -203,7 +203,7 @@ const faqItems = [
   {
     question: "Posso usar a plataforma offline?",
     answer:
-      "Sim! Instale localmente com Docker e MySQL. Siga o GUIA_INSTALACAO_WINDOWS.md.",
+      "Sim! Instale localmente com XAMPP (Apache + MySQL) e Node.js. Siga o GUIA_INSTALACAO_WINDOWS.md.",
   },
   {
     question: "Como mudo minha senha?",
