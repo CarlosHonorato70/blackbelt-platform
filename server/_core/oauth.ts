@@ -1,5 +1,5 @@
 // OAuth routes removed - using local authentication instead
-// See server/routers/auth-standalone.ts for authentication endpoints
+// See server/routers/auth-local.ts for authentication endpoints
 
 import type { Express } from "express";
 

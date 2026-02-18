@@ -203,28 +203,36 @@ export async function listTenants(filters?: {
   search?: string;
 }) {
   const db = await getDb();
-  if (!db) return [];
-
-  let query = db.select().from(tenants);
-
-  const conditions = [];
-  if (filters?.status) {
-    conditions.push(eq(tenants.status, filters.status));
-  }
-  if (filters?.search) {
-    conditions.push(
-      or(
-        like(tenants.name, `%${filters.search}%`),
-        like(tenants.cnpj, `%${filters.search}%`)
-      )
-    );
+  if (!db) {
+    return [];
   }
 
-  if (conditions.length > 0) {
-    query = query.where(and(...conditions)) as any;
-  }
+  try {
+    let query = db.select().from(tenants);
 
-  return await query;
+    const conditions = [];
+    if (filters?.status) {
+      conditions.push(eq(tenants.status, filters.status));
+    }
+    if (filters?.search) {
+      conditions.push(
+        or(
+          like(tenants.name, `%${filters.search}%`),
+          like(tenants.cnpj, `%${filters.search}%`)
+        )
+      );
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+
+    const result = await query;
+    return result;
+  } catch (error) {
+    console.error("[DB] Error in listTenants:", error);
+    throw error;
+  }
 }
 
 export async function updateTenant(id: string, data: Partial<InsertTenant>) {
@@ -289,4 +297,59 @@ export async function setTenantSetting(
       settingValue: value,
     });
   }
+}
+
+// ============================================================================
+// AUDIT LOGS
+// ============================================================================
+
+export async function createAuditLog(data: Omit<InsertAuditLog, "id" | "createdAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const auditLog: InsertAuditLog = {
+    id: nanoid(),
+    ...data,
+    createdAt: new Date(),
+  };
+
+  await db.insert(auditLogs).values(auditLog);
+  return auditLog;
+}
+
+export async function getAuditLogs(filters?: {
+  tenantId?: string;
+  userId?: string;
+  action?: string;
+  entityType?: string;
+  limit?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt));
+
+  const conditions = [];
+  if (filters?.tenantId) {
+    conditions.push(eq(auditLogs.tenantId, filters.tenantId));
+  }
+  if (filters?.userId) {
+    conditions.push(eq(auditLogs.userId, filters.userId));
+  }
+  if (filters?.action) {
+    conditions.push(eq(auditLogs.action, filters.action));
+  }
+  if (filters?.entityType) {
+    conditions.push(eq(auditLogs.entityType, filters.entityType));
+  }
+
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+
+  if (filters?.limit) {
+    query = query.limit(filters.limit) as any;
+  }
+
+  return await query;
 }
