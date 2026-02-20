@@ -5,7 +5,7 @@
  */
 
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 import { trpc } from "@/lib/trpc";
 import { PricingCard } from "@/components/subscription/PricingCard";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Check, X } from "lucide-react";
 
 export default function Pricing() {
-  const [, navigate] = useLocation();
+  const navigate = useNavigate();
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
 
   // Buscar planos públicos

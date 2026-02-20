@@ -5,7 +5,7 @@
  */
 
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function SubscriptionDashboard() {
-  const [, navigate] = useLocation();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
 

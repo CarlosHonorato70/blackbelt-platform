@@ -4,13 +4,13 @@
  * Página mostrada quando o pagamento falha
  */
 
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { XCircle } from "lucide-react";
 
 export default function SubscriptionFailure() {
-  const [, navigate] = useLocation();
+  const navigate = useNavigate();
 
   return (
     <div className="container mx-auto py-12 px-4 max-w-2xl">

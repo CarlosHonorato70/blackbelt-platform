@@ -20,11 +20,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useTenant } from "@/contexts/TenantContext";
 import { AlertCircle, ArrowLeft, CheckCircle2, Save } from "lucide-react";
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 
 export default function RiskAssessmentForm() {
   const { selectedTenant } = useTenant();
-  const [, setLocation] = useLocation();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     title: "",
     sector: "",
@@ -81,7 +81,7 @@ export default function RiskAssessmentForm() {
     console.log("Formulário submetido:", formData);
     setSubmitted(true);
     setTimeout(() => {
-      setLocation("/risk-assessments");
+      navigate("/risk-assessments");
     }, 2000);
   };
 
@@ -92,7 +92,7 @@ export default function RiskAssessmentForm() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setLocation("/risk-assessments")}
+            onClick={() => navigate("/risk-assessments")}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar
@@ -424,7 +424,7 @@ export default function RiskAssessmentForm() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setLocation("/risk-assessments")}
+              onClick={() => navigate("/risk-assessments")}
             >
               Cancelar
             </Button>

@@ -21,12 +21,12 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth.tsx";
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 import copsoqData from "../../../server/data/copsoq-76-questions.json";
 
 export default function COPSOQ() {
   const { user } = useAuth();
-  const [, setLocation] = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("form");
   const [currentSection, setCurrentSection] = useState(0);
   const [assessmentId, setAssessmentId] = useState<string | null>(null);

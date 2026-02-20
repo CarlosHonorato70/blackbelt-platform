@@ -55,7 +55,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 import {
   exportToJSON,
   exportToExcel,
@@ -66,7 +66,7 @@ import { toast } from "sonner";
 
 export default function RiskAssessments() {
   const { selectedTenant } = useTenant();
-  const [, setLocation] = useLocation();
+  const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [proposalDialogOpen, setProposalDialogOpen] = useState(false);
   const [selectedAssessmentId, setSelectedAssessmentId] = useState("");
@@ -86,7 +86,7 @@ export default function RiskAssessments() {
         }
       );
       setProposalDialogOpen(false);
-      setLocation(`/proposals`);
+      navigate(`/proposals`);
     },
     onError: (error: any) => {
       toast.error(error.message || "Erro ao gerar proposta");
@@ -198,7 +198,7 @@ export default function RiskAssessments() {
             </p>
           </div>
 
-          <Button onClick={() => setLocation("/risk-assessments/new")}>
+          <Button onClick={() => navigate("/risk-assessments/new")}>
             <Plus className="mr-2 h-4 w-4" />
             Nova Avaliação
           </Button>

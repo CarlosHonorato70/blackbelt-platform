@@ -42,7 +42,7 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useNavigate } from "react-router-dom";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { TenantSelector } from "./TenantSelector";
 import { TenantSelectionModal } from "./TenantSelectionModal";
@@ -177,7 +177,8 @@ function DashboardLayoutContent({
   setSidebarWidth,
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
-  const [location, setLocation] = useLocation();
+  const { pathname: location } = useLocation();
+  const navigate = useNavigate();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
@@ -284,7 +285,7 @@ function DashboardLayoutContent({
                     <SidebarMenuItem key={item.path}>
                       <SidebarMenuButton
                         isActive={isActive}
-                        onClick={() => setLocation(item.path)}
+                        onClick={() => navigate(item.path)}
                         tooltip={item.label}
                         className={`h-10 transition-all font-normal`}
                       >

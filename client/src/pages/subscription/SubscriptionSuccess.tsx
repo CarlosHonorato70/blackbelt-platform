@@ -5,13 +5,13 @@
  */
 
 import { useEffect } from "react";
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
 
 export default function SubscriptionSuccess() {
-  const [, navigate] = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Opcional: pode fazer uma chamada para verificar o status
