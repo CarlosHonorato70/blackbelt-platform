@@ -83,9 +83,7 @@ class StandaloneAuthService {
       const { payload } = await jwtVerify(cookieValue, secretKey, {
         algorithms: ["HS256"],
       });
-      console.log("[Auth] JWT Payload:", payload);
       const { userId, email, name } = payload as Record<string, unknown>;
-      console.log("[Auth] Extracted fields:", { userId, email, name });
 
       if (
         !isNonEmptyString(userId) ||

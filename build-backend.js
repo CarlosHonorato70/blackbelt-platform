@@ -106,7 +106,7 @@ await copyDir('drizzle', 'dist/drizzle');
 await copyDir('server/_core', 'dist/server/_core');
 await copyDir('server/routers', 'dist/server/routers');
 await copyDir('server/data', 'dist/server/data');
-await copyDir('server/__tests__', 'dist/server/__tests__');
+// Nota: server/__tests__ NAO e copiado para producao
 
 // Copia arquivos individuais
 await copyFile('server/storage.ts', 'dist/storage.js');
