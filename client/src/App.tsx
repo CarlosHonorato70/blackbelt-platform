@@ -37,6 +37,7 @@ const SecurityDashboard = lazy(() => import("./pages/SecurityDashboard"));
 const ExecutiveDashboard = lazy(() => import("./pages/ExecutiveDashboard"));
 const BrandingSettings = lazy(() => import("./pages/BrandingSettings"));
 const TestDashboard = lazy(() => import("./pages/TestDashboard"));
+const ActionPlans = lazy(() => import("./pages/ActionPlans"));
 const Help = lazy(() => import("./pages/Help"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -98,6 +99,9 @@ export default function App() {
                 <Route path="/copsoq/analytics" element={<ProtectedPage><AssessmentAnalytics /></ProtectedPage>} />
                 <Route path="/copsoq/invites" element={<ProtectedPage><CopsoqInvites /></ProtectedPage>} />
                 <Route path="/copsoq/tracking" element={<ProtectedPage><CopsoqTracking /></ProtectedPage>} />
+
+                {/* Planos de Ação */}
+                <Route path="/action-plans" element={<ProtectedPage><ActionPlans /></ProtectedPage>} />
 
                 {/* Relatorios e monitoramento */}
                 <Route path="/compliance-reports" element={<ProtectedPage><ComplianceReports /></ProtectedPage>} />

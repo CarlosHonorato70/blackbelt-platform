@@ -18,7 +18,6 @@ import {
   Shield,
   TrendingUp,
   Users,
-  UserSquare2,
 } from "lucide-react";
 import { OnboardingGuide } from "@/components/OnboardingGuide";
 import { Button } from "@/components/ui/button";
@@ -38,7 +37,8 @@ export default function Home() {
       icon: Building2,
       description: "Clientes ativos na plataforma",
       visible: user?.role === "admin",
-      color: "text-blue-600",
+      color: "text-primary",
+      bgIcon: "bg-primary/10",
     },
     {
       title: "Colaboradores",
@@ -46,7 +46,8 @@ export default function Home() {
       icon: Users,
       description: "Total de colaboradores cadastrados",
       visible: true,
-      color: "text-green-600",
+      color: "text-emerald-600",
+      bgIcon: "bg-emerald-50",
     },
     {
       title: "Avaliações NR-01",
@@ -54,7 +55,8 @@ export default function Home() {
       icon: Shield,
       description: "Avaliações de riscos psicossociais",
       visible: true,
-      color: "text-amber-600",
+      color: "text-gold",
+      bgIcon: "bg-gold-light",
     },
     {
       title: "Programas Ativos",
@@ -62,7 +64,8 @@ export default function Home() {
       icon: Activity,
       description: "Treinamentos e mentorias em andamento",
       visible: true,
-      color: "text-purple-600",
+      color: "text-sky-600",
+      bgIcon: "bg-sky-50",
     },
   ];
 
@@ -123,15 +126,19 @@ export default function Home() {
         {/* Header */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-amber-600 to-amber-800 bg-clip-text text-transparent">
-              Black Belt Consultoria
-            </h1>
+            <div>
+              <h1 className="text-4xl font-bold tracking-tight text-foreground">
+                Black Belt{" "}
+                <span className="text-gold">Consultoria</span>
+              </h1>
+              <div className="h-1 w-24 bg-gradient-to-r from-primary to-[#c8a55a] rounded-full mt-2" />
+            </div>
             <Button
               onClick={() => setShowOnboarding(true)}
               variant="outline"
-              className="gap-2"
+              className="gap-2 border-[#c8a55a]/30 hover:border-[#c8a55a] hover:bg-[#c8a55a]/5"
             >
-              <HelpCircle className="h-4 w-4" />
+              <HelpCircle className="h-4 w-4 text-gold" />
               Guia
             </Button>
           </div>
@@ -140,7 +147,7 @@ export default function Home() {
             Humano
           </p>
           <p className="text-sm text-muted-foreground">
-            Bem-vindo(a), <span className="font-semibold">{user?.name}</span> •{" "}
+            Bem-vindo(a), <span className="font-semibold text-foreground">{user?.name}</span> •{" "}
             {user?.role === "admin" ? "Administrador" : "Usuário"}
           </p>
         </div>
@@ -150,15 +157,17 @@ export default function Home() {
           {stats
             .filter(stat => stat.visible)
             .map(stat => (
-              <Card key={stat.title} className="border-l-4 border-l-amber-500">
+              <Card key={stat.title} className="border-l-4 border-l-[#c8a55a] hover:shadow-md transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
                     {stat.title}
                   </CardTitle>
-                  <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                  <div className={`p-2 rounded-lg ${stat.bgIcon}`}>
+                    <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold">{stat.value}</div>
+                  <div className="text-3xl font-bold text-foreground">{stat.value}</div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {stat.description}
                   </p>
@@ -169,17 +178,20 @@ export default function Home() {
 
         {/* Services Overview */}
         <div>
-          <h2 className="text-2xl font-bold mb-4">Nossos Serviços</h2>
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="text-2xl font-bold text-foreground">Nossos Serviços</h2>
+            <div className="h-px flex-1 bg-gradient-to-r from-[#c8a55a]/40 to-transparent" />
+          </div>
           <div className="grid gap-6 md:grid-cols-2">
             {services.map(service => (
               <Card
                 key={service.title}
-                className="hover:shadow-lg transition-shadow"
+                className="hover:shadow-lg transition-all hover:border-[#c8a55a]/30 group"
               >
                 <CardHeader>
                   <div className="flex items-start gap-4">
-                    <div className="p-3 bg-amber-100 rounded-lg">
-                      <service.icon className="h-6 w-6 text-amber-700" />
+                    <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-[#c8a55a]/10 transition-colors">
+                      <service.icon className="h-6 w-6 text-primary group-hover:text-gold transition-colors" />
                     </div>
                     <div className="flex-1">
                       <CardTitle className="text-lg">{service.title}</CardTitle>
@@ -196,7 +208,7 @@ export default function Home() {
                         key={feature}
                         className="flex items-center gap-2 text-sm"
                       >
-                        <div className="h-1.5 w-1.5 rounded-full bg-amber-600" />
+                        <div className="h-1.5 w-1.5 rounded-full bg-[#c8a55a]" />
                         <span>{feature}</span>
                       </li>
                     ))}
@@ -208,15 +220,17 @@ export default function Home() {
         </div>
 
         {/* Compliance Info */}
-        <Card className="border-amber-200 bg-amber-50/50">
+        <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
             <div className="flex items-center gap-3">
-              <FileText className="h-6 w-6 text-amber-700" />
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <FileText className="h-6 w-6 text-primary" />
+              </div>
               <div>
                 <CardTitle>
                   Conformidade NR-01 (Portaria MTE nº 1.419/2024)
                 </CardTitle>
-                <CardDescription className="text-amber-900/70">
+                <CardDescription>
                   Vigência a partir de 26/05/2025
                 </CardDescription>
               </div>
@@ -224,44 +238,44 @@ export default function Home() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="prose prose-sm max-w-none">
-              <p className="text-sm text-amber-900/80">
+              <p className="text-sm text-muted-foreground">
                 A nova redação da NR-01 inclui expressamente os{" "}
-                <strong>
+                <strong className="text-foreground">
                   fatores de risco psicossociais relacionados ao trabalho
                 </strong>{" "}
                 no Gerenciamento de Riscos Ocupacionais (GRO). Nossa plataforma
                 oferece ferramentas completas para:
               </p>
               <div className="grid md:grid-cols-3 gap-4 mt-4">
-                <div className="flex items-start gap-2">
-                  <Shield className="h-5 w-5 text-amber-700 mt-0.5 flex-shrink-0" />
+                <div className="flex items-start gap-2 p-3 bg-background rounded-lg">
+                  <Shield className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="font-semibold text-sm text-amber-900">
+                    <p className="font-semibold text-sm text-foreground">
                       Identificação
                     </p>
-                    <p className="text-xs text-amber-800">
+                    <p className="text-xs text-muted-foreground">
                       Mapeamento completo de riscos psicossociais
                     </p>
                   </div>
                 </div>
-                <div className="flex items-start gap-2">
-                  <TrendingUp className="h-5 w-5 text-amber-700 mt-0.5 flex-shrink-0" />
+                <div className="flex items-start gap-2 p-3 bg-background rounded-lg">
+                  <TrendingUp className="h-5 w-5 text-gold mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="font-semibold text-sm text-amber-900">
+                    <p className="font-semibold text-sm text-foreground">
                       Avaliação
                     </p>
-                    <p className="text-xs text-amber-800">
+                    <p className="text-xs text-muted-foreground">
                       Análise de gravidade e probabilidade
                     </p>
                   </div>
                 </div>
-                <div className="flex items-start gap-2">
-                  <Activity className="h-5 w-5 text-amber-700 mt-0.5 flex-shrink-0" />
+                <div className="flex items-start gap-2 p-3 bg-background rounded-lg">
+                  <Activity className="h-5 w-5 text-emerald-600 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="font-semibold text-sm text-amber-900">
+                    <p className="font-semibold text-sm text-foreground">
                       Controle
                     </p>
-                    <p className="text-xs text-amber-800">
+                    <p className="text-xs text-muted-foreground">
                       Planos de ação e acompanhamento
                     </p>
                   </div>
@@ -272,10 +286,12 @@ export default function Home() {
         </Card>
 
         {/* Founder Philosophy */}
-        <Card className="bg-gradient-to-br from-slate-900 to-slate-800 text-white border-slate-700">
+        <Card className="bg-gradient-to-br from-[#0f1a2e] to-[#1e3a5f] text-white border-[#c8a55a]/20">
           <CardHeader>
             <div className="flex items-center gap-3">
-              <Award className="h-6 w-6 text-amber-400" />
+              <div className="p-2 bg-[#c8a55a]/20 rounded-lg">
+                <Award className="h-6 w-6 text-[#c8a55a]" />
+              </div>
               <div>
                 <CardTitle className="text-white">
                   Filosofia Black Belt
@@ -289,29 +305,59 @@ export default function Home() {
           <CardContent className="space-y-4">
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <h4 className="font-semibold text-amber-400">
+                <h4 className="font-semibold text-[#c8a55a]">
                   Carlos Honorato
                 </h4>
-                <ul className="space-y-1 text-sm text-slate-300">
-                  <li>• 20 anos de experiência PRF e Exército</li>
-                  <li>• Mais de 9.000 atendimentos clínicos</li>
-                  <li>• Faixa preta 4º grau em Jiu-Jitsu</li>
-                  <li>• Campeão mundial de artes marciais</li>
-                  <li>• Especialista em psicanálise e hipnose clínica</li>
+                <ul className="space-y-1.5 text-sm text-slate-300">
+                  <li className="flex items-center gap-2">
+                    <div className="h-1 w-1 rounded-full bg-[#c8a55a]" />
+                    20 anos de experiência PRF e Exército
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="h-1 w-1 rounded-full bg-[#c8a55a]" />
+                    Mais de 9.000 atendimentos clínicos
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="h-1 w-1 rounded-full bg-[#c8a55a]" />
+                    Faixa preta 4º grau em Jiu-Jitsu
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="h-1 w-1 rounded-full bg-[#c8a55a]" />
+                    Campeão mundial de artes marciais
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="h-1 w-1 rounded-full bg-[#c8a55a]" />
+                    Especialista em psicanálise e hipnose clínica
+                  </li>
                 </ul>
               </div>
               <div className="space-y-2">
-                <h4 className="font-semibold text-amber-400">Thyberê Mendes</h4>
-                <ul className="space-y-1 text-sm text-slate-300">
-                  <li>• Gestão ágil e otimização de processos</li>
-                  <li>• Alta performance em artes marciais</li>
-                  <li>• Análise de requisitos complexos</li>
-                  <li>• Desenvolvimento de equipes de elite</li>
-                  <li>• Mentalidade de campeão aplicada ao corporativo</li>
+                <h4 className="font-semibold text-[#c8a55a]">Thyberê Mendes</h4>
+                <ul className="space-y-1.5 text-sm text-slate-300">
+                  <li className="flex items-center gap-2">
+                    <div className="h-1 w-1 rounded-full bg-[#c8a55a]" />
+                    Gestão ágil e otimização de processos
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="h-1 w-1 rounded-full bg-[#c8a55a]" />
+                    Alta performance em artes marciais
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="h-1 w-1 rounded-full bg-[#c8a55a]" />
+                    Análise de requisitos complexos
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="h-1 w-1 rounded-full bg-[#c8a55a]" />
+                    Desenvolvimento de equipes de elite
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="h-1 w-1 rounded-full bg-[#c8a55a]" />
+                    Mentalidade de campeão aplicada ao corporativo
+                  </li>
                 </ul>
               </div>
             </div>
-            <div className="pt-4 border-t border-slate-700">
+            <div className="pt-4 border-t border-[#c8a55a]/20">
               <p className="text-sm text-slate-300 italic">
                 "A maestria (o Black Belt) se alcança através de técnica
                 apurada, disciplina rigorosa e uma busca incansável por ir além

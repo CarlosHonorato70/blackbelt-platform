@@ -43,6 +43,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export default function UserInvites() {
   const { selectedTenant } = useTenant();
@@ -69,7 +70,7 @@ export default function UserInvites() {
   }
 
   // Mock data - será substituído por dados reais do backend
-  const invites = [
+  const [invites, setInvites] = useState([
     {
       id: "1",
       email: "joao.silva@example.com",
@@ -97,7 +98,7 @@ export default function UserInvites() {
       expiresIn: "2 dias",
       inviteLink: "https://blackbeltmgmt.com/invite/mno345pqr678",
     },
-  ];
+  ]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -351,11 +352,27 @@ export default function UserInvites() {
                             ? "Copiado!"
                             : "Copiar Link"}
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            toast.success("Convite reenviado!", {
+                              description: `Um novo email foi enviado para ${invite.email}`,
+                            });
+                          }}
+                        >
                           <Mail className="h-4 w-4 mr-2" />
                           Reenviar Convite
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => {
+                            if (window.confirm(`Tem certeza que deseja cancelar o convite para ${invite.email}?`)) {
+                              setInvites(prev => prev.filter(i => i.id !== invite.id));
+                              toast.success("Convite cancelado com sucesso!", {
+                                description: `O convite para ${invite.email} foi removido.`,
+                              });
+                            }
+                          }}
+                        >
                           <Trash2 className="h-4 w-4 mr-2" />
                           Cancelar Convite
                         </DropdownMenuItem>

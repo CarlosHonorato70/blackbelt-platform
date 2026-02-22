@@ -325,7 +325,7 @@ export const riskAssessmentsRouter = router({
         description: z.string().optional(),
         actionType: z.string(),
         responsibleId: z.string().optional(),
-        deadline: z.date().optional(),
+        deadline: z.coerce.date().optional(),
         priority: z.string(),
         budget: z.number().optional(),
       })
@@ -357,5 +357,61 @@ export const riskAssessmentsRouter = router({
       });
 
       return { id };
+    }),
+
+  // Atualizar plano de ação
+  updateActionPlan: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        actionType: z.string().optional(),
+        priority: z.string().optional(),
+        status: z.enum(["pending", "in_progress", "completed", "cancelled"]).optional(),
+        deadline: z.coerce.date().optional(),
+        budget: z.number().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
+
+      const { id, ...data } = input;
+      const updateData: any = { updatedAt: new Date() };
+
+      if (data.title !== undefined) updateData.title = data.title;
+      if (data.description !== undefined) updateData.description = data.description;
+      if (data.actionType !== undefined) updateData.actionType = data.actionType;
+      if (data.priority !== undefined) updateData.priority = data.priority;
+      if (data.status !== undefined) {
+        updateData.status = data.status;
+        if (data.status === "completed") updateData.completedAt = new Date();
+      }
+      if (data.deadline !== undefined) updateData.deadline = data.deadline;
+      if (data.budget !== undefined) updateData.budget = data.budget;
+
+      await db.update(actionPlans).set(updateData).where(eq(actionPlans.id, id));
+
+      return { success: true };
+    }),
+
+  // Deletar plano de ação
+  deleteActionPlan: publicProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
+
+      await db.delete(actionPlans).where(eq(actionPlans.id, input.id));
+      return { success: true };
     }),
 });

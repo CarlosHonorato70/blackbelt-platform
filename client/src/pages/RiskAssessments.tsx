@@ -40,6 +40,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useTenant } from "@/contexts/TenantContext";
 import { trpc } from "@/lib/trpc";
 import {
@@ -72,7 +82,10 @@ export default function RiskAssessments() {
   const [selectedAssessmentId, setSelectedAssessmentId] = useState("");
   const [selectedClientId, setSelectedClientId] = useState("");
   const [sendEmailChecked, setSendEmailChecked] = useState(true);
-  
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [assessmentToDelete, setAssessmentToDelete] = useState<string | null>(null);
+
   const { data: clients } = trpc.clients.list.useQuery();
   const generateProposalMutation = trpc.assessmentProposals.generateFromAssessment.useMutation({
     onSuccess: (data) => {
@@ -94,29 +107,30 @@ export default function RiskAssessments() {
   });
 
   // Mock data - será substituído por tRPC queries quando o backend estiver pronto
+  const initialAssessments = [
+    {
+      id: "1",
+      title: "Avaliação Inicial - Setor Administrativo",
+      tenant: "Empresa XYZ Ltda",
+      sector: "Administrativo",
+      date: "2025-01-15",
+      status: "completed",
+      riskLevel: "medium",
+      assessor: "Carlos Honorato",
+    },
+    {
+      id: "2",
+      title: "Reavaliação Anual - Produção",
+      tenant: "Indústria ABC S.A.",
+      sector: "Produção",
+      date: "2025-01-10",
+      status: "in_progress",
+      riskLevel: "high",
+      assessor: "Thyberê Mendes",
+    },
+  ];
   const assessments = selectedTenant
-    ? [
-        {
-          id: "1",
-          title: "Avaliação Inicial - Setor Administrativo",
-          tenant: "Empresa XYZ Ltda",
-          sector: "Administrativo",
-          date: "2025-01-15",
-          status: "completed",
-          riskLevel: "medium",
-          assessor: "Carlos Honorato",
-        },
-        {
-          id: "2",
-          title: "Reavaliação Anual - Produção",
-          tenant: "Indústria ABC S.A.",
-          sector: "Produção",
-          date: "2025-01-10",
-          status: "in_progress",
-          riskLevel: "high",
-          assessor: "Thyberê Mendes",
-        },
-      ]
+    ? initialAssessments.filter(a => !deletedIds.has(a.id))
     : [];
 
   if (!selectedTenant) {
@@ -410,11 +424,15 @@ export default function RiskAssessments() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => navigate("/copsoq/analytics")}
+                            >
                               <Eye className="h-4 w-4 mr-2" />
                               Visualizar
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => navigate(`/risk-assessments/${assessment.id}`)}
+                            >
                               <Edit2 className="h-4 w-4 mr-2" />
                               Editar
                             </DropdownMenuItem>
@@ -464,7 +482,13 @@ export default function RiskAssessments() {
                               <FileText className="h-4 w-4 mr-2" />
                               Gerar Proposta
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={() => {
+                                setAssessmentToDelete(assessment.id);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Excluir
                             </DropdownMenuItem>
@@ -570,6 +594,36 @@ export default function RiskAssessments() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta avaliação? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setDeleteDialogOpen(false); setAssessmentToDelete(null); }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={() => {
+                if (assessmentToDelete) {
+                  setDeletedIds(prev => new Set([...prev, assessmentToDelete]));
+                  toast.success("Avaliação excluída com sucesso!");
+                  setDeleteDialogOpen(false);
+                  setAssessmentToDelete(null);
+                }
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }

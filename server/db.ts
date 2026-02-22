@@ -353,3 +353,298 @@ export async function getAuditLogs(filters?: {
 
   return await query;
 }
+
+// ============================================================================
+// SECTORS
+// ============================================================================
+
+export async function listSectors(tenantId: string, search?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(sectors.tenantId, tenantId)];
+  if (search) conditions.push(like(sectors.name, `%${search}%`));
+  return db.select().from(sectors).where(and(...conditions)).orderBy(desc(sectors.createdAt));
+}
+
+export async function getSector(id: string, tenantId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(sectors).where(and(eq(sectors.id, id), eq(sectors.tenantId, tenantId))).limit(1);
+  return result[0] || undefined;
+}
+
+export async function createSector(data: Omit<InsertSector, "id" | "createdAt" | "updatedAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const sector = { id: nanoid(), ...data, createdAt: new Date(), updatedAt: new Date() };
+  await db.insert(sectors).values(sector);
+  return sector;
+}
+
+export async function updateSector(id: string, tenantId: string, data: Partial<InsertSector>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(sectors).set({ ...data, updatedAt: new Date() }).where(and(eq(sectors.id, id), eq(sectors.tenantId, tenantId)));
+}
+
+export async function deleteSector(id: string, tenantId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(sectors).where(and(eq(sectors.id, id), eq(sectors.tenantId, tenantId)));
+}
+
+// ============================================================================
+// PEOPLE
+// ============================================================================
+
+export async function listPeople(tenantId: string, filters: { sectorId?: string; search?: string; employmentType?: string } = {}) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(people.tenantId, tenantId)];
+  if (filters.sectorId) conditions.push(eq(people.sectorId, filters.sectorId));
+  if (filters.employmentType) conditions.push(eq(people.employmentType, filters.employmentType as any));
+  if (filters.search) conditions.push(or(like(people.name, `%${filters.search}%`), like(people.email, `%${filters.search}%`)) as any);
+  return db.select().from(people).where(and(...conditions)).orderBy(desc(people.createdAt));
+}
+
+export async function getPerson(id: string, tenantId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(people).where(and(eq(people.id, id), eq(people.tenantId, tenantId))).limit(1);
+  return result[0] || undefined;
+}
+
+export async function createPerson(data: Omit<InsertPerson, "id" | "createdAt" | "updatedAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const person = { id: nanoid(), ...data, createdAt: new Date(), updatedAt: new Date() };
+  await db.insert(people).values(person);
+  return person;
+}
+
+export async function updatePerson(id: string, tenantId: string, data: Partial<InsertPerson>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(people).set({ ...data, updatedAt: new Date() }).where(and(eq(people.id, id), eq(people.tenantId, tenantId)));
+}
+
+export async function deletePerson(id: string, tenantId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(people).where(and(eq(people.id, id), eq(people.tenantId, tenantId)));
+}
+
+export async function getPersonConsents(personId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(dataConsents).where(eq(dataConsents.personId, personId));
+}
+
+// ============================================================================
+// CLIENTS
+// ============================================================================
+
+export async function listClients(tenantId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(clients).where(eq(clients.tenantId, tenantId)).orderBy(desc(clients.createdAt));
+}
+
+export async function getClient(id: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(clients).where(eq(clients.id, id)).limit(1);
+  return result[0] || undefined;
+}
+
+export async function createClient(data: { tenantId: string; name: string; [key: string]: any }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const id = nanoid();
+  await db.insert(clients).values({ id, ...data, status: "active", createdAt: new Date(), updatedAt: new Date() });
+  return { id };
+}
+
+export async function updateClient(id: string, data: Record<string, any>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(clients).set({ ...data, updatedAt: new Date() }).where(eq(clients.id, id));
+}
+
+export async function deleteClient(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(clients).where(eq(clients.id, id));
+}
+
+// ============================================================================
+// SERVICES
+// ============================================================================
+
+export async function listServices(tenantId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(services).where(eq(services.tenantId, tenantId)).orderBy(desc(services.createdAt));
+}
+
+export async function getService(id: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(services).where(eq(services.id, id)).limit(1);
+  return result[0] || undefined;
+}
+
+export async function createService(data: { tenantId: string; name: string; category: string; unit: string; minPrice: number; maxPrice: number; description?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const id = nanoid();
+  await db.insert(services).values({ id, ...data, unit: data.unit as any, isActive: true, createdAt: new Date(), updatedAt: new Date() });
+  return { id };
+}
+
+export async function updateService(id: string, data: Record<string, any>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(services).set({ ...data, updatedAt: new Date() }).where(eq(services.id, id));
+}
+
+export async function deleteService(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(services).where(eq(services.id, id));
+}
+
+// ============================================================================
+// PRICING PARAMETERS
+// ============================================================================
+
+export async function getPricingParameters(tenantId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(pricingParameters).where(eq(pricingParameters.tenantId, tenantId)).limit(1);
+  return result[0] || undefined;
+}
+
+export async function updatePricingParameters(tenantId: string, data: Record<string, any>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(pricingParameters).set({ ...data, updatedAt: new Date() }).where(eq(pricingParameters.tenantId, tenantId));
+}
+
+// ============================================================================
+// PROPOSALS
+// ============================================================================
+
+export async function listProposals(tenantId: string, clientId?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(proposals.tenantId, tenantId)];
+  if (clientId) conditions.push(eq(proposals.clientId, clientId));
+  return db.select().from(proposals).where(and(...conditions)).orderBy(desc(proposals.createdAt));
+}
+
+export async function getProposal(id: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(proposals).where(eq(proposals.id, id)).limit(1);
+  return result[0] || undefined;
+}
+
+export async function createProposal(data: { tenantId: string; clientId: string; title: string; [key: string]: any }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const id = nanoid();
+  await db.insert(proposals).values({ id, ...data, status: data.status || "draft", generatedAt: new Date(), createdAt: new Date(), updatedAt: new Date() });
+  return id;
+}
+
+export async function updateProposal(id: string, data: Record<string, any>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(proposals).set({ ...data, updatedAt: new Date() }).where(eq(proposals.id, id));
+}
+
+export async function deleteProposal(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(proposalItems).where(eq(proposalItems.proposalId, id));
+  await db.delete(proposals).where(eq(proposals.id, id));
+}
+
+export async function listProposalItems(proposalId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(proposalItems).where(eq(proposalItems.proposalId, proposalId));
+}
+
+export async function createProposalItem(data: { proposalId: string; serviceId: string; serviceName: string; quantity: number; unitPrice: number; subtotal: number; technicalHours?: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const id = nanoid();
+  await db.insert(proposalItems).values({ id, ...data, createdAt: new Date() });
+  return { id };
+}
+
+export async function deleteProposalItem(itemId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(proposalItems).where(eq(proposalItems.id, itemId));
+}
+
+// ============================================================================
+// ASSESSMENT PROPOSALS
+// ============================================================================
+
+export async function createAssessmentProposal(data: { tenantId: string; assessmentId: string; proposalId: string; recommendedServices?: any; riskLevel: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const id = nanoid();
+  await db.insert(assessmentProposals).values({ id, ...data, riskLevel: data.riskLevel as any, createdAt: new Date() });
+  return { id };
+}
+
+export async function getAssessmentProposals(assessmentId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(assessmentProposals).where(eq(assessmentProposals.assessmentId, assessmentId));
+}
+
+// ============================================================================
+// ASSESSMENTS (NR01 Schema)
+// ============================================================================
+
+export async function getAssessment(id: string, tenantId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const { riskAssessments, riskAssessmentItems } = await import("../drizzle/schema_nr01");
+  const result = await db.select().from(riskAssessments).where(and(eq(riskAssessments.id, id), eq(riskAssessments.tenantId, tenantId))).limit(1);
+  if (!result[0]) return undefined;
+  const items = await db.select().from(riskAssessmentItems).where(eq(riskAssessmentItems.assessmentId, id));
+  return { ...result[0], items };
+}
+
+// ============================================================================
+// PRICING CALCULATIONS
+// ============================================================================
+
+export function calculateTechnicalHour(params: { monthlyFixedCost: number; laborCost: number; productiveHoursPerMonth: number; taxRegime: string; taxRates?: Record<string, number>; riskAdjustment?: number; seniorityAdjustment?: number }) {
+  const baseCost = (params.monthlyFixedCost + params.laborCost) / params.productiveHoursPerMonth;
+  const defaultRates: Record<string, number> = { MEI: 1.3, SN: 1.4, LP: 1.5, autonomous: 1.35 };
+  const multiplier = defaultRates[params.taxRegime] || 1.4;
+  const riskAdj = (params.riskAdjustment || 100) / 100;
+  const senAdj = (params.seniorityAdjustment || 100) / 100;
+  const technicalHour = Math.round(baseCost * multiplier * riskAdj * senAdj);
+  return { technicalHour, baseCost: Math.round(baseCost), taxRegime: params.taxRegime };
+}
+
+export function calculateProposal(params: { items: { quantity: number; unitPrice: number }[]; discountPercent?: number; taxRegime: string; taxRates?: Record<string, number> }) {
+  const subtotal = params.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+  const discountPercent = params.discountPercent || 0;
+  const discount = Math.round(subtotal * discountPercent / 100);
+  const afterDiscount = subtotal - discount;
+  const defaultTaxRates: Record<string, number> = { MEI: 0.05, SN: 0.08, LP: 0.15, autonomous: 0.20 };
+  const taxRate = params.taxRates?.[params.taxRegime] ?? defaultTaxRates[params.taxRegime] ?? 0.08;
+  const taxes = Math.round(afterDiscount * taxRate);
+  const totalValue = afterDiscount + taxes;
+  return { subtotal, discount, discountPercent, taxes, totalValue };
+}

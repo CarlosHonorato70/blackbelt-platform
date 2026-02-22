@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -23,12 +24,36 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { Download, TrendingUp, Users, AlertTriangle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Download, TrendingUp, Users, AlertTriangle, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth.tsx";
+import { useTenant } from "@/contexts/TenantContext";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import * as XLSX from "xlsx";
 
 export default function AssessmentAnalytics() {
   const { user } = useAuth();
+  const { selectedTenant } = useTenant();
+  const navigate = useNavigate();
 
   const assessmentsQuery = trpc.assessments.list.useQuery(
     undefined,
@@ -37,7 +62,7 @@ export default function AssessmentAnalytics() {
 
   const assessments = assessmentsQuery.data || [];
 
-  // Dados para gráficos
+  // ── Dados para gráficos ─────────────────────────────────────────────
   const riskDistribution = [
     { name: "Baixo Risco", value: 0, color: "#10b981" },
     { name: "Médio Risco", value: 0, color: "#f59e0b" },
@@ -76,6 +101,138 @@ export default function AssessmentAnalytics() {
     { sector: "Operações", score: 65, respondents: 28 },
     { sector: "Financeiro", score: 71, respondents: 15 },
   ];
+
+  // ── Estado do Dialog "Gerar Plano de Ação" ──────────────────────────
+  const [actionPlanDialogOpen, setActionPlanDialogOpen] = useState(false);
+  const [actionPlanForm, setActionPlanForm] = useState({
+    title: "Plano de Ação - Casos Críticos (28 respondentes)",
+    description:
+      "Intervenção imediata para 28 respondentes com risco crítico identificados na análise consolidada.\n\nDimensões prioritárias:\n- Violência: score 35 (Crítico)\n- Burnout: score 58 (Atenção)\n- Saúde Mental: score 62 (Atenção)",
+    actionType: "administrative",
+    priority: "urgent",
+    deadline: "",
+    budget: "",
+  });
+
+  const createActionPlanMutation =
+    trpc.riskAssessments.createActionPlan.useMutation({
+      onSuccess: () => {
+        toast.success("Plano de ação criado com sucesso!", {
+          description: "Redirecionando para a página de planos...",
+        });
+        setActionPlanDialogOpen(false);
+        navigate("/action-plans");
+      },
+      onError: (error: any) => {
+        toast.error(`Erro ao criar plano de ação: ${error.message}`);
+      },
+    });
+
+  const handleCreateActionPlan = () => {
+    if (!selectedTenant) {
+      toast.error("Selecione uma empresa primeiro");
+      return;
+    }
+    if (!actionPlanForm.title.trim()) {
+      toast.error("O título é obrigatório");
+      return;
+    }
+
+    createActionPlanMutation.mutate({
+      tenantId: selectedTenant.id,
+      title: actionPlanForm.title,
+      description: actionPlanForm.description || undefined,
+      actionType: actionPlanForm.actionType,
+      priority: actionPlanForm.priority,
+      deadline: actionPlanForm.deadline
+        ? new Date(actionPlanForm.deadline).toISOString()
+        : undefined,
+      budget: actionPlanForm.budget
+        ? Math.round(parseFloat(actionPlanForm.budget) * 100)
+        : undefined,
+    });
+  };
+
+  // ── Handler "Exportar Relatório Executivo" ──────────────────────────
+  const handleExportReport = () => {
+    const wb = XLSX.utils.book_new();
+
+    // Aba 1: KPIs
+    const kpiSheet = XLSX.utils.json_to_sheet([
+      { Indicador: "Total de Respondentes", Valor: 312, Observação: "+15% vs mês anterior" },
+      { Indicador: "Score Médio Geral", Valor: 68, Observação: "Risco Médio" },
+      { Indicador: "Casos Críticos", Valor: 28, Observação: "9% dos respondentes" },
+      { Indicador: "Tendência (6 meses)", Valor: "+5%", Observação: "Melhora contínua" },
+    ]);
+    XLSX.utils.book_append_sheet(wb, kpiSheet, "KPIs");
+
+    // Aba 2: Dimensões COPSOQ-II
+    const dimSheet = XLSX.utils.json_to_sheet(
+      dimensionData.map((d) => ({
+        Dimensão: d.dimension,
+        Score: d.score,
+        Classificação:
+          d.score >= 70 ? "Adequado" : d.score >= 50 ? "Atenção" : "Crítico",
+      }))
+    );
+    XLSX.utils.book_append_sheet(wb, dimSheet, "Dimensões COPSOQ-II");
+
+    // Aba 3: Evolução Temporal
+    const timeSheet = XLSX.utils.json_to_sheet(
+      timelineData.map((t) => ({
+        Mês: t.month,
+        "Score Médio": t.avgScore,
+        Respondentes: t.respondents,
+      }))
+    );
+    XLSX.utils.book_append_sheet(wb, timeSheet, "Evolução Temporal");
+
+    // Aba 4: Comparativo por Setor
+    const sectorSheet = XLSX.utils.json_to_sheet(
+      sectorComparison.map((s) => ({
+        Setor: s.sector,
+        Score: s.score,
+        Respondentes: s.respondents,
+      }))
+    );
+    XLSX.utils.book_append_sheet(wb, sectorSheet, "Por Setor");
+
+    // Aba 5: Recomendações
+    const recsSheet = XLSX.utils.json_to_sheet([
+      {
+        Prioridade: "1 - Urgente",
+        Área: "Casos Críticos",
+        Descrição: "28 respondentes com risco crítico necessitam intervenção imediata",
+      },
+      {
+        Prioridade: "2 - Alta",
+        Área: "Violência",
+        Descrição: "Score 35 - Implementar programa de prevenção de assédio e violência",
+      },
+      {
+        Prioridade: "2 - Alta",
+        Área: "Burnout",
+        Descrição: "Score 58 - Revisar carga de trabalho e prazos",
+      },
+      {
+        Prioridade: "2 - Alta",
+        Área: "Saúde Mental",
+        Descrição: "Score 62 - Oferecer suporte psicológico especializado",
+      },
+      {
+        Prioridade: "3 - Manutenção",
+        Área: "Liderança / Significado",
+        Descrição: "Manter boas práticas em dimensões com scores altos",
+      },
+    ]);
+    XLSX.utils.book_append_sheet(wb, recsSheet, "Recomendações");
+
+    const filename = `relatorio_executivo_riscos_${new Date().toISOString().split("T")[0]}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    toast.success("Relatório exportado com sucesso!", {
+      description: filename,
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -323,7 +480,11 @@ export default function AssessmentAnalytics() {
             <p className="text-sm text-red-800 mb-3">
               28 respondentes com risco crítico necessitam intervenção imediata
             </p>
-            <Button size="sm" className="bg-red-600 hover:bg-red-700">
+            <Button
+              size="sm"
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => setActionPlanDialogOpen(true)}
+            >
               Gerar Plano de Ação
             </Button>
           </div>
@@ -356,7 +517,7 @@ export default function AssessmentAnalytics() {
 
       {/* BOTOES DE ACAO */}
       <div className="flex gap-4">
-        <Button className="flex-1">
+        <Button className="flex-1" onClick={handleExportReport}>
           <Download className="w-4 h-4 mr-2" />
           Exportar Relatório Executivo
         </Button>
@@ -364,6 +525,147 @@ export default function AssessmentAnalytics() {
           Compartilhar com Gestores
         </Button>
       </div>
+
+      {/* DIALOG — Gerar Plano de Ação */}
+      <Dialog open={actionPlanDialogOpen} onOpenChange={setActionPlanDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Gerar Plano de Ação</DialogTitle>
+            <DialogDescription>
+              Crie um plano de ação para os 28 casos críticos identificados
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="ap-title">Título *</Label>
+              <Input
+                id="ap-title"
+                value={actionPlanForm.title}
+                onChange={(e) =>
+                  setActionPlanForm((prev) => ({ ...prev, title: e.target.value }))
+                }
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="ap-description">Descrição</Label>
+              <Textarea
+                id="ap-description"
+                rows={4}
+                value={actionPlanForm.description}
+                onChange={(e) =>
+                  setActionPlanForm((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Tipo de Ação</Label>
+                <Select
+                  value={actionPlanForm.actionType}
+                  onValueChange={(value) =>
+                    setActionPlanForm((prev) => ({ ...prev, actionType: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="elimination">Eliminação</SelectItem>
+                    <SelectItem value="substitution">Substituição</SelectItem>
+                    <SelectItem value="engineering">Engenharia</SelectItem>
+                    <SelectItem value="administrative">Administrativa</SelectItem>
+                    <SelectItem value="ppe">EPI</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Prioridade</Label>
+                <Select
+                  value={actionPlanForm.priority}
+                  onValueChange={(value) =>
+                    setActionPlanForm((prev) => ({ ...prev, priority: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Baixa</SelectItem>
+                    <SelectItem value="medium">Média</SelectItem>
+                    <SelectItem value="high">Alta</SelectItem>
+                    <SelectItem value="urgent">Urgente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="ap-deadline">Prazo</Label>
+                <Input
+                  id="ap-deadline"
+                  type="date"
+                  value={actionPlanForm.deadline}
+                  onChange={(e) =>
+                    setActionPlanForm((prev) => ({
+                      ...prev,
+                      deadline: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="ap-budget">Orçamento (R$)</Label>
+                <Input
+                  id="ap-budget"
+                  type="number"
+                  placeholder="0,00"
+                  value={actionPlanForm.budget}
+                  onChange={(e) =>
+                    setActionPlanForm((prev) => ({
+                      ...prev,
+                      budget: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setActionPlanDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleCreateActionPlan}
+              disabled={
+                createActionPlanMutation.isPending || !actionPlanForm.title.trim()
+              }
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {createActionPlanMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Criando...
+                </>
+              ) : (
+                "Criar Plano de Ação"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

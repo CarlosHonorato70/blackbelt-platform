@@ -35,6 +35,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export default function RolesPermissions() {
   const { selectedTenant } = useTenant();
@@ -60,7 +61,7 @@ export default function RolesPermissions() {
   }
 
   // Mock data - será substituído por dados reais do backend
-  const roles = [
+  const [roles, setRoles] = useState([
     {
       id: "1",
       name: "Administrador",
@@ -111,7 +112,7 @@ export default function RolesPermissions() {
       users: 5,
       permissions: ["visualizar_relatorios"],
     },
-  ];
+  ]);
 
   const allPermissions = [
     {
@@ -304,7 +305,16 @@ export default function RolesPermissions() {
                           <Edit2 className="h-4 w-4 mr-2" />
                           Editar
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => {
+                            if (window.confirm(`Tem certeza que deseja deletar o perfil "${role.name}"? Usuários com este perfil perderão suas permissões.`)) {
+                              setRoles(prev => prev.filter(r => r.id !== role.id));
+                              if (selectedRole === role.id) setSelectedRole(null);
+                              toast.success(`Perfil "${role.name}" removido com sucesso!`);
+                            }
+                          }}
+                        >
                           <Trash2 className="h-4 w-4 mr-2" />
                           Deletar
                         </DropdownMenuItem>

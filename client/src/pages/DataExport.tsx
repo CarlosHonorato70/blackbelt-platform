@@ -36,6 +36,7 @@ import {
   CheckCircle2,
   Clock,
   Download,
+  Eye,
   FileJson,
   FileSpreadsheet,
   FileText,
@@ -46,6 +47,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export default function DataExport() {
   const { selectedTenant } = useTenant();
@@ -55,6 +57,18 @@ export default function DataExport() {
     requestType: "export",
     reason: "",
   });
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<{
+    id: string;
+    email: string;
+    requestType: string;
+    status: string;
+    requestDate: string;
+    completionDate: string | null;
+    format: string | null;
+    fileSize: string | null;
+    downloadLink: string | null;
+  } | null>(null);
 
   if (!selectedTenant) {
     return (
@@ -71,7 +85,7 @@ export default function DataExport() {
   }
 
   // Mock data - será substituído por dados reais do backend
-  const dsrRequests = [
+  const [dsrRequests, setDsrRequests] = useState([
     {
       id: "1",
       email: "joao.silva@example.com",
@@ -116,7 +130,7 @@ export default function DataExport() {
       fileSize: "1.8 MB",
       downloadLink: "https://storage.example.com/dsr-004.json",
     },
-  ];
+  ]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -390,12 +404,23 @@ export default function DataExport() {
                       <DropdownMenuContent align="end">
                         {request.status === "completo" && (
                           <>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                toast.success("Download iniciado!", {
+                                  description: `Arquivo ${request.format} (${request.fileSize}) será baixado.`,
+                                });
+                              }}
+                            >
                               <Download className="h-4 w-4 mr-2" />
                               Baixar Dados
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <FileText className="h-4 w-4 mr-2" />
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedRequest(request);
+                                setReportDialogOpen(true);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
                               Ver Relatório
                             </DropdownMenuItem>
                           </>
@@ -406,7 +431,15 @@ export default function DataExport() {
                             Processando...
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => {
+                            if (window.confirm(`Tem certeza que deseja cancelar a solicitação de ${request.email}?`)) {
+                              setDsrRequests(prev => prev.filter(r => r.id !== request.id));
+                              toast.success("Solicitação cancelada com sucesso!");
+                            }
+                          }}
+                        >
                           <Trash2 className="h-4 w-4 mr-2" />
                           Cancelar Solicitação
                         </DropdownMenuItem>
@@ -495,6 +528,58 @@ export default function DataExport() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Report Details Dialog */}
+      <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detalhes da Solicitação</DialogTitle>
+            <DialogDescription>Informações completas da solicitação DSR</DialogDescription>
+          </DialogHeader>
+          {selectedRequest && (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-muted-foreground text-xs">Email do Titular</p>
+                  <p className="font-medium">{selectedRequest.email}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Tipo de Solicitação</p>
+                  <p className="font-medium">{getRequestTypeLabel(selectedRequest.requestType)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Status</p>
+                  <span className={`text-xs px-2 py-1 rounded ${getStatusColor(selectedRequest.status)}`}>
+                    {selectedRequest.status}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Data da Solicitação</p>
+                  <p className="font-medium">{selectedRequest.requestDate}</p>
+                </div>
+                {selectedRequest.completionDate && (
+                  <div>
+                    <p className="text-muted-foreground text-xs">Data de Conclusão</p>
+                    <p className="font-medium">{selectedRequest.completionDate}</p>
+                  </div>
+                )}
+                {selectedRequest.format && (
+                  <div>
+                    <p className="text-muted-foreground text-xs">Formato</p>
+                    <p className="font-medium">{selectedRequest.format}</p>
+                  </div>
+                )}
+                {selectedRequest.fileSize && (
+                  <div>
+                    <p className="text-muted-foreground text-xs">Tamanho do Arquivo</p>
+                    <p className="font-medium">{selectedRequest.fileSize}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

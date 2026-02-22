@@ -528,7 +528,7 @@ export const pricingRouter = router({
           title: z.string(),
           description: z.string().optional(),
           taxRegime: z.enum(["MEI", "SN", "LP", "autonomous"]),
-          validUntil: z.date().optional(),
+          validUntil: z.coerce.date().optional(),
           items: z.array(
             z.object({
               serviceId: z.string(),
@@ -917,10 +917,9 @@ export const pricingParametersRouter = router({
 // ============================================================================
 
 export const proposalsRouter = router({
-  list: protectedProcedure
+  list: tenantProcedure
     .input(z.object({ clientId: z.string().optional() }))
     .query(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new Error("Unauthorized");
       return await db.listProposals(ctx.tenantId!, input.clientId);
     }),
 
@@ -939,7 +938,7 @@ export const proposalsRouter = router({
         taxes: z.number().int().default(0),
         totalValue: z.number().int().min(0),
         taxRegime: z.enum(["MEI", "SN", "LP", "autonomous"]),
-        validUntil: z.date().optional(),
+        validUntil: z.coerce.date().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -976,7 +975,7 @@ export const proposalsRouter = router({
         discountPercent: z.number().int().optional(),
         taxes: z.number().int().optional(),
         totalValue: z.number().int().optional(),
-        validUntil: z.date().optional(),
+        validUntil: z.coerce.date().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
