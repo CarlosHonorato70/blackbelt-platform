@@ -107,6 +107,10 @@ jobs:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: ${{ secrets.DB_HOST || 'localhost' }}
+          DB_NAME: ${{ secrets.DB_NAME || 'blackbelt' }}
         run: |
           ssh $SERVER_USER@$SERVER_HOST << 'DEPLOY_SCRIPT'
             set -e
@@ -121,7 +125,18 @@ jobs:
             # Build application
             pnpm build
 
-            # Run database migrations (XAMPP MySQL)
+            # Backup database before migration
+            BACKUP_DIR="$HOME/db-backups"
+            mkdir -p "$BACKUP_DIR"
+            BACKUP_FILE="$BACKUP_DIR/blackbelt_$(date +%Y%m%d_%H%M%S).sql"
+            mysqldump -u "$DB_USER" -p"$DB_PASSWORD" -h "$DB_HOST" "$DB_NAME" > "$BACKUP_FILE" 2>/dev/null && \
+              echo "Database backup saved to $BACKUP_FILE" || \
+              echo "Warning: Database backup failed, proceeding with migration"
+
+            # Keep only last 10 backups
+            ls -t "$BACKUP_DIR"/blackbelt_*.sql 2>/dev/null | tail -n +11 | xargs rm -f 2>/dev/null || true
+
+            # Run database migrations
             pnpm db:push
 
             # Restart application with PM2

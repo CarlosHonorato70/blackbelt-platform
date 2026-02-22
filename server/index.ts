@@ -77,8 +77,10 @@ app.use(
 
 const allowedOrigins = [
   ENV.frontendUrl,
-  "http://localhost:5000",
-  "http://localhost:5173",
+  // Origens adicionais via variavel de ambiente (separadas por virgula)
+  ...(process.env.ALLOWED_ORIGINS?.split(",").map(s => s.trim()) ?? []),
+  // Em desenvolvimento, permitir localhost
+  ...(ENV.isProduction ? [] : ["http://localhost:5000", "http://localhost:5173"]),
 ].filter(Boolean);
 
 app.use(

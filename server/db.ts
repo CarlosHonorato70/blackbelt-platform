@@ -2,6 +2,7 @@ import { and, desc, eq, like, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import { nanoid } from "nanoid";
+import { log } from "./_core/logger";
 import * as schema from "../drizzle/schema";
 import * as schemaNr01 from "../drizzle/schema_nr01";
 import * as relations from "../drizzle/relations";
@@ -58,7 +59,7 @@ export async function getDb() {
       });
       _db = drizzle(pool, { schema: fullSchema, mode: "default" });
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      log.warn("[Database] Failed to connect", { error: String(error) });
       _db = null;
     }
   }
@@ -81,7 +82,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
+    log.warn("[Database] Cannot upsert user: database not available");
     return;
   }
 
@@ -127,7 +128,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       set: updateSet,
     });
   } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
+    log.error("[Database] Failed to upsert user", { error: String(error) });
     throw error;
   }
 }
@@ -135,7 +136,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 export async function getUser(id: string) {
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
+    log.warn("[Database] Cannot get user: database not available");
     return undefined;
   }
 
@@ -230,7 +231,7 @@ export async function listTenants(filters?: {
     const result = await query;
     return result;
   } catch (error) {
-    console.error("[DB] Error in listTenants:", error);
+    log.error("[DB] Error in listTenants", { error: String(error) });
     throw error;
   }
 }
