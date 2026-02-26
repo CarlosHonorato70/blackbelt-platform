@@ -123,7 +123,8 @@ Para grandes corporações e holdings
 
 **Database:**
 
-- MySQL 8.0+
+- PostgreSQL 15+ (Produção)
+- MySQL 8.0+ (Desenvolvimento - compatível)
 - 30+ tabelas
 - Row-Level Security (RLS)
 - Índices otimizados
@@ -154,7 +155,7 @@ Para grandes corporações e holdings
 └─────────────────────────────────────────────────────────────┘
                             ↓ SQL
 ┌─────────────────────────────────────────────────────────────┐
-│              DATABASE (MySQL + Drizzle ORM)                 │
+│          DATABASE (PostgreSQL + Drizzle ORM)                │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
 │  │  Conformidade│  │ Precificação │  │   Auditoria  │      │
 │  │   (NR-01)    │  │  Comercial   │  │   & Logs     │      │
@@ -261,6 +262,13 @@ A aplicação estará disponível em `http://localhost:3000`
 - [**COMO_RODAR.md**](COMO_RODAR.md) - 🚀 **Guia prático tradicional** (MySQL local)
 - [SETUP_GUIDE.md](SETUP_GUIDE.md) - Guia completo de instalação passo a passo
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Solução de problemas comuns
+
+### 🚀 Deploy em Produção
+
+- [**RENDER_DEPLOYMENT_GUIDE.md**](RENDER_DEPLOYMENT_GUIDE.md) - 🌐 **Deploy no Render** (Recomendado - PostgreSQL)
+- [**RENDER_SQLITE_GUIDE.md**](RENDER_SQLITE_GUIDE.md) - 🗄️ **Deploy com SQLite** (Armazenamento local - Economize US$ 6/mês)
+- [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) - Guia completo de deploy (VPS, Docker, etc)
+- [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md) - Referência rápida para produção
 
 ---
 

@@ -1,0 +1,57 @@
+# render.yaml - Configuração do Render para Black Belt Platform
+# Este arquivo define a infraestrutura necessária para rodar a aplicação no Render
+
+services:
+  # Aplicação Web Principal
+  - type: web
+    name: blackbelt-platform
+    env: docker
+    dockerfilePath: ./Dockerfile.production
+    plan: starter # Pode ser: starter, standard, pro
+    region: oregon # Pode ser: oregon, frankfurt, singapore
+    
+    # Variáveis de Ambiente
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8080
+      - key: HOST
+        value: 0.0.0.0
+      
+      # Database URL será preenchida automaticamente quando você conectar o database
+      - key: DATABASE_URL
+        fromDatabase:
+          name: blackbelt-db
+          property: connectionString
+      
+      # Session Secret - MUDE ISSO!
+      - key: SESSION_SECRET
+        generateValue: true
+      
+      # Frontend URLs - Atualize com seu domínio do Render
+      - key: VITE_FRONTEND_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+    
+    # Health Check
+    healthCheckPath: /api/health
+    
+    # Build Command (executado automaticamente pelo Dockerfile)
+    # O Dockerfile.production já faz o build
+    
+    # Auto-deploy quando push para a branch main
+    autoDeploy: true
+    branch: main
+
+# Banco de Dados PostgreSQL
+databases:
+  - name: blackbelt-db
+    databaseName: blackbelt
+    plan: starter # Pode ser: starter, standard, pro
+    region: oregon # Mesma região do web service
+    
+    # Versão do PostgreSQL
+    # Render usa PostgreSQL 15 por padrão
+    ipAllowList: [] # Vazio = permite apenas conexões internas do Render
