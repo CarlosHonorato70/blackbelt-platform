@@ -1,4 +1,5 @@
 import DashboardLayout from "@/components/DashboardLayout";
+import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -40,6 +41,7 @@ import {
   FileJson,
   FileSpreadsheet,
   FileText,
+  Loader2,
   MoreVertical,
   Plus,
   Shield,
@@ -51,6 +53,11 @@ import { toast } from "sonner";
 
 export default function DataExport() {
   const { selectedTenant } = useTenant();
+  const tenantId =
+    typeof selectedTenant === "string"
+      ? selectedTenant
+      : selectedTenant?.id || "";
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -58,17 +65,45 @@ export default function DataExport() {
     reason: "",
   });
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<{
-    id: string;
-    email: string;
-    requestType: string;
-    status: string;
-    requestDate: string;
-    completionDate: string | null;
-    format: string | null;
-    fileSize: string | null;
-    downloadLink: string | null;
-  } | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
+
+  // tRPC queries & mutations
+  const {
+    data: dsrRequests = [],
+    isLoading,
+    refetch,
+  } = trpc.dataExport.list.useQuery(
+    { tenantId },
+    { enabled: !!tenantId }
+  );
+
+  const createMutation = trpc.dataExport.create.useMutation({
+    onSuccess: () => {
+      toast.success("Solicitação criada com sucesso!", {
+        description: "A solicitação DSR foi registrada para processamento.",
+      });
+      setFormData({ email: "", requestType: "export", reason: "" });
+      setDialogOpen(false);
+      refetch();
+    },
+    onError: (err) => {
+      toast.error("Erro ao criar solicitação", {
+        description: err.message,
+      });
+    },
+  });
+
+  const cancelMutation = trpc.dataExport.cancel.useMutation({
+    onSuccess: () => {
+      toast.success("Solicitação cancelada com sucesso!");
+      refetch();
+    },
+    onError: (err) => {
+      toast.error("Erro ao cancelar solicitação", {
+        description: err.message,
+      });
+    },
+  });
 
   if (!selectedTenant) {
     return (
@@ -84,71 +119,40 @@ export default function DataExport() {
     );
   }
 
-  // Mock data - será substituído por dados reais do backend
-  const [dsrRequests, setDsrRequests] = useState([
-    {
-      id: "1",
-      email: "joao.silva@example.com",
-      requestType: "export",
-      status: "completo",
-      requestDate: "18/10/2025",
-      completionDate: "20/10/2025",
-      format: "PDF",
-      fileSize: "2.5 MB",
-      downloadLink: "https://storage.example.com/dsr-001.pdf",
-    },
-    {
-      id: "2",
-      email: "maria.santos@example.com",
-      requestType: "delete",
-      status: "processando",
-      requestDate: "19/10/2025",
-      completionDate: null,
-      format: null,
-      fileSize: null,
-      downloadLink: null,
-    },
-    {
-      id: "3",
-      email: "pedro.oliveira@example.com",
-      requestType: "export",
-      status: "pendente",
-      requestDate: "20/10/2025",
-      completionDate: null,
-      format: null,
-      fileSize: null,
-      downloadLink: null,
-    },
-    {
-      id: "4",
-      email: "ana.costa@example.com",
-      requestType: "export",
-      status: "completo",
-      requestDate: "15/10/2025",
-      completionDate: "17/10/2025",
-      format: "JSON",
-      fileSize: "1.8 MB",
-      downloadLink: "https://storage.example.com/dsr-004.json",
-    },
-  ]);
-
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleRequestTypeChange = (value: string) => {
-    setFormData(prev => ({ ...prev, requestType: value }));
+    setFormData((prev) => ({ ...prev, requestType: value }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Integrar com tRPC para criar solicitação DSR
-    console.log("Solicitação DSR enviada:", formData);
-    setFormData({ email: "", requestType: "export", reason: "" });
-    setDialogOpen(false);
+    createMutation.mutate({
+      tenantId,
+      email: formData.email,
+      requestType: formData.requestType as "export" | "delete" | "rectify",
+      reason: formData.reason || undefined,
+    });
+  };
+
+  const handleCancel = (id: string, email: string) => {
+    if (
+      window.confirm(
+        `Tem certeza que deseja cancelar a solicitação de ${email}?`
+      )
+    ) {
+      cancelMutation.mutate({ id, tenantId });
+    }
+  };
+
+  const formatDate = (date: string | Date | null | undefined) => {
+    if (!date) return null;
+    return new Date(date).toLocaleDateString("pt-BR");
   };
 
   const getStatusIcon = (status: string) => {
@@ -292,8 +296,12 @@ export default function DataExport() {
                   >
                     Cancelar
                   </Button>
-                  <Button type="submit">
-                    <Shield className="h-4 w-4 mr-2" />
+                  <Button type="submit" disabled={createMutation.isPending}>
+                    {createMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Shield className="h-4 w-4 mr-2" />
+                    )}
                     Criar Solicitação
                   </Button>
                 </div>
@@ -321,7 +329,7 @@ export default function DataExport() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-green-600">
-                {dsrRequests.filter(r => r.status === "completo").length}
+                {dsrRequests.filter((r) => r.status === "completo").length}
               </p>
             </CardContent>
           </Card>
@@ -332,7 +340,7 @@ export default function DataExport() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-yellow-600">
-                {dsrRequests.filter(r => r.status === "processando").length}
+                {dsrRequests.filter((r) => r.status === "processando").length}
               </p>
             </CardContent>
           </Card>
@@ -343,7 +351,7 @@ export default function DataExport() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-gray-600">
-                {dsrRequests.filter(r => r.status === "pendente").length}
+                {dsrRequests.filter((r) => r.status === "pendente").length}
               </p>
             </CardContent>
           </Card>
@@ -356,64 +364,107 @@ export default function DataExport() {
             <CardDescription>Histórico de solicitações LGPD</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {dsrRequests.map(request => (
-                <div
-                  key={request.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h4 className="font-semibold">{request.email}</h4>
-                      <span className="text-xs px-2 py-1 rounded bg-purple-100 text-purple-800">
-                        {getRequestTypeLabel(request.requestType)}
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Solicitado em {request.requestDate}
-                      {request.completionDate &&
-                        ` • Concluído em ${request.completionDate}`}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className="flex items-center gap-2 justify-end mb-2">
-                        {getStatusIcon(request.status)}
-                        <span
-                          className={`text-xs px-2 py-1 rounded ${getStatusColor(
-                            request.status
-                          )}`}
-                        >
-                          {request.status}
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : dsrRequests.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Shield className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold">Nenhuma solicitação</h3>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Crie uma nova solicitação DSR para começar
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {dsrRequests.map((request) => (
+                  <div
+                    key={request.id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h4 className="font-semibold">{request.email}</h4>
+                        <span className="text-xs px-2 py-1 rounded bg-purple-100 text-purple-800">
+                          {getRequestTypeLabel(request.requestType)}
                         </span>
                       </div>
-                      {request.fileSize && (
-                        <p className="text-xs text-muted-foreground">
-                          {request.format} • {request.fileSize}
-                        </p>
-                      )}
+                      <p className="text-sm text-muted-foreground">
+                        Solicitado em {formatDate(request.requestDate)}
+                        {request.completionDate &&
+                          ` • Concluído em ${formatDate(request.completionDate)}`}
+                      </p>
                     </div>
 
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {request.status === "completo" && (
-                          <>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <div className="flex items-center gap-2 justify-end mb-2">
+                          {getStatusIcon(request.status)}
+                          <span
+                            className={`text-xs px-2 py-1 rounded ${getStatusColor(
+                              request.status
+                            )}`}
+                          >
+                            {request.status}
+                          </span>
+                        </div>
+                        {request.fileSize && (
+                          <p className="text-xs text-muted-foreground">
+                            {request.format} • {request.fileSize}
+                          </p>
+                        )}
+                      </div>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {request.status === "completo" && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  toast.success("Download iniciado!", {
+                                    description: `Arquivo ${request.format} (${request.fileSize}) será baixado.`,
+                                  });
+                                }}
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Baixar Dados
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedRequest(request);
+                                  setReportDialogOpen(true);
+                                }}
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Ver Relatório
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {request.status !== "completo" &&
+                            request.status !== "pendente" && (
+                              <DropdownMenuItem disabled>
+                                <Clock className="h-4 w-4 mr-2" />
+                                Processando...
+                              </DropdownMenuItem>
+                            )}
+                          {request.status === "pendente" && (
                             <DropdownMenuItem
-                              onClick={() => {
-                                toast.success("Download iniciado!", {
-                                  description: `Arquivo ${request.format} (${request.fileSize}) será baixado.`,
-                                });
-                              }}
+                              className="text-destructive"
+                              onClick={() =>
+                                handleCancel(request.id, request.email)
+                              }
                             >
-                              <Download className="h-4 w-4 mr-2" />
-                              Baixar Dados
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Cancelar Solicitação
                             </DropdownMenuItem>
+                          )}
+                          {request.status !== "pendente" && (
                             <DropdownMenuItem
                               onClick={() => {
                                 setSelectedRequest(request);
@@ -421,34 +472,16 @@ export default function DataExport() {
                               }}
                             >
                               <Eye className="h-4 w-4 mr-2" />
-                              Ver Relatório
+                              Ver Detalhes
                             </DropdownMenuItem>
-                          </>
-                        )}
-                        {request.status !== "completo" && (
-                          <DropdownMenuItem disabled>
-                            <Clock className="h-4 w-4 mr-2" />
-                            Processando...
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => {
-                            if (window.confirm(`Tem certeza que deseja cancelar a solicitação de ${request.email}?`)) {
-                              setDsrRequests(prev => prev.filter(r => r.id !== request.id));
-                              toast.success("Solicitação cancelada com sucesso!");
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Cancelar Solicitação
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -534,33 +567,53 @@ export default function DataExport() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Detalhes da Solicitação</DialogTitle>
-            <DialogDescription>Informações completas da solicitação DSR</DialogDescription>
+            <DialogDescription>
+              Informações completas da solicitação DSR
+            </DialogDescription>
           </DialogHeader>
           {selectedRequest && (
             <div className="space-y-3 text-sm">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-muted-foreground text-xs">Email do Titular</p>
+                  <p className="text-muted-foreground text-xs">
+                    Email do Titular
+                  </p>
                   <p className="font-medium">{selectedRequest.email}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-xs">Tipo de Solicitação</p>
-                  <p className="font-medium">{getRequestTypeLabel(selectedRequest.requestType)}</p>
+                  <p className="text-muted-foreground text-xs">
+                    Tipo de Solicitação
+                  </p>
+                  <p className="font-medium">
+                    {getRequestTypeLabel(selectedRequest.requestType)}
+                  </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">Status</p>
-                  <span className={`text-xs px-2 py-1 rounded ${getStatusColor(selectedRequest.status)}`}>
+                  <span
+                    className={`text-xs px-2 py-1 rounded ${getStatusColor(
+                      selectedRequest.status
+                    )}`}
+                  >
                     {selectedRequest.status}
                   </span>
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-xs">Data da Solicitação</p>
-                  <p className="font-medium">{selectedRequest.requestDate}</p>
+                  <p className="text-muted-foreground text-xs">
+                    Data da Solicitação
+                  </p>
+                  <p className="font-medium">
+                    {formatDate(selectedRequest.requestDate)}
+                  </p>
                 </div>
                 {selectedRequest.completionDate && (
                   <div>
-                    <p className="text-muted-foreground text-xs">Data de Conclusão</p>
-                    <p className="font-medium">{selectedRequest.completionDate}</p>
+                    <p className="text-muted-foreground text-xs">
+                      Data de Conclusão
+                    </p>
+                    <p className="font-medium">
+                      {formatDate(selectedRequest.completionDate)}
+                    </p>
                   </div>
                 )}
                 {selectedRequest.format && (
@@ -571,8 +624,16 @@ export default function DataExport() {
                 )}
                 {selectedRequest.fileSize && (
                   <div>
-                    <p className="text-muted-foreground text-xs">Tamanho do Arquivo</p>
+                    <p className="text-muted-foreground text-xs">
+                      Tamanho do Arquivo
+                    </p>
                     <p className="font-medium">{selectedRequest.fileSize}</p>
+                  </div>
+                )}
+                {selectedRequest.reason && (
+                  <div className="col-span-2">
+                    <p className="text-muted-foreground text-xs">Motivo</p>
+                    <p className="font-medium">{selectedRequest.reason}</p>
                   </div>
                 )}
               </div>

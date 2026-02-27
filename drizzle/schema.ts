@@ -29,6 +29,7 @@ export const users = mysqlTable("users", {
   passwordHash: varchar("passwordHash", { length: 255 }),
   role: text("role").default("user").notNull(),
   tenantId: varchar("tenantId", { length: 64 }),
+  emailVerified: boolean("emailVerified").default(false),
   createdAt: timestamp("createdAt").defaultNow(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow(),
 });

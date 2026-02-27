@@ -46,6 +46,7 @@ import {
   TrendingUp,
   ClipboardList,
 } from "lucide-react";
+import { trpc } from "@/lib/trpc";
 import { CSSProperties, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
@@ -398,9 +399,56 @@ function DashboardLayoutContent({
           </div>
         )}
 
+        {/* === Email Verification Banner === */}
+        <EmailVerificationBanner />
+
         {/* === Main Content === */}
         <main className="flex-1 p-4 md:p-6">{children}</main>
       </SidebarInset>
     </>
+  );
+}
+
+function EmailVerificationBanner() {
+  const { user } = useAuth();
+  const [dismissed, setDismissed] = useState(false);
+
+  const resendMutation = trpc.auth.resendVerificationEmail.useMutation({
+    onSuccess: () => {
+      alert("Email de verificação reenviado com sucesso!");
+    },
+    onError: () => {
+      alert("Erro ao reenviar email. Tente novamente.");
+    },
+  });
+
+  // Don't show if user is verified, dismissed, or not logged in
+  if (!user || (user as any).emailVerified || dismissed) return null;
+
+  return (
+    <div className="bg-amber-50 border-b border-amber-200 px-4 py-2.5 flex items-center justify-between gap-4 text-sm">
+      <div className="flex items-center gap-2 text-amber-800">
+        <Mail className="h-4 w-4 shrink-0" />
+        <span>
+          Verifique seu email para garantir acesso completo à plataforma.
+        </span>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          onClick={() => resendMutation.mutate()}
+          disabled={resendMutation.isPending}
+          className="text-amber-700 hover:text-amber-900 font-medium underline underline-offset-2 text-xs"
+        >
+          {resendMutation.isPending ? "Enviando..." : "Reenviar email"}
+        </button>
+        <button
+          onClick={() => setDismissed(true)}
+          className="text-amber-500 hover:text-amber-700 text-lg leading-none px-1"
+          aria-label="Fechar"
+        >
+          ×
+        </button>
+      </div>
+    </div>
   );
 }

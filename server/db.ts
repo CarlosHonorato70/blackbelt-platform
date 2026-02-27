@@ -119,6 +119,11 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.role = user.role;
     }
 
+    if ((user as any).emailVerified !== undefined) {
+      (values as any).emailVerified = (user as any).emailVerified;
+      updateSet.emailVerified = (user as any).emailVerified;
+    }
+
     if (Object.keys(updateSet).length === 0) {
       updateSet.lastSignedIn = new Date();
     }

@@ -12,18 +12,28 @@ import { sendEmail } from "../_core/email";
 
 // Password reset token helpers (HMAC-signed, no DB needed)
 const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
+const VERIFY_TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 function createResetToken(userId: string): string {
-  const expiry = Date.now() + RESET_TOKEN_EXPIRY_MS;
+  return createHmacToken(userId, "-reset", RESET_TOKEN_EXPIRY_MS);
+}
+
+function verifyResetToken(token: string): { userId: string } | null {
+  return verifyHmacToken(token, "-reset");
+}
+
+// Generic HMAC token helpers (reused for reset and email verification)
+function createHmacToken(userId: string, suffix: string, expiryMs: number): string {
+  const expiry = Date.now() + expiryMs;
   const payload = `${userId}.${expiry}`;
   const signature = crypto
-    .createHmac("sha256", ENV.cookieSecret + "-reset")
+    .createHmac("sha256", ENV.cookieSecret + suffix)
     .update(payload)
     .digest("hex");
   return Buffer.from(`${payload}.${signature}`).toString("base64url");
 }
 
-function verifyResetToken(token: string): { userId: string } | null {
+function verifyHmacToken(token: string, suffix: string): { userId: string } | null {
   try {
     const decoded = Buffer.from(token, "base64url").toString();
     const parts = decoded.split(".");
@@ -34,7 +44,7 @@ function verifyResetToken(token: string): { userId: string } | null {
 
     const payload = `${userId}.${expiryStr}`;
     const expectedSig = crypto
-      .createHmac("sha256", ENV.cookieSecret + "-reset")
+      .createHmac("sha256", ENV.cookieSecret + suffix)
       .update(payload)
       .digest("hex");
 
@@ -49,6 +59,42 @@ function verifyResetToken(token: string): { userId: string } | null {
   } catch {
     return null;
   }
+}
+
+function createVerifyToken(userId: string): string {
+  return createHmacToken(userId, "-verify", VERIFY_TOKEN_EXPIRY_MS);
+}
+
+function verifyVerifyToken(token: string): { userId: string } | null {
+  return verifyHmacToken(token, "-verify");
+}
+
+async function sendVerificationEmail(email: string, name: string | null, token: string) {
+  const frontendUrl = process.env.VITE_FRONTEND_URL || "http://localhost:5000";
+  const verifyUrl = `${frontendUrl}/verify-email/${token}`;
+
+  await sendEmail({
+    to: email,
+    subject: "Verifique seu Email - Black Belt Platform",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #4C1D95;">Verificação de Email</h2>
+        <p>Olá${name ? `, ${name}` : ""},</p>
+        <p>Obrigado por se cadastrar na Black Belt Platform! Para garantir a segurança da sua conta, por favor verifique seu email clicando no botão abaixo:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${verifyUrl}"
+             style="background-color: #7C3AED; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+            Verificar Email
+          </a>
+        </div>
+        <p style="color: #666; font-size: 14px;">Este link expira em 24 horas.</p>
+        <p style="color: #666; font-size: 14px;">Se você não criou esta conta, ignore este email.</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+        <p style="color: #999; font-size: 12px;">Black Belt Platform - Gestão de Riscos Psicossociais</p>
+      </div>
+    `,
+    text: `Verificação de Email\n\nAcesse o link para verificar seu email: ${verifyUrl}\n\nEste link expira em 24 horas.`,
+  });
 }
 
 export const authLocalRouter = router({
@@ -86,6 +132,15 @@ export const authLocalRouter = router({
       const sessionToken = createSessionToken(userId);
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.cookie(COOKIE_NAME, sessionToken, cookieOptions);
+
+      // Envia email de verificação (fire-and-forget)
+      try {
+        const verifyToken = createVerifyToken(userId);
+        await sendVerificationEmail(input.email, input.name, verifyToken);
+      } catch (err) {
+        // Não bloqueia o registro se o email falhar
+        console.error("[Auth] Failed to send verification email:", err);
+      }
 
       return { success: true };
     }),
@@ -132,6 +187,7 @@ export const authLocalRouter = router({
       email: ctx.user.email,
       role: ctx.user.role,
       tenantId: ctx.user.tenantId,
+      emailVerified: (ctx.user as any).emailVerified ?? false,
     };
   }),
 
@@ -206,4 +262,52 @@ export const authLocalRouter = router({
 
       return { success: true };
     }),
+
+  verifyEmail: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .mutation(async ({ input }) => {
+      const result = verifyVerifyToken(input.token);
+      if (!result) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Link de verificação inválido ou expirado. Solicite um novo.",
+        });
+      }
+
+      await db.upsertUser({
+        id: result.userId,
+        emailVerified: true,
+      } as any);
+
+      return { success: true };
+    }),
+
+  resendVerificationEmail: publicProcedure.mutation(async ({ ctx }) => {
+    if (!ctx.user) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "Faça login primeiro",
+      });
+    }
+
+    if ((ctx.user as any).emailVerified) {
+      return { success: true, message: "Email já verificado" };
+    }
+
+    try {
+      const verifyToken = createVerifyToken(ctx.user.id);
+      await sendVerificationEmail(
+        ctx.user.email!,
+        ctx.user.name || null,
+        verifyToken
+      );
+    } catch (err) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Erro ao enviar email de verificação",
+      });
+    }
+
+    return { success: true };
+  }),
 });
