@@ -82,10 +82,10 @@ export default function RiskAssessments() {
   const [selectedAssessmentId, setSelectedAssessmentId] = useState("");
   const [selectedClientId, setSelectedClientId] = useState("");
   const [sendEmailChecked, setSendEmailChecked] = useState(true);
-  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [assessmentToDelete, setAssessmentToDelete] = useState<string | null>(null);
 
+  const utils = trpc.useUtils();
   const { data: clients } = trpc.clients.list.useQuery();
   const generateProposalMutation = trpc.assessmentProposals.generateFromAssessment.useMutation({
     onSuccess: (data) => {
@@ -106,32 +106,22 @@ export default function RiskAssessments() {
     },
   });
 
-  // Mock data - será substituído por tRPC queries quando o backend estiver pronto
-  const initialAssessments = [
-    {
-      id: "1",
-      title: "Avaliação Inicial - Setor Administrativo",
-      tenant: "Empresa XYZ Ltda",
-      sector: "Administrativo",
-      date: "2025-01-15",
-      status: "completed",
-      riskLevel: "medium",
-      assessor: "Carlos Honorato",
+  const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+
+  const { data: assessments = [] } = trpc.riskAssessments.list.useQuery(
+    { tenantId: tenantId ?? "" },
+    { enabled: !!tenantId }
+  );
+
+  const deleteMutation = trpc.riskAssessments.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Avaliação excluída com sucesso!");
+      utils.riskAssessments.list.invalidate();
+      setDeleteDialogOpen(false);
+      setAssessmentToDelete(null);
     },
-    {
-      id: "2",
-      title: "Reavaliação Anual - Produção",
-      tenant: "Indústria ABC S.A.",
-      sector: "Produção",
-      date: "2025-01-10",
-      status: "in_progress",
-      riskLevel: "high",
-      assessor: "Thyberê Mendes",
-    },
-  ];
-  const assessments = selectedTenant
-    ? initialAssessments.filter(a => !deletedIds.has(a.id))
-    : [];
+    onError: (err) => toast.error(`Erro: ${err.message}`),
+  });
 
   if (!selectedTenant) {
     return (
@@ -402,19 +392,19 @@ export default function RiskAssessments() {
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <div className="text-sm">{assessment.tenant}</div>
+                          <div className="text-sm">{typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.name}</div>
                           <div className="text-xs text-muted-foreground">
-                            {assessment.sector}
+                            {assessment.sectorId || "Geral"}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        {new Date(assessment.date).toLocaleDateString("pt-BR")}
+                        {assessment.assessmentDate ? new Date(assessment.assessmentDate).toLocaleDateString("pt-BR") : "—"}
                       </TableCell>
-                      <TableCell>{assessment.assessor}</TableCell>
-                      <TableCell>{getStatusBadge(assessment.status)}</TableCell>
+                      <TableCell>{assessment.assessor || "—"}</TableCell>
+                      <TableCell>{getStatusBadge(assessment.status ?? "draft")}</TableCell>
                       <TableCell>
-                        {getRiskLevelBadge(assessment.riskLevel)}
+                        {getRiskLevelBadge(assessment.methodology === "critical" ? "critical" : "medium")}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -611,11 +601,8 @@ export default function RiskAssessments() {
             <AlertDialogAction
               className="bg-destructive hover:bg-destructive/90"
               onClick={() => {
-                if (assessmentToDelete) {
-                  setDeletedIds(prev => new Set([...prev, assessmentToDelete]));
-                  toast.success("Avaliação excluída com sucesso!");
-                  setDeleteDialogOpen(false);
-                  setAssessmentToDelete(null);
+                if (assessmentToDelete && tenantId) {
+                  deleteMutation.mutate({ id: assessmentToDelete, tenantId });
                 }
               }}
             >

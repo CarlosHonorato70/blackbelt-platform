@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { protectedProcedure, router, tenantProcedure } from "../_core/trpc";
+import { protectedProcedure, router, tenantProcedure, subscribedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   copsoqAssessments,
@@ -14,7 +14,7 @@ import { sendBulkCopsoqInvites } from "../_core/email";
 
 export const assessmentsRouter = router({
   // Criar nova avaliacao
-  create: tenantProcedure
+  create: subscribedProcedure
     .input(
       z.object({
         
@@ -290,7 +290,7 @@ export const assessmentsRouter = router({
     }),
 
   // Enviar convites em lote
-  sendInvites: tenantProcedure
+  sendInvites: subscribedProcedure
     .input(
       z.object({
         

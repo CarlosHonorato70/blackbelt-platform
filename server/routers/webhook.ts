@@ -161,13 +161,111 @@ export const webhookRouter = router({
 
       return {
         id: invite.id,
+        assessmentId: invite.assessmentId,
+        tenantId: invite.tenantId,
         respondentName: invite.respondentName,
         respondentEmail: invite.respondentEmail,
+        respondentPosition: invite.respondentPosition,
         status: invite.status,
         expiresAt: invite.expiresAt,
         sentAt: invite.sentAt,
         completedAt: invite.completedAt,
         isExpired: invite.expiresAt ? new Date() > invite.expiresAt : false,
+      };
+    }),
+
+  // Submissão pública de resposta COPSOQ (via link de convite)
+  submitPublicResponse: publicProcedure
+    .input(
+      z.object({
+        inviteToken: z.string(),
+        responses: z.record(z.string(), z.number()),
+        ageGroup: z.string().optional(),
+        gender: z.string().optional(),
+        yearsInCompany: z.string().optional(),
+        mentalHealthSupport: z.string().optional(),
+        workplaceImprovement: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      // Buscar convite pelo token
+      const invites = await db
+        .select()
+        .from(copsoqInvites)
+        .where(eq(copsoqInvites.inviteToken, input.inviteToken));
+
+      if (invites.length === 0) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Convite não encontrado",
+        });
+      }
+
+      const invite = invites[0];
+
+      if (invite.expiresAt && new Date() > invite.expiresAt) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Este convite expirou",
+        });
+      }
+
+      if (invite.status === "completed") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Este questionário já foi respondido",
+        });
+      }
+
+      const dimensionScores = calculateDimensionScores(input.responses);
+      const overallRiskLevel = classifyOverallRisk(dimensionScores);
+
+      const responseId = `copsoq_resp_${Date.now()}_${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
+
+      await db.insert(copsoqResponses).values({
+        id: responseId,
+        assessmentId: invite.assessmentId,
+        personId: invite.id,
+        tenantId: invite.tenantId,
+        responses: input.responses,
+        ageGroup: input.ageGroup,
+        gender: input.gender,
+        yearsInCompany: input.yearsInCompany,
+        mentalHealthSupport: input.mentalHealthSupport,
+        workplaceImprovement: input.workplaceImprovement,
+        demandScore: dimensionScores.demanda,
+        controlScore: dimensionScores.controle,
+        supportScore: dimensionScores.apoio,
+        leadershipScore: dimensionScores.lideranca,
+        communityScore: dimensionScores.comunidade,
+        meaningScore: dimensionScores.significado,
+        trustScore: dimensionScores.confianca,
+        justiceScore: dimensionScores.justica,
+        insecurityScore: dimensionScores.inseguranca,
+        mentalHealthScore: dimensionScores.saudeMental,
+        burnoutScore: dimensionScores.burnout,
+        violenceScore: dimensionScores.violencia,
+        overallRiskLevel,
+        completedAt: new Date(),
+      });
+
+      await db
+        .update(copsoqInvites)
+        .set({
+          status: "completed",
+          completedAt: new Date(),
+        })
+        .where(eq(copsoqInvites.inviteToken, input.inviteToken));
+
+      return {
+        success: true,
+        responseId,
+        message: "Resposta registrada com sucesso",
       };
     }),
 

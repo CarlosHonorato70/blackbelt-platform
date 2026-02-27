@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useTenant } from "@/contexts/TenantContext";
+import { trpc } from "@/lib/trpc";
 import {
   AlertCircle,
   Download,
@@ -60,105 +61,31 @@ export default function AuditLogs() {
     );
   }
 
-  // Mock data - será substituído por dados reais do backend
-  const auditLogs = [
-    {
-      id: "1",
-      timestamp: "20/10/2025 14:35:22",
-      user: "Carlos Honorato",
-      action: "criar",
-      entity: "Avaliação",
-      description: "Criou avaliação 'Setor Administrativo'",
-      details: {
-        entityId: "eval-001",
-        entityName: "Setor Administrativo",
-        oldValue: null,
-        newValue: {
-          title: "Setor Administrativo",
-          status: "ativo",
-        },
-      },
-      ipAddress: "192.168.1.100",
-      userAgent: "Chrome 120.0 / Windows 11",
+  const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+
+  const { data: rawLogs = [] } = trpc.auditLogs.list.useQuery(
+    { tenantId: tenantId ?? "", limit: 50 },
+    { enabled: !!tenantId }
+  );
+
+  // Map DB records to display format
+  const actionMap: Record<string, string> = { create: "criar", update: "editar", delete: "deletar", read: "visualizar" };
+  const auditLogs = rawLogs.map((log: any) => ({
+    id: log.id,
+    timestamp: log.timestamp ? new Date(log.timestamp).toLocaleString("pt-BR") : "—",
+    user: log.userId || "Sistema",
+    action: actionMap[log.action] || log.action,
+    entity: log.entityType || "—",
+    description: log.description || `${actionMap[log.action] || log.action} ${log.entityType || ""}`,
+    details: {
+      entityId: log.entityId,
+      entityName: log.entityType,
+      oldValue: log.oldValue,
+      newValue: log.newValue,
     },
-    {
-      id: "2",
-      timestamp: "20/10/2025 13:20:15",
-      user: "Maria Santos",
-      action: "editar",
-      entity: "Colaborador",
-      description: "Atualizou dados de 'João Silva'",
-      details: {
-        entityId: "user-001",
-        entityName: "João Silva",
-        oldValue: { cargo: "Recepcionista" },
-        newValue: { cargo: "Supervisor de Recepção" },
-      },
-      ipAddress: "192.168.1.105",
-      userAgent: "Safari 17.0 / macOS 14",
-    },
-    {
-      id: "3",
-      timestamp: "20/10/2025 11:45:30",
-      user: "Thyberê Mendes",
-      action: "visualizar",
-      entity: "Relatório",
-      description: "Acessou 'Relatório de Compliance NR-01'",
-      details: {
-        entityId: "report-001",
-        entityName: "Relatório de Compliance NR-01",
-        oldValue: null,
-        newValue: null,
-      },
-      ipAddress: "192.168.1.110",
-      userAgent: "Firefox 121.0 / Ubuntu 22.04",
-    },
-    {
-      id: "4",
-      timestamp: "20/10/2025 10:15:45",
-      user: "Admin",
-      action: "deletar",
-      entity: "Convite",
-      description: "Cancelou convite para 'pedro@example.com'",
-      details: {
-        entityId: "invite-001",
-        entityName: "pedro@example.com",
-        oldValue: { status: "pendente" },
-        newValue: null,
-      },
-      ipAddress: "192.168.1.115",
-      userAgent: "Chrome 120.0 / Windows 11",
-    },
-    {
-      id: "5",
-      timestamp: "19/10/2025 16:30:20",
-      user: "Carlos Honorato",
-      action: "editar",
-      entity: "Perfil",
-      description: "Modificou permissões do perfil 'Gestor'",
-      details: {
-        entityId: "role-002",
-        entityName: "Gestor",
-        oldValue: {
-          permissions: [
-            "criar_avaliacao",
-            "editar_avaliacao",
-            "visualizar_relatorios",
-          ],
-        },
-        newValue: {
-          permissions: [
-            "criar_avaliacao",
-            "editar_avaliacao",
-            "visualizar_relatorios",
-            "exportar_dados",
-          ],
-        },
-      },
-      ipAddress: "192.168.1.100",
-      userAgent: "Chrome 120.0 / Windows 11",
-    },
-  ];
+    ipAddress: log.ipAddress || "—",
+    userAgent: log.userAgent || "—",
+  }));
 
   const getActionIcon = (action: string) => {
     switch (action) {

@@ -1,5 +1,6 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { Context } from "./context";
+import { requireActiveSubscription } from "./subscriptionMiddleware";
 
 const t = initTRPC.context<Context>().create();
 
@@ -51,6 +52,17 @@ const requireTenant = t.middleware(async ({ ctx, next }) => {
 });
 
 export const tenantProcedure = t.procedure.use(requireTenant);
+
+// Procedimento que exige tenant + assinatura ativa (para operações de escrita)
+const requireSubscription = t.middleware(async ({ ctx, next }) => {
+  const tenantId = (ctx as any).tenantId as string;
+  if (tenantId) {
+    await requireActiveSubscription(tenantId);
+  }
+  return next({ ctx });
+});
+
+export const subscribedProcedure = tenantProcedure.use(requireSubscription);
 
 const NOT_ADMIN_ERR_MSG = "Você precisa ser um administrador para acessar este recurso";
 

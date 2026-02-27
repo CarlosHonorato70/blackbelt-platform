@@ -39,6 +39,11 @@ const BrandingSettings = lazy(() => import("./pages/BrandingSettings"));
 const TestDashboard = lazy(() => import("./pages/TestDashboard"));
 const ActionPlans = lazy(() => import("./pages/ActionPlans"));
 const Help = lazy(() => import("./pages/Help"));
+const CopsoqRespond = lazy(() => import("./pages/CopsoqRespond"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Subscription pages
@@ -78,6 +83,11 @@ export default function App() {
                 {/* Rotas publicas */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/copsoq/respond/:token" element={<Suspense fallback={<PageLoader />}><CopsoqRespond /></Suspense>} />
+                <Route path="/forgot-password" element={<Suspense fallback={<PageLoader />}><ForgotPassword /></Suspense>} />
+                <Route path="/reset-password/:token" element={<Suspense fallback={<PageLoader />}><ResetPassword /></Suspense>} />
+                <Route path="/terms" element={<Suspense fallback={<PageLoader />}><TermsOfService /></Suspense>} />
+                <Route path="/privacy" element={<Suspense fallback={<PageLoader />}><PrivacyPolicy /></Suspense>} />
 
                 {/* Dashboard principal */}
                 <Route path="/" element={<ProtectedPage><Home /></ProtectedPage>} />

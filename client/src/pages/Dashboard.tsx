@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useTenant } from "@/contexts/TenantContext";
+import { trpc } from "@/lib/trpc";
 import {
   AlertCircle,
   TrendingDown,
@@ -19,6 +20,7 @@ import {
 
 export default function Dashboard() {
   const { selectedTenant } = useTenant();
+  const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
 
   if (!selectedTenant) {
     return (
@@ -34,54 +36,82 @@ export default function Dashboard() {
     );
   }
 
+  // Real data queries
+  const { data: riskAssessments = [] } = trpc.riskAssessments.list.useQuery(
+    { tenantId: tenantId ?? "" },
+    { enabled: !!tenantId }
+  );
+
+  const { data: actionPlans = [] } = trpc.riskAssessments.listActionPlans.useQuery(
+    { tenantId: tenantId ?? "" },
+    { enabled: !!tenantId }
+  );
+
+  const assessmentCount = riskAssessments.length;
+  const completedCount = riskAssessments.filter(a => a.status === "completed" || a.status === "reviewed").length;
+  const actionPlanCount = actionPlans.length;
+  const completedPlans = actionPlans.filter((p: any) => p.status === "completed").length;
+  const complianceRate = actionPlanCount > 0 ? Math.round((completedPlans / actionPlanCount) * 100) : 0;
+
   const metrics = [
     {
       title: "Avaliações Realizadas",
-      value: "2",
-      description: "Neste mês",
+      value: String(assessmentCount),
+      description: `${completedCount} concluída(s)`,
       icon: CheckCircle2,
       color: "text-blue-600",
       bgColor: "bg-blue-50",
     },
     {
-      title: "Riscos Identificados",
-      value: "8",
-      description: "Últimas 30 dias",
+      title: "Planos de Ação",
+      value: String(actionPlanCount),
+      description: `${completedPlans} concluído(s)`,
       icon: AlertTriangle,
       color: "text-orange-600",
       bgColor: "bg-orange-50",
     },
     {
       title: "Taxa de Conformidade",
-      value: "75%",
-      description: "NR-01 Compliance",
+      value: `${complianceRate}%`,
+      description: "Planos concluídos",
       icon: TrendingUp,
       color: "text-green-600",
       bgColor: "bg-green-50",
     },
     {
-      title: "Colaboradores Avaliados",
-      value: "1",
-      description: "Nesta empresa",
+      title: "Avaliações Pendentes",
+      value: String(riskAssessments.filter(a => a.status === "draft" || a.status === "in_progress").length),
+      description: "Aguardando conclusão",
       icon: Users,
       color: "text-purple-600",
       bgColor: "bg-purple-50",
     },
   ];
 
+  // Risk levels from assessments (extracted from description if stored)
+  const totalAssessments = assessmentCount || 1;
   const risksByLevel = [
-    { level: "Crítico", count: 1, percentage: 12.5, color: "bg-red-500" },
-    { level: "Alto", count: 2, percentage: 25, color: "bg-orange-500" },
-    { level: "Médio", count: 3, percentage: 37.5, color: "bg-yellow-500" },
-    { level: "Baixo", count: 2, percentage: 25, color: "bg-green-500" },
+    { level: "Crítico", count: riskAssessments.filter(a => a.status === "reviewed").length, percentage: Math.round((riskAssessments.filter(a => a.status === "reviewed").length / totalAssessments) * 100), color: "bg-red-500" },
+    { level: "Alto", count: riskAssessments.filter(a => a.status === "completed").length, percentage: Math.round((riskAssessments.filter(a => a.status === "completed").length / totalAssessments) * 100), color: "bg-orange-500" },
+    { level: "Médio", count: riskAssessments.filter(a => a.status === "in_progress").length, percentage: Math.round((riskAssessments.filter(a => a.status === "in_progress").length / totalAssessments) * 100), color: "bg-yellow-500" },
+    { level: "Baixo", count: riskAssessments.filter(a => a.status === "draft").length, percentage: Math.round((riskAssessments.filter(a => a.status === "draft").length / totalAssessments) * 100), color: "bg-green-500" },
   ];
 
-  const risksByCategory = [
-    { category: "Organizacionais", count: 3 },
-    { category: "Carga de Trabalho", count: 2 },
-    { category: "Relacionamento", count: 2 },
-    { category: "Violência/Assédio", count: 1 },
-  ];
+  // Categories from action plan types
+  const categoryMap: Record<string, string> = {
+    elimination: "Eliminação",
+    substitution: "Substituição",
+    engineering: "Engenharia",
+    administrative: "Administrativa",
+    ppe: "EPI",
+  };
+  const risksByCategory = Object.entries(
+    actionPlans.reduce((acc: Record<string, number>, p: any) => {
+      const cat = categoryMap[p.actionType] || p.actionType || "Outros";
+      acc[cat] = (acc[cat] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>)
+  ).map(([category, count]) => ({ category, count }));
 
   return (
     <DashboardLayout>

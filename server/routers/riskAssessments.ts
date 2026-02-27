@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
 import { publicProcedure, router } from "../_core/trpc";
+import { requireActiveSubscription } from "../_core/subscriptionMiddleware";
 import { getDb } from "../db";
 import {
   riskAssessments,
@@ -90,12 +91,13 @@ export const riskAssessmentsRouter = router({
         sectorId: z.string().optional(),
         title: z.string(),
         description: z.string().optional(),
-        assessmentDate: z.date(),
+        assessmentDate: z.coerce.date(),
         assessor: z.string().optional(),
         methodology: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
+      await requireActiveSubscription(input.tenantId);
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -131,6 +133,7 @@ export const riskAssessmentsRouter = router({
       }).passthrough()
     )
     .mutation(async ({ input }) => {
+      await requireActiveSubscription(input.tenantId);
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -331,6 +334,7 @@ export const riskAssessmentsRouter = router({
       })
     )
     .mutation(async ({ input }) => {
+      await requireActiveSubscription(input.tenantId);
       const db = await getDb();
       if (!db)
         throw new TRPCError({

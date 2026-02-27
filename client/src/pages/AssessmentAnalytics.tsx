@@ -62,52 +62,92 @@ export default function AssessmentAnalytics() {
 
   const assessments = assessmentsQuery.data || [];
 
-  // ── Dados para gráficos ─────────────────────────────────────────────
+  // Query responses for the first assessment (if any)
+  const firstAssessmentId = assessments[0]?.id;
+  const responsesQuery = trpc.assessments.getResponses.useQuery(
+    { assessmentId: firstAssessmentId ?? "" },
+    { enabled: !!firstAssessmentId }
+  );
+  const responses = responsesQuery.data || [];
+
+  // ── Dados derivados das respostas reais ─────────────────────────────
+  const totalRespondents = responses.length;
+
+  const avgScore = totalRespondents > 0
+    ? Math.round(responses.reduce((sum, r) => {
+        const scores = [
+          r.demandScore, r.controlScore, r.supportScore, r.leadershipScore,
+          r.communityScore, r.meaningScore, r.trustScore, r.justiceScore,
+          r.insecurityScore, r.mentalHealthScore, r.burnoutScore, r.violenceScore,
+        ].filter((s): s is number => s != null);
+        return sum + (scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0);
+      }, 0) / totalRespondents)
+    : 0;
+
+  const criticalCount = responses.filter(r => r.overallRiskLevel === "critical").length;
+  const highCount = responses.filter(r => r.overallRiskLevel === "high").length;
+  const mediumCount = responses.filter(r => r.overallRiskLevel === "medium").length;
+  const lowCount = responses.filter(r => r.overallRiskLevel === "low").length;
+
   const riskDistribution = [
-    { name: "Baixo Risco", value: 0, color: "#10b981" },
-    { name: "Médio Risco", value: 0, color: "#f59e0b" },
-    { name: "Alto Risco", value: 0, color: "#f97316" },
-    { name: "Crítico", value: 0, color: "#ef4444" },
+    { name: "Baixo Risco", value: totalRespondents > 0 ? Math.round((lowCount / totalRespondents) * 100) : 0, color: "#10b981" },
+    { name: "Médio Risco", value: totalRespondents > 0 ? Math.round((mediumCount / totalRespondents) * 100) : 0, color: "#f59e0b" },
+    { name: "Alto Risco", value: totalRespondents > 0 ? Math.round((highCount / totalRespondents) * 100) : 0, color: "#f97316" },
+    { name: "Crítico", value: totalRespondents > 0 ? Math.round((criticalCount / totalRespondents) * 100) : 0, color: "#ef4444" },
   ];
+
+  const calcAvg = (field: string) =>
+    totalRespondents > 0
+      ? Math.round(responses.reduce((sum, r) => sum + (Number((r as any)[field]) || 0), 0) / totalRespondents)
+      : 0;
 
   const dimensionData = [
-    { dimension: "Demanda", score: 65 },
-    { dimension: "Controle", score: 72 },
-    { dimension: "Apoio", score: 68 },
-    { dimension: "Liderança", score: 75 },
-    { dimension: "Comunidade", score: 70 },
-    { dimension: "Significado", score: 78 },
-    { dimension: "Confiança", score: 73 },
-    { dimension: "Justiça", score: 71 },
-    { dimension: "Insegurança", score: 45 },
-    { dimension: "Saúde Mental", score: 62 },
-    { dimension: "Burnout", score: 58 },
-    { dimension: "Violência", score: 35 },
+    { dimension: "Demanda", score: calcAvg("demandScore") },
+    { dimension: "Controle", score: calcAvg("controlScore") },
+    { dimension: "Apoio", score: calcAvg("supportScore") },
+    { dimension: "Liderança", score: calcAvg("leadershipScore") },
+    { dimension: "Comunidade", score: calcAvg("communityScore") },
+    { dimension: "Significado", score: calcAvg("meaningScore") },
+    { dimension: "Confiança", score: calcAvg("trustScore") },
+    { dimension: "Justiça", score: calcAvg("justiceScore") },
+    { dimension: "Insegurança", score: calcAvg("insecurityScore") },
+    { dimension: "Saúde Mental", score: calcAvg("mentalHealthScore") },
+    { dimension: "Burnout", score: calcAvg("burnoutScore") },
+    { dimension: "Violência", score: calcAvg("violenceScore") },
   ];
 
-  const timelineData = [
-    { month: "Jan", avgScore: 65, respondents: 45 },
-    { month: "Fev", avgScore: 68, respondents: 52 },
-    { month: "Mar", avgScore: 70, respondents: 58 },
-    { month: "Abr", avgScore: 67, respondents: 61 },
-    { month: "Mai", avgScore: 72, respondents: 65 },
-    { month: "Jun", avgScore: 75, respondents: 72 },
-  ];
+  // Timeline — group responses by month
+  const timelineData = (() => {
+    if (responses.length === 0) return [];
+    const byMonth: Record<string, { total: number; count: number }> = {};
+    for (const r of responses) {
+      const date = r.completedAt ? new Date(r.completedAt) : r.createdAt ? new Date(r.createdAt) : null;
+      if (!date) continue;
+      const key = date.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
+      if (!byMonth[key]) byMonth[key] = { total: 0, count: 0 };
+      const scores = [
+        r.demandScore, r.controlScore, r.supportScore, r.leadershipScore,
+        r.communityScore, r.meaningScore, r.trustScore, r.justiceScore,
+      ].filter((s): s is number => s != null);
+      const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+      byMonth[key].total += avg;
+      byMonth[key].count += 1;
+    }
+    return Object.entries(byMonth).map(([month, { total, count }]) => ({
+      month,
+      avgScore: Math.round(total / count),
+      respondents: count,
+    }));
+  })();
 
-  const sectorComparison = [
-    { sector: "TI", score: 78, respondents: 25 },
-    { sector: "RH", score: 72, respondents: 18 },
-    { sector: "Vendas", score: 68, respondents: 32 },
-    { sector: "Operações", score: 65, respondents: 28 },
-    { sector: "Financeiro", score: 71, respondents: 15 },
-  ];
+  // Sector comparison — not available from individual responses
+  const sectorComparison: { sector: string; score: number; respondents: number }[] = [];
 
   // ── Estado do Dialog "Gerar Plano de Ação" ──────────────────────────
   const [actionPlanDialogOpen, setActionPlanDialogOpen] = useState(false);
   const [actionPlanForm, setActionPlanForm] = useState({
-    title: "Plano de Ação - Casos Críticos (28 respondentes)",
-    description:
-      "Intervenção imediata para 28 respondentes com risco crítico identificados na análise consolidada.\n\nDimensões prioritárias:\n- Violência: score 35 (Crítico)\n- Burnout: score 58 (Atenção)\n- Saúde Mental: score 62 (Atenção)",
+    title: "",
+    description: "",
     actionType: "administrative",
     priority: "urgent",
     deadline: "",
@@ -158,11 +198,13 @@ export default function AssessmentAnalytics() {
     const wb = XLSX.utils.book_new();
 
     // Aba 1: KPIs
+    const riskLabel = avgScore >= 70 ? "Adequado" : avgScore >= 50 ? "Risco Médio" : avgScore > 0 ? "Risco Alto" : "Sem dados";
+    const criticalPct = totalRespondents > 0 ? `${Math.round((criticalCount / totalRespondents) * 100)}% dos respondentes` : "—";
     const kpiSheet = XLSX.utils.json_to_sheet([
-      { Indicador: "Total de Respondentes", Valor: 312, Observação: "+15% vs mês anterior" },
-      { Indicador: "Score Médio Geral", Valor: 68, Observação: "Risco Médio" },
-      { Indicador: "Casos Críticos", Valor: 28, Observação: "9% dos respondentes" },
-      { Indicador: "Tendência (6 meses)", Valor: "+5%", Observação: "Melhora contínua" },
+      { Indicador: "Total de Respondentes", Valor: totalRespondents, Observação: `${assessments.length} avaliação(ões)` },
+      { Indicador: "Score Médio Geral", Valor: avgScore, Observação: riskLabel },
+      { Indicador: "Casos Críticos", Valor: criticalCount, Observação: criticalPct },
+      { Indicador: "Casos Alto Risco", Valor: highCount, Observação: totalRespondents > 0 ? `${Math.round((highCount / totalRespondents) * 100)}%` : "—" },
     ]);
     XLSX.utils.book_append_sheet(wb, kpiSheet, "KPIs");
 
@@ -197,34 +239,17 @@ export default function AssessmentAnalytics() {
     );
     XLSX.utils.book_append_sheet(wb, sectorSheet, "Por Setor");
 
-    // Aba 5: Recomendações
-    const recsSheet = XLSX.utils.json_to_sheet([
-      {
-        Prioridade: "1 - Urgente",
-        Área: "Casos Críticos",
-        Descrição: "28 respondentes com risco crítico necessitam intervenção imediata",
-      },
-      {
-        Prioridade: "2 - Alta",
-        Área: "Violência",
-        Descrição: "Score 35 - Implementar programa de prevenção de assédio e violência",
-      },
-      {
-        Prioridade: "2 - Alta",
-        Área: "Burnout",
-        Descrição: "Score 58 - Revisar carga de trabalho e prazos",
-      },
-      {
-        Prioridade: "2 - Alta",
-        Área: "Saúde Mental",
-        Descrição: "Score 62 - Oferecer suporte psicológico especializado",
-      },
-      {
-        Prioridade: "3 - Manutenção",
-        Área: "Liderança / Significado",
-        Descrição: "Manter boas práticas em dimensões com scores altos",
-      },
-    ]);
+    // Aba 5: Recomendações (geradas a partir dos dados reais)
+    const criticalDims = dimensionData.filter(d => d.score > 0 && d.score < 50).sort((a, b) => a.score - b.score);
+    const attentionDims = dimensionData.filter(d => d.score >= 50 && d.score < 70);
+    const goodDims = dimensionData.filter(d => d.score >= 70);
+    const recs = [
+      ...(criticalCount > 0 ? [{ Prioridade: "1 - Urgente", Área: "Casos Críticos", Descrição: `${criticalCount} respondente(s) com risco crítico necessitam intervenção imediata` }] : []),
+      ...criticalDims.map(d => ({ Prioridade: "2 - Alta", Área: d.dimension, Descrição: `Score ${d.score} - Ação imediata necessária` })),
+      ...attentionDims.map(d => ({ Prioridade: "3 - Atenção", Área: d.dimension, Descrição: `Score ${d.score} - Monitorar e implementar melhorias` })),
+      ...(goodDims.length > 0 ? [{ Prioridade: "4 - Manutenção", Área: goodDims.map(d => d.dimension).join(", "), Descrição: "Manter boas práticas nas dimensões com scores adequados" }] : []),
+    ];
+    const recsSheet = XLSX.utils.json_to_sheet(recs.length > 0 ? recs : [{ Prioridade: "—", Área: "—", Descrição: "Sem dados suficientes para recomendações" }]);
     XLSX.utils.book_append_sheet(wb, recsSheet, "Recomendações");
 
     const filename = `relatorio_executivo_riscos_${new Date().toISOString().split("T")[0]}.xlsx`;
@@ -254,8 +279,8 @@ export default function AssessmentAnalytics() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">312</div>
-            <p className="text-xs text-gray-600 mt-1">+15% vs mês anterior</p>
+            <div className="text-3xl font-bold">{totalRespondents}</div>
+            <p className="text-xs text-gray-600 mt-1">{assessments.length} avaliação(ões)</p>
           </CardContent>
         </Card>
 
@@ -266,8 +291,10 @@ export default function AssessmentAnalytics() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">68</div>
-            <p className="text-xs text-gray-600 mt-1">Risco Médio</p>
+            <div className="text-3xl font-bold">{avgScore}</div>
+            <p className="text-xs text-gray-600 mt-1">
+              {avgScore >= 70 ? "Adequado" : avgScore >= 50 ? "Risco Médio" : avgScore > 0 ? "Risco Alto" : "Sem dados"}
+            </p>
           </CardContent>
         </Card>
 
@@ -279,8 +306,10 @@ export default function AssessmentAnalytics() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-red-600">28</div>
-            <p className="text-xs text-gray-600 mt-1">9% dos respondentes</p>
+            <div className="text-3xl font-bold text-red-600">{criticalCount}</div>
+            <p className="text-xs text-gray-600 mt-1">
+              {totalRespondents > 0 ? `${Math.round((criticalCount / totalRespondents) * 100)}% dos respondentes` : "Sem dados"}
+            </p>
           </CardContent>
         </Card>
 
@@ -288,12 +317,14 @@ export default function AssessmentAnalytics() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-green-600" />
-              Tendência
+              Alto Risco
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">↑ 5%</div>
-            <p className="text-xs text-gray-600 mt-1">Melhora em 6 meses</p>
+            <div className="text-3xl font-bold text-orange-600">{highCount}</div>
+            <p className="text-xs text-gray-600 mt-1">
+              {totalRespondents > 0 ? `${Math.round((highCount / totalRespondents) * 100)}% dos respondentes` : "Sem dados"}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -478,7 +509,9 @@ export default function AssessmentAnalytics() {
               Prioridade 1: Casos Críticos
             </h4>
             <p className="text-sm text-red-800 mb-3">
-              28 respondentes com risco crítico necessitam intervenção imediata
+              {criticalCount > 0
+                ? `${criticalCount} respondente(s) com risco crítico necessitam intervenção imediata`
+                : "Nenhum caso crítico identificado até o momento"}
             </p>
             <Button
               size="sm"
@@ -494,7 +527,12 @@ export default function AssessmentAnalytics() {
               Prioridade 2: Dimensões Críticas
             </h4>
             <p className="text-sm text-orange-800 mb-2">
-              Focar em: Violência (35), Burnout (58), Saúde Mental (62)
+              {(() => {
+                const critical = dimensionData.filter(d => d.score > 0 && d.score < 50).sort((a, b) => a.score - b.score);
+                return critical.length > 0
+                  ? `Focar em: ${critical.map(d => `${d.dimension} (${d.score})`).join(", ")}`
+                  : "Nenhuma dimensão em nível crítico identificada";
+              })()}
             </p>
             <ul className="text-sm text-orange-800 space-y-1 list-disc list-inside">
               <li>Implementar programa de prevenção de assédio e violência</li>
@@ -508,8 +546,12 @@ export default function AssessmentAnalytics() {
               Prioridade 3: Manutenção
             </h4>
             <p className="text-sm text-blue-800">
-              Manter boas práticas em dimensões com scores altos (Liderança,
-              Significado)
+              {(() => {
+                const good = dimensionData.filter(d => d.score >= 70).sort((a, b) => b.score - a.score);
+                return good.length > 0
+                  ? `Manter boas práticas em dimensões com scores altos (${good.map(d => d.dimension).join(", ")})`
+                  : "Colete respostas COPSOQ-II para ver recomendações baseadas em dados reais";
+              })()}
             </p>
           </div>
         </CardContent>
@@ -532,7 +574,9 @@ export default function AssessmentAnalytics() {
           <DialogHeader>
             <DialogTitle>Gerar Plano de Ação</DialogTitle>
             <DialogDescription>
-              Crie um plano de ação para os 28 casos críticos identificados
+              {criticalCount > 0
+                ? `Crie um plano de ação para os ${criticalCount} caso(s) crítico(s) identificado(s)`
+                : "Crie um plano de ação baseado na análise das dimensões"}
             </DialogDescription>
           </DialogHeader>
 
