@@ -64,6 +64,7 @@ app.use(
         ].filter(Boolean),
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         objectSrc: ["'none'"],
+        frameAncestors: ["'none'"],
         upgradeInsecureRequests: isProduction ? [] : null,
       },
     },
@@ -242,4 +243,21 @@ app.use((req, res, next) => {
     log.info(`Servidor rodando em http://0.0.0.0:${PORT}/`);
     log.info(`Ambiente: ${ENV.nodeEnv}`);
   });
+
+  // 6. GRACEFUL SHUTDOWN
+  const gracefulShutdown = (signal: string) => {
+    log.info(`${signal} received, shutting down gracefully...`);
+    server.close(() => {
+      log.info("HTTP server closed");
+      process.exit(0);
+    });
+    // Force exit after 30s
+    setTimeout(() => {
+      log.error("Forced shutdown after 30s timeout");
+      process.exit(1);
+    }, 30000).unref();
+  };
+
+  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 })();

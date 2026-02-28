@@ -1,0 +1,17 @@
+node_modules
+.git
+.gitignore
+logs/
+*.log
+.env
+.env.local
+.env.development
+dist/
+.claude/
+.vscode/
+.idea/
+*.md
+!README.md
+docker/backups/
+coverage/
+.nyc_output/

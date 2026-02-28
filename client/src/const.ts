@@ -21,5 +21,4 @@ export const getLoginUrl = () => {
   url.searchParams.set("type", "signIn");
 
   return url.toString();
-  return "/login";
 };
