@@ -8,7 +8,7 @@ import { z } from "zod";
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { getPaymentGatewayConfig } from "../_core/paymentConfig";
-import { subscriptions, plans, invoices } from "../../drizzle/schema";
+import { subscriptions, plans, invoices, tenants } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import Stripe from "stripe";
@@ -77,8 +77,15 @@ export const stripeRouter = router({
         throw new Error("Plano não encontrado");
       }
 
-      // Buscar tenant para pegar email
-      const [tenant] = await db
+      // Buscar tenant para pegar email de contato
+      const [tenantInfo] = await db
+        .select()
+        .from(tenants)
+        .where(eq(tenants.id, ctx.tenantId))
+        .limit(1);
+
+      // Buscar assinatura existente para IDs Stripe
+      const [existingSub] = await db
         .select()
         .from(subscriptions)
         .where(eq(subscriptions.tenantId, ctx.tenantId))
@@ -92,14 +99,14 @@ export const stripeRouter = router({
 
       // Criar ou buscar customer no Stripe
       let customerId: string | undefined;
-      if (tenant?.stripeCustomerId) {
-        customerId = tenant.stripeCustomerId;
+      if (existingSub?.stripeCustomerId) {
+        customerId = existingSub.stripeCustomerId;
       }
 
       // Criar sessão de checkout
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
-        customer_email: !customerId ? ctx.user?.email : undefined,
+        customer_email: !customerId ? ((tenantInfo as any)?.contactEmail || ctx.user?.email) : undefined,
         mode: "subscription",
         payment_method_types: ["card"],
         line_items: [

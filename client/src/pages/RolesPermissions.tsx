@@ -23,11 +23,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { trpc } from "@/lib/trpc";
 import { useTenant } from "@/contexts/TenantContext";
 import {
   AlertCircle,
   CheckCircle2,
   Edit2,
+  Loader2,
   Lock,
   MoreVertical,
   Plus,
@@ -46,6 +48,48 @@ export default function RolesPermissions() {
     description: "",
   });
 
+  // tRPC queries
+  const { data: roles = [], isLoading: rolesLoading, refetch: refetchRoles } =
+    trpc.rolesPermissions.roles.list.useQuery(
+      {},
+      { enabled: !!selectedTenant }
+    );
+
+  const { data: allPermissions = [] } =
+    trpc.rolesPermissions.permissions.list.useQuery(
+      {},
+      { enabled: !!selectedTenant }
+    );
+
+  const { data: allRolePermissions = [] } =
+    trpc.rolesPermissions.rolePermissions.list.useQuery(
+      {},
+      { enabled: !!selectedTenant }
+    );
+
+  // tRPC mutations
+  const createRoleMutation = trpc.rolesPermissions.roles.create.useMutation({
+    onSuccess: () => {
+      toast.success("Perfil criado com sucesso!");
+      setFormData({ name: "", description: "" });
+      setDialogOpen(false);
+      refetchRoles();
+    },
+    onError: (err) => {
+      toast.error("Erro ao criar perfil", { description: err.message });
+    },
+  });
+
+  const deleteRoleMutation = trpc.rolesPermissions.roles.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Perfil removido com sucesso!");
+      refetchRoles();
+    },
+    onError: (err) => {
+      toast.error("Erro ao remover perfil", { description: err.message });
+    },
+  });
+
   if (!selectedTenant) {
     return (
       <DashboardLayout>
@@ -60,111 +104,6 @@ export default function RolesPermissions() {
     );
   }
 
-  // Mock data - será substituído por dados reais do backend
-  const [roles, setRoles] = useState([
-    {
-      id: "1",
-      name: "Administrador",
-      description: "Acesso total à plataforma",
-      type: "sistema",
-      users: 1,
-      permissions: [
-        "criar_avaliacao",
-        "editar_avaliacao",
-        "deletar_avaliacao",
-        "visualizar_relatorios",
-        "exportar_dados",
-        "gerenciar_usuarios",
-        "gerenciar_roles",
-        "acessar_auditoria",
-      ],
-    },
-    {
-      id: "2",
-      name: "Gestor",
-      description: "Gestão de avaliações e equipe",
-      type: "customizado",
-      users: 2,
-      permissions: [
-        "criar_avaliacao",
-        "editar_avaliacao",
-        "visualizar_relatorios",
-        "gerenciar_usuarios",
-      ],
-    },
-    {
-      id: "3",
-      name: "Avaliador",
-      description: "Realização de avaliações",
-      type: "customizado",
-      users: 1,
-      permissions: [
-        "criar_avaliacao",
-        "editar_avaliacao",
-        "visualizar_relatorios",
-      ],
-    },
-    {
-      id: "4",
-      name: "Colaborador",
-      description: "Visualização de resultados",
-      type: "customizado",
-      users: 5,
-      permissions: ["visualizar_relatorios"],
-    },
-  ]);
-
-  const allPermissions = [
-    {
-      id: "criar_avaliacao",
-      name: "Criar Avaliação",
-      description: "Criar novas avaliações de riscos psicossociais",
-      category: "Avaliações",
-    },
-    {
-      id: "editar_avaliacao",
-      name: "Editar Avaliação",
-      description: "Editar avaliações existentes",
-      category: "Avaliações",
-    },
-    {
-      id: "deletar_avaliacao",
-      name: "Deletar Avaliação",
-      description: "Remover avaliações do sistema",
-      category: "Avaliações",
-    },
-    {
-      id: "visualizar_relatorios",
-      name: "Visualizar Relatórios",
-      description: "Acessar relatórios de compliance",
-      category: "Relatórios",
-    },
-    {
-      id: "exportar_dados",
-      name: "Exportar Dados",
-      description: "Exportar dados em PDF, Excel, etc.",
-      category: "Dados",
-    },
-    {
-      id: "gerenciar_usuarios",
-      name: "Gerenciar Usuários",
-      description: "Convidar e gerenciar usuários",
-      category: "Administração",
-    },
-    {
-      id: "gerenciar_roles",
-      name: "Gerenciar Roles",
-      description: "Criar e editar perfis de acesso",
-      category: "Administração",
-    },
-    {
-      id: "acessar_auditoria",
-      name: "Acessar Auditoria",
-      description: "Visualizar logs de auditoria",
-      category: "Segurança",
-    },
-  ];
-
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -174,27 +113,34 @@ export default function RolesPermissions() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Integrar com tRPC para criar/editar role
-    console.log("Role salvo:", formData);
-    setFormData({ name: "", description: "" });
-    setDialogOpen(false);
+    createRoleMutation.mutate({
+      systemName: formData.name.toLowerCase().replace(/\s+/g, "_"),
+      displayName: formData.name,
+      description: formData.description || undefined,
+      scope: "tenant",
+    });
   };
 
   const getPermissionsByCategory = (roleId: string) => {
-    const role = roles.find(r => r.id === roleId);
-    if (!role) return {};
+    const rolePerms = allRolePermissions.filter(rp => rp.roleId === roleId);
+    const rolePermIds = new Set(rolePerms.map(rp => rp.permissionId));
 
     const grouped: Record<string, any[]> = {};
     allPermissions.forEach(perm => {
-      if (!grouped[perm.category]) {
-        grouped[perm.category] = [];
+      const category = perm.resource || "Geral";
+      if (!grouped[category]) {
+        grouped[category] = [];
       }
-      grouped[perm.category].push({
+      grouped[category].push({
         ...perm,
-        enabled: role.permissions.includes(perm.id),
+        enabled: rolePermIds.has(perm.id),
       });
     });
     return grouped;
+  };
+
+  const getRolePermissionCount = (roleId: string) => {
+    return allRolePermissions.filter(rp => rp.roleId === roleId).length;
   };
 
   return (
@@ -262,125 +208,154 @@ export default function RolesPermissions() {
                   >
                     Cancelar
                   </Button>
-                  <Button type="submit">Criar Perfil</Button>
+                  <Button type="submit" disabled={createRoleMutation.isPending}>
+                    {createRoleMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4 mr-2" />
+                    )}
+                    Criar Perfil
+                  </Button>
                 </div>
               </form>
             </DialogContent>
           </Dialog>
         </div>
 
+        {/* Loading state */}
+        {rolesLoading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
         {/* Lista de Perfis */}
-        <div className="space-y-4">
-          {roles.map(role => (
-            <Card key={role.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <CardTitle>{role.name}</CardTitle>
-                      <span
-                        className={`text-xs px-2 py-1 rounded ${
-                          role.type === "sistema"
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-purple-100 text-purple-800"
-                        }`}
-                      >
-                        {role.type === "sistema" ? "Sistema" : "Customizado"}
-                      </span>
+        {!rolesLoading && (
+          <div className="space-y-4">
+            {roles.length === 0 && (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Lock className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold">Nenhum perfil cadastrado</h3>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Crie seu primeiro perfil de acesso clicando em "Novo Perfil"
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {roles.map(role => (
+              <Card key={role.id}>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <CardTitle>{role.displayName}</CardTitle>
+                        <span
+                          className={`text-xs px-2 py-1 rounded ${
+                            role.scope === "global"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-purple-100 text-purple-800"
+                          }`}
+                        >
+                          {role.scope === "global" ? "Sistema" : "Customizado"}
+                        </span>
+                      </div>
+                      <CardDescription>{role.description}</CardDescription>
                     </div>
-                    <CardDescription>{role.description}</CardDescription>
-                  </div>
 
-                  {role.type !== "sistema" && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => setSelectedRole(role.id)}
-                        >
-                          <Edit2 className="h-4 w-4 mr-2" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => {
-                            if (window.confirm(`Tem certeza que deseja deletar o perfil "${role.name}"? Usuários com este perfil perderão suas permissões.`)) {
-                              setRoles(prev => prev.filter(r => r.id !== role.id));
-                              if (selectedRole === role.id) setSelectedRole(null);
-                              toast.success(`Perfil "${role.name}" removido com sucesso!`);
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Deletar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
-                {/* Informações do Perfil */}
-                <div className="grid md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">
-                      Usuários com este perfil
-                    </p>
-                    <p className="font-semibold">{role.users}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Permissões</p>
-                    <p className="font-semibold">{role.permissions.length}</p>
-                  </div>
-                </div>
-
-                {/* Permissões */}
-                <div className="space-y-3 border-t pt-4">
-                  <p className="font-semibold text-sm">Permissões Atribuídas</p>
-                  <div className="space-y-2">
-                    {Object.entries(getPermissionsByCategory(role.id)).map(
-                      ([category, perms]) => (
-                        <div key={category}>
-                          <p className="text-xs font-semibold text-muted-foreground mb-2">
-                            {category}
-                          </p>
-                          <div className="space-y-1 ml-2">
-                            {(perms as any[]).map(perm => (
-                              <div
-                                key={perm.id}
-                                className="flex items-center gap-2 text-sm"
-                              >
-                                {perm.enabled ? (
-                                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                ) : (
-                                  <XCircle className="h-4 w-4 text-gray-300" />
-                                )}
-                                <span
-                                  className={
-                                    perm.enabled
-                                      ? "text-foreground"
-                                      : "text-muted-foreground"
-                                  }
-                                >
-                                  {perm.name}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )
+                    {role.scope !== "global" && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => setSelectedRole(role.id)}
+                          >
+                            <Edit2 className="h-4 w-4 mr-2" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => {
+                              if (window.confirm(`Tem certeza que deseja deletar o perfil "${role.displayName}"? Usuários com este perfil perderão suas permissões.`)) {
+                                deleteRoleMutation.mutate({ id: role.id });
+                                if (selectedRole === role.id) setSelectedRole(null);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Deletar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                  {/* Informações do Perfil */}
+                  <div className="grid md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Tipo</p>
+                      <p className="font-semibold">
+                        {role.scope === "global" ? "Sistema" : "Customizado"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Permissões</p>
+                      <p className="font-semibold">{getRolePermissionCount(role.id)}</p>
+                    </div>
+                  </div>
+
+                  {/* Permissões */}
+                  {allPermissions.length > 0 && (
+                    <div className="space-y-3 border-t pt-4">
+                      <p className="font-semibold text-sm">Permissões Atribuídas</p>
+                      <div className="space-y-2">
+                        {Object.entries(getPermissionsByCategory(role.id)).map(
+                          ([category, perms]) => (
+                            <div key={category}>
+                              <p className="text-xs font-semibold text-muted-foreground mb-2">
+                                {category}
+                              </p>
+                              <div className="space-y-1 ml-2">
+                                {(perms as any[]).map(perm => (
+                                  <div
+                                    key={perm.id}
+                                    className="flex items-center gap-2 text-sm"
+                                  >
+                                    {perm.enabled ? (
+                                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                    ) : (
+                                      <XCircle className="h-4 w-4 text-gray-300" />
+                                    )}
+                                    <span
+                                      className={
+                                        perm.enabled
+                                          ? "text-foreground"
+                                          : "text-muted-foreground"
+                                      }
+                                    >
+                                      {perm.name}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {/* Informações sobre Controle de Acesso */}
         <Card className="border-blue-200 bg-blue-50">

@@ -1,9 +1,11 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { Context } from "./context";
 import { requireActiveSubscription } from "./subscriptionMiddleware";
+import { withPermission } from "./permissionMiddleware";
 
 const t = initTRPC.context<Context>().create();
 
+export { t };
 export const router = t.router;
 export const publicProcedure = t.procedure;
 
@@ -82,3 +84,9 @@ export const adminProcedure = t.procedure.use(
     });
   })
 );
+
+// Procedimento tenant + verificação de permissão RBAC
+// Uso: permittedProcedure("people", "create") — admin faz bypass automático
+export function permittedProcedure(resource: string, action: string) {
+  return tenantProcedure.use(t.middleware(withPermission(resource, action)));
+}
