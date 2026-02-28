@@ -2,6 +2,7 @@
 // Files are stored in /uploads directory
 
 import { promises as fs } from "fs";
+import { log } from "./_core/logger";
 import { join } from "path";
 
 const UPLOAD_DIR = join(process.cwd(), "uploads");
@@ -11,7 +12,7 @@ async function ensureUploadDir() {
   try {
     await fs.mkdir(UPLOAD_DIR, { recursive: true });
   } catch (error) {
-    console.error("Failed to create upload directory:", error);
+    log.error("Failed to create upload directory", { error: error instanceof Error ? error.message : String(error) });
   }
 }
 

@@ -10,7 +10,6 @@ import { useTenant } from "@/contexts/TenantContext";
 import { trpc } from "@/lib/trpc";
 import {
   AlertCircle,
-  TrendingDown,
   TrendingUp,
   Users,
   CheckCircle2,
@@ -44,6 +43,11 @@ export default function Dashboard() {
 
   const { data: actionPlans = [] } = trpc.riskAssessments.listActionPlans.useQuery(
     { tenantId: tenantId ?? "" },
+    { enabled: !!tenantId }
+  );
+
+  const { data: copsoqAssessments = [] } = trpc.assessments.list.useQuery(
+    undefined,
     { enabled: !!tenantId }
   );
 
@@ -209,53 +213,65 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle>Indicadores de Saúde Mental</CardTitle>
             <CardDescription>
-              Métricas de bem-estar e saúde ocupacional
+              Métricas de bem-estar baseadas no COPSOQ-II
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Satisfação Geral
+            {copsoqAssessments.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <BarChart3 className="h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-sm font-medium">Dados disponíveis após primeira avaliação COPSOQ-II</p>
+                <p className="text-xs text-muted-foreground mt-2 max-w-md">
+                  Realize uma avaliação de riscos psicossociais usando o questionário COPSOQ-II
+                  para visualizar indicadores de saúde mental e bem-estar dos colaboradores.
                 </p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold">6.8</span>
-                  <span className="text-sm text-muted-foreground">/10</span>
-                </div>
-                <div className="flex items-center gap-1 text-sm text-green-600">
-                  <TrendingUp className="h-4 w-4" />
-                  +0.5 vs mês anterior
-                </div>
               </div>
+            ) : (
+              <div className="grid md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Avaliações COPSOQ-II</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold">{copsoqAssessments.length}</span>
+                    <span className="text-sm text-muted-foreground">realizadas</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {copsoqAssessments.filter((a: any) => a.status === "completed" || a.status === "closed").length} concluídas
+                  </p>
+                </div>
 
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Clima Organizacional
-                </p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold">7.2</span>
-                  <span className="text-sm text-muted-foreground">/10</span>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Status das Avaliações</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold">
+                      {copsoqAssessments.filter((a: any) => a.status === "active" || a.status === "in_progress").length}
+                    </span>
+                    <span className="text-sm text-muted-foreground">em andamento</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {copsoqAssessments.filter((a: any) => a.status === "draft").length} rascunho(s)
+                  </p>
                 </div>
-                <div className="flex items-center gap-1 text-sm text-green-600">
-                  <TrendingUp className="h-4 w-4" />
-                  +0.3 vs mês anterior
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Qualidade de Vida
-                </p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold">6.5</span>
-                  <span className="text-sm text-muted-foreground">/10</span>
-                </div>
-                <div className="flex items-center gap-1 text-sm text-red-600">
-                  <TrendingDown className="h-4 w-4" />
-                  -0.2 vs mês anterior
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Última Avaliação</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-bold">
+                      {(() => {
+                        const sorted = [...copsoqAssessments].sort((a: any, b: any) =>
+                          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                        );
+                        if (sorted.length === 0) return "—";
+                        const date = new Date(sorted[0].createdAt);
+                        return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+                      })()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Acesse o módulo COPSOQ-II para análise detalhada
+                  </p>
                 </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
@@ -267,62 +283,64 @@ export default function Dashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">
-                    ✓ Avaliação de Riscos Realizada
-                  </span>
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                    Completo
-                  </span>
-                </div>
-              </div>
+            {(() => {
+              const hasAssessments = completedCount > 0;
+              const hasPlans = actionPlanCount > 0;
+              const plansComplete = hasPlans && completedPlans === actionPlanCount;
+              const plansPartial = hasPlans && completedPlans > 0 && completedPlans < actionPlanCount;
+              const hasCommunication = copsoqAssessments.length > 0;
+              const hasMonitoring = copsoqAssessments.length >= 2;
+              const allComplete = hasAssessments && plansComplete && hasCommunication && hasMonitoring;
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">
-                    ⚠ Plano de Ação Implementado
-                  </span>
-                  <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
-                    Parcial
-                  </span>
-                </div>
-              </div>
+              const items = [
+                {
+                  label: "Avaliação de Riscos Realizada",
+                  status: hasAssessments ? "complete" : "incomplete",
+                },
+                {
+                  label: "Plano de Ação Implementado",
+                  status: plansComplete ? "complete" : plansPartial ? "partial" : "incomplete",
+                },
+                {
+                  label: "Comunicação aos Colaboradores",
+                  status: hasCommunication ? "complete" : "incomplete",
+                },
+                {
+                  label: "Monitoramento Contínuo",
+                  status: hasMonitoring ? "complete" : copsoqAssessments.length === 1 ? "partial" : "incomplete",
+                },
+                {
+                  label: "Documentação Completa",
+                  status: allComplete ? "complete" : (hasAssessments || hasPlans) ? "partial" : "incomplete",
+                },
+              ];
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">
-                    ✓ Comunicação aos Colaboradores
-                  </span>
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                    Completo
-                  </span>
-                </div>
-              </div>
+              const statusConfig = {
+                complete: { icon: "\u2713", label: "Completo", bg: "bg-green-100", text: "text-green-800" },
+                partial: { icon: "\u26A0", label: "Parcial", bg: "bg-yellow-100", text: "text-yellow-800" },
+                incomplete: { icon: "\u2717", label: "Pendente", bg: "bg-red-100", text: "text-red-800" },
+              };
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">
-                    ⚠ Monitoramento Contínuo
-                  </span>
-                  <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
-                    Pendente
-                  </span>
+              return (
+                <div className="space-y-4">
+                  {items.map((item) => {
+                    const config = statusConfig[item.status as keyof typeof statusConfig];
+                    return (
+                      <div key={item.label} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">
+                            {config.icon} {item.label}
+                          </span>
+                          <span className={`text-xs px-2 py-1 rounded ${config.bg} ${config.text}`}>
+                            {config.label}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">
-                    ✗ Documentação Completa
-                  </span>
-                  <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
-                    Incompleto
-                  </span>
-                </div>
-              </div>
-            </div>
+              );
+            })()}
           </CardContent>
         </Card>
       </div>

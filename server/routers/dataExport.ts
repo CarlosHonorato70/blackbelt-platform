@@ -33,7 +33,7 @@ export const dataExportRouter = router({
     )
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       const id = `dsr_${Date.now()}_${nanoid(8)}`;
 
@@ -78,7 +78,7 @@ export const dataExportRouter = router({
     .input(z.object({ id: z.string(), tenantId: z.string() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       // Verificar se existe e está pendente
       const existing = await db

@@ -56,7 +56,7 @@ function base32Decode(encoded: string): Buffer {
 
   for (const char of cleaned) {
     const index = BASE32_ALPHABET.indexOf(char);
-    if (index === -1) throw new Error(`Caractere base32 invalido: ${char}`);
+    if (index === -1) throw new TRPCError({ code: "BAD_REQUEST", message: "Caractere base32 inválido" });
     bits += index.toString(2).padStart(5, "0");
   }
 

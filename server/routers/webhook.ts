@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { nanoid } from "nanoid";
 import { eq } from "drizzle-orm";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
@@ -34,7 +35,7 @@ export const webhookRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
       // Verificar assinatura do webhook (HMAC-SHA256)
-      const webhookSecret = process.env.WEBHOOK_SECRET || "default-secret";
+      const webhookSecret = process.env.WEBHOOK_SECRET || (process.env.NODE_ENV === "production" ? (() => { throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "WEBHOOK_SECRET não configurado" }); })() : "dev-webhook-secret");
       const expectedSignature = crypto
         .createHmac("sha256", webhookSecret)
         .update(
@@ -89,9 +90,7 @@ export const webhookRouter = router({
       const overallRiskLevel = classifyOverallRisk(dimensionScores);
 
       // Salvar resposta
-      const responseId = `copsoq_resp_${Date.now()}_${Math.random()
-        .toString(36)
-        .substr(2, 9)}`;
+      const responseId = `copsoq_resp_${Date.now()}_${nanoid(8)}`;
 
       await db.insert(copsoqResponses).values({
         id: responseId,
@@ -223,9 +222,7 @@ export const webhookRouter = router({
       const dimensionScores = calculateDimensionScores(input.responses);
       const overallRiskLevel = classifyOverallRisk(dimensionScores);
 
-      const responseId = `copsoq_resp_${Date.now()}_${Math.random()
-        .toString(36)
-        .substr(2, 9)}`;
+      const responseId = `copsoq_resp_${Date.now()}_${nanoid(8)}`;
 
       await db.insert(copsoqResponses).values({
         id: responseId,

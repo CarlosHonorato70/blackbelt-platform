@@ -1,4 +1,6 @@
 import { router, protectedProcedure } from "../_core/trpc";
+import { TRPCError } from "@trpc/server";
+import { nanoid } from "nanoid";
 import { z } from "zod";
 import { getDb } from "../db";
 import { copsoqReminders, copsoqInvites } from "../../drizzle/schema_nr01";
@@ -114,7 +116,7 @@ export const remindersRouter = router({
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) {
-        throw new Error("Database not available");
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
       }
 
       const invite = await db
@@ -124,7 +126,7 @@ export const remindersRouter = router({
         .limit(1);
 
       if (!invite || invite.length === 0) {
-        throw new Error("Convite não encontrado");
+        throw new TRPCError({ code: "NOT_FOUND", message: "Convite não encontrado" });
       }
 
       const inviteData = invite[0];
@@ -141,11 +143,11 @@ export const remindersRouter = router({
         );
 
       if (sentReminders.length >= 3) {
-        throw new Error("Limite máximo de lembretes atingido (3)");
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Limite máximo de lembretes atingido (3)" });
       }
 
       // Registrar lembrete
-      const reminderId = `reminder_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const reminderId = `reminder_${Date.now()}_${nanoid(8)}`;
 
       await db.insert(copsoqReminders).values({
         id: reminderId,

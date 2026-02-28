@@ -754,7 +754,7 @@ export const clientsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new Error("Unauthorized");
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       return await db.createClient({
         tenantId: ctx.tenantId!,
         ...input,
@@ -764,9 +764,9 @@ export const clientsRouter = router({
   getById: tenantProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new Error("Unauthorized");
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       const client = await db.getClient(input.id);
-      if (client?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
+      if (client?.tenantId !== ctx.tenantId!) throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
       return client;
     }),
 
@@ -792,9 +792,9 @@ export const clientsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new Error("Unauthorized");
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       const client = await db.getClient(input.id);
-      if (client?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
+      if (client?.tenantId !== ctx.tenantId!) throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
       const { id, ...data } = input;
       await db.updateClient(id, data);
       return await db.getClient(id);
@@ -803,9 +803,9 @@ export const clientsRouter = router({
   delete: tenantProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new Error("Unauthorized");
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       const client = await db.getClient(input.id);
-      if (client?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
+      if (client?.tenantId !== ctx.tenantId!) throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
       await db.deleteClient(input.id);
       return { success: true };
     }),
@@ -817,7 +817,7 @@ export const clientsRouter = router({
 
 export const servicesRouter = router({
   list: tenantProcedure.query(async ({ ctx }) => {
-    if (!ctx.user?.id) throw new Error("Unauthorized");
+    if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
     return await db.listServices(ctx.tenantId!);
   }),
 
@@ -833,7 +833,7 @@ export const servicesRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new Error("Unauthorized");
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       return await db.createService({
         tenantId: ctx.tenantId!,
         ...input,
@@ -843,9 +843,9 @@ export const servicesRouter = router({
   getById: tenantProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new Error("Unauthorized");
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       const service = await db.getService(input.id);
-      if (service?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
+      if (service?.tenantId !== ctx.tenantId!) throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
       return service;
     }),
 
@@ -863,9 +863,9 @@ export const servicesRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new Error("Unauthorized");
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       const service = await db.getService(input.id);
-      if (service?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
+      if (service?.tenantId !== ctx.tenantId!) throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
       const { id, ...data } = input;
       await db.updateService(id, data);
       return await db.getService(id);
@@ -874,9 +874,9 @@ export const servicesRouter = router({
   delete: tenantProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new Error("Unauthorized");
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       const service = await db.getService(input.id);
-      if (service?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
+      if (service?.tenantId !== ctx.tenantId!) throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
       await db.deleteService(input.id);
       return { success: true };
     }),
@@ -888,7 +888,7 @@ export const servicesRouter = router({
 
 export const pricingParametersRouter = router({
   get: tenantProcedure.query(async ({ ctx }) => {
-    if (!ctx.user?.id) throw new Error("Unauthorized");
+    if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
     return await db.getPricingParameters(ctx.tenantId!);
   }),
 
@@ -906,7 +906,7 @@ export const pricingParametersRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new Error("Unauthorized");
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       await db.updatePricingParameters(ctx.tenantId!, input);
       return await db.getPricingParameters(ctx.tenantId!);
     }),
@@ -942,9 +942,9 @@ export const proposalsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new Error("Unauthorized");
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       const client = await db.getClient(input.clientId);
-      if (client?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
+      if (client?.tenantId !== ctx.tenantId!) throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
       return await db.createProposal({
         tenantId: ctx.tenantId!,
         ...input,
@@ -954,9 +954,9 @@ export const proposalsRouter = router({
   getById: tenantProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new Error("Unauthorized");
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       const proposal = await db.getProposal(input.id);
-      if (proposal?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
+      if (proposal?.tenantId !== ctx.tenantId!) throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
       const items = await db.listProposalItems(input.id);
       return { ...proposal, items };
     }),
@@ -979,9 +979,9 @@ export const proposalsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new Error("Unauthorized");
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       const proposal = await db.getProposal(input.id);
-      if (proposal?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
+      if (proposal?.tenantId !== ctx.tenantId!) throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
       const { id, ...data } = input;
       await db.updateProposal(id, data);
       return await db.getProposal(id);
@@ -990,9 +990,9 @@ export const proposalsRouter = router({
   delete: tenantProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new Error("Unauthorized");
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       const proposal = await db.getProposal(input.id);
-      if (proposal?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
+      if (proposal?.tenantId !== ctx.tenantId!) throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
       await db.deleteProposal(input.id);
       return { success: true };
     }),
@@ -1010,16 +1010,16 @@ export const proposalsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new Error("Unauthorized");
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       const proposal = await db.getProposal(input.proposalId);
-      if (proposal?.tenantId !== ctx.tenantId!) throw new Error("Forbidden");
+      if (proposal?.tenantId !== ctx.tenantId!) throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
       return await db.createProposalItem(input);
     }),
 
   removeItem: tenantProcedure
     .input(z.object({ itemId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new Error("Unauthorized");
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       await db.deleteProposalItem(input.itemId);
       return { success: true };
     }),
@@ -1080,7 +1080,7 @@ export const assessmentProposalsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new Error("Unauthorized");
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       return await db.createAssessmentProposal({
         tenantId: ctx.tenantId!,
         ...input,
@@ -1090,7 +1090,7 @@ export const assessmentProposalsRouter = router({
   getByAssessment: protectedProcedure
     .input(z.object({ assessmentId: z.string() }))
     .query(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new Error("Unauthorized");
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       return await db.getAssessmentProposals(input.assessmentId);
     }),
 
@@ -1103,7 +1103,7 @@ export const assessmentProposalsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new Error("Unauthorized");
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
 
       // Import email function
       const { sendProposalEmail } = await import("../_core/email");

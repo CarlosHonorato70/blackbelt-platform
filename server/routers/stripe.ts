@@ -5,6 +5,8 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import { log } from "../_core/logger";
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { getPaymentGatewayConfig } from "../_core/paymentConfig";
@@ -55,16 +57,16 @@ export const stripeRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       if (!ctx.tenantId) {
-        throw new Error("Tenant não selecionado");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
       }
 
       const stripe = getStripeClient();
       if (!stripe) {
-        throw new Error("Stripe não está configurado");
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Stripe não está configurado" });
       }
 
       const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       // Buscar plano
       const [plan] = await db
@@ -74,7 +76,7 @@ export const stripeRouter = router({
         .limit(1);
 
       if (!plan) {
-        throw new Error("Plano não encontrado");
+        throw new TRPCError({ code: "NOT_FOUND", message: "Plano não encontrado" });
       }
 
       // Buscar tenant para pegar email de contato
@@ -159,16 +161,16 @@ export const stripeRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       if (!ctx.tenantId) {
-        throw new Error("Tenant não selecionado");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
       }
 
       const stripe = getStripeClient();
       if (!stripe) {
-        throw new Error("Stripe não está configurado");
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Stripe não está configurado" });
       }
 
       const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       // Buscar assinatura para pegar customer ID
       const [subscription] = await db
@@ -178,7 +180,7 @@ export const stripeRouter = router({
         .limit(1);
 
       if (!subscription?.stripeCustomerId) {
-        throw new Error("Cliente Stripe não encontrado");
+        throw new TRPCError({ code: "NOT_FOUND", message: "Cliente Stripe não encontrado" });
       }
 
       // Criar portal session
@@ -197,16 +199,16 @@ export const stripeRouter = router({
    */
   getSubscriptionDetails: protectedProcedure.query(async ({ ctx }) => {
     if (!ctx.tenantId) {
-      throw new Error("Tenant não selecionado");
+      throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
     }
 
     const stripe = getStripeClient();
     if (!stripe) {
-      throw new Error("Stripe não está configurado");
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Stripe não está configurado" });
     }
 
     const db = await getDb();
-    if (!db) throw new Error("Database not available");
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
     const [subscription] = await db
       .select()
@@ -233,7 +235,7 @@ export const stripeRouter = router({
           : null,
       };
     } catch (error) {
-      console.error("Error fetching Stripe subscription:", error);
+      log.error("Error fetching Stripe subscription", { error: error instanceof Error ? error.message : String(error) });
       return null;
     }
   }),
@@ -249,16 +251,16 @@ export const stripeRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       if (!ctx.tenantId) {
-        throw new Error("Tenant não selecionado");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
       }
 
       const stripe = getStripeClient();
       if (!stripe) {
-        throw new Error("Stripe não está configurado");
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Stripe não está configurado" });
       }
 
       const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       const [subscription] = await db
         .select()
@@ -267,7 +269,7 @@ export const stripeRouter = router({
         .limit(1);
 
       if (!subscription?.stripeSubscriptionId) {
-        throw new Error("Assinatura Stripe não encontrada");
+        throw new TRPCError({ code: "NOT_FOUND", message: "Assinatura Stripe não encontrada" });
       }
 
       if (input.immediately) {
@@ -288,16 +290,16 @@ export const stripeRouter = router({
    */
   reactivateSubscription: protectedProcedure.mutation(async ({ ctx }) => {
     if (!ctx.tenantId) {
-      throw new Error("Tenant não selecionado");
+      throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
     }
 
     const stripe = getStripeClient();
     if (!stripe) {
-      throw new Error("Stripe não está configurado");
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Stripe não está configurado" });
     }
 
     const db = await getDb();
-    if (!db) throw new Error("Database not available");
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
     const [subscription] = await db
       .select()
@@ -306,7 +308,7 @@ export const stripeRouter = router({
       .limit(1);
 
     if (!subscription?.stripeSubscriptionId) {
-      throw new Error("Assinatura Stripe não encontrada");
+      throw new TRPCError({ code: "NOT_FOUND", message: "Assinatura Stripe não encontrada" });
     }
 
     // Reativar removendo cancel_at_period_end
@@ -322,16 +324,16 @@ export const stripeRouter = router({
    */
   listPaymentMethods: protectedProcedure.query(async ({ ctx }) => {
     if (!ctx.tenantId) {
-      throw new Error("Tenant não selecionado");
+      throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
     }
 
     const stripe = getStripeClient();
     if (!stripe) {
-      throw new Error("Stripe não está configurado");
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Stripe não está configurado" });
     }
 
     const db = await getDb();
-    if (!db) throw new Error("Database not available");
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
     const [subscription] = await db
       .select()
@@ -527,7 +529,7 @@ export async function handleStripeWebhook(
 
     return { received: true };
   } catch (error) {
-    console.error("Stripe webhook error:", error);
+    log.error("Stripe webhook error", { error: error instanceof Error ? error.message : String(error) });
     return {
       received: false,
       error: error instanceof Error ? error.message : "Unknown error",

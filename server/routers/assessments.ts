@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
@@ -27,7 +28,7 @@ export const assessmentsRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      const id = `copsoq_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const id = `copsoq_${Date.now()}_${nanoid(8)}`;
       await db.insert(copsoqAssessments).values({
         id,
         tenantId: ctx.tenantId!,
@@ -95,7 +96,7 @@ export const assessmentsRouter = router({
       );
       const overallRiskLevel = classifyOverallRisk(dimensionScores);
 
-      const responseId = `copsoq_resp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const responseId = `copsoq_resp_${Date.now()}_${nanoid(8)}`;
 
       await db.insert(copsoqResponses).values({
         id: responseId,
@@ -229,7 +230,7 @@ export const assessmentsRouter = router({
         r => r.overallRiskLevel === "critical"
       ).length;
 
-      const reportId = `copsoq_report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const reportId = `copsoq_report_${Date.now()}_${nanoid(8)}`;
 
       await db.insert(copsoqReports).values({
         id: reportId,
@@ -311,7 +312,7 @@ export const assessmentsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
       // Criar avaliacao
-      const assessmentId = `copsoq_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const assessmentId = `copsoq_${Date.now()}_${nanoid(8)}`;
       await db.insert(copsoqAssessments).values({
         id: assessmentId,
         tenantId: ctx.tenantId!,
@@ -327,7 +328,7 @@ export const assessmentsRouter = router({
       const invitesToSend = [];
       for (const invitee of input.invitees) {
         const inviteToken = crypto.randomBytes(32).toString("hex");
-        const inviteId = `invite_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const inviteId = `invite_${Date.now()}_${nanoid(8)}`;
 
         await db.insert(copsoqInvites).values({
           id: inviteId,

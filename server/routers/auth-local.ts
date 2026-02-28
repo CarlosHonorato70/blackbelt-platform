@@ -2,6 +2,7 @@ import { z } from "zod";
 import crypto from "crypto";
 import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
+import { log } from "../_core/logger";
 import * as db from "../db";
 import { nanoid } from "nanoid";
 import bcrypt from "bcryptjs";
@@ -139,7 +140,7 @@ export const authLocalRouter = router({
         await sendVerificationEmail(input.email, input.name, verifyToken);
       } catch (err) {
         // Não bloqueia o registro se o email falhar
-        console.error("[Auth] Failed to send verification email:", err);
+        log.error("Failed to send verification email", { error: err instanceof Error ? err.message : String(err) });
       }
 
       return { success: true };

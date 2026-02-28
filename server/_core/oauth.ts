@@ -1,5 +1,6 @@
 // OAuth routes removed - using local authentication instead
 // See server/routers/auth-local.ts for authentication endpoints
+import { log } from "./logger";
 
 import type { Express } from "express";
 
@@ -43,7 +44,7 @@ export function registerOAuthRoutes(app: Express) {
 
       res.redirect(302, "/");
     } catch (error) {
-      console.error("[OAuth] Callback failed", error);
+      log.error("OAuth callback failed", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ error: "OAuth callback failed" });
     }
   });
