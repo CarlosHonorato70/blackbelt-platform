@@ -60,9 +60,12 @@ try {
 Write-Step "2" "Gerando secrets de seguranca"
 
 function New-Secret($length) {
+    $rng = New-Object System.Security.Cryptography.RNGCryptoServiceProvider
     $bytes = New-Object byte[] $length
-    [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
-    return [Convert]::ToBase64String($bytes) -replace '[^A-Za-z0-9]','' | ForEach-Object { $_.Substring(0, [Math]::Min($length, $_.Length)) }
+    $rng.GetBytes($bytes)
+    $rng.Dispose()
+    $base64 = [Convert]::ToBase64String($bytes) -replace '[^A-Za-z0-9]',''
+    return $base64.Substring(0, [Math]::Min($length, $base64.Length))
 }
 
 $DB_PASSWORD = New-Secret 24
