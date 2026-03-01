@@ -3,6 +3,7 @@ import { TRPCProvider } from "./lib/trpc-provider";
 import { AuthProvider } from "./_core/hooks/useAuth";
 import { TenantProvider } from "./contexts/TenantContext";
 import ErrorBoundary from "./components/ErrorBoundary";
+import CookieConsent from "./components/CookieConsent";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { lazy, Suspense } from "react";
 
@@ -154,6 +155,7 @@ export default function App() {
           </AuthProvider>
         </Router>
       </TRPCProvider>
+      <CookieConsent />
     </ErrorBoundary>
   );
 }
