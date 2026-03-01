@@ -81,8 +81,6 @@ Write-Ok "ADMIN_PASSWORD gerado"
 Write-Step "3" "Criando docker-compose.dev.yml (sem Nginx/SSL)"
 
 $devCompose = @"
-version: "3.8"
-
 services:
   app:
     build:
@@ -215,10 +213,31 @@ if (Test-Path ".env") {
 }
 
 # ============================================================
-Write-Step "5" "Iniciando containers Docker"
+Write-Step "5" "Parando containers antigos e iniciando novos"
+
+# Parar containers antigos deste projeto (se existirem)
+Write-Host "  Parando containers anteriores (se existirem)..." -ForegroundColor Gray
+docker compose -f docker-compose.dev.yml down 2>$null
 
 Write-Host "  Construindo imagens (pode levar 3-5 minutos na primeira vez)..." -ForegroundColor Gray
 docker compose -f docker-compose.dev.yml up --build -d
+if ($LASTEXITCODE -ne 0) {
+    Write-Host ""
+    Write-Fail "Falha ao construir/iniciar containers. Verifique os erros acima."
+}
+
+# Verificar se o container app esta rodando
+Start-Sleep -Seconds 5
+$appState = docker inspect --format '{{.State.Status}}' blackbelt-app 2>$null
+if ($appState -ne "running") {
+    Write-Host ""
+    Write-Host "  Container 'blackbelt-app' nao esta rodando (estado: $appState)" -ForegroundColor Red
+    Write-Host "  Logs do container:" -ForegroundColor Yellow
+    docker compose -f docker-compose.dev.yml logs --tail 30 app
+    Write-Host ""
+    Write-Fail "Build ou inicializacao do app falhou. Corrija os erros acima e rode o script novamente."
+}
+Write-Ok "Container blackbelt-app esta rodando"
 
 Write-Host ""
 Write-Host "  Aguardando MySQL inicializar..." -ForegroundColor Gray
@@ -234,10 +253,10 @@ while ($retries -gt 0 -and -not $ready) {
         $retries--
     }
 }
-if ($ready) { Write-Ok "MySQL disponivel" } else { Write-Warn "MySQL demorou para inicializar" }
+if ($ready) { Write-Ok "MySQL disponivel" } else { Write-Warn "MySQL demorou para inicializar - continuando mesmo assim..." }
 
-Write-Host "  Aguardando aplicacao..." -ForegroundColor Gray
-$retries = 15
+Write-Host "  Aguardando aplicacao responder..." -ForegroundColor Gray
+$retries = 20
 $ready = $false
 while ($retries -gt 0 -and -not $ready) {
     try {
@@ -249,7 +268,14 @@ while ($retries -gt 0 -and -not $ready) {
         $retries--
     }
 }
-if ($ready) { Write-Ok "Aplicacao rodando em http://localhost:5000" } else { Write-Warn "App demorou. Verifique: docker compose -f docker-compose.dev.yml logs app" }
+if ($ready) {
+    Write-Ok "Aplicacao rodando em http://localhost:5000"
+} else {
+    Write-Host ""
+    Write-Host "  Logs do container app:" -ForegroundColor Yellow
+    docker compose -f docker-compose.dev.yml logs --tail 20 app
+    Write-Fail "App nao respondeu ao health check. Verifique os logs acima."
+}
 
 Write-Host ""
 docker compose -f docker-compose.dev.yml ps
@@ -259,14 +285,20 @@ Write-Step "6" "Configurando banco de dados"
 
 Write-Host "  Executando migrations..." -ForegroundColor Gray
 docker compose -f docker-compose.dev.yml exec -T app npx tsx node_modules/drizzle-kit/bin.cjs push
+if ($LASTEXITCODE -ne 0) {
+    Write-Fail "Falha ao executar migrations. Verifique os logs acima."
+}
 Write-Ok "Tabelas criadas"
 
 Write-Host "  Executando seed (admin + planos + roles)..." -ForegroundColor Gray
 docker compose -f docker-compose.dev.yml exec -T -e ADMIN_PASSWORD="$ADMIN_PASSWORD" app npx tsx drizzle/seed.ts
+if ($LASTEXITCODE -ne 0) {
+    Write-Fail "Falha ao executar seed. Verifique os logs acima."
+}
 Write-Ok "Banco populado com dados iniciais"
 
 # ============================================================
-Write-Step "7" "Verificacao"
+Write-Step "7" "Verificacao final"
 
 try {
     $health = Invoke-RestMethod -Uri "http://localhost:5000/api/health" -TimeoutSec 5
