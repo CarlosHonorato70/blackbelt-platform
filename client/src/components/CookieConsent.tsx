@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 
 const STORAGE_KEY = "cookie-consent";
 
@@ -36,12 +35,12 @@ export default function CookieConsent() {
               Utilizamos cookies para melhorar sua experiência, analisar o
               tráfego do site e personalizar conteúdo. Ao continuar navegando,
               você concorda com nossa{" "}
-              <Link
-                to="/privacy"
+              <a
+                href="/privacy"
                 className="font-medium text-primary underline underline-offset-4 hover:text-primary/80"
               >
                 Política de Privacidade
-              </Link>
+              </a>
               .
             </p>
 

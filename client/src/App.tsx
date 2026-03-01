@@ -153,9 +153,9 @@ export default function App() {
               </Routes>
             </TenantProvider>
           </AuthProvider>
+          <CookieConsent />
         </Router>
       </TRPCProvider>
-      <CookieConsent />
     </ErrorBoundary>
   );
 }
