@@ -2,9 +2,16 @@
 # ============================================================
 # Black Belt Platform - Setup de Produção (Automático)
 # ============================================================
-# Execute no servidor: ./scripts/setup-production.sh
-# Ou remotamente:
-#   curl -fsSL https://raw.githubusercontent.com/CarlosHonorato70/blackbelt-platform/main/scripts/setup-production.sh | bash
+# Do Windows (PowerShell), conecte ao servidor via SSH:
+#   ssh root@SEU_IP_DO_SERVIDOR
+#
+# No servidor, execute:
+#   cd /opt/blackbelt
+#   chmod +x scripts/deploy-setup.sh
+#   ./scripts/deploy-setup.sh
+#
+# Ou em servidor novo (uma linha só):
+#   curl -fsSL https://raw.githubusercontent.com/CarlosHonorato70/blackbelt-platform/main/scripts/deploy-setup.sh -o /tmp/setup.sh && bash /tmp/setup.sh
 # ============================================================
 
 set -euo pipefail
