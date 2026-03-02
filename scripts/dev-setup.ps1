@@ -219,6 +219,9 @@ Write-Step "5" "Parando containers antigos e iniciando novos"
 Write-Host "  Parando containers anteriores (se existirem)..." -ForegroundColor Gray
 docker compose -f docker-compose.dev.yml down 2>$null
 
+# Remover containers orfaos com nomes conflitantes (podem ter sido criados por outro compose file)
+docker rm -f blackbelt-app blackbelt-mysql 2>$null | Out-Null
+
 Write-Host "  Construindo imagens (pode levar 3-5 minutos na primeira vez)..." -ForegroundColor Gray
 docker compose -f docker-compose.dev.yml up --build -d
 if ($LASTEXITCODE -ne 0) {
