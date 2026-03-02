@@ -33,8 +33,6 @@ jobs:
 
       - name: npm audit
         run: npm audit --audit-level=moderate
-        continue-on-error: true
 
       - name: Verificar vulnerabilidades
         run: pnpm audit
-        continue-on-error: true

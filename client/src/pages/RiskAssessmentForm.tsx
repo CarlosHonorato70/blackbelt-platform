@@ -18,13 +18,15 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useTenant } from "@/contexts/TenantContext";
-import { AlertCircle, ArrowLeft, CheckCircle2, Save } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { AlertCircle, ArrowLeft, CheckCircle2, Loader2, Save } from "lucide-react";
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export default function RiskAssessmentForm() {
   const { selectedTenant } = useTenant();
-  const [, setLocation] = useLocation();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     title: "",
     sector: "",
@@ -47,6 +49,20 @@ export default function RiskAssessmentForm() {
   });
 
   const [submitted, setSubmitted] = useState(false);
+
+  const utils = trpc.useUtils();
+
+  const createMutation = trpc.riskAssessments.create.useMutation({
+    onSuccess: (data) => {
+      toast.success("Avaliação criada com sucesso!");
+      setSubmitted(true);
+      utils.riskAssessments.list.invalidate();
+      setTimeout(() => navigate("/risk-assessments"), 2000);
+    },
+    onError: (err) => {
+      toast.error(`Erro ao salvar: ${err.message}`);
+    },
+  });
 
   if (!selectedTenant) {
     return (
@@ -77,12 +93,38 @@ export default function RiskAssessmentForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Integrar com tRPC para salvar no banco de dados
-    console.log("Formulário submetido:", formData);
-    setSubmitted(true);
-    setTimeout(() => {
-      setLocation("/risk-assessments");
-    }, 2000);
+
+    const tenantId =
+      typeof selectedTenant === "string"
+        ? selectedTenant
+        : selectedTenant?.id;
+
+    if (!tenantId) {
+      toast.error("Selecione uma empresa primeiro");
+      return;
+    }
+
+    // Build description from risk factors + control measures
+    const descriptionParts = [
+      formData.description,
+      formData.organizationalFactors && `Fatores Organizacionais: ${formData.organizationalFactors}`,
+      formData.workloadFactors && `Fatores de Carga: ${formData.workloadFactors}`,
+      formData.relationshipFactors && `Fatores de Relacionamento: ${formData.relationshipFactors}`,
+      formData.violenceFactors && `Fatores de Violência: ${formData.violenceFactors}`,
+      formData.preventionMeasures && `Prevenção: ${formData.preventionMeasures}`,
+      formData.controlMeasures && `Controle: ${formData.controlMeasures}`,
+      formData.monitoringPlan && `Monitoramento: ${formData.monitoringPlan}`,
+    ].filter(Boolean).join("\n\n");
+
+    createMutation.mutate({
+      tenantId,
+      title: formData.title,
+      description: descriptionParts || undefined,
+      assessmentDate: formData.assessmentDate,
+      assessor: formData.assessor || undefined,
+      methodology: formData.methodology || undefined,
+      sectorId: formData.sector || undefined,
+    });
   };
 
   return (
@@ -92,7 +134,7 @@ export default function RiskAssessmentForm() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setLocation("/risk-assessments")}
+            onClick={() => navigate("/risk-assessments")}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar
@@ -424,13 +466,17 @@ export default function RiskAssessmentForm() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setLocation("/risk-assessments")}
+              onClick={() => navigate("/risk-assessments")}
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={submitted}>
-              <Save className="h-4 w-4 mr-2" />
-              Salvar Avaliação
+            <Button type="submit" disabled={submitted || createMutation.isPending}>
+              {createMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              {createMutation.isPending ? "Salvando..." : "Salvar Avaliação"}
             </Button>
           </div>
         </form>

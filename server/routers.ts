@@ -34,6 +34,7 @@ import { twoFactorRouter } from "./routers/twoFactor";
 import { securityRouter } from "./routers/security";
 import { analyticsRouter } from "./routers/analytics";
 import { onboardingRouter } from "./routers/onboarding";
+import { dataExportRouter } from "./routers/dataExport";
 
 export const appRouter = router({
   system: systemRouter,
@@ -90,6 +91,9 @@ export const appRouter = router({
 
   // Phase 10: Automated Onboarding
   onboarding: onboardingRouter,
+
+  // LGPD: Data Subject Rights (DSR)
+  dataExport: dataExportRouter,
 });
 
 export type AppRouter = typeof appRouter;

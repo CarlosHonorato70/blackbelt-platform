@@ -1,14 +1,14 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { publicProcedure, router } from "../_core/trpc";
+import { publicProcedure, protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { userInvites } from "../../drizzle/schema";
 import { eq, and, desc, isNull } from "drizzle-orm";
 
 export const userInvitesRouter = router({
   // Listar convites
-  list: publicProcedure
+  list: protectedProcedure
     .input(
       z.object({
         tenantId: z.string().optional(),
@@ -50,7 +50,7 @@ export const userInvitesRouter = router({
     }),
 
   // Obter convite por ID
-  get: publicProcedure
+  get: protectedProcedure
     .input(
       z.object({
         id: z.string(),
@@ -118,7 +118,7 @@ export const userInvitesRouter = router({
     }),
 
   // Criar novo convite
-  create: publicProcedure
+  create: adminProcedure
     .input(
       z.object({
         tenantId: z.string().optional(),
@@ -221,7 +221,7 @@ export const userInvitesRouter = router({
     }),
 
   // Cancelar convite
-  cancel: publicProcedure
+  cancel: adminProcedure
     .input(
       z.object({
         id: z.string(),
@@ -244,7 +244,7 @@ export const userInvitesRouter = router({
     }),
 
   // Reenviar convite
-  resend: publicProcedure
+  resend: adminProcedure
     .input(
       z.object({
         id: z.string(),
@@ -290,7 +290,7 @@ export const userInvitesRouter = router({
     }),
 
   // Deletar convite
-  delete: publicProcedure
+  delete: adminProcedure
     .input(
       z.object({
         id: z.string(),

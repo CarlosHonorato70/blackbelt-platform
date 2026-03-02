@@ -501,13 +501,9 @@ export const analyticsRouter = router({
       ),
     });
 
-    // Calculate storage usage
-    // TODO: Implement actual storage calculation based on your file storage system
-    // For now, returning 0. In production:
-    // - If using S3: Query S3 bucket size for tenant files
-    // - If using local storage: Calculate file sizes in tenant directory
-    // - If using database: Sum up sizes of blob/binary columns
-    const storageUsed = 0; // Placeholder - implement based on storage backend
+    // Storage tracking will be implemented when file upload features are added.
+    // Currently no files are stored per-tenant, so storage usage is 0.
+    const storageUsed = 0;
 
     return {
       users: {

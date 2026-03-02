@@ -9,6 +9,7 @@
  */
 
 import { Request, Response, NextFunction } from "express";
+import { log } from "./logger";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import cors from "cors";
@@ -191,15 +192,13 @@ export function requestLogger(req: Request, res: Response, next: NextFunction) {
   const { method, url, ip } = req;
 
   // Log request
-  console.log(`[${new Date().toISOString()}] ${method} ${url} from ${ip}`);
+  log.http("Incoming request", { method, url, ip });
 
   // Log response when finished
   res.on("finish", () => {
     const duration = Date.now() - start;
     const { statusCode } = res;
-    console.log(
-      `[${new Date().toISOString()}] ${method} ${url} ${statusCode} - ${duration}ms`
-    );
+    log.http("Request completed", { method, url, statusCode, duration });
   });
 
   next();
@@ -228,9 +227,7 @@ export function validateHeaders(
   ];
 
   if (suspiciousPatterns.some((pattern) => pattern.test(userAgent))) {
-    console.warn(
-      `[SECURITY] Suspicious user agent detected: ${userAgent} from ${req.ip}`
-    );
+    log.warn("Suspicious user agent detected", { userAgent, ip: req.ip });
     return res.status(403).json({ error: "Forbidden" });
   }
 
@@ -238,9 +235,7 @@ export function validateHeaders(
   const contentLength = parseInt(req.get("content-length") || "0");
   if (contentLength > 50 * 1024 * 1024) {
     // 50MB limit
-    console.warn(
-      `[SECURITY] Request body too large: ${contentLength} bytes from ${req.ip}`
-    );
+    log.warn("Request body too large", { contentLength, ip: req.ip });
     return res
       .status(413)
       .json({ error: "Request entity too large", maxSize: "50MB" });
@@ -264,7 +259,7 @@ export function ipMonitoring(req: Request, res: Response, next: NextFunction) {
 
   // Check if IP is blocked
   if (blockedIPs.has(ip)) {
-    console.warn(`[SECURITY] Blocked IP attempted access: ${ip}`);
+    log.warn("Blocked IP attempted access", { ip });
     return res.status(403).json({ error: "Access denied" });
   }
 
@@ -277,9 +272,7 @@ export function ipMonitoring(req: Request, res: Response, next: NextFunction) {
       // Block IP after 5 violations
       if (violations >= 5) {
         blockedIPs.add(ip);
-        console.warn(
-          `[SECURITY] IP blocked due to repeated violations: ${ip}`
-        );
+        log.warn("IP blocked due to repeated violations", { ip });
       }
     }
   });
@@ -293,7 +286,7 @@ export function ipMonitoring(req: Request, res: Response, next: NextFunction) {
 export function unblockIP(ip: string) {
   blockedIPs.delete(ip);
   suspiciousIPs.delete(ip);
-  console.log(`[SECURITY] IP unblocked: ${ip}`);
+  log.info("IP unblocked", { ip });
 }
 
 /**
@@ -333,9 +326,7 @@ export function validateTenantIsolation(
 
   if (tenantHeader) {
     // Log potential security issue
-    console.warn(
-      `[SECURITY] Direct tenant ID in header from ${req.ip}: ${tenantHeader}`
-    );
+    log.warn("Direct tenant ID in header detected", { ip: req.ip, tenantHeader });
   }
 
   next();

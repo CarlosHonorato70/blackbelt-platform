@@ -40,6 +40,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useTenant } from "@/contexts/TenantContext";
 import { trpc } from "@/lib/trpc";
 import {
@@ -55,7 +65,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 import {
   exportToJSON,
   exportToExcel,
@@ -66,13 +76,16 @@ import { toast } from "sonner";
 
 export default function RiskAssessments() {
   const { selectedTenant } = useTenant();
-  const [, setLocation] = useLocation();
+  const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [proposalDialogOpen, setProposalDialogOpen] = useState(false);
   const [selectedAssessmentId, setSelectedAssessmentId] = useState("");
   const [selectedClientId, setSelectedClientId] = useState("");
   const [sendEmailChecked, setSendEmailChecked] = useState(true);
-  
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [assessmentToDelete, setAssessmentToDelete] = useState<string | null>(null);
+
+  const utils = trpc.useUtils();
   const { data: clients } = trpc.clients.list.useQuery();
   const generateProposalMutation = trpc.assessmentProposals.generateFromAssessment.useMutation({
     onSuccess: (data) => {
@@ -86,38 +99,29 @@ export default function RiskAssessments() {
         }
       );
       setProposalDialogOpen(false);
-      setLocation(`/proposals`);
+      navigate(`/proposals`);
     },
     onError: (error: any) => {
       toast.error(error.message || "Erro ao gerar proposta");
     },
   });
 
-  // Mock data - será substituído por tRPC queries quando o backend estiver pronto
-  const assessments = selectedTenant
-    ? [
-        {
-          id: "1",
-          title: "Avaliação Inicial - Setor Administrativo",
-          tenant: "Empresa XYZ Ltda",
-          sector: "Administrativo",
-          date: "2025-01-15",
-          status: "completed",
-          riskLevel: "medium",
-          assessor: "Carlos Honorato",
-        },
-        {
-          id: "2",
-          title: "Reavaliação Anual - Produção",
-          tenant: "Indústria ABC S.A.",
-          sector: "Produção",
-          date: "2025-01-10",
-          status: "in_progress",
-          riskLevel: "high",
-          assessor: "Thyberê Mendes",
-        },
-      ]
-    : [];
+  const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+
+  const { data: assessments = [] } = trpc.riskAssessments.list.useQuery(
+    { tenantId: tenantId ?? "" },
+    { enabled: !!tenantId }
+  );
+
+  const deleteMutation = trpc.riskAssessments.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Avaliação excluída com sucesso!");
+      utils.riskAssessments.list.invalidate();
+      setDeleteDialogOpen(false);
+      setAssessmentToDelete(null);
+    },
+    onError: (err) => toast.error(`Erro: ${err.message}`),
+  });
 
   if (!selectedTenant) {
     return (
@@ -198,7 +202,7 @@ export default function RiskAssessments() {
             </p>
           </div>
 
-          <Button onClick={() => setLocation("/risk-assessments/new")}>
+          <Button onClick={() => navigate("/risk-assessments/new")}>
             <Plus className="mr-2 h-4 w-4" />
             Nova Avaliação
           </Button>
@@ -388,19 +392,19 @@ export default function RiskAssessments() {
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <div className="text-sm">{assessment.tenant}</div>
+                          <div className="text-sm">{typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.name}</div>
                           <div className="text-xs text-muted-foreground">
-                            {assessment.sector}
+                            {assessment.sectorId || "Geral"}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        {new Date(assessment.date).toLocaleDateString("pt-BR")}
+                        {assessment.assessmentDate ? new Date(assessment.assessmentDate).toLocaleDateString("pt-BR") : "—"}
                       </TableCell>
-                      <TableCell>{assessment.assessor}</TableCell>
-                      <TableCell>{getStatusBadge(assessment.status)}</TableCell>
+                      <TableCell>{assessment.assessor || "—"}</TableCell>
+                      <TableCell>{getStatusBadge(assessment.status ?? "draft")}</TableCell>
                       <TableCell>
-                        {getRiskLevelBadge(assessment.riskLevel)}
+                        {getRiskLevelBadge(assessment.methodology === "critical" ? "critical" : "medium")}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -410,11 +414,15 @@ export default function RiskAssessments() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => navigate("/copsoq/analytics")}
+                            >
                               <Eye className="h-4 w-4 mr-2" />
                               Visualizar
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => navigate(`/risk-assessments/${assessment.id}`)}
+                            >
                               <Edit2 className="h-4 w-4 mr-2" />
                               Editar
                             </DropdownMenuItem>
@@ -464,7 +472,13 @@ export default function RiskAssessments() {
                               <FileText className="h-4 w-4 mr-2" />
                               Gerar Proposta
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={() => {
+                                setAssessmentToDelete(assessment.id);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Excluir
                             </DropdownMenuItem>
@@ -570,6 +584,33 @@ export default function RiskAssessments() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta avaliação? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setDeleteDialogOpen(false); setAssessmentToDelete(null); }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={() => {
+                if (assessmentToDelete && tenantId) {
+                  deleteMutation.mutate({ id: assessmentToDelete, tenantId });
+                }
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }

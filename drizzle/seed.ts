@@ -23,6 +23,7 @@ import {
   userRoles,
 } from "./schema";
 import { seedPlans, seedFeatures, getPlanFeatureAssociations } from "../seed_plans";
+import crypto from "crypto";
 import "dotenv/config";
 
 async function seed() {
@@ -142,7 +143,8 @@ async function seed() {
   // 6. Seed Admin User
   console.log("[6/6] Seeding admin user...");
   const ADMIN_EMAIL = "admin@blackbelt-platform.com";
-  const ADMIN_PASSWORD = "BlackBelt@2025!";
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || crypto.randomUUID().slice(0, 16) + "!Aa1";
+  const isRandomPassword = !process.env.ADMIN_PASSWORD;
 
   const existingAdmin = await db.select().from(users).where(eq(users.email, ADMIN_EMAIL)).limit(1);
   if (existingAdmin.length === 0) {
@@ -176,10 +178,18 @@ async function seed() {
   }
 
   console.log("\nSeed completed!");
-  console.log("\n--- Login credentials ---");
-  console.log(`Email: ${ADMIN_EMAIL}`);
-  console.log(`Password: ${ADMIN_PASSWORD}`);
-  console.log("(Change this password immediately after first login)\n");
+  if (isRandomPassword) {
+    console.log("\n--- Login credentials (GENERATED) ---");
+    console.log(`Email: ${ADMIN_EMAIL}`);
+    console.log(`Password: ${ADMIN_PASSWORD}`);
+    console.log("IMPORTANT: Save this password now! It will not be shown again.");
+    console.log("Change it immediately after first login.\n");
+  } else {
+    console.log("\n--- Login credentials ---");
+    console.log(`Email: ${ADMIN_EMAIL}`);
+    console.log("Password: (set via ADMIN_PASSWORD env var)");
+    console.log("Change it immediately after first login.\n");
+  }
 
   await pool.end();
   process.exit(0);

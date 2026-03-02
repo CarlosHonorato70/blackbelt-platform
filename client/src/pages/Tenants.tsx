@@ -14,7 +14,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -147,110 +146,6 @@ export default function Tenants() {
             </p>
           </div>
 
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Nova Empresa
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <form onSubmit={handleSubmit}>
-                <DialogHeader>
-                  <DialogTitle>Nova Empresa</DialogTitle>
-                  <DialogDescription>
-                    Cadastre uma nova empresa cliente na plataforma
-                  </DialogDescription>
-                </DialogHeader>
-
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="name">Nome da Empresa *</Label>
-                    <Input id="name" name="name" required />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="cnpj">CNPJ *</Label>
-                    <Input
-                      id="cnpj"
-                      name="cnpj"
-                      placeholder="00.000.000/0000-00"
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="street">Logradouro</Label>
-                      <Input id="street" name="street" />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="number">Número</Label>
-                      <Input id="number" name="number" />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="city">Cidade</Label>
-                      <Input id="city" name="city" />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="state">UF</Label>
-                      <Input id="state" name="state" maxLength={2} />
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="zipCode">CEP</Label>
-                    <Input
-                      id="zipCode"
-                      name="zipCode"
-                      placeholder="00000-000"
-                    />
-                  </div>
-
-                  <div className="border-t pt-4">
-                    <h3 className="font-semibold mb-3">Contato Principal</h3>
-
-                    <div className="grid gap-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor="contactName">Nome</Label>
-                        <Input id="contactName" name="contactName" />
-                      </div>
-
-                      <div className="grid gap-2">
-                        <Label htmlFor="contactEmail">E-mail</Label>
-                        <Input
-                          id="contactEmail"
-                          name="contactEmail"
-                          type="email"
-                        />
-                      </div>
-
-                      <div className="grid gap-2">
-                        <Label htmlFor="contactPhone">Telefone</Label>
-                        <Input id="contactPhone" name="contactPhone" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setDialogOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={createMutation.isPending}>
-                    {createMutation.isPending ? "Criando..." : "Criar Empresa"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
           <Button onClick={() => setDialogMode("create")}>
             <Plus className="mr-2 h-4 w-4" />
             Nova Empresa

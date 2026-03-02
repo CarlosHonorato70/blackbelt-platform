@@ -3,6 +3,7 @@
  * 
  * Manages:
  * - IP whitelisting (Enterprise)
+import { log } from "../_core/logger";
  * - Session management
  * - Security alerts
  * - Login attempts monitoring
@@ -400,7 +401,7 @@ export async function createSecurityAlert(
       resolved: false,
     });
   } catch (error) {
-    console.error("Failed to create security alert:", error);
+    log.error("Failed to create security alert", { error: error instanceof Error ? error.message : String(error) });
   }
 }
 
@@ -429,6 +430,6 @@ export async function logLoginAttempt(
       failureReason: failureReason || null,
     });
   } catch (error) {
-    console.error("Failed to log login attempt:", error);
+    log.error("Failed to log login attempt", { error: error instanceof Error ? error.message : String(error) });
   }
 }

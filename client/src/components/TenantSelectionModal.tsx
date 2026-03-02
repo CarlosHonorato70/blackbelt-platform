@@ -68,8 +68,8 @@ export function TenantSelectionModal() {
                 onClick={() => handleSelectTenant(tenant.id)}
                 className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
                   selectedTenant?.id === tenant.id
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
-                    : "border-border hover:border-blue-300 hover:bg-accent"
+                    ? "border-[#c8a55a] bg-[#c8a55a]/5 dark:bg-[#c8a55a]/10"
+                    : "border-border hover:border-primary/30 hover:bg-accent"
                 }`}
               >
                 <div className="flex items-start justify-between">
@@ -80,7 +80,7 @@ export function TenantSelectionModal() {
                     </p>
                   </div>
                   {selectedTenant?.id === tenant.id && (
-                    <Check className="h-5 w-5 text-blue-500 flex-shrink-0 ml-2" />
+                    <Check className="h-5 w-5 text-[#c8a55a] flex-shrink-0 ml-2" />
                   )}
                 </div>
               </button>

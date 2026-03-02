@@ -2,6 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { handleStripeWebhook } from "./routers/stripe";
 import { handleMercadoPagoWebhook } from "./routers/mercadopago";
 import crypto from "crypto";
+import { log } from "./_core/logger";
 
 /**
  * Rotas Express - apenas health check e webhooks de pagamento.
@@ -51,7 +52,7 @@ export function registerRoutes(app: Express) {
           res.status(400).json({ error: result.error });
         }
       } catch (error) {
-        console.error("[Stripe Webhook] Error:", error);
+        log.error("[Stripe Webhook] Error:", error);
         res.status(500).json({ error: "Webhook processing failed" });
       }
     }
@@ -96,7 +97,7 @@ export function registerRoutes(app: Express) {
         .digest("hex");
 
       if (expectedSignature !== v1) {
-        console.warn("[MercadoPago Webhook] Invalid signature");
+        log.warn("[MercadoPago Webhook] Invalid signature");
         return res.status(401).json({ error: "Invalid signature" });
       }
     }
@@ -110,7 +111,7 @@ export function registerRoutes(app: Express) {
         res.status(400).json({ error: result.error });
       }
     } catch (error) {
-      console.error("[MercadoPago Webhook] Error:", error);
+      log.error("[MercadoPago Webhook] Error:", error);
       res.status(500).json({ error: "Webhook processing failed" });
     }
   });

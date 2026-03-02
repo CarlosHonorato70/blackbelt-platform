@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
 import * as db from "../db";
+import { log } from "../_core/logger";
 
 // Validacao de CNPJ
 function validateCNPJ(cnpj: string): boolean {
@@ -45,17 +46,21 @@ export const tenantsRouter = router({
     .query(async ({ ctx, input }) => {
       const tenantsList = await db.listTenants(input);
 
-      await db.createAuditLog({
-        tenantId: null,
-        userId: ctx.user.id,
-        action: "READ",
-        entityType: "tenants",
-        entityId: null,
-        oldValues: null,
-        newValues: null,
-        ipAddress: ctx.req.ip,
-        userAgent: ctx.req.headers["user-agent"],
-      });
+      try {
+        await db.createAuditLog({
+          tenantId: null,
+          userId: ctx.user.id,
+          action: "READ",
+          entityType: "tenants",
+          entityId: null,
+          oldValues: null,
+          newValues: null,
+          ipAddress: ctx.req.ip,
+          userAgent: ctx.req.headers["user-agent"],
+        });
+      } catch (auditError) {
+        log.error("Failed to create audit log", { error: auditError instanceof Error ? auditError.message : String(auditError) });
+      }
 
       return tenantsList;
     }),

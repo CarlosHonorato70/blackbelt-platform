@@ -423,6 +423,32 @@ export const copsoqReminders = mysqlTable("copsoq_reminders", {
 export type CopsoqReminder = typeof copsoqReminders.$inferSelect;
 export type InsertCopsoqReminder = typeof copsoqReminders.$inferInsert;
 
+// ============================================================================
+// LGPD: Solicitações de Direitos do Titular (DSR)
+// ============================================================================
+
+export const dsrRequests = mysqlTable("dsr_requests", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  requestType: mysqlEnum("requestType", ["export", "delete", "rectify"]).notNull(),
+  status: mysqlEnum("dsrStatus", ["pendente", "processando", "completo", "erro"])
+    .default("pendente")
+    .notNull(),
+  reason: text("reason"),
+  format: varchar("format", { length: 20 }), // PDF, JSON, Excel
+  fileSize: varchar("fileSize", { length: 50 }), // "2.5 MB"
+  downloadLink: varchar("downloadLink", { length: 500 }),
+  errorMessage: text("errorMessage"),
+  requestDate: timestamp("requestDate").defaultNow(),
+  completionDate: timestamp("completionDate"),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
+});
+
+export type DsrRequest = typeof dsrRequests.$inferSelect;
+export type InsertDsrRequest = typeof dsrRequests.$inferInsert;
+
 export type RiskCategory = typeof riskCategories.$inferSelect;
 export type RiskFactor = typeof riskFactors.$inferSelect;
 export type RiskAssessment = typeof riskAssessments.$inferSelect;
