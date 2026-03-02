@@ -7,7 +7,9 @@
 # Pre-requisitos: Docker Desktop instalado e rodando
 # ============================================================
 
-$ErrorActionPreference = "Stop"
+# Nao usar $ErrorActionPreference = "Stop" globalmente porque
+# o Docker escreve mensagens de progresso no stderr, e o PowerShell
+# com "Stop" trata qualquer stderr como excecao fatal.
 
 # --- Colors/helpers ---
 function Write-Step($num, $msg) { Write-Host "`n[$num/8] $msg`n" -ForegroundColor Cyan }
@@ -25,34 +27,31 @@ Write-Host ""
 Write-Step "1" "Verificando pre-requisitos"
 
 # Docker
-try {
-    $dockerVersion = docker --version 2>$null
-    Write-Ok "Docker: $dockerVersion"
-} catch {
+$dockerVersion = docker --version 2>&1
+if ($LASTEXITCODE -ne 0) {
     Write-Fail "Docker nao encontrado. Instale o Docker Desktop: https://www.docker.com/products/docker-desktop/"
 }
+Write-Ok "Docker: $dockerVersion"
 
 # Docker Compose
-try {
-    $composeVersion = docker compose version 2>$null
-    Write-Ok "Docker Compose: $composeVersion"
-} catch {
+$composeVersion = docker compose version 2>&1
+if ($LASTEXITCODE -ne 0) {
     Write-Fail "Docker Compose nao encontrado. Atualize o Docker Desktop."
 }
+Write-Ok "Docker Compose: $composeVersion"
 
 # Docker running?
-try {
-    docker info 2>$null | Out-Null
-    Write-Ok "Docker Desktop esta rodando"
-} catch {
+docker info 2>&1 | Out-Null
+if ($LASTEXITCODE -ne 0) {
     Write-Fail "Docker Desktop nao esta rodando. Abra o Docker Desktop e tente novamente."
 }
+Write-Ok "Docker Desktop esta rodando"
 
 # Git
-try {
-    $gitVersion = git --version 2>$null
+$gitVersion = git --version 2>&1
+if ($LASTEXITCODE -eq 0) {
     Write-Ok "Git: $gitVersion"
-} catch {
+} else {
     Write-Warn "Git nao encontrado (opcional para dev local)"
 }
 
@@ -217,13 +216,13 @@ Write-Step "5" "Parando containers antigos e iniciando novos"
 
 # Parar containers antigos deste projeto (se existirem)
 Write-Host "  Parando containers anteriores (se existirem)..." -ForegroundColor Gray
-docker compose -f docker-compose.dev.yml down 2>$null
+docker compose -f docker-compose.dev.yml down 2>&1 | Out-Null
 
 # Remover containers orfaos com nomes conflitantes (podem ter sido criados por outro compose file)
-docker rm -f blackbelt-app blackbelt-mysql 2>$null | Out-Null
+docker rm -f blackbelt-app blackbelt-mysql 2>&1 | Out-Null
 
 Write-Host "  Construindo imagens (pode levar 3-5 minutos na primeira vez)..." -ForegroundColor Gray
-docker compose -f docker-compose.dev.yml up --build -d
+docker compose -f docker-compose.dev.yml up --build -d 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
     Write-Fail "Falha ao construir/iniciar containers. Verifique os erros acima."
@@ -231,12 +230,12 @@ if ($LASTEXITCODE -ne 0) {
 
 # Verificar se o container app esta rodando
 Start-Sleep -Seconds 5
-$appState = docker inspect --format '{{.State.Status}}' blackbelt-app 2>$null
-if ($appState -ne "running") {
+$appState = docker inspect --format '{{.State.Status}}' blackbelt-app 2>&1
+if ($LASTEXITCODE -ne 0 -or $appState -ne "running") {
     Write-Host ""
     Write-Host "  Container 'blackbelt-app' nao esta rodando (estado: $appState)" -ForegroundColor Red
     Write-Host "  Logs do container:" -ForegroundColor Yellow
-    docker compose -f docker-compose.dev.yml logs --tail 30 app
+    docker compose -f docker-compose.dev.yml logs --tail 30 app 2>&1
     Write-Host ""
     Write-Fail "Build ou inicializacao do app falhou. Corrija os erros acima e rode o script novamente."
 }
@@ -247,10 +246,8 @@ Write-Host "  Aguardando MySQL inicializar..." -ForegroundColor Gray
 $retries = 30
 $ready = $false
 while ($retries -gt 0 -and -not $ready) {
-    try {
-        $result = docker compose -f docker-compose.dev.yml exec -T mysql mysqladmin ping -h localhost -u root --password="$DB_ROOT_PASSWORD" 2>$null
-        if ($LASTEXITCODE -eq 0) { $ready = $true }
-    } catch {}
+    docker compose -f docker-compose.dev.yml exec -T mysql mysqladmin ping -h localhost -u root --password="$DB_ROOT_PASSWORD" 2>&1 | Out-Null
+    if ($LASTEXITCODE -eq 0) { $ready = $true }
     if (-not $ready) {
         Start-Sleep -Seconds 2
         $retries--
@@ -276,25 +273,25 @@ if ($ready) {
 } else {
     Write-Host ""
     Write-Host "  Logs do container app:" -ForegroundColor Yellow
-    docker compose -f docker-compose.dev.yml logs --tail 20 app
+    docker compose -f docker-compose.dev.yml logs --tail 20 app 2>&1
     Write-Fail "App nao respondeu ao health check. Verifique os logs acima."
 }
 
 Write-Host ""
-docker compose -f docker-compose.dev.yml ps
+docker compose -f docker-compose.dev.yml ps 2>&1
 
 # ============================================================
 Write-Step "6" "Configurando banco de dados"
 
 Write-Host "  Executando migrations..." -ForegroundColor Gray
-docker compose -f docker-compose.dev.yml exec -T app npx tsx node_modules/drizzle-kit/bin.cjs push
+docker compose -f docker-compose.dev.yml exec -T app npx tsx node_modules/drizzle-kit/bin.cjs push 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Fail "Falha ao executar migrations. Verifique os logs acima."
 }
 Write-Ok "Tabelas criadas"
 
 Write-Host "  Executando seed (admin + planos + roles)..." -ForegroundColor Gray
-docker compose -f docker-compose.dev.yml exec -T -e ADMIN_PASSWORD="$ADMIN_PASSWORD" app npx tsx drizzle/seed.ts
+docker compose -f docker-compose.dev.yml exec -T -e ADMIN_PASSWORD="$ADMIN_PASSWORD" app npx tsx drizzle/seed.ts 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Fail "Falha ao executar seed. Verifique os logs acima."
 }
@@ -304,7 +301,7 @@ Write-Ok "Banco populado com dados iniciais"
 Write-Step "7" "Verificacao final"
 
 try {
-    $health = Invoke-RestMethod -Uri "http://localhost:5000/api/health" -TimeoutSec 5
+    $health = Invoke-RestMethod -Uri "http://localhost:5000/api/health" -TimeoutSec 5 -ErrorAction SilentlyContinue
     Write-Ok "Health check: $($health.status)"
 } catch {
     Write-Warn "Health check falhou - verifique os logs"
