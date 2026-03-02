@@ -8,53 +8,10 @@ const __dirname = dirname(__filename);
 
 console.log('🔨 Building backend...');
 
-// Lista completa de módulos externos (não fazer bundle)
-const externalModules = [
-  // Módulos nativos do Node.js
-  'http',
-  'https',
-  'fs',
-  'path',
-  'net',
-  'crypto',
-  'stream',
-  'util',
-  'events',
-  'buffer',
-  'url',
-  'querystring',
-  'zlib',
-  'os',
-  'child_process',
-  
-  // Dependências externas
-  'express',
-  'vite',
-  'drizzle-orm',
-  'postgres',
-  '@trpc/server',
-  'zod',
-  'bcryptjs',
-  'jsonwebtoken',
-  'nodemailer',
-  'stripe',
-  'mercadopago',
-  '@aws-sdk/*',
-  'helmet',
-  'cors',
-  'express-rate-limit',
-  'express-slow-down',
-  'better-sqlite3',
-  'pg-native',
-  'dotenv',
-  'dotenv/config',
-  'pdfkit',
-  '@babel/core',
-  '@babel/preset-typescript',
-  '@babel/preset-env',
-];
-
 // Build do index.ts com bundle
+// packages: 'external' externaliza TODOS os imports de node_modules automaticamente.
+// Isso evita problemas de CommonJS→ESM ao empacotar pacotes como winston, @sentry, etc.
+// O Node.js resolve esses imports em runtime via node_modules copiado no Dockerfile.
 await build({
   entryPoints: ['server/index.ts'],
   bundle: true,
@@ -62,7 +19,7 @@ await build({
   target: 'node22',
   format: 'esm',
   outfile: 'dist/index.js',
-  external: externalModules,
+  packages: 'external',
   alias: {
     '@/_core': './server/_core',
     '@': '.',
