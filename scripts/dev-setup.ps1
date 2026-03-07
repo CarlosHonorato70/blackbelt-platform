@@ -13,19 +13,11 @@ function Write-Ok($msg) { Write-Host "  OK " -ForegroundColor Green -NoNewline; 
 function Write-Warn($msg) { Write-Host "  !! " -ForegroundColor Yellow -NoNewline; Write-Host $msg }
 function Write-Fail($msg) { Write-Host "  X  " -ForegroundColor Red -NoNewline; Write-Host $msg; exit 1 }
 
-# Helper para executar Docker sem que o PowerShell trate stderr como erro.
-# O Docker escreve mensagens de progresso no stderr (ex: "Network ... Creating"),
+# Nota: Usamos cmd /c "docker ... 2>&1" em vez de chamar docker diretamente
+# porque o Docker escreve mensagens de progresso no stderr (ex: "Network ... Creating"),
 # e o PowerShell lanca NativeCommandError quando ve qualquer output no stderr.
 # cmd /c redireciona stderr->stdout no nivel do cmd, antes do PowerShell ver.
-function Invoke-Docker {
-    param([string]$Arguments, [switch]$Silent)
-    if ($Silent) {
-        cmd /c "docker $Arguments 2>&1" | Out-Null
-    } else {
-        cmd /c "docker $Arguments 2>&1"
-    }
-    return $LASTEXITCODE
-}
+# $LASTEXITCODE e verificado diretamente apos cada chamada.
 
 Write-Host ""
 Write-Host "  ======================================================" -ForegroundColor Cyan
@@ -51,7 +43,7 @@ if ($LASTEXITCODE -ne 0) {
 Write-Ok "Docker Compose: $composeVersion"
 
 # Docker running?
-Invoke-Docker "info" -Silent | Out-Null
+cmd /c "docker info 2>&1" | Out-Null
 if ($LASTEXITCODE -ne 0) {
     Write-Fail "Docker Desktop nao esta rodando. Abra o Docker Desktop e tente novamente."
 }
@@ -235,17 +227,17 @@ Write-Step "5" "Parando containers antigos e iniciando novos"
 
 # Parar containers antigos deste projeto (se existirem)
 Write-Host "  Parando containers anteriores (se existirem)..." -ForegroundColor Gray
-Invoke-Docker "compose -f docker-compose.dev.yml down" -Silent | Out-Null
+cmd /c "docker compose -f docker-compose.dev.yml down 2>&1" | Out-Null
 
 # Remover containers orfaos com nomes conflitantes
-Invoke-Docker "rm -f blackbelt-app blackbelt-mysql" -Silent | Out-Null
+cmd /c "docker rm -f blackbelt-app blackbelt-mysql 2>&1" | Out-Null
 
 # Remover volumes antigos para evitar conflito de senhas MySQL
-Invoke-Docker "volume rm blackbelt-platform-main_mysql_data" -Silent | Out-Null
+cmd /c "docker volume rm blackbelt-platform-main_mysql_data 2>&1" | Out-Null
 
 Write-Host "  Construindo imagens (pode levar 3-5 minutos na primeira vez)..." -ForegroundColor Gray
-$exitCode = Invoke-Docker "compose -f docker-compose.dev.yml up --build -d"
-if ($exitCode -ne 0) {
+cmd /c "docker compose -f docker-compose.dev.yml up --build -d 2>&1"
+if ($LASTEXITCODE -ne 0) {
     Write-Host ""
     Write-Fail "Falha ao construir/iniciar containers. Verifique os erros acima."
 }
@@ -258,7 +250,7 @@ if ($appState -ne "running") {
     Write-Host ""
     Write-Host "  Container 'blackbelt-app' nao esta rodando (estado: $appState)" -ForegroundColor Red
     Write-Host "  Logs do container:" -ForegroundColor Yellow
-    Invoke-Docker "compose -f docker-compose.dev.yml logs --tail 30 app"
+    cmd /c "docker compose -f docker-compose.dev.yml logs --tail 30 app 2>&1"
     Write-Host ""
     Write-Fail "Build ou inicializacao do app falhou. Corrija os erros acima e rode o script novamente."
 }
@@ -269,7 +261,7 @@ if ($mysqlState -ne "running") {
     Write-Host ""
     Write-Host "  Container 'blackbelt-mysql' nao esta rodando (estado: $mysqlState)" -ForegroundColor Red
     Write-Host "  Logs do container:" -ForegroundColor Yellow
-    Invoke-Docker "compose -f docker-compose.dev.yml logs --tail 30 mysql"
+    cmd /c "docker compose -f docker-compose.dev.yml logs --tail 30 mysql 2>&1"
     Write-Host ""
     Write-Fail "MySQL nao iniciou. Corrija os erros acima e rode o script novamente."
 }
@@ -280,8 +272,8 @@ Write-Host "  Aguardando MySQL aceitar conexoes..." -ForegroundColor Gray
 $retries = 30
 $ready = $false
 while ($retries -gt 0 -and -not $ready) {
-    $exitCode = Invoke-Docker "compose -f docker-compose.dev.yml exec -T mysql mysqladmin ping -h localhost -u root --password=$DB_ROOT_PASSWORD" -Silent
-    if ($exitCode -eq 0) { $ready = $true }
+    cmd /c "docker compose -f docker-compose.dev.yml exec -T mysql mysqladmin ping -h localhost -u root --password=$DB_ROOT_PASSWORD 2>&1" | Out-Null
+    if ($LASTEXITCODE -eq 0) { $ready = $true }
     if (-not $ready) {
         Start-Sleep -Seconds 2
         $retries--
@@ -307,26 +299,26 @@ if ($ready) {
 } else {
     Write-Host ""
     Write-Host "  Logs do container app:" -ForegroundColor Yellow
-    Invoke-Docker "compose -f docker-compose.dev.yml logs --tail 20 app"
+    cmd /c "docker compose -f docker-compose.dev.yml logs --tail 20 app 2>&1"
     Write-Fail "App nao respondeu ao health check. Verifique os logs acima."
 }
 
 Write-Host ""
-Invoke-Docker "compose -f docker-compose.dev.yml ps"
+cmd /c "docker compose -f docker-compose.dev.yml ps 2>&1"
 
 # ============================================================
 Write-Step "6" "Configurando banco de dados"
 
 Write-Host "  Executando migrations..." -ForegroundColor Gray
-$exitCode = Invoke-Docker "compose -f docker-compose.dev.yml exec -T app npx tsx node_modules/drizzle-kit/bin.cjs push"
-if ($exitCode -ne 0) {
+cmd /c "docker compose -f docker-compose.dev.yml exec -T app npx tsx node_modules/drizzle-kit/bin.cjs push 2>&1"
+if ($LASTEXITCODE -ne 0) {
     Write-Fail "Falha ao executar migrations. Verifique os logs acima."
 }
 Write-Ok "Tabelas criadas"
 
 Write-Host "  Executando seed (admin + planos + roles)..." -ForegroundColor Gray
-$exitCode = Invoke-Docker "compose -f docker-compose.dev.yml exec -T -e ADMIN_PASSWORD=$ADMIN_PASSWORD app npx tsx drizzle/seed.ts"
-if ($exitCode -ne 0) {
+cmd /c "docker compose -f docker-compose.dev.yml exec -T -e ADMIN_PASSWORD=$ADMIN_PASSWORD app npx tsx drizzle/seed.ts 2>&1"
+if ($LASTEXITCODE -ne 0) {
     Write-Fail "Falha ao executar seed. Verifique os logs acima."
 }
 Write-Ok "Banco populado com dados iniciais"
