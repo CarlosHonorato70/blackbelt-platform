@@ -40,11 +40,16 @@ import {
   Bell,
   DollarSign,
   ShoppingCart,
+  ChevronRight,
+  Shield,
+  Palette,
+  TrendingUp,
+  ClipboardList,
 } from "lucide-react";
-import { CSSProperties, useEffect, useRef, useState } from "react";
-import { useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
+import { CSSProperties, useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
-import { TenantSelector } from "./TenantSelector";
 import { TenantSelectionModal } from "./TenantSelectionModal";
 import { NotificationCenter } from "./NotificationCenter";
 import { Button } from "./ui/button";
@@ -55,6 +60,7 @@ const menuItems = [
   { icon: UserSquare2, label: "Setores", path: "/sectors" },
   { icon: Users, label: "Colaboradores", path: "/people" },
   { icon: FileText, label: "Avaliações NR-01", path: "/risk-assessments" },
+  { icon: ClipboardList, label: "Planos de Ação", path: "/action-plans" },
   { icon: Clipboard, label: "COPSOQ-II", path: "/copsoq" },
   { icon: FileText, label: "Histórico", path: "/assessment-history" },
   { icon: FileText, label: "Análise COPSOQ-II", path: "/copsoq/analytics" },
@@ -90,6 +96,23 @@ const menuItems = [
     path: "/test-dashboard",
     adminOnly: true,
   },
+  {
+    icon: Shield,
+    label: "Segurança",
+    path: "/security-dashboard",
+    adminOnly: true,
+  },
+  {
+    icon: Palette,
+    label: "Identidade Visual",
+    path: "/branding-settings",
+    adminOnly: true,
+  },
+  {
+    icon: TrendingUp,
+    label: "Dashboard Executivo",
+    path: "/executive-dashboard",
+  },
   { icon: HelpCircle, label: "Ajuda e Suporte", path: "/help" },
 ];
 
@@ -119,7 +142,7 @@ export default function DashboardLayout({
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#0f1a2e] to-[#1e3a5f]">
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
           <div className="flex flex-col items-center gap-6">
             <div className="relative group">
@@ -127,14 +150,14 @@ export default function DashboardLayout({
                 <img
                   src={APP_LOGO}
                   alt={APP_TITLE}
-                  className="h-20 w-20 rounded-xl object-cover shadow"
+                  className="h-20 w-20 rounded-xl object-cover shadow-lg ring-2 ring-[#c8a55a]/30"
                 />
               </div>
             </div>
             <div className="text-center space-y-2">
-              <h1 className="text-2xl font-bold tracking-tight">{APP_TITLE}</h1>
-              <p className="text-sm text-muted-foreground">
-                Please sign in to continue
+              <h1 className="text-2xl font-bold tracking-tight text-white">{APP_TITLE}</h1>
+              <p className="text-sm text-slate-400">
+                Acesse sua conta para continuar
               </p>
             </div>
           </div>
@@ -143,9 +166,9 @@ export default function DashboardLayout({
               window.location.href = getLoginUrl();
             }}
             size="lg"
-            className="w-full shadow-lg hover:shadow-xl transition-all"
+            className="w-full bg-[#c8a55a] hover:bg-[#b8953a] text-[#0f1a2e] font-semibold shadow-lg hover:shadow-xl transition-all"
           >
-            Sign in
+            Entrar
           </Button>
         </div>
       </div>
@@ -177,11 +200,11 @@ function DashboardLayoutContent({
   setSidebarWidth,
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
-  const [location, setLocation] = useLocation();
+  const { pathname: location } = useLocation();
+  const navigate = useNavigate();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
-  const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
 
@@ -195,8 +218,7 @@ function DashboardLayoutContent({
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
 
-      const sidebarLeft = sidebarRef.current?.getBoundingClientRect().left ?? 0;
-      const newWidth = e.clientX - sidebarLeft;
+      const newWidth = e.clientX;
       if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
         setSidebarWidth(newWidth);
       }
@@ -223,131 +245,148 @@ function DashboardLayoutContent({
 
   return (
     <>
-      <div className="relative" ref={sidebarRef}>
-        <Sidebar
-          collapsible="icon"
-          className="border-r-0"
-          disableTransition={isResizing}
-        >
-          <SidebarHeader className="h-16 justify-center">
-            <div className="flex items-center gap-3 pl-2 group-data-[collapsible=icon]:px-0 transition-all w-full">
-              {isCollapsed ? (
-                <div className="relative h-8 w-8 shrink-0 group">
+      <Sidebar
+        collapsible="icon"
+        className="border-r-0"
+        disableTransition={isResizing}
+      >
+        {/* === Sidebar Header: Logo + Title === */}
+        <SidebarHeader className="h-16 justify-center border-b border-sidebar-border">
+          <div className="flex items-center gap-3 pl-2 group-data-[collapsible=icon]:px-0 transition-all w-full">
+            {isCollapsed ? (
+              <div className="relative h-8 w-8 shrink-0 group">
+                <img
+                  src={APP_LOGO}
+                  className="h-8 w-8 rounded-md object-cover ring-1 ring-[#c8a55a]/30"
+                  alt="Logo"
+                />
+                <button
+                  onClick={toggleSidebar}
+                  className="absolute inset-0 flex items-center justify-center bg-sidebar-accent rounded-md ring-1 ring-sidebar-border opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <PanelLeft className="h-4 w-4 text-sidebar-foreground" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 min-w-0">
                   <img
                     src={APP_LOGO}
-                    className="h-8 w-8 rounded-md object-cover ring-1 ring-border"
+                    className="h-8 w-8 rounded-md object-cover ring-1 ring-[#c8a55a]/30 shrink-0"
                     alt="Logo"
                   />
-                  <button
-                    onClick={toggleSidebar}
-                    className="absolute inset-0 flex items-center justify-center bg-accent rounded-md ring-1 ring-border opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <PanelLeft className="h-4 w-4 text-foreground" />
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-center gap-3 min-w-0">
-                    <img
-                      src={APP_LOGO}
-                      className="h-8 w-8 rounded-md object-cover ring-1 ring-border shrink-0"
-                      alt="Logo"
-                    />
-                    <span className="font-semibold tracking-tight truncate">
-                      {APP_TITLE}
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-bold tracking-tight truncate text-sidebar-foreground text-sm">
+                      Black Belt
+                    </span>
+                    <span className="text-[10px] text-[#c8a55a] font-medium tracking-widest uppercase">
+                      Consultoria
                     </span>
                   </div>
-                  <button
-                    onClick={toggleSidebar}
-                    className="ml-auto h-8 w-8 flex items-center justify-center hover:bg-accent rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
-                  >
-                    <PanelLeft className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                </>
-              )}
-            </div>
-          </SidebarHeader>
-
-          {!isCollapsed && (
-            <div className="px-3 py-2 border-b">
-              <TenantSelectionModal />
-            </div>
-          )}
-
-          <SidebarContent className="gap-0">
-            <SidebarMenu className="px-2 py-1">
-              {menuItems
-                .filter(item => !item.adminOnly || user?.role === "admin")
-                .map(item => {
-                  const isActive = location === item.path;
-                  return (
-                    <SidebarMenuItem key={item.path}>
-                      <SidebarMenuButton
-                        isActive={isActive}
-                        onClick={() => setLocation(item.path)}
-                        tooltip={item.label}
-                        className={`h-10 transition-all font-normal`}
-                      >
-                        <item.icon
-                          className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
-                        />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-            </SidebarMenu>
-          </SidebarContent>
-
-          <SidebarFooter className="p-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  <Avatar className="h-9 w-9 border shrink-0">
-                    <AvatarFallback className="text-xs font-medium">
-                      {user?.name?.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-                    <p className="text-sm font-medium truncate leading-none">
-                      {user?.name || "-"}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate mt-1.5">
-                      {user?.email || "-"}
-                    </p>
-                  </div>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem
-                  onClick={logout}
-                  className="cursor-pointer text-destructive focus:text-destructive"
+                </div>
+                <button
+                  onClick={toggleSidebar}
+                  className="ml-auto h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
                 >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarFooter>
-        </Sidebar>
-        <div
-          className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors ${isCollapsed ? "hidden" : ""}`}
-          onMouseDown={() => {
-            if (isCollapsed) return;
-            setIsResizing(true);
-          }}
-          style={{ zIndex: 50 }}
-        />
-      </div>
+                  <PanelLeft className="h-4 w-4 text-sidebar-foreground/60" />
+                </button>
+              </>
+            )}
+          </div>
+        </SidebarHeader>
+
+        {/* === Tenant Selector === */}
+        {!isCollapsed && (
+          <div className="px-3 py-2.5 border-b border-sidebar-border">
+            <TenantSelectionModal />
+          </div>
+        )}
+
+        {/* === Navigation Menu === */}
+        <SidebarContent className="gap-0">
+          <SidebarMenu className="px-2 py-2">
+            {menuItems
+              .filter(item => !item.adminOnly || user?.role === "admin")
+              .map(item => {
+                const isActive = location === item.path;
+                return (
+                  <SidebarMenuItem key={item.path}>
+                    <SidebarMenuButton
+                      isActive={isActive}
+                      onClick={() => navigate(item.path)}
+                      tooltip={item.label}
+                      className={`h-10 transition-all font-normal rounded-lg ${
+                        isActive
+                          ? "bg-sidebar-accent text-[#c8a55a] font-medium border-l-2 border-l-[#c8a55a]"
+                          : "text-sidebar-foreground/70 hover:text-sidebar-foreground"
+                      }`}
+                    >
+                      <item.icon
+                        className={`h-4 w-4 shrink-0 ${
+                          isActive ? "text-[#c8a55a]" : ""
+                        }`}
+                      />
+                      <span className="truncate">{item.label}</span>
+                      {isActive && !isCollapsed && (
+                        <ChevronRight className="ml-auto h-3 w-3 text-[#c8a55a]/60" />
+                      )}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+          </SidebarMenu>
+        </SidebarContent>
+
+        {/* === User Footer === */}
+        <SidebarFooter className="p-3 border-t border-sidebar-border">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-sidebar-accent transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <Avatar className="h-9 w-9 shrink-0 ring-2 ring-[#c8a55a]/30">
+                  <AvatarFallback className="text-xs font-bold bg-[#c8a55a]/20 text-[#c8a55a]">
+                    {user?.name?.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
+                  <p className="text-sm font-medium truncate leading-none text-sidebar-foreground">
+                    {user?.name || "-"}
+                  </p>
+                  <p className="text-xs text-sidebar-foreground/50 truncate mt-1.5">
+                    {user?.email || "-"}
+                  </p>
+                </div>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem
+                onClick={logout}
+                className="cursor-pointer text-destructive focus:text-destructive"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sair</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </SidebarFooter>
+
+        {/* === Resize Handle (inside Sidebar so it doesn't break peer layout) === */}
+        {!isCollapsed && (
+          <div
+            className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#c8a55a]/30 transition-colors z-50"
+            onMouseDown={() => setIsResizing(true)}
+          />
+        )}
+      </Sidebar>
 
       <SidebarInset>
+        {/* === Mobile Header === */}
         {isMobile && (
           <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
               <div className="flex items-center gap-3">
                 <div className="flex flex-col gap-1">
-                  <span className="tracking-tight text-foreground">
+                  <span className="tracking-tight text-foreground font-medium">
                     {activeMenuItem?.label ?? APP_TITLE}
                   </span>
                 </div>
@@ -359,8 +398,57 @@ function DashboardLayoutContent({
             </div>
           </div>
         )}
-        <main className="flex-1 p-4">{children}</main>
+
+        {/* === Email Verification Banner === */}
+        <EmailVerificationBanner />
+
+        {/* === Main Content === */}
+        <main className="flex-1 p-4 md:p-6">{children}</main>
       </SidebarInset>
     </>
+  );
+}
+
+function EmailVerificationBanner() {
+  const { user } = useAuth();
+  const [dismissed, setDismissed] = useState(false);
+
+  const resendMutation = trpc.auth.resendVerificationEmail.useMutation({
+    onSuccess: () => {
+      alert("Email de verificação reenviado com sucesso!");
+    },
+    onError: () => {
+      alert("Erro ao reenviar email. Tente novamente.");
+    },
+  });
+
+  // Don't show if user is verified, dismissed, or not logged in
+  if (!user || (user as any).emailVerified || dismissed) return null;
+
+  return (
+    <div className="bg-amber-50 border-b border-amber-200 px-4 py-2.5 flex items-center justify-between gap-4 text-sm">
+      <div className="flex items-center gap-2 text-amber-800">
+        <Mail className="h-4 w-4 shrink-0" />
+        <span>
+          Verifique seu email para garantir acesso completo à plataforma.
+        </span>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          onClick={() => resendMutation.mutate()}
+          disabled={resendMutation.isPending}
+          className="text-amber-700 hover:text-amber-900 font-medium underline underline-offset-2 text-xs"
+        >
+          {resendMutation.isPending ? "Enviando..." : "Reenviar email"}
+        </button>
+        <button
+          onClick={() => setDismissed(true)}
+          className="text-amber-500 hover:text-amber-700 text-lg leading-none px-1"
+          aria-label="Fechar"
+        >
+          ×
+        </button>
+      </div>
+    </div>
   );
 }

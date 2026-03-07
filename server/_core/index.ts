@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { startReminderScheduler } from "./reminder-scheduler";
+import { log } from "./logger";
 import {
   helmetConfig,
   corsConfig,
@@ -92,7 +93,7 @@ async function startServer() {
           res.status(400).json({ error: result.error });
         }
       } catch (error) {
-        console.error("Stripe webhook error:", error);
+        log.error("Stripe webhook error", { error: error instanceof Error ? error.message : String(error) });
         res.status(400).send("Webhook Error");
       }
     }
@@ -152,7 +153,7 @@ async function startServer() {
         res.status(400).json({ error: result.error });
       }
     } catch (error) {
-      console.error("Mercado Pago webhook error:", error);
+      log.error("Mercado Pago webhook error", { error: error instanceof Error ? error.message : String(error) });
       res.status(400).json({ error: "Webhook processing failed" });
     }
   });
@@ -172,17 +173,17 @@ async function startServer() {
   const port = await findAvailablePort(preferredPort);
 
   if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+    log.info("Port is busy, using alternate port", { preferredPort, port });
   }
 
   server.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}/`);
+    log.info("Server running", { url: `http://localhost:${port}/` });
   });
 
   // Iniciar agendador de lembretes
   startReminderScheduler();
 }
 
-startServer().catch(console.error);
+startServer().catch((err) => log.error("Server startup failed", { error: err instanceof Error ? err.message : String(err) }));
 
 // Force rebuild Wed Dec 10 23:30:17     2025

@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
 import { publicProcedure, router } from "../_core/trpc";
+import { requireActiveSubscription } from "../_core/subscriptionMiddleware";
 import { getDb } from "../db";
 import { complianceDocuments } from "../../drizzle/schema_nr01";
 import { eq, and, desc } from "drizzle-orm";
@@ -98,6 +99,7 @@ export const complianceReportsRouter = router({
       })
     )
     .mutation(async ({ input }) => {
+      await requireActiveSubscription(input.tenantId);
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -199,6 +201,7 @@ export const complianceReportsRouter = router({
       })
     )
     .mutation(async ({ input }) => {
+      await requireActiveSubscription(input.tenantId);
       const db = await getDb();
       if (!db)
         throw new TRPCError({

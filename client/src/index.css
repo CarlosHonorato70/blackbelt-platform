@@ -2,16 +2,152 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer base {
+  :root {
+    /* ===== Black Belt Theme: Azul, Preto & Dourado ===== */
+
+    /* Background & Foreground */
+    --background: 210 20% 98%;       /* #f8fafc off-white */
+    --foreground: 215 28% 17%;       /* #1e293b dark navy text */
+
+    /* Card */
+    --card: 0 0% 100%;               /* #ffffff */
+    --card-foreground: 215 28% 17%;
+
+    /* Popover */
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 28% 17%;
+
+    /* Primary — Azul Navy */
+    --primary: 213 52% 24%;          /* #1e3a5f */
+    --primary-foreground: 210 40% 96%;
+
+    /* Secondary — Dourado */
+    --secondary: 41 42% 57%;         /* #c8a55a */
+    --secondary-foreground: 215 28% 12%;
+
+    /* Muted */
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Accent */
+    --accent: 210 20% 94%;
+    --accent-foreground: 213 52% 24%;
+
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Border / Input / Ring */
+    --border: 214 20% 88%;
+    --input: 214 20% 88%;
+    --ring: 213 52% 24%;
+
+    /* Radius */
+    --radius: 0.625rem;
+
+    /* ===== Sidebar — Fundo Escuro Navy/Preto ===== */
+    --sidebar: 216 50% 12%;          /* #0f1a2e preto-azulado */
+    --sidebar-foreground: 210 30% 88%;
+    --sidebar-primary: 41 42% 57%;   /* dourado para destaques */
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 213 52% 20%;   /* azul navy mais claro */
+    --sidebar-accent-foreground: 210 30% 92%;
+    --sidebar-border: 216 40% 18%;
+    --sidebar-ring: 41 42% 57%;
+
+    /* ===== Chart Colors ===== */
+    --chart-1: 213 52% 24%;          /* azul navy */
+    --chart-2: 41 42% 57%;           /* dourado */
+    --chart-3: 199 89% 48%;          /* azul claro */
+    --chart-4: 160 60% 45%;          /* verde esmeralda */
+    --chart-5: 0 84% 60%;            /* vermelho */
+  }
+
+  .dark {
+    --background: 216 50% 8%;
+    --foreground: 210 20% 96%;
+
+    --card: 216 50% 10%;
+    --card-foreground: 210 20% 96%;
+
+    --popover: 216 50% 10%;
+    --popover-foreground: 210 20% 96%;
+
+    --primary: 41 42% 57%;           /* dourado no dark mode */
+    --primary-foreground: 216 50% 8%;
+
+    --secondary: 213 52% 24%;
+    --secondary-foreground: 210 20% 96%;
+
+    --muted: 216 40% 15%;
+    --muted-foreground: 215 16% 55%;
+
+    --accent: 216 40% 15%;
+    --accent-foreground: 210 20% 96%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 216 40% 18%;
+    --input: 216 40% 18%;
+    --ring: 41 42% 57%;
+
+    --sidebar: 216 50% 6%;
+    --sidebar-foreground: 210 20% 96%;
+    --sidebar-primary: 41 42% 57%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 216 40% 15%;
+    --sidebar-accent-foreground: 210 20% 96%;
+    --sidebar-border: 216 40% 12%;
+    --sidebar-ring: 41 42% 57%;
+
+    --chart-1: 41 42% 57%;
+    --chart-2: 199 89% 48%;
+    --chart-3: 160 60% 45%;
+    --chart-4: 213 52% 40%;
+    --chart-5: 0 84% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+      "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans",
+      "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ===== Utility Classes: Dourado ===== */
+@layer utilities {
+  .text-gold {
+    color: #c8a55a;
+  }
+  .bg-gold {
+    background-color: #c8a55a;
+  }
+  .bg-gold-light {
+    background-color: #c8a55a1a;  /* 10% opacity */
+  }
+  .border-gold {
+    border-color: #c8a55a;
+  }
+  .from-gold {
+    --tw-gradient-from: #c8a55a;
+  }
+  .to-gold {
+    --tw-gradient-to: #c8a55a;
+  }
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }

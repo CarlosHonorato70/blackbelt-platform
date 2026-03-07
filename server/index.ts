@@ -64,6 +64,7 @@ app.use(
         ].filter(Boolean),
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         objectSrc: ["'none'"],
+        frameAncestors: ["'none'"],
         upgradeInsecureRequests: isProduction ? [] : null,
       },
     },
@@ -77,8 +78,10 @@ app.use(
 
 const allowedOrigins = [
   ENV.frontendUrl,
-  "http://localhost:5000",
-  "http://localhost:5173",
+  // Origens adicionais via variavel de ambiente (separadas por virgula)
+  ...(process.env.ALLOWED_ORIGINS?.split(",").map(s => s.trim()) ?? []),
+  // Em desenvolvimento, permitir localhost
+  ...(ENV.isProduction ? [] : ["http://localhost:5000", "http://localhost:5173", "http://127.0.0.1:5000", "http://127.0.0.1:5173"]),
 ].filter(Boolean);
 
 app.use(
@@ -240,4 +243,21 @@ app.use((req, res, next) => {
     log.info(`Servidor rodando em http://0.0.0.0:${PORT}/`);
     log.info(`Ambiente: ${ENV.nodeEnv}`);
   });
+
+  // 6. GRACEFUL SHUTDOWN
+  const gracefulShutdown = (signal: string) => {
+    log.info(`${signal} received, shutting down gracefully...`);
+    server.close(() => {
+      log.info("HTTP server closed");
+      process.exit(0);
+    });
+    // Force exit after 30s
+    setTimeout(() => {
+      log.error("Forced shutdown after 30s timeout");
+      process.exit(1);
+    }, 30000).unref();
+  };
+
+  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 })();

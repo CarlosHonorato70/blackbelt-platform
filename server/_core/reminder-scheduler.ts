@@ -1,4 +1,6 @@
 import { getDb } from "../db";
+import { log } from "./logger";
+import { nanoid } from "nanoid";
 import { copsoqInvites, copsoqReminders } from "../../drizzle/schema_nr01";
 import { eq, and, lt, isNull, lte } from "drizzle-orm";
 import { sendReminderEmail } from "./email";
@@ -22,12 +24,12 @@ const REMINDER_CONFIG = {
 export async function scheduleReminders() {
   const db = await getDb();
   if (!db) {
-    console.warn("[Reminder Scheduler] Database not available");
+    log.warn("Reminder scheduler: database not available");
     return;
   }
 
   try {
-    console.log("[Reminder Scheduler] Starting reminder scheduling...");
+    log.info("Reminder scheduler: starting reminder scheduling");
 
     // 1. Buscar convites pendentes que precisam de lembrete
     const pendingInvites = await db
@@ -44,9 +46,7 @@ export async function scheduleReminders() {
         )
       );
 
-    console.log(
-      `[Reminder Scheduler] Found ${pendingInvites.length} pending invites`
-    );
+    log.info("Reminder scheduler: found pending invites", { count: pendingInvites.length });
 
     for (const invite of pendingInvites) {
       // 2. Verificar quantos lembretes já foram enviados
@@ -64,9 +64,7 @@ export async function scheduleReminders() {
 
       // 3. Se já atingiu o máximo de lembretes, pular
       if (reminderCount >= REMINDER_CONFIG.maxReminders) {
-        console.log(
-          `[Reminder Scheduler] Invite ${invite.id} already has max reminders (${reminderCount})`
-        );
+        log.info("Reminder scheduler: invite already has max reminders", { inviteId: invite.id, reminderCount });
         continue;
       }
 
@@ -80,9 +78,7 @@ export async function scheduleReminders() {
       const reminderDays = reminderDaysConfig[reminderCount];
 
       if (!reminderDays) {
-        console.log(
-          `[Reminder Scheduler] No more reminders configured for invite ${invite.id}`
-        );
+        log.info("Reminder scheduler: no more reminders configured", { inviteId: invite.id });
         continue;
       }
 
@@ -93,16 +89,12 @@ export async function scheduleReminders() {
 
       // Se ainda não é hora de enviar, pular
       if (now < reminderDate) {
-        console.log(
-          `[Reminder Scheduler] Reminder ${nextReminderNumber} for invite ${invite.id} scheduled for ${reminderDate.toISOString()}`
-        );
+        log.info("Reminder scheduler: reminder scheduled", { reminderNumber: nextReminderNumber, inviteId: invite.id, scheduledFor: reminderDate.toISOString() });
         continue;
       }
 
       // 5. Enviar email de lembrete
-      console.log(
-        `[Reminder Scheduler] Sending reminder ${nextReminderNumber} for invite ${invite.id} to ${invite.respondentEmail}`
-      );
+      log.info("Reminder scheduler: sending reminder", { reminderNumber: nextReminderNumber, inviteId: invite.id, email: invite.respondentEmail });
 
       try {
         await sendReminderEmail({
@@ -121,7 +113,7 @@ export async function scheduleReminders() {
         }
 
         await db.insert(copsoqReminders).values({
-          id: `reminder_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          id: `reminder_${Date.now()}_${nanoid(8)}`,
           inviteId: invite.id,
           assessmentId: invite.assessmentId,
           respondentEmail: invite.respondentEmail,
@@ -135,18 +127,13 @@ export async function scheduleReminders() {
           status: "sent",
         });
 
-        console.log(
-          `[Reminder Scheduler] Reminder ${nextReminderNumber} sent successfully for invite ${invite.id}`
-        );
+        log.info("Reminder scheduler: reminder sent successfully", { reminderNumber: nextReminderNumber, inviteId: invite.id });
       } catch (error) {
-        console.error(
-          `[Reminder Scheduler] Failed to send reminder for invite ${invite.id}:`,
-          error
-        );
+        log.error("Reminder scheduler: failed to send reminder", { inviteId: invite.id, error: error instanceof Error ? error.message : String(error) });
 
         // Registrar falha
         await db.insert(copsoqReminders).values({
-          id: `reminder_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          id: `reminder_${Date.now()}_${nanoid(8)}`,
           inviteId: invite.id,
           assessmentId: invite.assessmentId,
           respondentEmail: invite.respondentEmail,
@@ -178,17 +165,12 @@ export async function scheduleReminders() {
         .set({ status: "expired" })
         .where(eq(copsoqInvites.id, invite.id));
 
-      console.log(`[Reminder Scheduler] Marked invite ${invite.id} as expired`);
+      log.info("Reminder scheduler: marked invite as expired", { inviteId: invite.id });
     }
 
-    console.log(
-      "[Reminder Scheduler] Reminder scheduling completed successfully"
-    );
+    log.info("Reminder scheduler: scheduling completed successfully");
   } catch (error) {
-    console.error(
-      "[Reminder Scheduler] Error during reminder scheduling:",
-      error
-    );
+    log.error("Reminder scheduler: error during scheduling", { error: error instanceof Error ? error.message : String(error) });
   }
 }
 
@@ -197,15 +179,15 @@ export async function scheduleReminders() {
  * Executa a cada 1 hora
  */
 export function startReminderScheduler() {
-  console.log("[Reminder Scheduler] Starting reminder scheduler service...");
+  log.info("Reminder scheduler: starting service");
 
   // Executar imediatamente
-  scheduleReminders().catch(console.error);
+  scheduleReminders().catch((err) => log.error("Reminder scheduler error", { error: err instanceof Error ? err.message : String(err) }));
 
   // Executar a cada 1 hora
   const intervalId = setInterval(
     () => {
-      scheduleReminders().catch(console.error);
+      scheduleReminders().catch((err) => log.error("Reminder scheduler error", { error: err instanceof Error ? err.message : String(err) }));
     },
     60 * 60 * 1000
   ); // 1 hora em milissegundos

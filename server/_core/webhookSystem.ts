@@ -9,6 +9,7 @@
  */
 
 import crypto from "crypto";
+import { log } from "./logger";
 import { getDb } from "../db";
 import { webhooks, webhookDeliveries } from "../../drizzle/schema";
 import { eq, and, lt } from "drizzle-orm";
@@ -53,7 +54,7 @@ export async function triggerWebhook(
 ): Promise<void> {
   const db = await getDb();
   if (!db) {
-    console.error("Database unavailable for webhook trigger");
+    log.error("Database unavailable for webhook trigger");
     return;
   }
 
@@ -64,7 +65,7 @@ export async function triggerWebhook(
     });
 
     if (activeWebhooks.length === 0) {
-      console.log(`No active webhooks for tenant ${tenantId}`);
+      log.info("No active webhooks for tenant", { tenantId });
       return;
     }
 
@@ -75,7 +76,7 @@ export async function triggerWebhook(
     });
 
     if (relevantWebhooks.length === 0) {
-      console.log(`No webhooks subscribed to ${event} for tenant ${tenantId}`);
+      log.info("No webhooks subscribed to event for tenant", { event, tenantId });
       return;
     }
 
@@ -96,16 +97,14 @@ export async function triggerWebhook(
       // Executar delivery de forma assíncrona (não bloquear)
       deliverWebhook(deliveryId, webhook, event, { tenantId, ...data }).catch(
         (error) => {
-          console.error(`Failed to deliver webhook ${deliveryId}:`, error);
+          log.error("Failed to deliver webhook", { deliveryId, error: error instanceof Error ? error.message : String(error) });
         }
       );
     }
 
-    console.log(
-      `Triggered ${relevantWebhooks.length} webhooks for event ${event}`
-    );
+    log.info("Triggered webhooks for event", { count: relevantWebhooks.length, event });
   } catch (error) {
-    console.error("Error triggering webhooks:", error);
+    log.error("Error triggering webhooks", { error: error instanceof Error ? error.message : String(error) });
   }
 }
 
@@ -171,11 +170,9 @@ export async function deliverWebhook(
       })
       .where(eq(webhookDeliveries.id, deliveryId));
 
-    console.log(
-      `Webhook delivered successfully: ${deliveryId} (${response.status})`
-    );
+    log.info("Webhook delivered successfully", { deliveryId, status: response.status });
   } catch (error: any) {
-    console.error(`Webhook delivery failed: ${deliveryId}`, error);
+    log.error("Webhook delivery failed", { deliveryId, error: error.message });
 
     // Obter tentativa atual
     const delivery = await db.query.webhookDeliveries.findFirst({
@@ -208,11 +205,9 @@ export async function deliverWebhook(
       .where(eq(webhookDeliveries.id, deliveryId));
 
     if (shouldRetry) {
-      console.log(
-        `Webhook will retry in ${nextRetryMinutes} minutes: ${deliveryId}`
-      );
+      log.info("Webhook will retry", { deliveryId, retryInMinutes: nextRetryMinutes });
     } else {
-      console.log(`Webhook max retries reached: ${deliveryId}`);
+      log.warn("Webhook max retries reached", { deliveryId });
     }
   }
 }
@@ -259,7 +254,7 @@ export function verifyWebhookSignature(
       Buffer.from(expectedSignature, "hex")
     );
   } catch (error) {
-    console.error("Error verifying webhook signature:", error);
+    log.error("Error verifying webhook signature", { error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }
@@ -284,7 +279,7 @@ export async function processWebhookRetries(): Promise<void> {
       },
     });
 
-    console.log(`Processing ${pendingRetries.length} pending webhook retries`);
+    log.info("Processing pending webhook retries", { count: pendingRetries.length });
 
     for (const delivery of pendingRetries) {
       if (!delivery.webhook) continue;
@@ -298,7 +293,7 @@ export async function processWebhookRetries(): Promise<void> {
       );
     }
   } catch (error) {
-    console.error("Error processing webhook retries:", error);
+    log.error("Error processing webhook retries", { error: error instanceof Error ? error.message : String(error) });
   }
 }
 
@@ -343,7 +338,7 @@ export async function getWebhookStats(tenantId: string) {
 
     return stats;
   } catch (error) {
-    console.error("Error getting webhook stats:", error);
+    log.error("Error getting webhook stats", { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }

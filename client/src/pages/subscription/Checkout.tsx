@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { useLocation, useSearch } from "wouter";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,8 @@ import { Loader2, CreditCard, Smartphone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Checkout() {
-  const [, navigate] = useLocation();
-  const searchParams = useSearch();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   
   const [planId, setPlanId] = useState<string>("");
@@ -26,9 +26,8 @@ export default function Checkout() {
 
   // Parse URL params
   useEffect(() => {
-    const params = new URLSearchParams(searchParams);
-    const plan = params.get("plan");
-    const cycle = params.get("cycle");
+    const plan = searchParams.get("plan");
+    const cycle = searchParams.get("cycle");
     
     if (plan) setPlanId(plan);
     if (cycle === "yearly") setBillingCycle("yearly");

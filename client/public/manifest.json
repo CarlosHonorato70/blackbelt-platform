@@ -1,0 +1,21 @@
+{
+  "name": "BlackBelt Platform - Gestão de Riscos Psicossociais",
+  "short_name": "BlackBelt",
+  "description": "Plataforma de gestão de riscos psicossociais conforme NR-01",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#1F2937",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

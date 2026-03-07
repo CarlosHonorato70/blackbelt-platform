@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTenant } from "@/contexts/TenantContext";
+import { trpc } from "@/lib/trpc";
 import {
   AlertCircle,
   CheckCircle2,
@@ -58,27 +59,23 @@ export default function ComplianceReports() {
     );
   }
 
-  // Mock data - será substituído por dados reais do backend
-  const reports = [
-    {
-      id: "1",
-      title: "Avaliação Inicial - Setor Administrativo",
-      date: "15/01/2025",
-      assessor: "Carlos Honorato",
-      status: "completo",
-      compliance: 75,
-      riskLevel: "médio",
-    },
-    {
-      id: "2",
-      title: "Reavaliação Anual - Produção",
-      date: "10/01/2025",
-      assessor: "Thyberê Mendes",
-      status: "parcial",
-      compliance: 60,
-      riskLevel: "alto",
-    },
-  ];
+  const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+
+  const { data: complianceDocs = [] } = trpc.complianceReports.list.useQuery(
+    { tenantId: tenantId ?? "" },
+    { enabled: !!tenantId }
+  );
+
+  // Map DB records to display format
+  const reports = complianceDocs.map((doc: any) => ({
+    id: doc.id,
+    title: doc.title,
+    date: doc.createdAt ? new Date(doc.createdAt).toLocaleDateString("pt-BR") : "—",
+    assessor: doc.signedBy || "—",
+    status: doc.status === "active" ? "completo" : doc.status === "draft" ? "rascunho" : doc.status,
+    compliance: doc.status === "active" ? 100 : doc.status === "draft" ? 50 : 75,
+    riskLevel: "médio",
+  }));
 
   const complianceChecklist = [
     {

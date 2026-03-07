@@ -5,6 +5,7 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
@@ -29,7 +30,7 @@ export const subscriptionsRouter = router({
    */
   listPublicPlans: publicProcedure.query(async () => {
     const db = await getDb();
-    if (!db) throw new Error("Database not available");
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
     
     const publicPlans = await db
       .select()
@@ -47,7 +48,7 @@ export const subscriptionsRouter = router({
     .input(z.object({ planId: z.string() }))
     .query(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
       
       const [plan] = await db
         .select()
@@ -56,7 +57,7 @@ export const subscriptionsRouter = router({
         .limit(1);
 
       if (!plan) {
-        throw new Error("Plano não encontrado");
+        throw new TRPCError({ code: "NOT_FOUND", message: "Plano não encontrado" });
       }
 
       // Buscar features do plano
@@ -88,11 +89,11 @@ export const subscriptionsRouter = router({
    */
   getCurrentSubscription: protectedProcedure.query(async ({ ctx }) => {
     if (!ctx.tenantId) {
-      throw new Error("Tenant não selecionado");
+      throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
     }
 
     const db = await getDb();
-    if (!db) throw new Error("Database not available");
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
     const [subscription] = await db
       .select({
@@ -119,11 +120,11 @@ export const subscriptionsRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       if (!ctx.tenantId) {
-        throw new Error("Tenant não selecionado");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
       }
 
       const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       // Verificar se já existe assinatura
       const [existing] = await db
@@ -133,7 +134,7 @@ export const subscriptionsRouter = router({
         .limit(1);
 
       if (existing) {
-        throw new Error("Tenant já possui uma assinatura");
+        throw new TRPCError({ code: "CONFLICT", message: "Tenant já possui uma assinatura" });
       }
 
       // Buscar plano
@@ -144,7 +145,7 @@ export const subscriptionsRouter = router({
         .limit(1);
 
       if (!plan) {
-        throw new Error("Plano não encontrado");
+        throw new TRPCError({ code: "NOT_FOUND", message: "Plano não encontrado" });
       }
 
       // Calcular datas
@@ -197,11 +198,11 @@ export const subscriptionsRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       if (!ctx.tenantId) {
-        throw new Error("Tenant não selecionado");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
       }
 
       const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       await db
         .update(subscriptions)
@@ -219,11 +220,11 @@ export const subscriptionsRouter = router({
    */
   cancelSubscription: protectedProcedure.mutation(async ({ ctx }) => {
     if (!ctx.tenantId) {
-      throw new Error("Tenant não selecionado");
+      throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
     }
 
     const db = await getDb();
-    if (!db) throw new Error("Database not available");
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
     await db
       .update(subscriptions)
@@ -242,11 +243,11 @@ export const subscriptionsRouter = router({
    */
   reactivateSubscription: protectedProcedure.mutation(async ({ ctx }) => {
     if (!ctx.tenantId) {
-      throw new Error("Tenant não selecionado");
+      throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
     }
 
     const db = await getDb();
-    if (!db) throw new Error("Database not available");
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
     await db
       .update(subscriptions)
@@ -272,11 +273,11 @@ export const subscriptionsRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       if (!ctx.tenantId) {
-        throw new Error("Tenant não selecionado");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
       }
 
       const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       // Buscar novo plano
       const [newPlan] = await db
@@ -286,7 +287,7 @@ export const subscriptionsRouter = router({
         .limit(1);
 
       if (!newPlan) {
-        throw new Error("Plano não encontrado");
+        throw new TRPCError({ code: "NOT_FOUND", message: "Plano não encontrado" });
       }
 
       // Buscar assinatura atual
@@ -297,7 +298,7 @@ export const subscriptionsRouter = router({
         .limit(1);
 
       if (!currentSub) {
-        throw new Error("Assinatura não encontrada");
+        throw new TRPCError({ code: "NOT_FOUND", message: "Assinatura não encontrada" });
       }
 
       const billingCycle = input.billingCycle || currentSub.billingCycle;
@@ -333,11 +334,11 @@ export const subscriptionsRouter = router({
    */
   checkLimits: protectedProcedure.query(async ({ ctx }) => {
     if (!ctx.tenantId) {
-      throw new Error("Tenant não selecionado");
+      throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
     }
 
     const db = await getDb();
-    if (!db) throw new Error("Database not available");
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
     // Buscar assinatura e plano
     const [subscription] = await db
@@ -351,7 +352,7 @@ export const subscriptionsRouter = router({
       .limit(1);
 
     if (!subscription) {
-      throw new Error("Assinatura não encontrada");
+      throw new TRPCError({ code: "NOT_FOUND", message: "Assinatura não encontrada" });
     }
 
     // Buscar métricas de uso atuais
@@ -418,11 +419,11 @@ export const subscriptionsRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       if (!ctx.tenantId) {
-        throw new Error("Tenant não selecionado");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
       }
 
       const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       const now = new Date();
       const periodStart = new Date(now);
@@ -467,11 +468,11 @@ export const subscriptionsRouter = router({
     )
     .query(async ({ input, ctx }) => {
       if (!ctx.tenantId) {
-        throw new Error("Tenant não selecionado");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
       }
 
       const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       const conditions = [eq(invoices.tenantId, ctx.tenantId)];
       if (input.status) {
@@ -495,11 +496,11 @@ export const subscriptionsRouter = router({
     .input(z.object({ invoiceId: z.string() }))
     .query(async ({ input, ctx }) => {
       if (!ctx.tenantId) {
-        throw new Error("Tenant não selecionado");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
       }
 
       const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       const [invoice] = await db
         .select()
@@ -513,7 +514,7 @@ export const subscriptionsRouter = router({
         .limit(1);
 
       if (!invoice) {
-        throw new Error("Fatura não encontrada");
+        throw new TRPCError({ code: "NOT_FOUND", message: "Fatura não encontrada" });
       }
 
       return invoice;

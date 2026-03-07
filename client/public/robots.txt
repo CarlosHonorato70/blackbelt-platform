@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /home
+Disallow: /copsoq/respond/
+Disallow: /subscription/checkout
+Disallow: /subscription/success
+Disallow: /subscription/failure
+
+Sitemap: https://www.blackbelt-platform.com.br/sitemap.xml

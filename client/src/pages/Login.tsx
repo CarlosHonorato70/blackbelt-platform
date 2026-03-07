@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -145,15 +145,21 @@ export default function Login() {
 
             {mode === "login" && (
               <div>
-                <button
-                  type="button"
+                <Link
+                  to="/forgot-password"
                   className="text-sm text-blue-500 hover:text-blue-600"
-                  disabled={isLoading}
                 >
                   Recuperar Senha
-                </button>
+                </Link>
               </div>
             )}
+          </div>
+
+          {/* Footer legal links */}
+          <div className="mt-6 text-center text-xs text-gray-500 space-x-3">
+            <Link to="/terms" className="hover:text-gray-700 underline">Termos de Uso</Link>
+            <span>|</span>
+            <Link to="/privacy" className="hover:text-gray-700 underline">Política de Privacidade</Link>
           </div>
         </div>
       </div>

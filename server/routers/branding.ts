@@ -5,6 +5,7 @@ import { getDb } from "../db";
 import { tenants } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import * as dns from "dns/promises";
+import { log } from "../_core/logger";
 
 /**
  * Phase 5: White-Label / Branding Router
@@ -264,10 +265,7 @@ export const brandingRouter = router({
         };
       }
     } catch (error) {
-      // TODO: Replace with proper logging system before production
-      if (process.env.NODE_ENV !== "production") {
-        console.error("DNS verification error:", error);
-      }
+      log.error("DNS verification error", { error: String(error) });
       return {
         success: false,
         verified: false,
@@ -334,11 +332,7 @@ async function verifyDNS(
       );
     });
   } catch (error) {
-    // Log error for debugging but don't expose details
-    // TODO: Replace with proper logging system (Winston/Pino) before production
-    if (process.env.NODE_ENV !== "production") {
-      console.error("DNS verification error:", error instanceof Error ? error.message : "Unknown error");
-    }
+    log.error("DNS verification error", { error: error instanceof Error ? error.message : "Unknown error" });
     return false;
   }
 }

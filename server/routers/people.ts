@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { protectedProcedure, router, tenantProcedure } from "../_core/trpc";
+import { router, tenantProcedure, permittedProcedure } from "../_core/trpc";
 import * as db from "../db";
 
 export const peopleRouter = router({
@@ -65,7 +65,7 @@ export const peopleRouter = router({
     }),
 
   // Criar novo colaborador
-  create: tenantProcedure
+  create: permittedProcedure("people", "create")
     .input(
       z.object({
         
@@ -78,8 +78,6 @@ export const peopleRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // TODO: Verificar se usuário tem permissão para criar colaboradores neste tenant
-
       // Verificar se tenant existe
       const tenant = await db.getTenant(ctx.tenantId!);
       if (!tenant) {
@@ -121,7 +119,7 @@ export const peopleRouter = router({
     }),
 
   // Atualizar colaborador
-  update: tenantProcedure
+  update: permittedProcedure("people", "update")
     .input(
       z.object({
         id: z.string(),
@@ -156,8 +154,6 @@ export const peopleRouter = router({
         }
       }
 
-      // TODO: Verificar permissões
-
       await db.updatePerson(id, ctx.tenantId!, data);
 
       await db.createAuditLog({
@@ -176,7 +172,7 @@ export const peopleRouter = router({
     }),
 
   // Deletar colaborador
-  delete: tenantProcedure
+  delete: permittedProcedure("people", "delete")
     .input(
       z.object({
         id: z.string(),
@@ -191,9 +187,6 @@ export const peopleRouter = router({
           message: "Colaborador não encontrado",
         });
       }
-
-      // TODO: Verificar permissões
-      // TODO: Verificar consentimentos LGPD antes de deletar
 
       await db.deletePerson(input.id, ctx.tenantId!);
 

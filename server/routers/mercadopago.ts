@@ -5,6 +5,8 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import { log } from "../_core/logger";
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { getPaymentGatewayConfig } from "../_core/paymentConfig";
@@ -57,15 +59,15 @@ export const mercadoPagoRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       if (!ctx.tenantId) {
-        throw new Error("Tenant não selecionado");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
       }
 
       if (!configureMercadoPago()) {
-        throw new Error("Mercado Pago não está configurado");
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Mercado Pago não está configurado" });
       }
 
       const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       // Buscar plano
       const [plan] = await db
@@ -75,7 +77,7 @@ export const mercadoPagoRouter = router({
         .limit(1);
 
       if (!plan) {
-        throw new Error("Plano não encontrado");
+        throw new TRPCError({ code: "NOT_FOUND", message: "Plano não encontrado" });
       }
 
       // Calcular preço (Mercado Pago usa valores decimais, não centavos)
@@ -133,15 +135,15 @@ export const mercadoPagoRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       if (!ctx.tenantId) {
-        throw new Error("Tenant não selecionado");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
       }
 
       if (!configureMercadoPago()) {
-        throw new Error("Mercado Pago não está configurado");
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Mercado Pago não está configurado" });
       }
 
       const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       // Buscar plano
       const [plan] = await db
@@ -151,7 +153,7 @@ export const mercadoPagoRouter = router({
         .limit(1);
 
       if (!plan) {
-        throw new Error("Plano não encontrado");
+        throw new TRPCError({ code: "NOT_FOUND", message: "Plano não encontrado" });
       }
 
       // Calcular preço
@@ -193,7 +195,7 @@ export const mercadoPagoRouter = router({
     )
     .query(async ({ input }) => {
       if (!configureMercadoPago()) {
-        throw new Error("Mercado Pago não está configurado");
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Mercado Pago não está configurado" });
       }
 
       try {
@@ -209,7 +211,7 @@ export const mercadoPagoRouter = router({
           dateApproved: payment.body.date_approved,
         };
       } catch (error) {
-        console.error("Error fetching Mercado Pago payment:", error);
+        log.error("Error fetching Mercado Pago payment", { error: error instanceof Error ? error.message : String(error) });
         return null;
       }
     }),
@@ -225,15 +227,15 @@ export const mercadoPagoRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       if (!ctx.tenantId) {
-        throw new Error("Tenant não selecionado");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
       }
 
       if (!configureMercadoPago()) {
-        throw new Error("Mercado Pago não está configurado");
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Mercado Pago não está configurado" });
       }
 
       const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       // Cancelar assinatura no Mercado Pago
       await mercadopago.preapproval.update({
@@ -368,7 +370,7 @@ export async function handleMercadoPagoWebhook(
 
     return { received: true };
   } catch (error) {
-    console.error("Mercado Pago webhook error:", error);
+    log.error("Mercado Pago webhook error", { error: error instanceof Error ? error.message : String(error) });
     return {
       received: false,
       error: error instanceof Error ? error.message : "Unknown error",

@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { protectedProcedure, router, tenantProcedure } from "../_core/trpc";
+import { router, tenantProcedure, permittedProcedure } from "../_core/trpc";
 import * as db from "../db";
 
 export const sectorsRouter = router({
@@ -12,8 +12,6 @@ export const sectorsRouter = router({
       }).optional()
     )
     .query(async ({ ctx, input }) => {
-      // TODO: Verificar se usuário tem acesso a este tenant
-
       const sectors = await db.listSectors(ctx.tenantId!, input?.search);
 
       await db.createAuditLog({
@@ -64,7 +62,7 @@ export const sectorsRouter = router({
     }),
 
   // Criar novo setor
-  create: tenantProcedure
+  create: permittedProcedure("sectors", "create")
     .input(
       z.object({
         
@@ -76,8 +74,6 @@ export const sectorsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // TODO: Verificar se usuário tem permissão para criar setores neste tenant
-
       // Verificar se tenant existe
       const tenant = await db.getTenant(ctx.tenantId!);
       if (!tenant) {
@@ -108,7 +104,7 @@ export const sectorsRouter = router({
     }),
 
   // Atualizar setor
-  update: tenantProcedure
+  update: permittedProcedure("sectors", "update")
     .input(
       z.object({
         id: z.string(),
@@ -131,8 +127,6 @@ export const sectorsRouter = router({
         });
       }
 
-      // TODO: Verificar permissões
-
       await db.updateSector(id, ctx.tenantId!, data);
 
       await db.createAuditLog({
@@ -151,7 +145,7 @@ export const sectorsRouter = router({
     }),
 
   // Deletar setor
-  delete: tenantProcedure
+  delete: permittedProcedure("sectors", "delete")
     .input(
       z.object({
         id: z.string(),
@@ -166,9 +160,6 @@ export const sectorsRouter = router({
           message: "Setor não encontrado",
         });
       }
-
-      // TODO: Verificar permissões
-      // TODO: Verificar se há colaboradores vinculados
 
       await db.deleteSector(input.id, ctx.tenantId!);
 

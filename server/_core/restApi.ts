@@ -6,6 +6,7 @@
  */
 
 import express from "express";
+import { log } from "./logger";
 import { getDb } from "../db";
 import { apiKeys, apiKeyUsage, riskAssessments, proposals } from "../../drizzle/schema";
 import { eq, and, isNull, gte } from "drizzle-orm";
@@ -129,7 +130,7 @@ async function logApiUsage(
         userAgent: req.headers["user-agent"] || null,
       });
     } catch (error) {
-      console.error("Failed to log API usage:", error);
+      log.error("Failed to log API usage", { error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -199,7 +200,7 @@ router.get("/riskAssessments", requireScope("riskAssessments:read"), async (req,
       },
     });
   } catch (error) {
-    console.error("Error fetching riskAssessments:", error);
+    log.error("Error fetching riskAssessments", { error: error instanceof Error ? error.message : String(error) });
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -228,7 +229,7 @@ router.get("/riskAssessments/:id", requireScope("riskAssessments:read"), async (
 
     res.json({ data: assessment });
   } catch (error) {
-    console.error("Error fetching assessment:", error);
+    log.error("Error fetching assessment", { error: error instanceof Error ? error.message : String(error) });
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -267,7 +268,7 @@ router.get("/proposals", requireScope("proposals:read"), async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error fetching proposals:", error);
+    log.error("Error fetching proposals", { error: error instanceof Error ? error.message : String(error) });
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -293,7 +294,7 @@ router.get("/proposals/:id", requireScope("proposals:read"), async (req, res) =>
 
     res.json({ data: proposal });
   } catch (error) {
-    console.error("Error fetching proposal:", error);
+    log.error("Error fetching proposal", { error: error instanceof Error ? error.message : String(error) });
     res.status(500).json({ error: "Internal server error" });
   }
 });

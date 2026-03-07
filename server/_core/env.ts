@@ -26,8 +26,8 @@ export const ENV = {
   appTitle: process.env.VITE_APP_TITLE ?? "Black Belt Consultoria",
   appLogo: process.env.VITE_APP_LOGO ?? "/logo.png",
 
-  // Frontend URL (para CORS)
-  frontendUrl: process.env.FRONTEND_URL ?? "http://localhost:5000",
+  // Frontend URL (para CORS) - obrigatorio em producao
+  frontendUrl: requireEnv("FRONTEND_URL", process.env.NODE_ENV === "production" ? undefined : "http://localhost:5000"),
 
   // Porta do servidor
   port: parseInt(process.env.PORT ?? "5000", 10),

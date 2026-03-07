@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import { log } from "./logger";
 
 export type NotificationPayload = {
   title: string;
@@ -65,10 +66,7 @@ export async function notifyOwner(
 
   try {
     // Log to console
-    console.log("[Notification] Owner notification:");
-    console.log(`  Title: ${title}`);
-    console.log(`  Content: ${content}`);
-    console.log(`  Timestamp: ${new Date().toISOString()}`);
+    log.info("Owner notification received", { title, content, timestamp: new Date().toISOString() });
 
     // In production, you could:
     // - Send email via SendGrid
@@ -78,7 +76,7 @@ export async function notifyOwner(
 
     return true;
   } catch (error) {
-    console.warn("[Notification] Error processing notification:", error);
+    log.warn("Error processing notification", { error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }

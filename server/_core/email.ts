@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { log } from "./logger";
 
 // Configuração do transporte de email (usando variáveis de ambiente)
 const transporter = nodemailer.createTransport({
@@ -24,8 +25,8 @@ export interface SendEmailOptions {
 export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
   try {
     if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
-      console.warn(
-        "[Email] SMTP credentials not configured, skipping email send"
+      log.warn(
+"SMTP credentials not configured, skipping email send"
       );
       return false;
     }
@@ -40,7 +41,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
 
     return true;
   } catch (error) {
-    console.error("[Email] Failed to send email:", error);
+    log.error("Failed to send email", { error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }

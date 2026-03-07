@@ -6,6 +6,7 @@ import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
 import { ENV } from "./env";
+import { log } from "./logger";
 
 // Utility function
 const isNonEmptyString = (value: unknown): value is string =>
@@ -74,7 +75,7 @@ class StandaloneAuthService {
     cookieValue: string | undefined | null
   ): Promise<{ userId: string; email: string; name: string } | null> {
     if (!cookieValue) {
-      console.warn("[Auth] Missing session cookie");
+      log.warn("Missing session cookie");
       return null;
     }
 
@@ -83,20 +84,14 @@ class StandaloneAuthService {
       const { payload } = await jwtVerify(cookieValue, secretKey, {
         algorithms: ["HS256"],
       });
-      console.log("[Auth] JWT Payload:", payload);
       const { userId, email, name } = payload as Record<string, unknown>;
-      console.log("[Auth] Extracted fields:", { userId, email, name });
 
       if (
         !isNonEmptyString(userId) ||
         !isNonEmptyString(email) ||
         !isNonEmptyString(name)
       ) {
-        console.warn("[Auth] Session payload missing required fields", {
-          userId,
-          email,
-          name,
-        });
+        log.warn("Session payload missing required fields", { userId: String(userId), email: String(email), name: String(name) });
         return null;
       }
 
@@ -106,7 +101,7 @@ class StandaloneAuthService {
         name,
       };
     } catch (error) {
-      console.warn("[Auth] Session verification failed", String(error));
+      log.warn("Session verification failed", { error: String(error) });
       return null;
     }
   }

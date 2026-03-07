@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
   Card,
@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Shield,
@@ -16,145 +17,181 @@ import {
   Activity,
   Ban,
   Clock,
-  TrendingUp,
   RefreshCw,
+  Loader2,
+  CheckCircle,
+  XCircle,
+  Plus,
+  Trash2,
+  Globe,
 } from "lucide-react";
-
-interface SecurityMetrics {
-  totalRequests: number;
-  blockedRequests: number;
-  suspiciousIPs: number;
-  blockedIPs: number;
-  rateLimit429s: number;
-  authFailures: number;
-}
-
-interface IPInfo {
-  ip: string;
-  violations: number;
-  lastSeen: string;
-  status: "suspicious" | "blocked";
-}
+import { trpc } from "@/lib/trpc";
+import { useTenant } from "@/contexts/TenantContext";
+import { toast } from "sonner";
 
 export default function SecurityDashboard() {
-  const [metrics, setMetrics] = useState<SecurityMetrics>({
-    totalRequests: 15847,
-    blockedRequests: 23,
-    suspiciousIPs: 5,
-    blockedIPs: 2,
-    rateLimit429s: 18,
-    authFailures: 7,
+  const { selectedTenant } = useTenant();
+
+  // Local state for add-IP form
+  const [newIP, setNewIP] = useState("");
+  const [newIPDescription, setNewIPDescription] = useState("");
+
+  // ── tRPC Queries ──────────────────────────────────────────────────────
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    refetch: refetchStats,
+  } = trpc.security.getSecurityStats.useQuery(undefined, {
+    enabled: !!selectedTenant,
   });
 
-  const [suspiciousIPs, setSuspiciousIPs] = useState<IPInfo[]>([
-    {
-      ip: "192.168.1.100",
-      violations: 4,
-      lastSeen: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      status: "suspicious",
-    },
-    {
-      ip: "10.0.0.50",
-      violations: 3,
-      lastSeen: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-      status: "suspicious",
-    },
-  ]);
+  const {
+    data: alerts = [],
+    isLoading: alertsLoading,
+    refetch: refetchAlerts,
+  } = trpc.security.listAlerts.useQuery(
+    { page: 1, perPage: 50 },
+    { enabled: !!selectedTenant }
+  );
 
-  const [blockedIPs, setBlockedIPs] = useState<IPInfo[]>([
-    {
-      ip: "203.0.113.42",
-      violations: 8,
-      lastSeen: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-      status: "blocked",
-    },
-    {
-      ip: "198.51.100.99",
-      violations: 12,
-      lastSeen: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-      status: "blocked",
-    },
-  ]);
+  const {
+    data: loginAttempts = [],
+    refetch: refetchLogins,
+  } = trpc.security.listLoginAttempts.useQuery(
+    { page: 1, perPage: 50 },
+    { enabled: !!selectedTenant }
+  );
 
-  const [securityEvents, setSecurityEvents] = useState([
-    {
-      id: 1,
-      timestamp: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-      type: "rate_limit",
-      severity: "warning",
-      message: "Rate limit exceeded for IP 192.168.1.100",
-      ip: "192.168.1.100",
-    },
-    {
-      id: 2,
-      timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-      type: "blocked_ip",
-      severity: "high",
-      message: "IP blocked due to repeated violations: 203.0.113.42",
-      ip: "203.0.113.42",
-    },
-    {
-      id: 3,
-      timestamp: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-      type: "auth_failure",
-      severity: "medium",
-      message: "Multiple authentication failures from IP 10.0.0.50",
-      ip: "10.0.0.50",
-    },
-    {
-      id: 4,
-      timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-      type: "suspicious_agent",
-      severity: "high",
-      message: "Suspicious user agent detected from IP 198.51.100.99",
-      ip: "198.51.100.99",
-    },
-  ]);
+  const {
+    data: whitelistedIPs = [],
+    refetch: refetchIPs,
+  } = trpc.security.listWhitelistedIPs.useQuery(undefined, {
+    enabled: !!selectedTenant,
+  });
 
-  const formatTimeAgo = (timestamp: string) => {
+  // ── tRPC Mutations ────────────────────────────────────────────────────
+  const resolveAlertMutation = trpc.security.resolveAlert.useMutation({
+    onSuccess: () => {
+      toast.success("Alerta resolvido");
+      refetchAlerts();
+      refetchStats();
+    },
+    onError: (err) =>
+      toast.error("Erro ao resolver alerta", { description: err.message }),
+  });
+
+  const addIPMutation = trpc.security.addWhitelistedIP.useMutation({
+    onSuccess: () => {
+      toast.success("IP adicionado à whitelist");
+      setNewIP("");
+      setNewIPDescription("");
+      refetchIPs();
+      refetchStats();
+    },
+    onError: (err) =>
+      toast.error("Erro ao adicionar IP", { description: err.message }),
+  });
+
+  const removeIPMutation = trpc.security.removeWhitelistedIP.useMutation({
+    onSuccess: () => {
+      toast.success("IP removido da whitelist");
+      refetchIPs();
+      refetchStats();
+    },
+    onError: (err) =>
+      toast.error("Erro ao remover IP", { description: err.message }),
+  });
+
+  // ── Helpers ───────────────────────────────────────────────────────────
+  const formatTimeAgo = (timestamp: string | Date) => {
     const seconds = Math.floor(
       (Date.now() - new Date(timestamp).getTime()) / 1000
     );
-
-    if (seconds < 60) return `${seconds}s ago`;
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    return `${Math.floor(seconds / 86400)}d ago`;
+    if (seconds < 60) return `${seconds}s atrás`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m atrás`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h atrás`;
+    return `${Math.floor(seconds / 86400)}d atrás`;
   };
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
+      case "critical":
+        return "destructive";
       case "high":
         return "destructive";
       case "medium":
         return "default";
-      case "warning":
+      case "low":
         return "secondary";
       default:
         return "outline";
     }
   };
 
-  const handleUnblockIP = (ip: string) => {
-    console.log(`Unblocking IP: ${ip}`);
-    setBlockedIPs(blockedIPs.filter((item) => item.ip !== ip));
+  const handleRefreshAll = () => {
+    refetchStats();
+    refetchAlerts();
+    refetchLogins();
+    refetchIPs();
+    toast.success("Dados atualizados");
   };
+
+  const handleAddIP = () => {
+    if (!newIP.trim()) {
+      toast.error("Informe um endereço IP");
+      return;
+    }
+    addIPMutation.mutate({
+      ipAddress: newIP.trim(),
+      description: newIPDescription.trim() || undefined,
+    });
+  };
+
+  // ── No tenant guard ───────────────────────────────────────────────────
+  if (!selectedTenant) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-12">
+          <AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold">Nenhuma empresa selecionada</h3>
+          <p className="text-sm text-muted-foreground mt-2">
+            Selecione uma empresa para visualizar o painel de segurança
+          </p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // ── Loading state ─────────────────────────────────────────────────────
+  if (statsLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-24">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
+          <p className="text-sm text-muted-foreground">
+            Carregando painel de segurança...
+          </p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
-              Security Dashboard
+              Painel de Segurança
             </h1>
             <p className="text-muted-foreground mt-2">
-              Monitor security events, rate limiting, and blocked IPs
+              Monitore alertas de segurança, tentativas de login e IPs autorizados
             </p>
           </div>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleRefreshAll}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
+            Atualizar
           </Button>
         </div>
 
@@ -163,17 +200,16 @@ export default function SecurityDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Total Requests (24h)
+                Total de Alertas (30 dias)
               </CardTitle>
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {metrics.totalRequests.toLocaleString()}
+                {stats?.totalAlerts ?? 0}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                <TrendingUp className="h-3 w-3 inline mr-1" />
-                +12% from yesterday
+                Últimos 30 dias
               </p>
             </CardContent>
           </Card>
@@ -181,17 +217,16 @@ export default function SecurityDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Blocked Requests
+                Alertas Pendentes
               </CardTitle>
-              <Ban className="h-4 w-4 text-destructive" />
+              <AlertTriangle className="h-4 w-4 text-destructive" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metrics.blockedRequests}</div>
+              <div className="text-2xl font-bold">
+                {stats?.unresolvedAlerts ?? 0}
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {((metrics.blockedRequests / metrics.totalRequests) * 100).toFixed(
-                  2
-                )}
-                % of total
+                Aguardando resolução
               </p>
             </CardContent>
           </Card>
@@ -199,14 +234,16 @@ export default function SecurityDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Rate Limit Hits
+                Sessões Ativas
               </CardTitle>
-              <Clock className="h-4 w-4 text-yellow-500" />
+              <Clock className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metrics.rateLimit429s}</div>
+              <div className="text-2xl font-bold">
+                {stats?.activeSessions ?? 0}
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
-                429 status codes returned
+                Sessões em andamento
               </p>
             </CardContent>
           </Card>
@@ -214,14 +251,16 @@ export default function SecurityDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Blocked IPs
+                Falhas de Login
               </CardTitle>
               <Ban className="h-4 w-4 text-red-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metrics.blockedIPs}</div>
+              <div className="text-2xl font-bold">
+                {stats?.failedLoginAttempts ?? 0}
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Permanently blocked
+                Tentativas falhadas (30 dias)
               </p>
             </CardContent>
           </Card>
@@ -229,14 +268,16 @@ export default function SecurityDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Suspicious IPs
+                IPs na Whitelist
               </CardTitle>
-              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+              <Globe className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metrics.suspiciousIPs}</div>
+              <div className="text-2xl font-bold">
+                {stats?.whitelistedIPs ?? 0}
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Being monitored
+                IPs autorizados ativos
               </p>
             </CardContent>
           </Card>
@@ -244,139 +285,264 @@ export default function SecurityDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Auth Failures
+                Alertas Críticos
               </CardTitle>
               <Shield className="h-4 w-4 text-orange-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metrics.authFailures}</div>
+              <div className="text-2xl font-bold">
+                {stats?.alertsBySeverity?.critical ?? 0}
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Failed login attempts
+                Severidade crítica (30 dias)
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Tabs for different views */}
-        <Tabs defaultValue="events" className="space-y-4">
+        {/* Tabs */}
+        <Tabs defaultValue="alerts" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="events">Security Events</TabsTrigger>
-            <TabsTrigger value="suspicious">Suspicious IPs</TabsTrigger>
-            <TabsTrigger value="blocked">Blocked IPs</TabsTrigger>
+            <TabsTrigger value="alerts">Alertas de Segurança</TabsTrigger>
+            <TabsTrigger value="logins">Tentativas de Login</TabsTrigger>
+            <TabsTrigger value="whitelist">IPs Whitelist</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="events" className="space-y-4">
+          {/* ── Alertas de Segurança ─────────────────────────────────── */}
+          <TabsContent value="alerts" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Recent Security Events</CardTitle>
+                <CardTitle>Alertas Recentes</CardTitle>
                 <CardDescription>
-                  Real-time security events and alerts from the past 24 hours
+                  Alertas de segurança gerados nos últimos 30 dias
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {securityEvents.map((event) => (
-                    <div
-                      key={event.id}
-                      className="flex items-start justify-between border-b pb-4 last:border-0"
-                    >
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-center gap-2">
-                          <Badge variant={getSeverityColor(event.severity) as any}>
-                            {event.severity}
-                          </Badge>
-                          <span className="text-sm text-muted-foreground">
-                            {formatTimeAgo(event.timestamp)}
-                          </span>
+                {alertsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : alerts.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Shield className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                    <p className="text-sm">Nenhum alerta de segurança encontrado</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {(alerts as any[]).map((alert) => (
+                      <div
+                        key={alert.id}
+                        className="flex items-start justify-between border-b pb-4 last:border-0"
+                      >
+                        <div className="space-y-1 flex-1">
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant={
+                                getSeverityColor(alert.severity) as any
+                              }
+                            >
+                              {alert.severity}
+                            </Badge>
+                            {alert.resolved && (
+                              <Badge variant="outline" className="text-green-600">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Resolvido
+                              </Badge>
+                            )}
+                            <span className="text-sm text-muted-foreground">
+                              {formatTimeAgo(alert.createdAt)}
+                            </span>
+                          </div>
+                          <p className="text-sm font-medium">
+                            {alert.message}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {alert.ipAddress && <>IP: {alert.ipAddress} &bull; </>}
+                            Tipo: {alert.alertType}
+                          </p>
                         </div>
-                        <p className="text-sm font-medium">{event.message}</p>
-                        <p className="text-xs text-muted-foreground">
-                          IP: {event.ip} • Type: {event.type}
-                        </p>
+                        {!alert.resolved && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="ml-4 shrink-0"
+                            disabled={resolveAlertMutation.isPending}
+                            onClick={() =>
+                              resolveAlertMutation.mutate({
+                                alertId: alert.id,
+                              })
+                            }
+                          >
+                            {resolveAlertMutation.isPending ? (
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            ) : (
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                            )}
+                            Resolver
+                          </Button>
+                        )}
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="suspicious" className="space-y-4">
+          {/* ── Tentativas de Login ──────────────────────────────────── */}
+          <TabsContent value="logins" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Suspicious IP Addresses</CardTitle>
+                <CardTitle>Tentativas de Login</CardTitle>
                 <CardDescription>
-                  IPs with unusual behavior being monitored for violations
+                  Registro de tentativas de autenticação recentes
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {suspiciousIPs.map((ipInfo) => (
-                    <div
-                      key={ipInfo.ip}
-                      className="flex items-center justify-between border-b pb-4 last:border-0"
-                    >
-                      <div className="space-y-1">
-                        <p className="text-sm font-mono font-medium">
-                          {ipInfo.ip}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {ipInfo.violations} violations • Last seen{" "}
-                          {formatTimeAgo(ipInfo.lastSeen)}
-                        </p>
+                {(loginAttempts as any[]).length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Activity className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                    <p className="text-sm">Nenhuma tentativa de login registrada</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {(loginAttempts as any[]).map((attempt) => (
+                      <div
+                        key={attempt.id}
+                        className="flex items-center justify-between border-b pb-4 last:border-0"
+                      >
+                        <div className="space-y-1 flex-1">
+                          <div className="flex items-center gap-2">
+                            {attempt.success ? (
+                              <Badge variant="outline" className="text-green-600">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Sucesso
+                              </Badge>
+                            ) : (
+                              <Badge variant="destructive">
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Falha
+                              </Badge>
+                            )}
+                            <span className="text-sm font-medium">
+                              {attempt.email}
+                            </span>
+                            <span className="text-sm text-muted-foreground">
+                              {formatTimeAgo(attempt.createdAt)}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {attempt.ipAddress && <>IP: {attempt.ipAddress} &bull; </>}
+                            {attempt.userAgent && (
+                              <span className="truncate max-w-xs inline-block align-bottom">
+                                UA: {attempt.userAgent}
+                              </span>
+                            )}
+                          </p>
+                          {attempt.failureReason && (
+                            <p className="text-xs text-destructive">
+                              Motivo: {attempt.failureReason}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <Badge variant="secondary">
-                        <AlertTriangle className="h-3 w-3 mr-1" />
-                        Monitoring
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="blocked" className="space-y-4">
+          {/* ── IPs Whitelist ────────────────────────────────────────── */}
+          <TabsContent value="whitelist" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Blocked IP Addresses</CardTitle>
+                <CardTitle>IPs Autorizados (Whitelist)</CardTitle>
                 <CardDescription>
-                  IPs that have been permanently blocked due to security
-                  violations
+                  Endereços IP autorizados para acesso à plataforma
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {blockedIPs.map((ipInfo) => (
-                    <div
-                      key={ipInfo.ip}
-                      className="flex items-center justify-between border-b pb-4 last:border-0"
-                    >
-                      <div className="space-y-1 flex-1">
-                        <p className="text-sm font-mono font-medium">
-                          {ipInfo.ip}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {ipInfo.violations} violations • Blocked{" "}
-                          {formatTimeAgo(ipInfo.lastSeen)}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="destructive">
-                          <Ban className="h-3 w-3 mr-1" />
-                          Blocked
-                        </Badge>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleUnblockIP(ipInfo.ip)}
-                        >
-                          Unblock
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+              <CardContent className="space-y-6">
+                {/* Add new IP form */}
+                <div className="flex items-end gap-3 p-4 border rounded-lg bg-muted/30">
+                  <div className="flex-1 space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      Endereço IP
+                    </label>
+                    <Input
+                      placeholder="ex: 192.168.1.100"
+                      value={newIP}
+                      onChange={(e) => setNewIP(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      Descrição (opcional)
+                    </label>
+                    <Input
+                      placeholder="ex: Escritório principal"
+                      value={newIPDescription}
+                      onChange={(e) => setNewIPDescription(e.target.value)}
+                    />
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={handleAddIP}
+                    disabled={addIPMutation.isPending}
+                  >
+                    {addIPMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                    ) : (
+                      <Plus className="h-4 w-4 mr-1" />
+                    )}
+                    Adicionar
+                  </Button>
                 </div>
+
+                {/* IP list */}
+                {(whitelistedIPs as any[]).length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Globe className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                    <p className="text-sm">Nenhum IP na whitelist</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {(whitelistedIPs as any[]).map((ip) => (
+                      <div
+                        key={ip.id}
+                        className="flex items-center justify-between border-b pb-4 last:border-0"
+                      >
+                        <div className="space-y-1 flex-1">
+                          <p className="text-sm font-mono font-medium">
+                            {ip.ipAddress}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {ip.description || "Sem descrição"}
+                            {ip.createdAt && (
+                              <> &bull; Adicionado {formatTimeAgo(ip.createdAt)}</>
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={ip.active ? "default" : "secondary"}>
+                            {ip.active ? "Ativo" : "Inativo"}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            disabled={removeIPMutation.isPending}
+                            onClick={() =>
+                              removeIPMutation.mutate({ id: ip.id })
+                            }
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -385,16 +551,16 @@ export default function SecurityDashboard() {
         {/* Rate Limiting Configuration */}
         <Card>
           <CardHeader>
-            <CardTitle>Rate Limiting Configuration</CardTitle>
+            <CardTitle>Configuração de Rate Limiting</CardTitle>
             <CardDescription>
-              Current rate limiting rules applied to API endpoints
+              Regras de limitação de requisições aplicadas aos endpoints da API
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
-                  <p className="text-sm font-medium">General API</p>
+                  <p className="text-sm font-medium">API Geral</p>
                   <p className="text-xs text-muted-foreground">
                     /api/* endpoints
                   </p>
@@ -403,7 +569,7 @@ export default function SecurityDashboard() {
               </div>
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
-                  <p className="text-sm font-medium">Authentication</p>
+                  <p className="text-sm font-medium">Autenticação</p>
                   <p className="text-xs text-muted-foreground">
                     /api/auth/* endpoints
                   </p>
@@ -412,21 +578,21 @@ export default function SecurityDashboard() {
               </div>
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
-                  <p className="text-sm font-medium">Email Sending</p>
+                  <p className="text-sm font-medium">Envio de Email</p>
                   <p className="text-xs text-muted-foreground">
-                    Email delivery endpoints
+                    Endpoints de envio de email
                   </p>
                 </div>
-                <Badge variant="outline">10 req / 1 hour</Badge>
+                <Badge variant="outline">10 req / 1 hora</Badge>
               </div>
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
-                  <p className="text-sm font-medium">File Uploads</p>
+                  <p className="text-sm font-medium">Upload de Arquivos</p>
                   <p className="text-xs text-muted-foreground">
-                    Upload endpoints
+                    Endpoints de upload
                   </p>
                 </div>
-                <Badge variant="outline">20 req / 1 hour</Badge>
+                <Badge variant="outline">20 req / 1 hora</Badge>
               </div>
             </div>
           </CardContent>
