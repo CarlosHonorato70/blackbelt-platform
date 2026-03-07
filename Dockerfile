@@ -25,6 +25,8 @@ ENV PORT=5000
 COPY --from=builder --chown=node:node /app/dist ./dist
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/drizzle ./drizzle
+COPY --from=builder --chown=node:node /app/drizzle.config.ts ./
+COPY --from=builder --chown=node:node /app/seed_plans.ts ./
 COPY --from=builder --chown=node:node /app/package.json ./
 
 # Non-root user
