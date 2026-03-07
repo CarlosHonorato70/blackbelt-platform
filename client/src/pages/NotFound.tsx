@@ -2,8 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle, Home } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function NotFound() {
+  usePageMeta({ title: "Pagina Nao Encontrada" });
   const navigate = useNavigate();
 
   const handleGoHome = () => {

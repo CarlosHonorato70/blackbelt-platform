@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function Register() {
+  usePageMeta({ title: "Cadastro", description: "Crie sua conta na plataforma Black Belt" });
   const navigate = useNavigate();
   const { login } = useAuth();
   const [formData, setFormData] = useState({

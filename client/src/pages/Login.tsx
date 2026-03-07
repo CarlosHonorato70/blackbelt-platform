@@ -4,8 +4,10 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function Login() {
+  usePageMeta({ title: "Entrar", description: "Acesse sua conta Black Belt Consultoria" });
   const navigate = useNavigate();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");

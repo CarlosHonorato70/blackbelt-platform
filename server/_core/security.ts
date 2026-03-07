@@ -8,11 +8,37 @@
  * - Request logging and monitoring
  */
 
+import crypto from "crypto";
 import { Request, Response, NextFunction } from "express";
 import { log } from "./logger";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import cors from "cors";
+
+// ============================================================================
+// REQUEST TRACING (X-Request-ID)
+// ============================================================================
+
+// Extend Express Request type to include requestId
+declare global {
+  namespace Express {
+    interface Request {
+      requestId?: string;
+    }
+  }
+}
+
+/**
+ * Middleware that generates a unique X-Request-ID for each request.
+ * If the client sends an X-Request-ID header, it is reused (for distributed tracing).
+ * Otherwise, a new UUID is generated.
+ */
+export function requestTracing(req: Request, res: Response, next: NextFunction) {
+  const requestId = (req.headers["x-request-id"] as string) || crypto.randomUUID();
+  req.requestId = requestId;
+  res.setHeader("X-Request-ID", requestId);
+  next();
+}
 
 // ============================================================================
 // RATE LIMITING
@@ -185,20 +211,20 @@ export const corsConfig = cors({
 // ============================================================================
 
 /**
- * Request logging middleware
+ * Request logging middleware (includes X-Request-ID for tracing)
  */
 export function requestLogger(req: Request, res: Response, next: NextFunction) {
   const start = Date.now();
-  const { method, url, ip } = req;
+  const { method, url, ip, requestId } = req;
 
-  // Log request
-  log.http("Incoming request", { method, url, ip });
+  // Log request with correlation ID
+  log.http("Incoming request", { requestId, method, url, ip });
 
   // Log response when finished
   res.on("finish", () => {
     const duration = Date.now() - start;
     const { statusCode } = res;
-    log.http("Request completed", { method, url, statusCode, duration });
+    log.http("Request completed", { requestId, method, url, statusCode, duration });
   });
 
   next();

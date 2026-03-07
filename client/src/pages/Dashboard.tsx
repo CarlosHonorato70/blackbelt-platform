@@ -16,8 +16,10 @@ import {
   AlertTriangle,
   BarChart3,
 } from "lucide-react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function Dashboard() {
+  usePageMeta({ title: "Painel" });
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
 
