@@ -49,23 +49,55 @@ import { ENV } from "./_core/env";
 const fullSchema = { ...schema, ...schemaNr01, ...relations };
 
 let _db: ReturnType<typeof drizzle<typeof fullSchema>> | null = null;
+let _pool: ReturnType<typeof mysql.createPool> | null = null;
+
+const DB_RETRY_ATTEMPTS = 3;
+const DB_RETRY_DELAYS = [1000, 2000, 4000]; // exponential backoff
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
-    try {
-      const pool = mysql.createPool({
-        uri: process.env.DATABASE_URL,
-        waitForConnections: true,
-        connectionLimit: 10,
-        queueLimit: 0,
-      });
-      _db = drizzle(pool, { schema: fullSchema, mode: "default" });
-    } catch (error) {
-      log.warn("[Database] Failed to connect", { error: String(error) });
-      _db = null;
+    for (let attempt = 0; attempt < DB_RETRY_ATTEMPTS; attempt++) {
+      try {
+        _pool = mysql.createPool({
+          uri: process.env.DATABASE_URL,
+          waitForConnections: true,
+          connectionLimit: 10,
+          queueLimit: 0,
+        });
+        _db = drizzle(_pool, { schema: fullSchema, mode: "default" });
+        if (attempt > 0) {
+          log.info(`[Database] Connected after ${attempt + 1} attempts`);
+        }
+        break;
+      } catch (error) {
+        log.warn(`[Database] Connection attempt ${attempt + 1}/${DB_RETRY_ATTEMPTS} failed`, {
+          error: String(error),
+        });
+        _db = null;
+        _pool = null;
+        if (attempt < DB_RETRY_ATTEMPTS - 1) {
+          await new Promise((r) => setTimeout(r, DB_RETRY_DELAYS[attempt]));
+        }
+      }
     }
   }
   return _db;
+}
+
+/** Verifica se o banco de dados esta acessivel (para health check) */
+export async function checkDbHealth(): Promise<boolean> {
+  try {
+    if (!_pool) {
+      await getDb();
+    }
+    if (!_pool) return false;
+    const conn = await _pool.getConnection();
+    await conn.ping();
+    conn.release();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // Alias para compatibilidade com context.ts

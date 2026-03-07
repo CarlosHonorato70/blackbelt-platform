@@ -12,7 +12,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import slowDown from "express-slow-down";
-import { ENV } from "./_core/env";
+import { ENV, logSecurityWarnings } from "./_core/env";
 import { log } from "./_core/logger";
 
 // tRPC
@@ -238,6 +238,9 @@ app.use((req, res, next) => {
 
   // 5. START
   const PORT = ENV.port;
+
+  // Validar secrets e logar warnings antes de aceitar conexoes
+  logSecurityWarnings();
 
   server.listen(PORT, "0.0.0.0", () => {
     log.info(`Servidor rodando em http://0.0.0.0:${PORT}/`);
