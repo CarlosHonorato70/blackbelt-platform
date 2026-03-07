@@ -21,14 +21,14 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=5000
 
-# Copy production artifacts
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/drizzle ./drizzle
-COPY --from=builder /app/package.json ./
+# Copy production artifacts with correct ownership (avoids slow chown -R)
+COPY --from=builder --chown=node:node /app/dist ./dist
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/drizzle ./drizzle
+COPY --from=builder --chown=node:node /app/package.json ./
 
 # Non-root user
-RUN mkdir -p logs && chown -R node:node /app
+RUN mkdir -p logs && chown node:node logs
 USER node
 
 EXPOSE 5000
