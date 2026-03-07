@@ -362,6 +362,11 @@ export const copsoqReports = mysqlTable("copsoq_reports", {
   // Arquivo do relatório
   reportUrl: varchar("reportUrl", { length: 500 }), // URL do PDF no S3
 
+  // Analise de IA (Fase 1)
+  aiAnalysis: json("ai_analysis"),              // CopsoqAnalysisResult completo
+  aiGeneratedAt: timestamp("ai_generated_at"),  // Quando a analise foi gerada
+  aiModel: varchar("ai_model", { length: 100 }),// Modelo utilizado (ex: gemini-2.5-flash)
+
   generatedAt: timestamp("generatedAt"),
   createdAt: timestamp("createdAt").defaultNow(),
 });

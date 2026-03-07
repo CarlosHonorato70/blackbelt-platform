@@ -125,6 +125,21 @@ export const uploadRateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+/**
+ * AI analysis rate limiter
+ * Limits: 20 AI analysis requests per hour per IP
+ */
+export const aiRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 20, // Limit each IP to 20 AI analysis requests per hour
+  message: {
+    error: "Too many AI analysis requests, please try again later.",
+    retryAfter: "1 hour",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // ============================================================================
 // HELMET SECURITY HEADERS
 // ============================================================================

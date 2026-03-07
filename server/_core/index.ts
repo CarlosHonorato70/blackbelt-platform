@@ -16,6 +16,7 @@ import {
   authRateLimiter,
   emailRateLimiter,
   uploadRateLimiter,
+  aiRateLimiter,
   requestTracing,
   requestLogger,
   validateHeaders,
@@ -125,6 +126,9 @@ async function startServer() {
   // Upload rate limiting (20/hour per IP)
   app.use("/api/trpc/pdfExports.generateProposal", uploadRateLimiter);
   app.use("/api/trpc/pdfExports.generateAssessment", uploadRateLimiter);
+
+  // AI analysis rate limiting (20/hour per IP)
+  app.use("/api/trpc/ai.analyzeCopsoq", aiRateLimiter);
 
   // ============================================================================
   // BODY PARSING
