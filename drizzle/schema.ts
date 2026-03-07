@@ -30,6 +30,8 @@ export const users = mysqlTable("users", {
   role: text("role").default("user").notNull(),
   tenantId: varchar("tenantId", { length: 64 }),
   emailVerified: boolean("emailVerified").default(false),
+  failedLoginAttempts: int("failedLoginAttempts").default(0).notNull(),
+  lockedUntil: timestamp("lockedUntil"),
   createdAt: timestamp("createdAt").defaultNow(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow(),
 });

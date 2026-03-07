@@ -149,21 +149,90 @@ export const authLocalRouter = router({
   login: publicProcedure
     .input(z.object({ email: z.string().email(), password: z.string() }))
     .mutation(async ({ input, ctx }) => {
+      const ipAddress = ctx.req.ip || ctx.req.socket.remoteAddress || null;
+      const userAgent = ctx.req.headers["user-agent"] || null;
+
       const user = await db.getUserByEmail(input.email);
       if (!user || !user.passwordHash) {
+        // Registra tentativa falha (usuario nao encontrado)
+        await db.recordLoginAttempt({
+          email: input.email,
+          userId: null,
+          success: false,
+          ipAddress,
+          userAgent,
+          failureReason: "user_not_found",
+        });
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Email ou senha incorretos",
         });
       }
 
+      // Verificar se a conta esta bloqueada
+      const lockedMinutes = db.getLockedMinutesRemaining(
+        (user as any).lockedUntil
+      );
+      if (lockedMinutes > 0) {
+        await db.recordLoginAttempt({
+          email: input.email,
+          userId: user.id,
+          success: false,
+          ipAddress,
+          userAgent,
+          failureReason: "account_locked",
+        });
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: `Conta bloqueada por excesso de tentativas. Tente novamente em ${lockedMinutes} minuto(s).`,
+        });
+      }
+
       const valid = await bcrypt.compare(input.password, user.passwordHash);
       if (!valid) {
+        // Registra falha e possivelmente bloqueia
+        const currentFailed = (user as any).failedLoginAttempts || 0;
+        const wasLocked = await db.handleFailedLogin(user.id, currentFailed);
+
+        await db.recordLoginAttempt({
+          email: input.email,
+          userId: user.id,
+          success: false,
+          ipAddress,
+          userAgent,
+          failureReason: "invalid_password",
+        });
+
+        if (wasLocked) {
+          log.warn("Account locked due to failed login attempts", {
+            email: input.email,
+            ip: ipAddress,
+          });
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message:
+              "Conta bloqueada por excesso de tentativas. Tente novamente em 30 minutos.",
+          });
+        }
+
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Email ou senha incorretos",
         });
       }
+
+      // Login com sucesso — resetar contadores de lockout
+      await db.resetLoginAttempts(user.id);
+
+      // Registra tentativa de sucesso
+      await db.recordLoginAttempt({
+        email: input.email,
+        userId: user.id,
+        success: true,
+        ipAddress,
+        userAgent,
+        failureReason: null,
+      });
 
       // Atualiza lastSignedIn
       await db.upsertUser({
@@ -171,7 +240,7 @@ export const authLocalRouter = router({
         lastSignedIn: new Date(),
       });
 
-      // Cria token de sessao OPACO e ASSINADO
+      // Cria token de sessao OPACO e ASSINADO com expiracao
       const sessionToken = createSessionToken(user.id);
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.cookie(COOKIE_NAME, sessionToken, cookieOptions);

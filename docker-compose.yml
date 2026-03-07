@@ -69,10 +69,44 @@ services:
     networks:
       - blackbelt-net
 
+  backup:
+    image: mysql:8.0
+    container_name: blackbelt-backup
+    restart: unless-stopped
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        apt-get update -qq && apt-get install -y -qq cron > /dev/null 2>&1
+        chmod +x /scripts/backup.sh
+        echo "0 3 * * * /scripts/backup.sh >> /var/log/backup.log 2>&1" | crontab -
+        echo "[$(date)] Backup cron scheduled: daily at 03:00"
+        echo "[$(date)] Running initial backup..."
+        /scripts/backup.sh
+        cron -f
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: blackbelt
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-blackbelt_secret}
+      MYSQL_DATABASE: blackbelt
+      BACKUP_DIR: /backups
+      RETENTION_DAYS: "30"
+    volumes:
+      - ./docker/scripts/backup.sh:/scripts/backup.sh:ro
+      - backup_data:/backups
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - blackbelt-net
+
 volumes:
   mysql_data:
     driver: local
   app_logs:
+    driver: local
+  backup_data:
     driver: local
 
 networks:

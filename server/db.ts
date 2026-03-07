@@ -13,6 +13,7 @@ import {
   dataConsents,
   InsertAuditLog,
   InsertDataConsent,
+  InsertLoginAttempt,
   InsertPerson,
   InsertRole,
   InsertRolePermission,
@@ -22,6 +23,7 @@ import {
   InsertUser,
   InsertUserInvite,
   InsertUserRole,
+  loginAttempts,
   people,
   pricingParameters,
   proposalItems,
@@ -653,4 +655,54 @@ export function calculateProposal(params: { items: { quantity: number; unitPrice
   const taxes = Math.round(afterDiscount * taxRate);
   const totalValue = afterDiscount + taxes;
   return { subtotal, discount, discountPercent, taxes, totalValue };
+}
+
+// ============================================================================
+// LOGIN ATTEMPTS & ACCOUNT LOCKOUT
+// ============================================================================
+
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 30 * 60 * 1000; // 30 minutos
+
+/** Registra uma tentativa de login (sucesso ou falha) */
+export async function recordLoginAttempt(data: Omit<InsertLoginAttempt, "id">): Promise<void> {
+  const database = await getDb();
+  if (!database) return;
+  await database.insert(loginAttempts).values({ id: nanoid(), ...data });
+}
+
+/** Verifica se a conta esta bloqueada e retorna minutos restantes */
+export function getLockedMinutesRemaining(lockedUntil: Date | null): number {
+  if (!lockedUntil) return 0;
+  const remaining = lockedUntil.getTime() - Date.now();
+  return remaining > 0 ? Math.ceil(remaining / 60000) : 0;
+}
+
+/** Incrementa contador de falhas e bloqueia se atingiu o limite */
+export async function handleFailedLogin(userId: string, currentFailed: number): Promise<boolean> {
+  const database = await getDb();
+  if (!database) return false;
+
+  const newCount = currentFailed + 1;
+  const shouldLock = newCount >= MAX_FAILED_ATTEMPTS;
+
+  await database
+    .update(users)
+    .set({
+      failedLoginAttempts: newCount,
+      ...(shouldLock ? { lockedUntil: new Date(Date.now() + LOCKOUT_DURATION_MS) } : {}),
+    })
+    .where(eq(users.id, userId));
+
+  return shouldLock;
+}
+
+/** Reseta contadores de lockout apos login com sucesso */
+export async function resetLoginAttempts(userId: string): Promise<void> {
+  const database = await getDb();
+  if (!database) return;
+  await database
+    .update(users)
+    .set({ failedLoginAttempts: 0, lockedUntil: null })
+    .where(eq(users.id, userId));
 }
