@@ -42,12 +42,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Download, TrendingUp, Users, AlertTriangle, Loader2 } from "lucide-react";
+import { Download, TrendingUp, Users, AlertTriangle, Loader2, Brain } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth.tsx";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import AiAnalysisPanel from "@/components/ai/AiAnalysisPanel";
+import AiInventoryPanel from "@/components/ai/AiInventoryPanel";
+import AiActionPlanPanel from "@/components/ai/AiActionPlanPanel";
 import * as XLSX from "xlsx";
 
 export default function AssessmentAnalytics() {
@@ -142,6 +145,10 @@ export default function AssessmentAnalytics() {
 
   // Sector comparison — not available from individual responses
   const sectorComparison: { sector: string; score: number; respondents: number }[] = [];
+
+  // ── Estado IA NR-01 ─────────────────────────────────────────────────
+  const [aiAnalysisReady, setAiAnalysisReady] = useState(false);
+  const [aiInventoryReady, setAiInventoryReady] = useState(false);
 
   // ── Estado do Dialog "Gerar Plano de Ação" ──────────────────────────
   const [actionPlanDialogOpen, setActionPlanDialogOpen] = useState(false);
@@ -331,11 +338,15 @@ export default function AssessmentAnalytics() {
 
       {/* GRAFICOS */}
       <Tabs defaultValue="dimensions" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="dimensions">Dimensões</TabsTrigger>
           <TabsTrigger value="timeline">Tendência Temporal</TabsTrigger>
           <TabsTrigger value="sectors">Por Setor</TabsTrigger>
           <TabsTrigger value="distribution">Distribuição de Risco</TabsTrigger>
+          <TabsTrigger value="ai-nr01" className="flex items-center gap-1">
+            <Brain className="w-3.5 h-3.5" />
+            IA NR-01
+          </TabsTrigger>
         </TabsList>
 
         {/* DIMENSOES */}
@@ -492,6 +503,59 @@ export default function AssessmentAnalytics() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* IA NR-01 */}
+        <TabsContent value="ai-nr01">
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Brain className="w-5 h-5 text-purple-600" />
+                  Documentos NR-01 Gerados por IA
+                </CardTitle>
+                <CardDescription>
+                  Gere automaticamente os documentos exigidos pela NR-01 atualizada:
+                  Análise COPSOQ-II, Inventário de Riscos e Plano de Ação.
+                  O fluxo é sequencial — cada etapa alimenta a próxima.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            {/* Etapa 1: Analise IA */}
+            {firstAssessmentId && (
+              <AiAnalysisPanel
+                assessmentId={firstAssessmentId}
+                onAnalysisGenerated={() => setAiAnalysisReady(true)}
+              />
+            )}
+
+            {/* Etapa 2: Inventario de Riscos */}
+            {firstAssessmentId && (
+              <AiInventoryPanel
+                assessmentId={firstAssessmentId}
+                analysisReady={aiAnalysisReady}
+                onInventoryGenerated={() => setAiInventoryReady(true)}
+              />
+            )}
+
+            {/* Etapa 3: Plano de Acao */}
+            {firstAssessmentId && (
+              <AiActionPlanPanel
+                assessmentId={firstAssessmentId}
+                inventoryReady={aiInventoryReady}
+              />
+            )}
+
+            {!firstAssessmentId && (
+              <Card className="border-dashed">
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  <Brain className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                  <p>Crie uma avaliação COPSOQ-II primeiro para utilizar a geração via IA.</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 
