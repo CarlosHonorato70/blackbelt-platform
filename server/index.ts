@@ -94,6 +94,11 @@ app.use(
         return callback(null, true);
       }
 
+      // Em desenvolvimento, permitir qualquer localhost (porta dinamica com autoPort)
+      if (!ENV.isProduction && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        return callback(null, true);
+      }
+
       callback(new Error(`Origin ${origin} nao permitida pelo CORS`));
     },
     credentials: true,
