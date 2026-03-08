@@ -78,6 +78,11 @@ export const riskAssessmentItems = mysqlTable("risk_assessment_items", {
   affectedPopulation: int("affectedPopulation"), // Número de pessoas afetadas
   currentControls: text("currentControls"), // Controles existentes
   observations: text("observations"),
+
+  // Fase 2 IA: campos adicionais
+  aiGenerated: boolean("ai_generated").default(false),   // Item gerado por IA
+  hazardCode: varchar("hazard_code", { length: 10 }),    // Codigo do catalogo (P1, P3, etc.)
+
   createdAt: timestamp("createdAt").defaultNow(),
 });
 
@@ -110,6 +115,13 @@ export const actionPlans = mysqlTable("action_plans", {
     .notNull(),
   budget: int("budget"), // Orçamento estimado em centavos
   completedAt: timestamp("completedAt"),
+
+  // Fase 2 IA: campos adicionais
+  aiGenerated: boolean("ai_generated").default(false),       // Acao gerada por IA
+  monthlySchedule: json("monthly_schedule"),                 // boolean[12] cronograma Jan-Dez
+  kpiIndicator: varchar("kpi_indicator", { length: 255 }),   // Indicador de acompanhamento
+  expectedImpact: text("expected_impact"),                   // Impacto esperado
+
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt").defaultNow(),
 });

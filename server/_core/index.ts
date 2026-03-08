@@ -129,6 +129,8 @@ async function startServer() {
 
   // AI analysis rate limiting (20/hour per IP)
   app.use("/api/trpc/ai.analyzeCopsoq", aiRateLimiter);
+  app.use("/api/trpc/ai.generateInventory", aiRateLimiter);
+  app.use("/api/trpc/ai.generatePlan", aiRateLimiter);
 
   // ============================================================================
   // BODY PARSING
