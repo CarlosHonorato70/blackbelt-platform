@@ -9,15 +9,14 @@ import { dsrRequests } from "../../drizzle/schema_nr01";
 export const dataExportRouter = router({
   // Lista todas as solicitações DSR do tenant
   list: subscribedProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx }) => {
       const db = await getDb();
       if (!db) return [];
 
       return db
         .select()
         .from(dsrRequests)
-        .where(eq(dsrRequests.tenantId, input.tenantId))
+        .where(eq(dsrRequests.tenantId, ctx.tenantId!))
         .orderBy(desc(dsrRequests.requestDate));
     }),
 
@@ -25,13 +24,12 @@ export const dataExportRouter = router({
   create: subscribedProcedure
     .input(
       z.object({
-        tenantId: z.string(),
         email: z.string().email("Email inválido"),
         requestType: z.enum(["export", "delete", "rectify"]),
         reason: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
@@ -39,7 +37,7 @@ export const dataExportRouter = router({
 
       await db.insert(dsrRequests).values({
         id,
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         email: input.email,
         requestType: input.requestType,
         status: "pendente",
@@ -54,8 +52,8 @@ export const dataExportRouter = router({
 
   // Busca solicitação DSR por ID
   getById: subscribedProcedure
-    .input(z.object({ id: z.string(), tenantId: z.string() }))
-    .query(async ({ input }) => {
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return null;
 
@@ -65,7 +63,7 @@ export const dataExportRouter = router({
         .where(
           and(
             eq(dsrRequests.id, input.id),
-            eq(dsrRequests.tenantId, input.tenantId)
+            eq(dsrRequests.tenantId, ctx.tenantId!)
           )
         )
         .limit(1);
@@ -75,8 +73,8 @@ export const dataExportRouter = router({
 
   // Cancela solicitação DSR (apenas se pendente)
   cancel: subscribedProcedure
-    .input(z.object({ id: z.string(), tenantId: z.string() }))
-    .mutation(async ({ input }) => {
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
@@ -87,7 +85,7 @@ export const dataExportRouter = router({
         .where(
           and(
             eq(dsrRequests.id, input.id),
-            eq(dsrRequests.tenantId, input.tenantId)
+            eq(dsrRequests.tenantId, ctx.tenantId!)
           )
         )
         .limit(1);
@@ -111,7 +109,7 @@ export const dataExportRouter = router({
         .where(
           and(
             eq(dsrRequests.id, input.id),
-            eq(dsrRequests.tenantId, input.tenantId)
+            eq(dsrRequests.tenantId, ctx.tenantId!)
           )
         );
 

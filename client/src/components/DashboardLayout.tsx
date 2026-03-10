@@ -45,6 +45,10 @@ import {
   Palette,
   TrendingUp,
   ClipboardList,
+  LifeBuoy,
+  Activity,
+  CreditCard,
+  Ticket,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { CSSProperties, useEffect, useState } from "react";
@@ -112,6 +116,25 @@ const menuItems = [
     icon: TrendingUp,
     label: "Dashboard Executivo",
     path: "/executive-dashboard",
+  },
+  { icon: LifeBuoy, label: "Suporte", path: "/support" },
+  {
+    icon: Activity,
+    label: "Painel Admin",
+    path: "/admin/metrics",
+    adminOnly: true,
+  },
+  {
+    icon: CreditCard,
+    label: "Assinaturas Admin",
+    path: "/admin/subscriptions",
+    adminOnly: true,
+  },
+  {
+    icon: Ticket,
+    label: "Tickets Admin",
+    path: "/admin/support",
+    adminOnly: true,
   },
   { icon: HelpCircle, label: "Ajuda e Suporte", path: "/help" },
 ];

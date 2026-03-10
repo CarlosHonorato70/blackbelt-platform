@@ -180,7 +180,7 @@ export const roles = mysqlTable(
     systemName: varchar("systemName", { length: 100 }).notNull().unique(),
     displayName: varchar("displayName", { length: 100 }).notNull(),
     description: text("description"),
-    scope: text("scope").default("tenant").notNull(),
+    scope: varchar("scope", { length: 50 }).default("tenant").notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   (table) => ({
@@ -724,7 +724,7 @@ export const pdfExports = mysqlTable(
     id: varchar("id", { length: 64 }).primaryKey(),
     tenantId: varchar("tenantId", { length: 64 }).notNull(),
     userId: varchar("userId", { length: 64 }).notNull(),
-    documentType: text("documentType").notNull(),
+    documentType: varchar("documentType", { length: 50 }).notNull(),
     documentId: varchar("documentId", { length: 64 }).notNull(),
     filename: varchar("filename", { length: 255 }).notNull(),
     fileSize: int("fileSize").notNull(),
@@ -948,7 +948,7 @@ export const securityAlerts = mysqlTable(
     tenantId: varchar("tenantId", { length: 64 }).notNull(),
     userId: varchar("userId", { length: 64 }),
     alertType: varchar("alertType", { length: 50 }).notNull(),
-    severity: text("severity").notNull(),
+    severity: varchar("severity", { length: 20 }).notNull(),
     message: text("message").notNull(),
     metadata: json("metadata"),
     ipAddress: varchar("ipAddress", { length: 45 }),
@@ -1043,3 +1043,56 @@ export const industryTemplates = mysqlTable(
 
 export type IndustryTemplate = typeof industryTemplates.$inferSelect;
 export type InsertIndustryTemplate = typeof industryTemplates.$inferInsert;
+
+
+// ============================================================================
+// SUPORTE: Tickets de Suporte
+// ============================================================================
+
+export const supportTickets = mysqlTable(
+  "support_tickets",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+    userId: varchar("userId", { length: 64 }).notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description").notNull(),
+    status: varchar("status", { length: 30 }).default("open").notNull(),
+    priority: varchar("priority", { length: 20 }).default("medium").notNull(),
+    category: varchar("category", { length: 50 }).default("technical").notNull(),
+    assignedTo: varchar("assignedTo", { length: 64 }),
+    resolvedAt: timestamp("resolvedAt"),
+    closedAt: timestamp("closedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    tenantIdx: index("idx_ticket_tenant").on(table.tenantId),
+    statusIdx: index("idx_ticket_status").on(table.status),
+    priorityIdx: index("idx_ticket_priority").on(table.priority),
+    assignedIdx: index("idx_ticket_assigned").on(table.assignedTo),
+    createdIdx: index("idx_ticket_created").on(table.createdAt),
+  })
+);
+
+export type SupportTicket = typeof supportTickets.$inferSelect;
+export type InsertSupportTicket = typeof supportTickets.$inferInsert;
+
+export const ticketMessages = mysqlTable(
+  "ticket_messages",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    ticketId: varchar("ticketId", { length: 64 }).notNull(),
+    userId: varchar("userId", { length: 64 }).notNull(),
+    message: text("message").notNull(),
+    isInternal: boolean("isInternal").default(false).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    ticketIdx: index("idx_ticket_msg_ticket").on(table.ticketId),
+    userIdx: index("idx_ticket_msg_user").on(table.userId),
+  })
+);
+
+export type TicketMessage = typeof ticketMessages.$inferSelect;
+export type InsertTicketMessage = typeof ticketMessages.$inferInsert;

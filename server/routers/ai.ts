@@ -148,6 +148,55 @@ export const aiRouter = router({
       };
     }),
 
+  /**
+   * Busca analise IA existente pelo assessmentId (nao pelo reportId).
+   * Usado pelo frontend para detectar analise pre-existente ao montar o painel.
+   */
+  getAnalysisByAssessment: tenantProcedure
+    .input(
+      z.object({
+        assessmentId: z.string().min(1, "ID da avaliacao e obrigatorio"),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
+      }
+
+      const [report] = await db
+        .select({
+          id: copsoqReports.id,
+          assessmentId: copsoqReports.assessmentId,
+          tenantId: copsoqReports.tenantId,
+          aiAnalysis: copsoqReports.aiAnalysis,
+          aiGeneratedAt: copsoqReports.aiGeneratedAt,
+          aiModel: copsoqReports.aiModel,
+        })
+        .from(copsoqReports)
+        .where(
+          and(
+            eq(copsoqReports.assessmentId, input.assessmentId),
+            eq(copsoqReports.tenantId, ctx.tenantId!)
+          )
+        )
+        .limit(1);
+
+      if (!report || !report.aiAnalysis) {
+        return null;
+      }
+
+      return {
+        reportId: report.id,
+        analysis: report.aiAnalysis as CopsoqAnalysisResult,
+        generatedAt: report.aiGeneratedAt?.toISOString() || null,
+        model: report.aiModel || null,
+      };
+    }),
+
   // ========================================================================
   // FASE 2: Inventario de Riscos + Plano de Acao
   // ========================================================================

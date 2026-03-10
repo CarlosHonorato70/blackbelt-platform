@@ -98,6 +98,9 @@ async function sendVerificationEmail(email: string, name: string | null, token: 
   });
 }
 
+// Track used password reset tokens to prevent reuse
+const usedResetTokens = new Set<string>();
+
 export const authLocalRouter = router({
   register: publicProcedure
     .input(
@@ -315,6 +318,14 @@ export const authLocalRouter = router({
       })
     )
     .mutation(async ({ input }) => {
+      // Check if token was already used
+      if (usedResetTokens.has(input.token)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Este link já foi utilizado. Solicite um novo.",
+        });
+      }
+
       const result = verifyResetToken(input.token);
       if (!result) {
         throw new TRPCError({
@@ -322,6 +333,14 @@ export const authLocalRouter = router({
           message:
             "Link de recuperação inválido ou expirado. Solicite um novo.",
         });
+      }
+
+      // Mark token as used before processing
+      usedResetTokens.add(input.token);
+
+      // Cleanup old tokens periodically (keep set from growing)
+      if (usedResetTokens.size > 10000) {
+        usedResetTokens.clear();
       }
 
       const passwordHash = await bcrypt.hash(input.password, 12);

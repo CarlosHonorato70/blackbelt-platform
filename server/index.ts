@@ -87,8 +87,13 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Permitir requests sem origin (curl, mobile, server-to-server)
-      if (!origin) return callback(null, true);
+      // Em produção, bloquear requests sem Origin (previne CSRF)
+      if (!origin) {
+        if (ENV.isProduction) {
+          return callback(new Error("Origin header required"));
+        }
+        return callback(null, true);
+      }
 
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
@@ -103,7 +108,7 @@ app.use(
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "x-impersonate-tenant"],
   })
 );
 
@@ -122,7 +127,7 @@ const apiLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 5,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Muitas tentativas de login. Aguarde 15 minutos." },

@@ -7,7 +7,7 @@
  * - Contagem resumida por nivel
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -33,6 +33,7 @@ import {
   CheckCircle2,
   Sparkles,
   ClipboardList,
+  Download,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -100,12 +101,48 @@ export default function AiInventoryPanel({
     },
   });
 
+  // Propagar ready quando query carrega dados existentes do banco
+  useEffect(() => {
+    if (inventoryQuery.data?.items?.length > 0) {
+      onInventoryGenerated?.();
+    }
+  }, [inventoryQuery.data]);
+
+  // Mutation para exportar PDF do inventario
+  const pdfMutation = (trpc as any).pdfExports.generateInventoryPdf.useMutation({
+    onSuccess: (data: any) => {
+      if (data.pdfBase64) {
+        const byteCharacters = atob(data.pdfBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = data.filename || "inventario-riscos-nr01.pdf";
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success("PDF do inventário exportado com sucesso!");
+      }
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao gerar PDF: ${error.message}`);
+    },
+  });
+
   const handleGenerate = () => {
     generateMutation.mutate({
       assessmentId,
       sectorName: sectorName || undefined,
       workerCount: workerCount ? parseInt(workerCount, 10) : undefined,
     });
+  };
+
+  const handleExportPdf = () => {
+    pdfMutation.mutate({ assessmentId });
   };
 
   // Dados do inventario (do state local ou da query)
@@ -226,6 +263,26 @@ export default function AiInventoryPanel({
             Psicossociais
           </CardDescription>
         </CardHeader>
+        <CardContent>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportPdf}
+            disabled={pdfMutation.isPending}
+          >
+            {pdfMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Gerando PDF...
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                Exportar PDF do Inventário
+              </>
+            )}
+          </Button>
+        </CardContent>
       </Card>
 
       {/* Resumo por nivel de risco */}

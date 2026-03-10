@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { trpc } from "@/lib/trpc";
 
 export default function Register() {
   usePageMeta({ title: "Cadastro", description: "Crie sua conta na plataforma Black Belt" });
@@ -19,6 +20,20 @@ export default function Register() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const registerMutation = (trpc as any).auth.register.useMutation({
+    onSuccess: async () => {
+      // Após cadastro, faz login automaticamente
+      const success = await login(formData.email, formData.password);
+      if (success) {
+        navigate("/dashboard");
+      }
+    },
+    onError: (err: any) => {
+      setError(err.message || "Erro ao criar conta");
+      setLoading(false);
+    },
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -28,39 +43,17 @@ export default function Register() {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError("A senha deve ter pelo menos 6 caracteres");
+    if (formData.password.length < 8) {
+      setError("A senha deve ter pelo menos 8 caracteres");
       return;
     }
 
     setLoading(true);
-
-    try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Erro ao criar conta");
-      }
-
-      // Após cadastro, faz login automaticamente
-      const success = await login(formData.email, formData.password);
-      if (success) {
-        navigate("/dashboard");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao criar conta");
-    } finally {
-      setLoading(false);
-    }
+    registerMutation.mutate({
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+    });
   };
 
   return (

@@ -8,7 +8,7 @@
  * - Acoes gerais obrigatorias
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -36,6 +36,7 @@ import {
   Calendar,
   Target,
   Check,
+  Download,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -118,11 +119,40 @@ export default function AiActionPlanPanel({
     },
   });
 
+  // Mutation para exportar PDF do plano de acao
+  const pdfMutation = (trpc as any).pdfExports.generateActionPlanPdf.useMutation({
+    onSuccess: (data: any) => {
+      if (data.pdfBase64) {
+        const byteCharacters = atob(data.pdfBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = data.filename || "plano-acao-nr01.pdf";
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success("PDF do plano de ação exportado com sucesso!");
+      }
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao gerar PDF: ${error.message}`);
+    },
+  });
+
   const handleGenerate = () => {
     generateMutation.mutate({
       assessmentId,
       sectorName: sectorName || undefined,
     });
+  };
+
+  const handleExportPdf = () => {
+    pdfMutation.mutate({ assessmentId });
   };
 
   // Dados do plano (do state local ou da query)
@@ -233,6 +263,26 @@ export default function AiActionPlanPanel({
             Plano gerado conforme NR-01 item 1.5.5.2 — Medidas de Prevenção
           </CardDescription>
         </CardHeader>
+        <CardContent>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportPdf}
+            disabled={pdfMutation.isPending}
+          >
+            {pdfMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Gerando PDF...
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                Exportar PDF do Plano de Ação
+              </>
+            )}
+          </Button>
+        </CardContent>
       </Card>
 
       {/* Resumo por prioridade */}

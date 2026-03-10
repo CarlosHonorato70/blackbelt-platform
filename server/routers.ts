@@ -36,6 +36,10 @@ import { analyticsRouter } from "./routers/analytics";
 import { onboardingRouter } from "./routers/onboarding";
 import { dataExportRouter } from "./routers/dataExport";
 import { aiRouter } from "./routers/ai";
+import { adminSubscriptionsRouter } from "./routers/adminSubscriptions";
+import { supportTicketsRouter } from "./routers/supportTickets";
+import { adminMetricsRouter } from "./routers/adminMetrics";
+
 
 export const appRouter = router({
   system: systemRouter,
@@ -98,6 +102,11 @@ export const appRouter = router({
 
   // Phase IA: AI-powered analysis
   ai: aiRouter,
+
+  // Admin Operations
+  adminSubscriptions: adminSubscriptionsRouter,
+  supportTickets: supportTicketsRouter,
+  adminMetrics: adminMetricsRouter,
 });
 
 export type AppRouter = typeof appRouter;

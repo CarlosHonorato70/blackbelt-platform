@@ -8,7 +8,7 @@
  * - Recomendacoes priorizadas
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -67,6 +67,20 @@ export default function AiAnalysisPanel({
   onAnalysisGenerated,
 }: AiAnalysisPanelProps) {
   const [analysis, setAnalysis] = useState<any>(null);
+
+  // Query para detectar analise existente no banco
+  const existingAnalysisQuery = (trpc as any).ai.getAnalysisByAssessment.useQuery(
+    { assessmentId },
+    { enabled: !!assessmentId }
+  );
+
+  // Se ja existe analise no banco, carregar automaticamente
+  useEffect(() => {
+    if (existingAnalysisQuery.data?.analysis && !analysis) {
+      setAnalysis(existingAnalysisQuery.data.analysis);
+      onAnalysisGenerated?.();
+    }
+  }, [existingAnalysisQuery.data]);
 
   const analyzeMutation = (trpc as any).ai.analyzeCopsoq.useMutation({
     onSuccess: (data: any) => {

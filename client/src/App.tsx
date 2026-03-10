@@ -3,6 +3,8 @@ import { TRPCProvider } from "./lib/trpc-provider";
 import { AuthProvider } from "./_core/hooks/useAuth";
 import { TenantProvider } from "./contexts/TenantContext";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { ImpersonationProvider } from "./contexts/ImpersonationContext";
+import { ImpersonationBanner } from "./components/ImpersonationBanner";
 import CookieConsent from "./components/CookieConsent";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { lazy, Suspense } from "react";
@@ -40,6 +42,10 @@ const BrandingSettings = lazy(() => import("./pages/BrandingSettings"));
 const TestDashboard = lazy(() => import("./pages/TestDashboard"));
 const ActionPlans = lazy(() => import("./pages/ActionPlans"));
 const Help = lazy(() => import("./pages/Help"));
+const SupportTickets = lazy(() => import("./pages/SupportTickets"));
+const AdminSubscriptions = lazy(() => import("./pages/AdminSubscriptions"));
+const AdminSupportTickets = lazy(() => import("./pages/AdminSupportTickets"));
+const AdminMetricsDashboard = lazy(() => import("./pages/AdminMetricsDashboard"));
 const CopsoqRespond = lazy(() => import("./pages/CopsoqRespond"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
@@ -81,6 +87,8 @@ export default function App() {
       <TRPCProvider>
         <Router>
           <AuthProvider>
+            <ImpersonationProvider>
+            <ImpersonationBanner />
             <TenantProvider>
               <Routes>
                 {/* Landing page publica */}
@@ -148,10 +156,19 @@ export default function App() {
                 <Route path="/subscription/success" element={<ProtectedPage><SubscriptionSuccess /></ProtectedPage>} />
                 <Route path="/subscription/failure" element={<ProtectedPage><SubscriptionFailure /></ProtectedPage>} />
 
+                {/* Suporte */}
+                <Route path="/support" element={<ProtectedPage><SupportTickets /></ProtectedPage>} />
+
+                {/* Admin Operations */}
+                <Route path="/admin/metrics" element={<ProtectedPage><AdminMetricsDashboard /></ProtectedPage>} />
+                <Route path="/admin/subscriptions" element={<ProtectedPage><AdminSubscriptions /></ProtectedPage>} />
+                <Route path="/admin/support" element={<ProtectedPage><AdminSupportTickets /></ProtectedPage>} />
+
                 {/* Catch-all */}
                 <Route path="*" element={<Suspense fallback={<PageLoader />}><NotFound /></Suspense>} />
               </Routes>
             </TenantProvider>
+            </ImpersonationProvider>
           </AuthProvider>
           <CookieConsent />
         </Router>

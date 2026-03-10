@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { protectedProcedure, router, tenantProcedure, subscribedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
 import {
@@ -72,7 +72,7 @@ export const assessmentsRouter = router({
     }),
 
   // Salvar resposta de avaliacao
-  submitResponse: protectedProcedure
+  submitResponse: tenantProcedure
     .input(
       z.object({
         assessmentId: z.string(),
@@ -129,7 +129,7 @@ export const assessmentsRouter = router({
     }),
 
   // Obter respostas de uma avaliacao
-  getResponses: protectedProcedure
+  getResponses: tenantProcedure
     .input(z.object({ assessmentId: z.string() }))
     .query(async ({ ctx, input }) => {
       const db = await getDb();
@@ -138,11 +138,14 @@ export const assessmentsRouter = router({
       return db
         .select()
         .from(copsoqResponses)
-        .where(eq(copsoqResponses.assessmentId, input.assessmentId));
+        .where(and(
+          eq(copsoqResponses.assessmentId, input.assessmentId),
+          eq(copsoqResponses.tenantId, ctx.tenantId!)
+        ));
     }),
 
   // Gerar relatorio
-  generateReport: protectedProcedure
+  generateReport: tenantProcedure
     .input(
       z.object({
         assessmentId: z.string(),
@@ -156,7 +159,10 @@ export const assessmentsRouter = router({
       const responses = await db
         .select()
         .from(copsoqResponses)
-        .where(eq(copsoqResponses.assessmentId, input.assessmentId));
+        .where(and(
+          eq(copsoqResponses.assessmentId, input.assessmentId),
+          eq(copsoqResponses.tenantId, ctx.tenantId!)
+        ));
 
       if (responses.length === 0) {
         throw new TRPCError({
@@ -262,7 +268,7 @@ export const assessmentsRouter = router({
     }),
 
   // Obter relatorio
-  getReport: protectedProcedure
+  getReport: tenantProcedure
     .input(z.object({ reportId: z.string() }))
     .query(async ({ ctx, input }) => {
       const db = await getDb();
@@ -271,14 +277,17 @@ export const assessmentsRouter = router({
       const result = await db
         .select()
         .from(copsoqReports)
-        .where(eq(copsoqReports.id, input.reportId))
+        .where(and(
+          eq(copsoqReports.id, input.reportId),
+          eq(copsoqReports.tenantId, ctx.tenantId!)
+        ))
         .limit(1);
 
       return result[0] || null;
     }),
 
   // Listar convites de avaliacao
-  listInvites: protectedProcedure
+  listInvites: tenantProcedure
     .input(z.object({  }))
     .query(async ({ ctx, input }) => {
       const db = await getDb();
@@ -372,17 +381,20 @@ export const assessmentsRouter = router({
     }),
 
   // Cancelar convite
-  cancelInvite: protectedProcedure
+  cancelInvite: tenantProcedure
     .input(z.object({ inviteId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      // Verificar se convite existe
+      // Verificar se convite existe e pertence ao tenant
       const invite = await db
         .select()
         .from(copsoqInvites)
-        .where(eq(copsoqInvites.id, input.inviteId))
+        .where(and(
+          eq(copsoqInvites.id, input.inviteId),
+          eq(copsoqInvites.tenantId, ctx.tenantId!)
+        ))
         .limit(1);
 
       if (!invite || invite.length === 0) {

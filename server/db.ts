@@ -61,8 +61,8 @@ export async function getDb() {
         _pool = mysql.createPool({
           uri: process.env.DATABASE_URL,
           waitForConnections: true,
-          connectionLimit: 10,
-          queueLimit: 0,
+          connectionLimit: process.env.NODE_ENV === "production" ? 50 : 10,
+          queueLimit: 1000,
         });
         _db = drizzle(_pool, { schema: fullSchema, mode: "default" });
         if (attempt > 0) {

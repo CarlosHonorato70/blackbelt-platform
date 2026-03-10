@@ -7,6 +7,7 @@ import {
   int,
   boolean,
   json,
+  index,
 } from "drizzle-orm/mysql-core";
 import { tenants } from "./schema";
 
@@ -285,7 +286,10 @@ export const copsoqAssessments = mysqlTable("copsoq_assessments", {
     .notNull(),
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt").defaultNow(),
-});
+}, (table) => ({
+  tenantIdx: index("idx_copsoq_assess_tenant").on(table.tenantId),
+  statusIdx: index("idx_copsoq_assess_status").on(table.status),
+}));
 
 export const copsoqResponses = mysqlTable("copsoq_responses", {
   id: varchar("id", { length: 64 }).primaryKey(),
@@ -339,7 +343,11 @@ export const copsoqResponses = mysqlTable("copsoq_responses", {
   completedAt: timestamp("completedAt"),
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt").defaultNow(),
-});
+}, (table) => ({
+  assessmentIdx: index("idx_copsoq_resp_assessment").on(table.assessmentId),
+  tenantIdx: index("idx_copsoq_resp_tenant").on(table.tenantId),
+  personIdx: index("idx_copsoq_resp_person").on(table.personId),
+}));
 
 export const copsoqReports = mysqlTable("copsoq_reports", {
   id: varchar("id", { length: 64 }).primaryKey(),
@@ -381,7 +389,10 @@ export const copsoqReports = mysqlTable("copsoq_reports", {
 
   generatedAt: timestamp("generatedAt"),
   createdAt: timestamp("createdAt").defaultNow(),
-});
+}, (table) => ({
+  assessmentIdx: index("idx_copsoq_report_assessment").on(table.assessmentId),
+  tenantIdx: index("idx_copsoq_report_tenant").on(table.tenantId),
+}));
 
 export type CopsoqAssessment = typeof copsoqAssessments.$inferSelect;
 export type InsertCopsoqAssessment = typeof copsoqAssessments.$inferInsert;
@@ -415,7 +426,11 @@ export const copsoqInvites = mysqlTable("copsoq_invites", {
   expiresAt: timestamp("expiresAt"),
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow(),
-});
+}, (table) => ({
+  assessmentIdx: index("idx_copsoq_invite_assessment").on(table.assessmentId),
+  tenantIdx: index("idx_copsoq_invite_tenant").on(table.tenantId),
+  statusIdx: index("idx_copsoq_invite_status").on(table.status),
+}));
 
 export type CopsoqInvite = typeof copsoqInvites.$inferSelect;
 export type InsertCopsoqInvite = typeof copsoqInvites.$inferInsert;

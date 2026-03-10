@@ -6,7 +6,7 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
+import { publicProcedure, protectedProcedure, router , tenantProcedure} from "../_core/trpc";
 import { getDb } from "../db";
 import {
   plans,
@@ -87,10 +87,7 @@ export const subscriptionsRouter = router({
   /**
    * Obter assinatura do tenant atual
    */
-  getCurrentSubscription: protectedProcedure.query(async ({ ctx }) => {
-    if (!ctx.tenantId) {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
-    }
+  getCurrentSubscription: tenantProcedure.query(async ({ ctx }) => {
 
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });

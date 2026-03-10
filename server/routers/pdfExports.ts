@@ -4,7 +4,7 @@
  */
 
 import { z } from "zod";
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, protectedProcedure, tenantProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
 import { getDb } from "../db";
@@ -377,7 +377,7 @@ export const pdfExportsRouter = router({
   /**
    * Generate NR-01 Risk Inventory PDF from AI-generated data
    */
-  generateInventoryPdf: protectedProcedure
+  generateInventoryPdf: tenantProcedure
     .input(
       z.object({
         assessmentId: z.string().min(1),
@@ -496,7 +496,7 @@ export const pdfExportsRouter = router({
   /**
    * Generate NR-01 Action Plan PDF from AI-generated data
    */
-  generateActionPlanPdf: protectedProcedure
+  generateActionPlanPdf: tenantProcedure
     .input(
       z.object({
         assessmentId: z.string().min(1),

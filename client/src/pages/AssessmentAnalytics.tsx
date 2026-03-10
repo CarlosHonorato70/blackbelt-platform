@@ -59,7 +59,7 @@ export default function AssessmentAnalytics() {
   const navigate = useNavigate();
 
   const assessmentsQuery = trpc.assessments.list.useQuery(
-    undefined,
+    {},
     { enabled: !!user }
   );
 
