@@ -35,7 +35,12 @@ async function seed() {
     process.exit(1);
   }
 
-  const pool = mysql.createPool({ uri: dbUrl, connectionLimit: 5 });
+  const needsSsl = dbUrl.includes('tidbcloud.com') || process.env.DATABASE_SSL === 'true';
+  const pool = mysql.createPool({
+    uri: dbUrl,
+    connectionLimit: 5,
+    ...(needsSsl ? { ssl: { minVersion: 'TLSv1.2', rejectUnauthorized: true } } : {}),
+  });
   const db = drizzle(pool);
 
   console.log("Seeding database...\n");
@@ -229,7 +234,7 @@ async function seed() {
 
   // 6. Seed Admin User
   console.log("[8/8] Seeding admin user...");
-  const ADMIN_EMAIL = "admin@blackbelt-platform.com";
+  const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@blackbelt-platform.com";
   const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || crypto.randomUUID().slice(0, 16) + "!Aa1";
   const isRandomPassword = !process.env.ADMIN_PASSWORD;
 
