@@ -19,31 +19,57 @@ export interface SendEmailOptions {
   text?: string;
 }
 
+// Retry delays for transient SMTP failures (exponential backoff)
+const EMAIL_RETRY_DELAYS = [2000, 5000, 15000]; // 2s, 5s, 15s
+
 /**
- * Envia um email usando o transporte configurado
+ * Envia um email usando o transporte configurado.
+ * Retenta até 3 vezes com backoff exponencial em caso de falha transitória.
  */
 export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
-  try {
-    if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
-      log.warn(
-"SMTP credentials not configured, skipping email send"
-      );
-      return false;
-    }
-
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to: options.to,
-      subject: options.subject,
-      html: options.html,
-      text: options.text,
-    });
-
-    return true;
-  } catch (error) {
-    log.error("Failed to send email", { error: error instanceof Error ? error.message : String(error) });
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
+    log.warn("SMTP credentials not configured, skipping email send");
     return false;
   }
+
+  const maxAttempts = EMAIL_RETRY_DELAYS.length + 1; // 1 initial + 3 retries
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        text: options.text,
+      });
+
+      if (attempt > 1) {
+        log.info("Email sent successfully after retry", { attempt, to: options.to });
+      }
+      return true;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+
+      if (attempt < maxAttempts) {
+        const delay = EMAIL_RETRY_DELAYS[attempt - 1];
+        log.warn(`Email send failed (attempt ${attempt}/${maxAttempts}), retrying in ${delay}ms...`, {
+          error: errorMsg,
+          to: options.to,
+        });
+        await new Promise((r) => setTimeout(r, delay));
+      } else {
+        log.error(`Email send failed after ${maxAttempts} attempts`, {
+          error: errorMsg,
+          to: options.to,
+          subject: options.subject,
+        });
+        return false;
+      }
+    }
+  }
+
+  return false;
 }
 
 /**

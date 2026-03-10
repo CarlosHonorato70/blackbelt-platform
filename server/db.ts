@@ -13,6 +13,7 @@ import {
   dataConsents,
   InsertAuditLog,
   InsertDataConsent,
+  InsertLoginAttempt,
   InsertPerson,
   InsertRole,
   InsertRolePermission,
@@ -22,6 +23,7 @@ import {
   InsertUser,
   InsertUserInvite,
   InsertUserRole,
+  loginAttempts,
   people,
   pricingParameters,
   proposalItems,
@@ -47,23 +49,55 @@ import { ENV } from "./_core/env";
 const fullSchema = { ...schema, ...schemaNr01, ...relations };
 
 let _db: ReturnType<typeof drizzle<typeof fullSchema>> | null = null;
+let _pool: ReturnType<typeof mysql.createPool> | null = null;
+
+const DB_RETRY_ATTEMPTS = 3;
+const DB_RETRY_DELAYS = [1000, 2000, 4000]; // exponential backoff
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
-    try {
-      const pool = mysql.createPool({
-        uri: process.env.DATABASE_URL,
-        waitForConnections: true,
-        connectionLimit: 10,
-        queueLimit: 0,
-      });
-      _db = drizzle(pool, { schema: fullSchema, mode: "default" });
-    } catch (error) {
-      log.warn("[Database] Failed to connect", { error: String(error) });
-      _db = null;
+    for (let attempt = 0; attempt < DB_RETRY_ATTEMPTS; attempt++) {
+      try {
+        _pool = mysql.createPool({
+          uri: process.env.DATABASE_URL,
+          waitForConnections: true,
+          connectionLimit: process.env.NODE_ENV === "production" ? 50 : 10,
+          queueLimit: 1000,
+        });
+        _db = drizzle(_pool, { schema: fullSchema, mode: "default" });
+        if (attempt > 0) {
+          log.info(`[Database] Connected after ${attempt + 1} attempts`);
+        }
+        break;
+      } catch (error) {
+        log.warn(`[Database] Connection attempt ${attempt + 1}/${DB_RETRY_ATTEMPTS} failed`, {
+          error: String(error),
+        });
+        _db = null;
+        _pool = null;
+        if (attempt < DB_RETRY_ATTEMPTS - 1) {
+          await new Promise((r) => setTimeout(r, DB_RETRY_DELAYS[attempt]));
+        }
+      }
     }
   }
   return _db;
+}
+
+/** Verifica se o banco de dados esta acessivel (para health check) */
+export async function checkDbHealth(): Promise<boolean> {
+  try {
+    if (!_pool) {
+      await getDb();
+    }
+    if (!_pool) return false;
+    const conn = await _pool.getConnection();
+    await conn.ping();
+    conn.release();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // Alias para compatibilidade com context.ts
@@ -653,4 +687,54 @@ export function calculateProposal(params: { items: { quantity: number; unitPrice
   const taxes = Math.round(afterDiscount * taxRate);
   const totalValue = afterDiscount + taxes;
   return { subtotal, discount, discountPercent, taxes, totalValue };
+}
+
+// ============================================================================
+// LOGIN ATTEMPTS & ACCOUNT LOCKOUT
+// ============================================================================
+
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 30 * 60 * 1000; // 30 minutos
+
+/** Registra uma tentativa de login (sucesso ou falha) */
+export async function recordLoginAttempt(data: Omit<InsertLoginAttempt, "id">): Promise<void> {
+  const database = await getDb();
+  if (!database) return;
+  await database.insert(loginAttempts).values({ id: nanoid(), ...data });
+}
+
+/** Verifica se a conta esta bloqueada e retorna minutos restantes */
+export function getLockedMinutesRemaining(lockedUntil: Date | null): number {
+  if (!lockedUntil) return 0;
+  const remaining = lockedUntil.getTime() - Date.now();
+  return remaining > 0 ? Math.ceil(remaining / 60000) : 0;
+}
+
+/** Incrementa contador de falhas e bloqueia se atingiu o limite */
+export async function handleFailedLogin(userId: string, currentFailed: number): Promise<boolean> {
+  const database = await getDb();
+  if (!database) return false;
+
+  const newCount = currentFailed + 1;
+  const shouldLock = newCount >= MAX_FAILED_ATTEMPTS;
+
+  await database
+    .update(users)
+    .set({
+      failedLoginAttempts: newCount,
+      ...(shouldLock ? { lockedUntil: new Date(Date.now() + LOCKOUT_DURATION_MS) } : {}),
+    })
+    .where(eq(users.id, userId));
+
+  return shouldLock;
+}
+
+/** Reseta contadores de lockout apos login com sucesso */
+export async function resetLoginAttempts(userId: string): Promise<void> {
+  const database = await getDb();
+  if (!database) return;
+  await database
+    .update(users)
+    .set({ failedLoginAttempts: 0, lockedUntil: null })
+    .where(eq(users.id, userId));
 }

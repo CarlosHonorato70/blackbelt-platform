@@ -4,12 +4,15 @@ import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
 import { log } from "../_core/logger";
 import * as db from "../db";
+import { getDb } from "../db";
 import { nanoid } from "nanoid";
 import bcrypt from "bcryptjs";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions, createSessionToken } from "../_core/cookies";
 import { ENV } from "../_core/env";
 import { sendEmail } from "../_core/email";
+import { eq } from "drizzle-orm";
+import { roles, userRoles, users } from "../../drizzle/schema";
 
 // Password reset token helpers (HMAC-signed, no DB needed)
 const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
@@ -19,7 +22,7 @@ function createResetToken(userId: string): string {
   return createHmacToken(userId, "-reset", RESET_TOKEN_EXPIRY_MS);
 }
 
-function verifyResetToken(token: string): { userId: string } | null {
+function verifyResetToken(token: string): { userId: string; tokenCreatedAt: number } | null {
   return verifyHmacToken(token, "-reset");
 }
 
@@ -34,7 +37,7 @@ function createHmacToken(userId: string, suffix: string, expiryMs: number): stri
   return Buffer.from(`${payload}.${signature}`).toString("base64url");
 }
 
-function verifyHmacToken(token: string, suffix: string): { userId: string } | null {
+function verifyHmacToken(token: string, suffix: string): { userId: string; tokenCreatedAt: number } | null {
   try {
     const decoded = Buffer.from(token, "base64url").toString();
     const parts = decoded.split(".");
@@ -56,7 +59,8 @@ function verifyHmacToken(token: string, suffix: string): { userId: string } | nu
 
     if (Date.now() > parseInt(expiryStr, 10)) return null;
 
-    return { userId };
+    const tokenCreatedAt = Number(expiryStr) - RESET_TOKEN_EXPIRY_MS;
+    return { userId, tokenCreatedAt };
   } catch {
     return null;
   }
@@ -98,6 +102,9 @@ async function sendVerificationEmail(email: string, name: string | null, token: 
   });
 }
 
+// Track used password reset tokens to prevent reuse
+const usedResetTokens = new Set<string>();
+
 export const authLocalRouter = router({
   register: publicProcedure
     .input(
@@ -129,6 +136,24 @@ export const authLocalRouter = router({
         tenantId: input.tenantId || null,
       });
 
+      // Assign default "manager" role to new user (if tenant provided)
+      if (input.tenantId) {
+        try {
+          const drizzleDb = await getDb();
+          const managerRole = await drizzleDb.select().from(roles).where(eq(roles.systemName, "manager")).limit(1);
+          if (managerRole.length > 0) {
+            await drizzleDb!.insert(userRoles).values({
+              id: nanoid(),
+              userId,
+              roleId: managerRole[0].id,
+              tenantId: input.tenantId,
+            });
+          }
+        } catch (err) {
+          log.warn("Failed to assign default role", { userId, error: err instanceof Error ? err.message : String(err) });
+        }
+      }
+
       // Cria token de sessao OPACO e ASSINADO (nao userId bruto)
       const sessionToken = createSessionToken(userId);
       const cookieOptions = getSessionCookieOptions(ctx.req);
@@ -149,21 +174,90 @@ export const authLocalRouter = router({
   login: publicProcedure
     .input(z.object({ email: z.string().email(), password: z.string() }))
     .mutation(async ({ input, ctx }) => {
+      const ipAddress = ctx.req.ip || ctx.req.socket.remoteAddress || null;
+      const userAgent = ctx.req.headers["user-agent"] || null;
+
       const user = await db.getUserByEmail(input.email);
       if (!user || !user.passwordHash) {
+        // Registra tentativa falha (usuario nao encontrado)
+        await db.recordLoginAttempt({
+          email: input.email,
+          userId: null,
+          success: false,
+          ipAddress,
+          userAgent,
+          failureReason: "user_not_found",
+        });
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Email ou senha incorretos",
         });
       }
 
+      // Verificar se a conta esta bloqueada
+      const lockedMinutes = db.getLockedMinutesRemaining(
+        (user as any).lockedUntil
+      );
+      if (lockedMinutes > 0) {
+        await db.recordLoginAttempt({
+          email: input.email,
+          userId: user.id,
+          success: false,
+          ipAddress,
+          userAgent,
+          failureReason: "account_locked",
+        });
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: `Conta bloqueada por excesso de tentativas. Tente novamente em ${lockedMinutes} minuto(s).`,
+        });
+      }
+
       const valid = await bcrypt.compare(input.password, user.passwordHash);
       if (!valid) {
+        // Registra falha e possivelmente bloqueia
+        const currentFailed = (user as any).failedLoginAttempts || 0;
+        const wasLocked = await db.handleFailedLogin(user.id, currentFailed);
+
+        await db.recordLoginAttempt({
+          email: input.email,
+          userId: user.id,
+          success: false,
+          ipAddress,
+          userAgent,
+          failureReason: "invalid_password",
+        });
+
+        if (wasLocked) {
+          log.warn("Account locked due to failed login attempts", {
+            email: input.email,
+            ip: ipAddress,
+          });
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message:
+              "Conta bloqueada por excesso de tentativas. Tente novamente em 30 minutos.",
+          });
+        }
+
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Email ou senha incorretos",
         });
       }
+
+      // Login com sucesso — resetar contadores de lockout
+      await db.resetLoginAttempts(user.id);
+
+      // Registra tentativa de sucesso
+      await db.recordLoginAttempt({
+        email: input.email,
+        userId: user.id,
+        success: true,
+        ipAddress,
+        userAgent,
+        failureReason: null,
+      });
 
       // Atualiza lastSignedIn
       await db.upsertUser({
@@ -171,7 +265,7 @@ export const authLocalRouter = router({
         lastSignedIn: new Date(),
       });
 
-      // Cria token de sessao OPACO e ASSINADO
+      // Cria token de sessao OPACO e ASSINADO com expiracao
       const sessionToken = createSessionToken(user.id);
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.cookie(COOKIE_NAME, sessionToken, cookieOptions);
@@ -246,6 +340,14 @@ export const authLocalRouter = router({
       })
     )
     .mutation(async ({ input }) => {
+      // Check if token was already used (in-memory + DB check)
+      if (usedResetTokens.has(input.token)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Este link já foi utilizado. Solicite um novo.",
+        });
+      }
+
       const result = verifyResetToken(input.token);
       if (!result) {
         throw new TRPCError({
@@ -255,11 +357,33 @@ export const authLocalRouter = router({
         });
       }
 
+      // Check if password was already changed after this token was created (persistent check)
+      const drizzle = await getDb();
+      const [user] = await drizzle.select({ passwordChangedAt: users.passwordChangedAt })
+        .from(users).where(eq(users.id, result.userId)).limit(1);
+      if (user?.passwordChangedAt && user.passwordChangedAt.getTime() > result.tokenCreatedAt) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Este link já foi utilizado. Solicite um novo.",
+        });
+      }
+
+      // Mark token as used in memory
+      usedResetTokens.add(input.token);
+      if (usedResetTokens.size > 10000) {
+        usedResetTokens.clear();
+      }
+
       const passwordHash = await bcrypt.hash(input.password, 12);
       await db.upsertUser({
         id: result.userId,
         passwordHash,
       });
+
+      // Update passwordChangedAt timestamp (persistent token invalidation)
+      await drizzle.update(users)
+        .set({ passwordChangedAt: new Date() })
+        .where(eq(users.id, result.userId));
 
       return { success: true };
     }),

@@ -2,6 +2,23 @@ import type { CookieOptions, Request } from "express";
 import crypto from "crypto";
 import { ENV } from "./env";
 
+// ============================================================================
+// Session timeout configuration
+// ============================================================================
+
+/** Sessao expira apos 30 minutos de inatividade */
+export const SESSION_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutos
+
+/** Renova automaticamente se faltam menos de 10 minutos (sliding window) */
+export const SESSION_REFRESH_THRESHOLD_MS = 10 * 60 * 1000; // 10 minutos
+
+/** Cookie maxAge alinhado com a sessao */
+const COOKIE_MAX_AGE_MS = SESSION_MAX_AGE_MS;
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
 function isSecureRequest(req: Request) {
@@ -32,23 +49,26 @@ export function getSessionCookieOptions(
     path: "/",
     sameSite: isSecure ? "strict" : "lax",
     secure: isSecure,
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
+    maxAge: COOKIE_MAX_AGE_MS,
   };
 }
 
 /**
- * Cria um token de sessao opaco e assinado com HMAC.
- * O cookie NAO deve conter o userId diretamente — isso permite
- * que atacantes forjem sessoes. Em vez disso, gera um token
- * aleatorio e mapeia para o userId via assinatura.
+ * Cria um token de sessao opaco e assinado com HMAC, com expiracao embutida.
  *
- * Formato: <randomToken>.<hmacSignature>
- * O randomToken tem 32 bytes (64 hex chars)
- * O hmac valida que o token foi emitido pelo nosso servidor
+ * Formato: <randomHex>.<userId>.<expiresAtMs>.<hmacSignature>
+ *
+ * - randomHex: 32 bytes aleatorios (64 hex chars) — unicidade
+ * - userId: identificador do usuario
+ * - expiresAtMs: timestamp de expiracao em milissegundos
+ * - hmacSignature: HMAC-SHA256 dos 3 campos acima — integridade
+ *
+ * O HMAC impede adulteracao de qualquer campo (userId, expiresAt, etc).
  */
 export function createSessionToken(userId: string): string {
   const randomPart = crypto.randomBytes(32).toString("hex");
-  const payload = `${randomPart}.${userId}`;
+  const expiresAt = Date.now() + SESSION_MAX_AGE_MS;
+  const payload = `${randomPart}.${userId}.${expiresAt}`;
   const signature = crypto
     .createHmac("sha256", ENV.cookieSecret)
     .update(payload)
@@ -57,21 +77,28 @@ export function createSessionToken(userId: string): string {
   return `${payload}.${signature}`;
 }
 
+/** Resultado da validacao de token */
+export interface SessionTokenResult {
+  userId: string;
+  expiresAt: number;
+}
+
 /**
- * Valida e extrai o userId de um token de sessao.
- * Retorna null se o token for invalido ou adulterado.
+ * Valida e extrai o userId e expiresAt de um token de sessao.
+ * Retorna null se o token for invalido, adulterado ou expirado.
  */
-export function verifySessionToken(token: string): string | null {
+export function verifySessionToken(token: string): SessionTokenResult | null {
   if (!token || typeof token !== "string") return null;
 
   const parts = token.split(".");
-  if (parts.length !== 3) return null;
+  if (parts.length !== 4) return null;
 
-  const [randomPart, userId, providedSignature] = parts;
+  const [randomPart, userId, expiresAtStr, providedSignature] = parts;
 
-  if (!randomPart || !userId || !providedSignature) return null;
+  if (!randomPart || !userId || !expiresAtStr || !providedSignature) return null;
 
-  const payload = `${randomPart}.${userId}`;
+  // Validar HMAC
+  const payload = `${randomPart}.${userId}.${expiresAtStr}`;
   const expectedSignature = crypto
     .createHmac("sha256", ENV.cookieSecret)
     .update(payload)
@@ -85,5 +112,9 @@ export function verifySessionToken(token: string): string | null {
 
   if (!crypto.timingSafeEqual(sigBuffer, expectedBuffer)) return null;
 
-  return userId;
+  // Verificar expiracao
+  const expiresAt = parseInt(expiresAtStr, 10);
+  if (isNaN(expiresAt) || Date.now() > expiresAt) return null;
+
+  return { userId, expiresAt };
 }

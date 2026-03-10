@@ -7,6 +7,7 @@ import {
   int,
   boolean,
   json,
+  index,
 } from "drizzle-orm/mysql-core";
 import { tenants } from "./schema";
 
@@ -78,6 +79,11 @@ export const riskAssessmentItems = mysqlTable("risk_assessment_items", {
   affectedPopulation: int("affectedPopulation"), // Número de pessoas afetadas
   currentControls: text("currentControls"), // Controles existentes
   observations: text("observations"),
+
+  // Fase 2 IA: campos adicionais
+  aiGenerated: boolean("ai_generated").default(false),   // Item gerado por IA
+  hazardCode: varchar("hazard_code", { length: 10 }),    // Codigo do catalogo (P1, P3, etc.)
+
   createdAt: timestamp("createdAt").defaultNow(),
 });
 
@@ -110,6 +116,13 @@ export const actionPlans = mysqlTable("action_plans", {
     .notNull(),
   budget: int("budget"), // Orçamento estimado em centavos
   completedAt: timestamp("completedAt"),
+
+  // Fase 2 IA: campos adicionais
+  aiGenerated: boolean("ai_generated").default(false),       // Acao gerada por IA
+  monthlySchedule: json("monthly_schedule"),                 // boolean[12] cronograma Jan-Dez
+  kpiIndicator: varchar("kpi_indicator", { length: 255 }),   // Indicador de acompanhamento
+  expectedImpact: text("expected_impact"),                   // Impacto esperado
+
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt").defaultNow(),
 });
@@ -273,7 +286,10 @@ export const copsoqAssessments = mysqlTable("copsoq_assessments", {
     .notNull(),
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt").defaultNow(),
-});
+}, (table) => ({
+  tenantIdx: index("idx_copsoq_assess_tenant").on(table.tenantId),
+  statusIdx: index("idx_copsoq_assess_status").on(table.status),
+}));
 
 export const copsoqResponses = mysqlTable("copsoq_responses", {
   id: varchar("id", { length: 64 }).primaryKey(),
@@ -327,7 +343,11 @@ export const copsoqResponses = mysqlTable("copsoq_responses", {
   completedAt: timestamp("completedAt"),
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt").defaultNow(),
-});
+}, (table) => ({
+  assessmentIdx: index("idx_copsoq_resp_assessment").on(table.assessmentId),
+  tenantIdx: index("idx_copsoq_resp_tenant").on(table.tenantId),
+  personIdx: index("idx_copsoq_resp_person").on(table.personId),
+}));
 
 export const copsoqReports = mysqlTable("copsoq_reports", {
   id: varchar("id", { length: 64 }).primaryKey(),
@@ -362,9 +382,17 @@ export const copsoqReports = mysqlTable("copsoq_reports", {
   // Arquivo do relatório
   reportUrl: varchar("reportUrl", { length: 500 }), // URL do PDF no S3
 
+  // Analise de IA (Fase 1)
+  aiAnalysis: json("ai_analysis"),              // CopsoqAnalysisResult completo
+  aiGeneratedAt: timestamp("ai_generated_at"),  // Quando a analise foi gerada
+  aiModel: varchar("ai_model", { length: 100 }),// Modelo utilizado (ex: gemini-2.5-flash)
+
   generatedAt: timestamp("generatedAt"),
   createdAt: timestamp("createdAt").defaultNow(),
-});
+}, (table) => ({
+  assessmentIdx: index("idx_copsoq_report_assessment").on(table.assessmentId),
+  tenantIdx: index("idx_copsoq_report_tenant").on(table.tenantId),
+}));
 
 export type CopsoqAssessment = typeof copsoqAssessments.$inferSelect;
 export type InsertCopsoqAssessment = typeof copsoqAssessments.$inferInsert;
@@ -398,7 +426,11 @@ export const copsoqInvites = mysqlTable("copsoq_invites", {
   expiresAt: timestamp("expiresAt"),
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow(),
-});
+}, (table) => ({
+  assessmentIdx: index("idx_copsoq_invite_assessment").on(table.assessmentId),
+  tenantIdx: index("idx_copsoq_invite_tenant").on(table.tenantId),
+  statusIdx: index("idx_copsoq_invite_status").on(table.status),
+}));
 
 export type CopsoqInvite = typeof copsoqInvites.$inferSelect;
 export type InsertCopsoqInvite = typeof copsoqInvites.$inferInsert;

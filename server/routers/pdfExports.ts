@@ -4,7 +4,7 @@
  */
 
 import { z } from "zod";
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, protectedProcedure, tenantProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
 import { getDb } from "../db";
@@ -13,11 +13,22 @@ import { eq, and, desc } from "drizzle-orm";
 import {
   generateProposalPdf,
   generateAssessmentPdf,
+  generateInventoryPdf,
+  generateActionPlanPdf,
   type ProposalPdfData,
   type AssessmentPdfData,
+  type InventoryPdfData,
+  type ActionPlanPdfData,
   type PdfBranding,
 } from "../_core/pdfGenerator";
 import { uploadPdfToS3, isS3Configured, getPresignedDownloadUrl } from "../_core/s3Upload";
+import {
+  riskAssessments,
+  riskAssessmentItems,
+  actionPlans,
+  copsoqReports,
+} from "../../drizzle/schema_nr01";
+import { tenants } from "../../drizzle/schema";
 import {
   sendProposalEmail,
   sendAssessmentEmail,
@@ -355,6 +366,241 @@ export const pdfExportsRouter = router({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: `Failed to generate PDF: ${error instanceof Error ? error.message : "Unknown error"}`,
+        });
+      }
+    }),
+
+  // ========================================================================
+  // NR-01 AI Document PDF Generation
+  // ========================================================================
+
+  /**
+   * Generate NR-01 Risk Inventory PDF from AI-generated data
+   */
+  generateInventoryPdf: tenantProcedure
+    .input(
+      z.object({
+        assessmentId: z.string().min(1),
+        branding: pdfBrandingSchema.optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!ctx.tenantId) throw new TRPCError({ code: "UNAUTHORIZED", message: "Tenant ID required" });
+
+      // Fetch tenant info
+      const [tenant] = await db
+        .select({ name: tenants.name })
+        .from(tenants)
+        .where(eq(tenants.id, ctx.tenantId))
+        .limit(1);
+
+      // Fetch latest risk assessment
+      const [assessment] = await db
+        .select()
+        .from(riskAssessments)
+        .where(eq(riskAssessments.tenantId, ctx.tenantId))
+        .orderBy(desc(riskAssessments.createdAt))
+        .limit(1);
+
+      if (!assessment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Nenhum inventário de riscos encontrado. Gere o inventário via IA primeiro.",
+        });
+      }
+
+      // Fetch items
+      const items = await db
+        .select()
+        .from(riskAssessmentItems)
+        .where(eq(riskAssessmentItems.assessmentId, assessment.id));
+
+      const exportId = nanoid();
+      const filename = `inventario-riscos-nr01-${new Date().toISOString().split("T")[0]}.pdf`;
+
+      const pdfData: InventoryPdfData = {
+        companyName: tenant?.name || "Empresa",
+        sector: assessment.title || "Geral",
+        date: new Date().toLocaleDateString("pt-BR"),
+        methodology: assessment.methodology || "COPSOQ-II + IA",
+        assessor: assessment.assessor || "Sistema IA",
+        items: items.map((i) => ({
+          hazardCode: (i as any).hazardCode || "—",
+          hazard: i.observations || "Risco psicossocial",
+          risk: i.observations || "—",
+          healthDamage: "Estresse, ansiedade, burnout",
+          severity: i.severity || "medium",
+          probability: i.probability || "possible",
+          riskLevel: i.riskLevel || "medium",
+          currentControls: i.currentControls || "Nenhum identificado",
+          recommendedControls: i.observations || "Implementar medidas preventivas",
+        })),
+        totalWorkers: items[0]?.affectedPopulation ? Number(items[0].affectedPopulation) : undefined,
+      };
+
+      try {
+        const pdfBuffer = await generateInventoryPdf(
+          pdfData,
+          input.branding,
+          { title: "Inventário de Riscos Ocupacionais — Psicossociais" }
+        );
+
+        let s3Key: string | undefined;
+        let s3Bucket: string | undefined;
+        let url: string | undefined;
+
+        if (isS3Configured()) {
+          const uploadResult = await uploadPdfToS3(pdfBuffer, filename, ctx.tenantId, {
+            documentType: "inventory",
+            assessmentId: input.assessmentId,
+          });
+          s3Key = uploadResult.key;
+          s3Bucket = uploadResult.bucket;
+          url = uploadResult.url;
+        }
+
+        await db.insert(pdfExports).values({
+          id: exportId,
+          tenantId: ctx.tenantId,
+          userId: ctx.user.id,
+          documentType: "assessment",
+          documentId: assessment.id,
+          filename,
+          fileSize: pdfBuffer.length,
+          mimeType: "application/pdf",
+          s3Key,
+          s3Bucket,
+          url,
+          status: "completed",
+          brandingApplied: !!input.branding,
+          downloadCount: 0,
+        });
+
+        return {
+          id: exportId,
+          filename,
+          url,
+          size: pdfBuffer.length,
+          pdfBase64: !isS3Configured() ? pdfBuffer.toString("base64") : undefined,
+        };
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Erro ao gerar PDF do inventário: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
+        });
+      }
+    }),
+
+  /**
+   * Generate NR-01 Action Plan PDF from AI-generated data
+   */
+  generateActionPlanPdf: tenantProcedure
+    .input(
+      z.object({
+        assessmentId: z.string().min(1),
+        branding: pdfBrandingSchema.optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (!ctx.tenantId) throw new TRPCError({ code: "UNAUTHORIZED", message: "Tenant ID required" });
+
+      // Fetch tenant info
+      const [tenant] = await db
+        .select({ name: tenants.name })
+        .from(tenants)
+        .where(eq(tenants.id, ctx.tenantId))
+        .limit(1);
+
+      // Fetch action plans
+      const plans = await db
+        .select()
+        .from(actionPlans)
+        .where(eq(actionPlans.tenantId, ctx.tenantId))
+        .orderBy(desc(actionPlans.createdAt));
+
+      if (plans.length === 0) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Nenhum plano de ação encontrado. Gere o plano via IA primeiro.",
+        });
+      }
+
+      const exportId = nanoid();
+      const filename = `plano-acao-nr01-${new Date().toISOString().split("T")[0]}.pdf`;
+
+      const pdfData: ActionPlanPdfData = {
+        companyName: tenant?.name || "Empresa",
+        sector: "Geral",
+        date: new Date().toLocaleDateString("pt-BR"),
+        planTitle: "Plano de Ação — Mitigação de Riscos Psicossociais",
+        actions: plans.map((p) => ({
+          riskIdentified: p.title || "—",
+          controlMeasure: p.description || "—",
+          actionType: p.actionType || "administrative",
+          responsibleRole: "Gestão de RH",
+          deadline: p.deadline?.toLocaleDateString("pt-BR") || "—",
+          priority: p.priority || "medium",
+          monthlySchedule: ((p as any).monthlySchedule as boolean[]) || [],
+          expectedImpact: (p as any).expectedImpact || "",
+          kpiIndicator: (p as any).kpiIndicator || "",
+        })),
+        generalActions: [],
+        monitoringStrategy: "Acompanhamento mensal de indicadores COPSOQ-II com reavaliação trimestral.",
+      };
+
+      try {
+        const pdfBuffer = await generateActionPlanPdf(
+          pdfData,
+          input.branding,
+          { title: "Plano de Ação — Mitigação de Riscos Psicossociais" }
+        );
+
+        let s3Key: string | undefined;
+        let s3Bucket: string | undefined;
+        let url: string | undefined;
+
+        if (isS3Configured()) {
+          const uploadResult = await uploadPdfToS3(pdfBuffer, filename, ctx.tenantId, {
+            documentType: "action_plan",
+            assessmentId: input.assessmentId,
+          });
+          s3Key = uploadResult.key;
+          s3Bucket = uploadResult.bucket;
+          url = uploadResult.url;
+        }
+
+        await db.insert(pdfExports).values({
+          id: exportId,
+          tenantId: ctx.tenantId,
+          userId: ctx.user.id,
+          documentType: "assessment",
+          documentId: input.assessmentId,
+          filename,
+          fileSize: pdfBuffer.length,
+          mimeType: "application/pdf",
+          s3Key,
+          s3Bucket,
+          url,
+          status: "completed",
+          brandingApplied: !!input.branding,
+          downloadCount: 0,
+        });
+
+        return {
+          id: exportId,
+          filename,
+          url,
+          size: pdfBuffer.length,
+          pdfBase64: !isS3Configured() ? pdfBuffer.toString("base64") : undefined,
+        };
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Erro ao gerar PDF do plano de ação: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
         });
       }
     }),

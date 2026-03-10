@@ -14,6 +14,10 @@ import {
   corsConfig,
   apiRateLimiter,
   authRateLimiter,
+  emailRateLimiter,
+  uploadRateLimiter,
+  aiRateLimiter,
+  requestTracing,
   requestLogger,
   validateHeaders,
   ipMonitoring,
@@ -47,6 +51,9 @@ async function startServer() {
   // ============================================================================
   // SECURITY MIDDLEWARE (Applied first)
   // ============================================================================
+
+  // Request tracing — generates X-Request-ID for every request
+  app.use(requestTracing);
 
   // Helmet security headers
   app.use(helmetConfig);
@@ -109,6 +116,21 @@ async function startServer() {
   // Stricter rate limiting for auth routes
   app.use("/api/auth", authRateLimiter);
   app.use("/api/oauth", authRateLimiter);
+
+  // Email rate limiting (10/hour per IP) — matches tRPC procedure paths
+  app.use("/api/trpc/assessments.sendInvites", emailRateLimiter);
+  app.use("/api/trpc/reminders.sendManualReminder", emailRateLimiter);
+  app.use("/api/trpc/pdfExports.generateProposal", emailRateLimiter);
+  app.use("/api/trpc/pdfExports.generateAssessment", emailRateLimiter);
+
+  // Upload rate limiting (20/hour per IP)
+  app.use("/api/trpc/pdfExports.generateProposal", uploadRateLimiter);
+  app.use("/api/trpc/pdfExports.generateAssessment", uploadRateLimiter);
+
+  // AI analysis rate limiting (20/hour per IP)
+  app.use("/api/trpc/ai.analyzeCopsoq", aiRateLimiter);
+  app.use("/api/trpc/ai.generateInventory", aiRateLimiter);
+  app.use("/api/trpc/ai.generatePlan", aiRateLimiter);
 
   // ============================================================================
   // BODY PARSING

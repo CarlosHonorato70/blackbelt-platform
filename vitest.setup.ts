@@ -8,6 +8,8 @@ afterEach(() => {
   cleanup();
 });
 
-// Environment setup
+// Environment setup for tests
 process.env.NODE_ENV = 'test';
-process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
+process.env.COOKIE_SECRET = 'test-cookie-secret-minimum-32-characters-long-for-hmac';
+process.env.DATABASE_URL = 'mysql://test:test@localhost:3306/test';
+process.env.FRONTEND_URL = 'http://localhost:5000';

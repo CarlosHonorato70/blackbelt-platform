@@ -42,7 +42,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { trpc } from "@/lib/trpc";
-import { Building2, Edit2, Plus, Search, Trash2 } from "lucide-react";
+import { Building2, Edit2, Eye, Plus, Search, Trash2 } from "lucide-react";
+import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -54,6 +55,7 @@ export default function Tenants() {
   const [dialogMode, setDialogMode] = useState<DialogMode>("closed");
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
 
+  const { startImpersonation } = useImpersonation();
   const utils = trpc.useUtils();
   const { data: tenants, isLoading } = trpc.tenants.list.useQuery({
     search: search || undefined,
@@ -244,6 +246,14 @@ export default function Tenants() {
                         </span>
                       </TableCell>
                       <TableCell className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          title="Impersonar tenant"
+                          onClick={() => startImpersonation(tenant.id, tenant.name)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"

@@ -3,6 +3,7 @@ import { handleStripeWebhook } from "./routers/stripe";
 import { handleMercadoPagoWebhook } from "./routers/mercadopago";
 import crypto from "crypto";
 import { log } from "./_core/logger";
+import { checkDbHealth } from "./db";
 
 /**
  * Rotas Express - apenas health check e webhooks de pagamento.
@@ -12,17 +13,23 @@ import { log } from "./_core/logger";
 export function registerRoutes(app: Express) {
 
   // ============================================
-  // HEALTH CHECK
+  // HEALTH CHECK (com status do banco de dados)
   // ============================================
 
-  app.get("/api/health", (_req, res) => {
-    res.json({
-      status: "ok",
+  app.get("/api/health", async (_req, res) => {
+    const dbHealthy = await checkDbHealth();
+
+    const status = dbHealthy ? "ok" : "degraded";
+    const httpCode = dbHealthy ? 200 : 503;
+
+    res.status(httpCode).json({
+      status,
       timestamp: new Date().toISOString(),
       service: "blackbelt-platform",
-      version: "1.0.6",
+      version: "1.0.7",
       environment: process.env.NODE_ENV || "development",
       uptime: process.uptime(),
+      database: dbHealthy ? "connected" : "unavailable",
     });
   });
 

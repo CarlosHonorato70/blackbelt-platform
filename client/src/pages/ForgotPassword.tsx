@@ -4,8 +4,10 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CheckCircle, ArrowLeft, Loader2 } from "lucide-react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function ForgotPassword() {
+  usePageMeta({ title: "Recuperar Senha" });
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
 

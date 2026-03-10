@@ -12,6 +12,7 @@ import {
   Lock,
   Zap,
 } from "lucide-react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 const plans = [
   {
@@ -116,6 +117,11 @@ const features = [
 ];
 
 export default function Landing() {
+  usePageMeta({
+    title: "Gestao de Riscos Psicossociais",
+    description: "Plataforma NR-01 para gestao de riscos psicossociais. Avaliacao COPSOQ-II, relatorios automaticos e conformidade trabalhista.",
+  });
+
   return (
     <div className="min-h-screen bg-white">
       {/* Navbar */}

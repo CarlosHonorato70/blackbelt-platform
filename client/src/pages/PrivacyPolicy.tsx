@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import privacyRaw from "../../../PRIVACY_POLICY.md?raw";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 function renderMarkdown(md: string) {
   return md.split("\n").map((line, i) => {
@@ -51,6 +52,8 @@ function renderMarkdown(md: string) {
 }
 
 export default function PrivacyPolicy() {
+  usePageMeta({ title: "Politica de Privacidade" });
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-8">

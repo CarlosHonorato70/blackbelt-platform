@@ -18,7 +18,18 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
       links: [
         httpBatchLink({
           url: '/api/trpc',
-          credentials: 'include', // Importante para enviar cookies
+          credentials: 'include',
+          headers() {
+            const headers: Record<string, string> = {};
+            const impersonating = localStorage.getItem('blackbelt_impersonating_tenant');
+            if (impersonating) {
+              try {
+                const { id } = JSON.parse(impersonating);
+                if (id) headers['x-impersonate-tenant'] = id;
+              } catch {}
+            }
+            return headers;
+          },
         }),
       ],
     })
