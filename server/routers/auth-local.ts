@@ -4,12 +4,15 @@ import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
 import { log } from "../_core/logger";
 import * as db from "../db";
+import { getDb } from "../db";
 import { nanoid } from "nanoid";
 import bcrypt from "bcryptjs";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions, createSessionToken } from "../_core/cookies";
 import { ENV } from "../_core/env";
 import { sendEmail } from "../_core/email";
+import { eq } from "drizzle-orm";
+import { roles, userRoles, users } from "../../drizzle/schema";
 
 // Password reset token helpers (HMAC-signed, no DB needed)
 const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
@@ -19,7 +22,7 @@ function createResetToken(userId: string): string {
   return createHmacToken(userId, "-reset", RESET_TOKEN_EXPIRY_MS);
 }
 
-function verifyResetToken(token: string): { userId: string } | null {
+function verifyResetToken(token: string): { userId: string; tokenCreatedAt: number } | null {
   return verifyHmacToken(token, "-reset");
 }
 
@@ -34,7 +37,7 @@ function createHmacToken(userId: string, suffix: string, expiryMs: number): stri
   return Buffer.from(`${payload}.${signature}`).toString("base64url");
 }
 
-function verifyHmacToken(token: string, suffix: string): { userId: string } | null {
+function verifyHmacToken(token: string, suffix: string): { userId: string; tokenCreatedAt: number } | null {
   try {
     const decoded = Buffer.from(token, "base64url").toString();
     const parts = decoded.split(".");
@@ -56,7 +59,8 @@ function verifyHmacToken(token: string, suffix: string): { userId: string } | nu
 
     if (Date.now() > parseInt(expiryStr, 10)) return null;
 
-    return { userId };
+    const tokenCreatedAt = Number(expiryStr) - RESET_TOKEN_EXPIRY_MS;
+    return { userId, tokenCreatedAt };
   } catch {
     return null;
   }
@@ -131,6 +135,24 @@ export const authLocalRouter = router({
         loginMethod: "local",
         tenantId: input.tenantId || null,
       });
+
+      // Assign default "manager" role to new user (if tenant provided)
+      if (input.tenantId) {
+        try {
+          const drizzleDb = await getDb();
+          const managerRole = await drizzleDb.select().from(roles).where(eq(roles.systemName, "manager")).limit(1);
+          if (managerRole.length > 0) {
+            await drizzleDb!.insert(userRoles).values({
+              id: nanoid(),
+              userId,
+              roleId: managerRole[0].id,
+              tenantId: input.tenantId,
+            });
+          }
+        } catch (err) {
+          log.warn("Failed to assign default role", { userId, error: err instanceof Error ? err.message : String(err) });
+        }
+      }
 
       // Cria token de sessao OPACO e ASSINADO (nao userId bruto)
       const sessionToken = createSessionToken(userId);
@@ -318,7 +340,7 @@ export const authLocalRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      // Check if token was already used
+      // Check if token was already used (in-memory + DB check)
       if (usedResetTokens.has(input.token)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -335,10 +357,19 @@ export const authLocalRouter = router({
         });
       }
 
-      // Mark token as used before processing
-      usedResetTokens.add(input.token);
+      // Check if password was already changed after this token was created (persistent check)
+      const drizzle = await getDb();
+      const [user] = await drizzle.select({ passwordChangedAt: users.passwordChangedAt })
+        .from(users).where(eq(users.id, result.userId)).limit(1);
+      if (user?.passwordChangedAt && user.passwordChangedAt.getTime() > result.tokenCreatedAt) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Este link já foi utilizado. Solicite um novo.",
+        });
+      }
 
-      // Cleanup old tokens periodically (keep set from growing)
+      // Mark token as used in memory
+      usedResetTokens.add(input.token);
       if (usedResetTokens.size > 10000) {
         usedResetTokens.clear();
       }
@@ -348,6 +379,11 @@ export const authLocalRouter = router({
         id: result.userId,
         passwordHash,
       });
+
+      // Update passwordChangedAt timestamp (persistent token invalidation)
+      await drizzle.update(users)
+        .set({ passwordChangedAt: new Date() })
+        .where(eq(users.id, result.userId));
 
       return { success: true };
     }),

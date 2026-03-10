@@ -151,7 +151,7 @@ app.use("/api/webhooks/stripe", express.raw({ type: "application/json" }));
 // ============================================
 // BODY PARSING & COOKIES
 // ============================================
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 

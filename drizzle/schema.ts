@@ -34,6 +34,7 @@ export const users = mysqlTable("users", {
   lockedUntil: timestamp("lockedUntil"),
   createdAt: timestamp("createdAt").defaultNow(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow(),
+  passwordChangedAt: timestamp("passwordChangedAt"),
 });
 
 export type User = typeof users.$inferSelect;

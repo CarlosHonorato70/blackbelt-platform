@@ -21,6 +21,8 @@ import {
   planFeatures,
   roles,
   userRoles,
+  permissions,
+  rolePermissions,
 } from "./schema";
 import { seedPlans, seedFeatures, getPlanFeatureAssociations } from "../seed_plans";
 import crypto from "crypto";
@@ -81,7 +83,7 @@ async function seed() {
   }
 
   // 4. Seed Roles
-  console.log("[4/6] Seeding roles...");
+  console.log("[4/8] Seeding roles...");
   const seedRoles = [
     { id: nanoid(), systemName: "admin", displayName: "Administrador", description: "Acesso total ao sistema", scope: "global" },
     { id: nanoid(), systemName: "manager", displayName: "Gerente", description: "Gestao do tenant", scope: "tenant" },
@@ -98,8 +100,93 @@ async function seed() {
     }
   }
 
-  // 5. Seed Initial Tenant
-  console.log("[5/6] Seeding initial tenant...");
+  // 5. Seed Permissions
+  console.log("[5/8] Seeding permissions...");
+  const seedPermissions = [
+    { id: nanoid(), name: "sectors:create", resource: "sectors", action: "create", description: "Criar setores" },
+    { id: nanoid(), name: "sectors:read", resource: "sectors", action: "read", description: "Visualizar setores" },
+    { id: nanoid(), name: "sectors:update", resource: "sectors", action: "update", description: "Editar setores" },
+    { id: nanoid(), name: "sectors:delete", resource: "sectors", action: "delete", description: "Remover setores" },
+    { id: nanoid(), name: "people:create", resource: "people", action: "create", description: "Criar colaboradores" },
+    { id: nanoid(), name: "people:read", resource: "people", action: "read", description: "Visualizar colaboradores" },
+    { id: nanoid(), name: "people:update", resource: "people", action: "update", description: "Editar colaboradores" },
+    { id: nanoid(), name: "people:delete", resource: "people", action: "delete", description: "Remover colaboradores" },
+    { id: nanoid(), name: "assessments:create", resource: "assessments", action: "create", description: "Criar avaliacoes" },
+    { id: nanoid(), name: "assessments:read", resource: "assessments", action: "read", description: "Visualizar avaliacoes" },
+    { id: nanoid(), name: "assessments:update", resource: "assessments", action: "update", description: "Editar avaliacoes" },
+    { id: nanoid(), name: "assessments:delete", resource: "assessments", action: "delete", description: "Remover avaliacoes" },
+    { id: nanoid(), name: "reports:create", resource: "reports", action: "create", description: "Gerar relatorios" },
+    { id: nanoid(), name: "reports:read", resource: "reports", action: "read", description: "Visualizar relatorios" },
+    { id: nanoid(), name: "reports:export", resource: "reports", action: "export", description: "Exportar relatorios" },
+    { id: nanoid(), name: "subscriptions:read", resource: "subscriptions", action: "read", description: "Visualizar assinaturas" },
+    { id: nanoid(), name: "tickets:create", resource: "tickets", action: "create", description: "Criar tickets" },
+    { id: nanoid(), name: "tickets:read", resource: "tickets", action: "read", description: "Visualizar tickets" },
+    { id: nanoid(), name: "tickets:update", resource: "tickets", action: "update", description: "Editar tickets" },
+    { id: nanoid(), name: "data_export:read", resource: "data_export", action: "read", description: "Exportar dados LGPD" },
+  ];
+  for (const perm of seedPermissions) {
+    const existing = await db.select().from(permissions).where(eq(permissions.name, perm.name)).limit(1);
+    if (existing.length === 0) {
+      await db.insert(permissions).values(perm);
+      console.log(`  + Permission: ${perm.name}`);
+    } else {
+      console.log(`  = Permission already exists: ${perm.name}`);
+    }
+  }
+
+  // 6. Seed Role-Permission Associations
+  console.log("[6/8] Seeding role-permission associations...");
+  const dbRoles = await db.select().from(roles);
+  const dbPerms = await db.select().from(permissions);
+  const existingRP = await db.select().from(rolePermissions);
+
+  if (existingRP.length === 0) {
+    const managerRole = dbRoles.find((r: any) => r.systemName === "manager");
+    const analystRole = dbRoles.find((r: any) => r.systemName === "analyst");
+    const viewerRole = dbRoles.find((r: any) => r.systemName === "viewer");
+
+    const rpEntries: Array<{id: string; roleId: string; permissionId: string}> = [];
+
+    // Manager gets ALL permissions
+    if (managerRole) {
+      for (const perm of dbPerms) {
+        rpEntries.push({ id: nanoid(), roleId: managerRole.id, permissionId: perm.id });
+      }
+    }
+
+    // Analyst: assessments/reports/tickets full + people/sectors/subscriptions read
+    if (analystRole) {
+      const analystPerms = dbPerms.filter((p: any) =>
+        p.resource === "assessments" ||
+        p.resource === "reports" ||
+        p.resource === "tickets" ||
+        (p.resource === "people" && p.action === "read") ||
+        (p.resource === "sectors" && p.action === "read") ||
+        (p.resource === "subscriptions" && p.action === "read")
+      );
+      for (const perm of analystPerms) {
+        rpEntries.push({ id: nanoid(), roleId: analystRole.id, permissionId: perm.id });
+      }
+    }
+
+    // Viewer: read-only
+    if (viewerRole) {
+      const viewerPerms = dbPerms.filter((p: any) => p.action === "read");
+      for (const perm of viewerPerms) {
+        rpEntries.push({ id: nanoid(), roleId: viewerRole.id, permissionId: perm.id });
+      }
+    }
+
+    for (const rp of rpEntries) {
+      await db.insert(rolePermissions).values(rp);
+    }
+    console.log(`  + ${rpEntries.length} role-permission associations created`);
+  } else {
+    console.log(`  = ${existingRP.length} role-permission associations already exist`);
+  }
+
+  // 7. Seed Initial Tenant
+  console.log("[7/8] Seeding initial tenant...");
   const TENANT_CNPJ = "00.000.000/0001-00";
   let tenantId: string;
 
@@ -141,7 +228,7 @@ async function seed() {
   }
 
   // 6. Seed Admin User
-  console.log("[6/6] Seeding admin user...");
+  console.log("[8/8] Seeding admin user...");
   const ADMIN_EMAIL = "admin@blackbelt-platform.com";
   const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || crypto.randomUUID().slice(0, 16) + "!Aa1";
   const isRandomPassword = !process.env.ADMIN_PASSWORD;
