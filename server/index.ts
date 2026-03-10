@@ -87,12 +87,11 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Em produção, bloquear requests sem Origin (previne CSRF)
+      // Requests sem Origin: health checks, webhooks, server-to-server.
+      // CORS é mecanismo do browser — requests sem Origin são seguros.
+      // callback(null, false) = permite mas não seta headers CORS.
       if (!origin) {
-        if (ENV.isProduction) {
-          return callback(new Error("Origin header required"));
-        }
-        return callback(null, true);
+        return callback(null, false);
       }
 
       if (allowedOrigins.includes(origin)) {

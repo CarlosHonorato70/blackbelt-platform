@@ -56,6 +56,7 @@ const DB_RETRY_DELAYS = [1000, 2000, 4000]; // exponential backoff
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
+    const needsSsl = process.env.DATABASE_URL.includes('tidbcloud.com') || process.env.DATABASE_SSL === 'true';
     for (let attempt = 0; attempt < DB_RETRY_ATTEMPTS; attempt++) {
       try {
         _pool = mysql.createPool({
@@ -63,6 +64,7 @@ export async function getDb() {
           waitForConnections: true,
           connectionLimit: process.env.NODE_ENV === "production" ? 50 : 10,
           queueLimit: 1000,
+          ...(needsSsl ? { ssl: { minVersion: 'TLSv1.2', rejectUnauthorized: true } } : {}),
         });
         _db = drizzle(_pool, { schema: fullSchema, mode: "default" });
         if (attempt > 0) {
