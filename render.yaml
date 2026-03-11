@@ -36,7 +36,7 @@ services:
       - key: SMTP_PASSWORD
         sync: false
       - key: SMTP_FROM
-        value: contato@blackbeltconsultoria.com.br
+        value: contato@blackbeltconsultoria.com
       - key: STRIPE_ENABLED
         value: "true"
       - key: STRIPE_PUBLISHABLE_KEY
