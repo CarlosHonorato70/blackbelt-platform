@@ -45,3 +45,17 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      # Mercado Pago
+      - key: MERCADO_PAGO_ENABLED
+        value: "true"
+      - key: MERCADO_PAGO_ACCESS_TOKEN
+        sync: false
+      - key: MERCADO_PAGO_PUBLIC_KEY
+        sync: false
+      - key: MERCADO_PAGO_WEBHOOK_URL
+        sync: false
+      # Sentry
+      - key: SENTRY_DSN
+        sync: false
+      - key: VITE_SENTRY_DSN
+        sync: false
