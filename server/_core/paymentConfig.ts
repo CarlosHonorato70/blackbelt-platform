@@ -27,7 +27,7 @@ export function getPaymentGatewayConfig(): PaymentGatewayConfig {
   return {
     stripe: {
       enabled: process.env.STRIPE_ENABLED === "true",
-      publicKey: process.env.STRIPE_PUBLIC_KEY || "",
+      publicKey: process.env.STRIPE_PUBLIC_KEY || process.env.STRIPE_PUBLISHABLE_KEY || "",
       secretKey: process.env.STRIPE_SECRET_KEY || "",
       webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
     },

@@ -52,6 +52,7 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const Landing = lazy(() => import("./pages/Landing"));
+const LGPD = lazy(() => import("./pages/LGPD"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -103,6 +104,7 @@ export default function App() {
                 <Route path="/verify-email/:token" element={<Suspense fallback={<PageLoader />}><VerifyEmail /></Suspense>} />
                 <Route path="/terms" element={<Suspense fallback={<PageLoader />}><TermsOfService /></Suspense>} />
                 <Route path="/privacy" element={<Suspense fallback={<PageLoader />}><PrivacyPolicy /></Suspense>} />
+                <Route path="/lgpd" element={<Suspense fallback={<PageLoader />}><LGPD /></Suspense>} />
 
                 {/* Dashboard principal */}
                 <Route path="/home" element={<ProtectedPage><Home /></ProtectedPage>} />
