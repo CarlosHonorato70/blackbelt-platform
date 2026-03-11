@@ -191,7 +191,7 @@ export const brandingRouter = router({
       const dnsRecord = {
         type: "CNAME",
         name: input.domain,
-        value: process.env.APP_DOMAIN || "app.blackbelt-platform.com",
+        value: process.env.APP_DOMAIN || "blackbeltconsultoria.com",
         ttl: 3600,
       };
 
@@ -239,7 +239,7 @@ export const brandingRouter = router({
     try {
       const isVerified = await verifyDNS(
         tenant.customDomain,
-        process.env.APP_DOMAIN || "app.blackbelt-platform.com"
+        process.env.APP_DOMAIN || "blackbeltconsultoria.com"
       );
 
       if (isVerified) {

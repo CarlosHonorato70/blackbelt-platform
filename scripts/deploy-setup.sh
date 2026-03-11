@@ -348,7 +348,7 @@ echo -e "${GREEN}║              ✨ Plataforma no ar! ✨                     
 echo -e "${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 echo -e "  ${BOLD}URL:${NC}           https://${DOMAIN}"
-echo -e "  ${BOLD}Admin email:${NC}   admin@blackbelt-platform.com"
+echo -e "  ${BOLD}Admin email:${NC}   admin@blackbeltconsultoria.com"
 echo -e "  ${BOLD}Admin senha:${NC}   ${YELLOW}${ADMIN_PASSWORD}${NC}"
 echo ""
 echo -e "  ${RED}${BOLD}IMPORTANTE: Anote a senha acima e troque no primeiro login!${NC}"
@@ -367,7 +367,7 @@ cat > "$CREDS_FILE" << CREDS
 # APAGUE ESTE ARQUIVO APÓS ANOTAR AS SENHAS
 
 URL=https://${DOMAIN}
-ADMIN_EMAIL=admin@blackbelt-platform.com
+ADMIN_EMAIL=admin@blackbeltconsultoria.com
 ADMIN_PASSWORD=${ADMIN_PASSWORD}
 DB_PASSWORD=${DB_PASSWORD}
 DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}

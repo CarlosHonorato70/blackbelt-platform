@@ -432,7 +432,7 @@ function CustomDomainConfig() {
                   <br />
                   Nome: {branding.customDomain}
                   <br />
-                  Valor: app.blackbelt-platform.com
+                  Valor: blackbeltconsultoria.com
                   <br />
                   TTL: 3600
                 </code>

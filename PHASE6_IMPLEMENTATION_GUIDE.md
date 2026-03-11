@@ -384,7 +384,7 @@ async function updateApiKey(keyId: string) {
 import axios from "axios";
 
 const API_KEY = "pk_live_XXXXXXXXXXXXXXXXXXXXXX";
-const BASE_URL = "https://app.blackbelt-platform.com/api/v1";
+const BASE_URL = "https://blackbeltconsultoria.com/api/v1";
 
 // List assessments
 async function listAssessments() {
@@ -470,7 +470,7 @@ import requests
 import time
 
 class BlackBeltAPI:
-    def __init__(self, api_key: str, base_url: str = "https://app.blackbelt-platform.com/api/v1"):
+    def __init__(self, api_key: str, base_url: str = "https://blackbeltconsultoria.com/api/v1"):
         self.api_key = api_key
         self.base_url = base_url
         self.session = requests.Session()
@@ -696,7 +696,7 @@ X-RateLimit-Reset: 1234567890
 ### Test Webhook
 
 ```bash
-curl -X POST https://app.blackbelt-platform.com/api/trpc/webhooks.test \
+curl -X POST https://blackbeltconsultoria.com/api/trpc/webhooks.test \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -d '{"id": "webhook_123"}'
@@ -705,7 +705,7 @@ curl -X POST https://app.blackbelt-platform.com/api/trpc/webhooks.test \
 ### Test REST API
 
 ```bash
-curl -X GET https://app.blackbelt-platform.com/api/v1/health \
+curl -X GET https://blackbeltconsultoria.com/api/v1/health \
   -H "X-API-Key: pk_live_XXXXXXXXXXXXXXXXXXXXXX"
 ```
 

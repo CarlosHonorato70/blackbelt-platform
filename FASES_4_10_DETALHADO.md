@@ -426,7 +426,7 @@ AWS_S3_BUCKET=blackbelt-pdfs
 
 # SendGrid para envio de emails
 SENDGRID_API_KEY=your_key
-SENDGRID_FROM_EMAIL=noreply@blackbelt-platform.com
+SENDGRID_FROM_EMAIL=noreply@blackbeltconsultoria.com
 ```
 
 ---
@@ -554,7 +554,7 @@ export const brandingRouter = router({
       const dnsRecord = {
         type: 'CNAME',
         name: input.domain,
-        value: 'app.blackbelt-platform.com',
+        value: 'blackbeltconsultoria.com',
       };
 
       return {
@@ -607,7 +607,7 @@ async function verifyDNS(domain: string): Promise<boolean> {
   const dns = require('dns').promises;
   try {
     const records = await dns.resolveCname(domain);
-    return records.includes('app.blackbelt-platform.com');
+    return records.includes('blackbeltconsultoria.com');
   } catch {
     return false;
   }

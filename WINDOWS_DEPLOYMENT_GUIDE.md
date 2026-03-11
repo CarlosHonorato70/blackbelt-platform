@@ -193,7 +193,7 @@ EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USER=seu_email@gmail.com
 EMAIL_PASSWORD=sua_senha_de_app_do_gmail
-EMAIL_FROM=noreply@blackbelt-platform.com
+EMAIL_FROM=noreply@blackbeltconsultoria.com
 
 # === STRIPE (Pagamentos) ===
 STRIPE_SECRET_KEY=sk_test_seu_stripe_secret_key_aqui

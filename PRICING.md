@@ -278,7 +278,7 @@ Sim! Entre em contato para condições especiais.
 
 Escolha seu plano e comece seu teste gratuito hoje:
 
-**👉 [Iniciar Teste Gratuito](https://blackbelt-platform.com/signup)**
+**👉 [Iniciar Teste Gratuito](https://blackbeltconsultoria.com/signup)**
 
 Ou fale com nosso time de vendas:  
 📧 vendas@blackbelt-consultoria.com  

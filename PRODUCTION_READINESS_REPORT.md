@@ -214,7 +214,7 @@ Required environment variables (from `.env.production.template`):
 DATABASE_URL=mysql://user:pass@host:3306/db
 
 # Application
-APP_DOMAIN=app.blackbelt-platform.com
+APP_DOMAIN=blackbeltconsultoria.com
 DEFAULT_LOGO_URL=https://cdn.example.com/logo.png
 
 # Email
@@ -222,7 +222,7 @@ EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USER=your-email@gmail.com
 EMAIL_PASSWORD=your-app-password
-EMAIL_FROM=noreply@blackbelt-platform.com
+EMAIL_FROM=noreply@blackbeltconsultoria.com
 
 # Stripe (if using)
 STRIPE_SECRET_KEY=sk_live_...

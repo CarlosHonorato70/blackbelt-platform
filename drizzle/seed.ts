@@ -203,7 +203,7 @@ async function seed() {
       name: "BlackBelt Platform (Admin)",
       cnpj: TENANT_CNPJ,
       contactName: "Admin",
-      contactEmail: "admin@blackbelt-platform.com",
+      contactEmail: "admin@blackbeltconsultoria.com",
       status: "active",
       strategy: "shared_rls",
     });
@@ -234,7 +234,7 @@ async function seed() {
 
   // 6. Seed Admin User
   console.log("[8/8] Seeding admin user...");
-  const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@blackbelt-platform.com";
+  const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@blackbeltconsultoria.com";
   const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || crypto.randomUUID().slice(0, 16) + "!Aa1";
   const isRandomPassword = !process.env.ADMIN_PASSWORD;
 

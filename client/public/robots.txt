@@ -8,4 +8,4 @@ Disallow: /subscription/checkout
 Disallow: /subscription/success
 Disallow: /subscription/failure
 
-Sitemap: https://www.blackbelt-platform.com.br/sitemap.xml
+Sitemap: https://www.blackbeltconsultoria.com/sitemap.xml

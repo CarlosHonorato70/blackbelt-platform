@@ -342,7 +342,7 @@ Write-Host "       Plataforma rodando localmente!" -ForegroundColor Green
 Write-Host "  ======================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "  URL:           " -NoNewline; Write-Host "http://localhost:5000" -ForegroundColor Yellow
-Write-Host "  Admin email:   " -NoNewline; Write-Host "admin@blackbelt-platform.com" -ForegroundColor Yellow
+Write-Host "  Admin email:   " -NoNewline; Write-Host "admin@blackbeltconsultoria.com" -ForegroundColor Yellow
 Write-Host "  Admin senha:   " -NoNewline; Write-Host $ADMIN_PASSWORD -ForegroundColor Yellow
 if ($MYSQL_HOST_PORT -ne "3306") {
     Write-Host "  MySQL porta:   " -NoNewline; Write-Host "$MYSQL_HOST_PORT (porta 3306 ocupada pelo XAMPP)" -ForegroundColor Yellow
@@ -363,7 +363,7 @@ $credsContent = @"
 # APAGUE ESTE ARQUIVO APOS ANOTAR AS SENHAS
 
 URL=http://localhost:5000
-ADMIN_EMAIL=admin@blackbelt-platform.com
+ADMIN_EMAIL=admin@blackbeltconsultoria.com
 ADMIN_PASSWORD=$ADMIN_PASSWORD
 DB_PASSWORD=$DB_PASSWORD
 DB_ROOT_PASSWORD=$DB_ROOT_PASSWORD
