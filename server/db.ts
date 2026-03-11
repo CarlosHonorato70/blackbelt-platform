@@ -145,6 +145,17 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
     textFields.forEach(assignNullable);
 
+    // Garantir NOT NULL defaults — TiDB pode nao ter apos migracao de colunas
+    if (values.role === undefined) {
+      values.role = "user";
+    }
+    if ((values as any).failedLoginAttempts === undefined) {
+      (values as any).failedLoginAttempts = 0;
+    }
+    if ((values as any).emailVerified === undefined) {
+      (values as any).emailVerified = false;
+    }
+
     if (user.lastSignedIn !== undefined) {
       values.lastSignedIn = user.lastSignedIn;
       updateSet.lastSignedIn = user.lastSignedIn;
