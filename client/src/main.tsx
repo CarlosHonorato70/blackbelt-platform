@@ -1,3 +1,4 @@
+// BlackBelt Platform v1.0 — blackbeltconsultoria.com
 import { createRoot } from "react-dom/client";
 import * as Sentry from "@sentry/react";
 import App from "./App";
