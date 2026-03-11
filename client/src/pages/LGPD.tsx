@@ -224,8 +224,8 @@ export default function LGPD() {
           <p className="text-xs text-gray-500 mt-4 text-center">
             Responderemos sua solicitacao em ate 15 dias uteis, conforme Art. 18, LGPD.
             Para duvidas, entre em contato:{" "}
-            <a href="mailto:contato@blackbeltconsultoria.com.br" className="text-blue-600 hover:underline">
-              contato@blackbeltconsultoria.com.br
+            <a href="mailto:contato@blackbeltconsultoria.com" className="text-blue-600 hover:underline">
+              contato@blackbeltconsultoria.com
             </a>
           </p>
         </form>
