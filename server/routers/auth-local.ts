@@ -13,6 +13,7 @@ import { ENV } from "../_core/env";
 import { sendEmail } from "../_core/email";
 import { eq } from "drizzle-orm";
 import { roles, userRoles, users } from "../../drizzle/schema";
+import { getSubscriptionContext } from "../_core/subscriptionMiddleware";
 
 // Password reset token helpers (HMAC-signed, no DB needed)
 const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
@@ -270,9 +271,16 @@ export const authLocalRouter = router({
       return { success: true };
     }),
 
-  me: publicProcedure.query(({ ctx }) => {
+  me: publicProcedure.query(async ({ ctx }) => {
     if (!ctx.user) return null;
-    // Retorna dados seguros do usuario (sem passwordHash)
+
+    // Verificar assinatura do tenant
+    let subscriptionStatus: string | null = null;
+    if (ctx.user.tenantId) {
+      const subCtx = await getSubscriptionContext(ctx.user.tenantId);
+      subscriptionStatus = subCtx?.subscription?.status ?? null;
+    }
+
     return {
       id: ctx.user.id,
       name: ctx.user.name,
@@ -280,6 +288,7 @@ export const authLocalRouter = router({
       role: ctx.user.role,
       tenantId: ctx.user.tenantId,
       emailVerified: (ctx.user as any).emailVerified ?? false,
+      subscriptionStatus,
     };
   }),
 

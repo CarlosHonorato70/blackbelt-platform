@@ -7,6 +7,8 @@ export interface User {
   name: string;
   email: string;
   role: string;
+  tenantId?: string | null;
+  subscriptionStatus?: string | null;
 }
 
 interface AuthContextValue {
