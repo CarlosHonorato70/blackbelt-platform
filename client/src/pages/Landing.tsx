@@ -418,6 +418,11 @@ export default function Landing() {
                       Política de Privacidade
                     </Link>
                   </li>
+                  <li>
+                    <Link to="/lgpd" className="hover:text-white">
+                      LGPD - Direitos do Titular
+                    </Link>
+                  </li>
                 </ul>
               </div>
               <div>
