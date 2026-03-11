@@ -3,14 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/_core/hooks/useAuth";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 export default function Register() {
   usePageMeta({ title: "Cadastro", description: "Crie sua conta na plataforma Black Belt" });
   const navigate = useNavigate();
-  const { login } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -20,13 +19,10 @@ export default function Register() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const registerMutation = (trpc as any).auth.register.useMutation({
-    onSuccess: async () => {
-      // Após cadastro, faz login automaticamente
-      const success = await login(formData.email, formData.password);
-      if (success) {
-        navigate("/dashboard");
-      }
+  const registerMutation = trpc.auth.register.useMutation({
+    onSuccess: () => {
+      toast.success("Conta criada com sucesso!");
+      window.location.href = "/dashboard";
     },
     onError: (err: any) => {
       setError(err.message || "Erro ao criar conta");
