@@ -22,7 +22,7 @@ export default function Register() {
   const registerMutation = trpc.auth.register.useMutation({
     onSuccess: () => {
       toast.success("Conta criada com sucesso!");
-      window.location.href = "/dashboard";
+      window.location.href = "/subscription/pricing";
     },
     onError: (err: any) => {
       setError(err.message || "Erro ao criar conta");
