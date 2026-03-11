@@ -42,7 +42,7 @@ import { seedPlans, seedFeatures, getPlanFeatureAssociations } from "../seed_pla
 // ============================================================================
 
 const BASE_URL = "http://localhost:5000";
-const ADMIN_EMAIL = "admin@blackbelt-platform.com";
+const ADMIN_EMAIL = "admin@blackbeltconsultoria.com";
 const ADMIN_PASSWORD = "BlackBelt@2025!";
 const USER2_EMAIL = "gerente@saudebemestar.com.br";
 const USER2_PASSWORD = "Gerente@2025!";
