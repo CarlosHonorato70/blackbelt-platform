@@ -73,7 +73,7 @@ export function getDefaultBranding(companyName?: string): BrandingConfig {
     secondaryColor: "#10b981",
     companyName: companyName || "Black Belt Platform",
     senderName: "Black Belt Platform",
-    senderEmail: process.env.EMAIL_FROM || "noreply@blackbelt-platform.com",
+    senderEmail: process.env.SMTP_FROM || process.env.EMAIL_FROM || "contato@blackbeltconsultoria.com.br",
   };
 }
 
@@ -164,7 +164,7 @@ export function getEmailTemplate(
         Se você recebeu este email por engano, por favor ignore.
       </p>
       <p style="margin-top: 15px;">
-        <a href="https://blackbelt-platform.com">blackbelt-platform.com</a>
+        <a href="${process.env.FRONTEND_URL || 'https://blackbeltconsultoria.com.br'}">${(process.env.FRONTEND_URL || 'https://blackbeltconsultoria.com.br').replace(/^https?:\/\//, '')}</a>
       </p>
     </div>
   </div>
