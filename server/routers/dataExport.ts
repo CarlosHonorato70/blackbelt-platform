@@ -1,12 +1,48 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { subscribedProcedure, router } from "../_core/trpc";
+import { subscribedProcedure, publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { nanoid } from "nanoid";
 import { eq, and, desc } from "drizzle-orm";
 import { dsrRequests } from "../../drizzle/schema_nr01";
+import { log } from "../_core/logger";
 
 export const dataExportRouter = router({
+  // ============================================================
+  // Endpoint PUBLICO para nao-usuarios enviarem solicitacoes LGPD
+  // ============================================================
+  publicDsr: publicProcedure
+    .input(
+      z.object({
+        name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+        email: z.string().email("Email invalido"),
+        requestType: z.enum(["export", "delete", "rectify"]),
+        reason: z.string().min(10, "Descreva o motivo com pelo menos 10 caracteres"),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const id = `dsr_${Date.now()}_${nanoid(8)}`;
+
+      await db.insert(dsrRequests).values({
+        id,
+        tenantId: "__public__",
+        email: input.email,
+        requestType: input.requestType,
+        status: "pendente",
+        reason: `[${input.name}] ${input.reason}`,
+        requestDate: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      log.info("Public DSR request created", { id, email: input.email, type: input.requestType });
+
+      return { success: true, protocol: id };
+    }),
+
   // Lista todas as solicitações DSR do tenant
   list: subscribedProcedure
     .query(async ({ ctx }) => {
