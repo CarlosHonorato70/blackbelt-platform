@@ -159,14 +159,11 @@ export const authLocalRouter = router({
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.cookie(COOKIE_NAME, sessionToken, cookieOptions);
 
-      // Envia email de verificação (fire-and-forget)
-      try {
-        const verifyToken = createVerifyToken(userId);
-        await sendVerificationEmail(input.email, input.name, verifyToken);
-      } catch (err) {
-        // Não bloqueia o registro se o email falhar
+      // Envia email de verificação (fire-and-forget — sem await para não bloquear resposta)
+      const verifyToken = createVerifyToken(userId);
+      sendVerificationEmail(input.email, input.name, verifyToken).catch((err) => {
         log.error("Failed to send verification email", { error: err instanceof Error ? err.message : String(err) });
-      }
+      });
 
       return { success: true };
     }),

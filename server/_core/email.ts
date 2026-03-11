@@ -10,6 +10,9 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASSWORD,
   },
+  connectionTimeout: 5000, // 5s para conectar ao SMTP
+  greetingTimeout: 5000,   // 5s para resposta inicial
+  socketTimeout: 10000,    // 10s para operações
 });
 
 export interface SendEmailOptions {
