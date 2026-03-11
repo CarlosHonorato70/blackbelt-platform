@@ -241,7 +241,7 @@ export default function Pricing() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="secondary" size="lg" onClick={() => window.location.href = "mailto:contato@blackbelt-consultoria.com"}>
+            <Button variant="secondary" size="lg" onClick={() => window.location.href = "mailto:contato@blackbeltconsultoria.com"}>
               Falar com Vendas
             </Button>
           </CardContent>

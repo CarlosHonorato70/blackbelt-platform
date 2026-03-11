@@ -464,7 +464,7 @@ export async function sendProposalEmail(params: {
         </div>
         <p style="margin: 15px 0 0 0; font-size: 12px; color: #666; text-align: center;">
           Black Belt Consultoria | Plataforma de Gestão de Riscos Psicossociais<br>
-          <a href="mailto:contato@blackbelt.com.br" style="color: #667eea; text-decoration: none;">contato@blackbelt.com.br</a>
+          <a href="mailto:contato@blackbeltconsultoria.com" style="color: #667eea; text-decoration: none;">contato@blackbeltconsultoria.com</a>
         </p>
       </div>
     </div>
@@ -490,7 +490,7 @@ ${validityText}
 Acesse a proposta completa: ${proposalUrl}
 
 Black Belt Consultoria
-contato@blackbelt.com.br
+contato@blackbeltconsultoria.com
   `.trim();
 
   return sendEmail({
