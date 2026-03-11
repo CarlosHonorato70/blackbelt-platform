@@ -124,7 +124,7 @@ export const authLocalRouter = router({
         });
       }
 
-      const passwordHash = await bcrypt.hash(input.password, 12);
+      const passwordHash = await bcrypt.hash(input.password, 10);
       const userId = nanoid();
 
       await db.upsertUser({
@@ -374,7 +374,7 @@ export const authLocalRouter = router({
         usedResetTokens.clear();
       }
 
-      const passwordHash = await bcrypt.hash(input.password, 12);
+      const passwordHash = await bcrypt.hash(input.password, 10);
       await db.upsertUser({
         id: result.userId,
         passwordHash,
