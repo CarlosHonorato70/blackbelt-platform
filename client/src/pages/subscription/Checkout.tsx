@@ -21,14 +21,14 @@ export default function Checkout() {
   
   const [planId, setPlanId] = useState<string>("");
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
-  const [gateway, setGateway] = useState<"stripe" | "mercadopago">("stripe");
+  const [gateway, setGateway] = useState<"stripe" | "mercadopago">("mercadopago");
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Parse URL params
   useEffect(() => {
     const plan = searchParams.get("plan");
     const cycle = searchParams.get("cycle");
-    
+
     if (plan) setPlanId(plan);
     if (cycle === "yearly") setBillingCycle("yearly");
   }, [searchParams]);
@@ -42,6 +42,15 @@ export default function Checkout() {
   // Verificar gateways disponíveis
   const { data: stripeConfig } = trpc.stripe.isEnabled.useQuery();
   const { data: mercadoPagoConfig } = trpc.mercadoPago.isEnabled.useQuery();
+
+  // Auto-selecionar gateway habilitado
+  useEffect(() => {
+    if (mercadoPagoConfig?.enabled) {
+      setGateway("mercadopago");
+    } else if (stripeConfig?.enabled) {
+      setGateway("stripe");
+    }
+  }, [stripeConfig, mercadoPagoConfig]);
 
   // Mutations
   const createStripeCheckout = trpc.stripe.createCheckoutSession.useMutation();
