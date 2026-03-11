@@ -38,6 +38,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = createHttpServer(app);
 
+// Trust reverse proxy (Render, nginx) para req.ip correto e rate limiting
+app.set("trust proxy", 1);
+
 // ============================================
 // SEGURANCA: Helmet (CSP)
 // ============================================
@@ -126,7 +129,7 @@ const apiLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 15,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Muitas tentativas de login. Aguarde 15 minutos." },
