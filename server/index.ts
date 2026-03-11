@@ -64,6 +64,9 @@ app.use(
         connectSrc: [
           "'self'",
           ENV.frontendUrl,
+          "https://blackbeltconsultoria.com",
+          "https://api.mercadopago.com",
+          "https://*.sentry.io",
         ].filter(Boolean),
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         objectSrc: ["'none'"],
@@ -81,6 +84,10 @@ app.use(
 
 const allowedOrigins = [
   ENV.frontendUrl,
+  // Dominio de producao (hardcoded como fallback)
+  "https://blackbeltconsultoria.com",
+  "https://www.blackbeltconsultoria.com",
+  "https://blackbelt-platform.onrender.com",
   // Origens adicionais via variavel de ambiente (separadas por virgula)
   ...(process.env.ALLOWED_ORIGINS?.split(",").map(s => s.trim()) ?? []),
   // Em desenvolvimento, permitir localhost
