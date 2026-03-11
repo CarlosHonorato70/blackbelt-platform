@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Shield, FileText, Trash2, PenLine, CheckCircle, Loader2 } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
-import { trpc } from "@/_core/trpc";
+import { trpc } from "@/lib/trpc";
 
 type RequestType = "export" | "delete" | "rectify";
 
