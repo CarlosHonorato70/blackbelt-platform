@@ -66,110 +66,88 @@ import {
   MessageSquareWarning,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { CSSProperties, useEffect, useState } from "react";
+import { CSSProperties, Fragment, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { TenantSelectionModal } from "./TenantSelectionModal";
 import { NotificationCenter } from "./NotificationCenter";
 import { Button } from "./ui/button";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: Building2, label: "Empresas", path: "/tenants", adminOnly: true },
-  { icon: UserSquare2, label: "Setores", path: "/sectors" },
-  { icon: Users, label: "Colaboradores", path: "/people" },
-  { icon: FileText, label: "Avaliações NR-01", path: "/risk-assessments" },
-  { icon: ClipboardList, label: "Planos de Ação", path: "/action-plans" },
-  { icon: Clipboard, label: "COPSOQ-II", path: "/copsoq" },
-  { icon: FileText, label: "Histórico", path: "/assessment-history" },
-  { icon: FileText, label: "Análise COPSOQ-II", path: "/copsoq/analytics" },
-  { icon: Mail, label: "Enviar Convites", path: "/copsoq/invites" },
-  { icon: BarChart3, label: "Rastreamento", path: "/copsoq/tracking" },
-  { icon: Bell, label: "Lembretes Automáticos", path: "/reminder-management" },
-  {
-    icon: FileText,
-    label: "Relatórios Compliance",
-    path: "/compliance-reports",
-  },
-  { icon: Mail, label: "Convites de Usuários", path: "/user-invites" },
-  { icon: DollarSign, label: "Precificação", path: "/pricing-parameters" },
-  { icon: ShoppingCart, label: "Serviços", path: "/services" },
-  { icon: Building2, label: "Clientes", path: "/clients" },
-  { icon: FileText, label: "Propostas", path: "/proposals" },
-  {
-    icon: Lock,
-    label: "Perfis e Permissões",
-    path: "/roles-permissions",
-    adminOnly: true,
-  },
-  { icon: Eye, label: "Auditoria", path: "/audit-logs", adminOnly: true },
-  {
-    icon: Download,
-    label: "Exportação LGPD",
-    path: "/data-export",
-    adminOnly: true,
-  },
-  {
-    icon: TestTube,
-    label: "Dashboard de Testes",
-    path: "/test-dashboard",
-    adminOnly: true,
-  },
-  {
-    icon: Shield,
-    label: "Segurança",
-    path: "/security-dashboard",
-    adminOnly: true,
-  },
-  {
-    icon: Palette,
-    label: "Identidade Visual",
-    path: "/branding-settings",
-    adminOnly: true,
-  },
-  {
-    icon: TrendingUp,
-    label: "Dashboard Executivo",
-    path: "/executive-dashboard",
-  },
-  // Entregáveis NR-01
-  { icon: Brain, label: "Indicadores Psicossociais", path: "/psychosocial-dashboard" },
-  { icon: Target, label: "Matriz de Risco", path: "/risk-matrix" },
-  { icon: HeartPulse, label: "Integração PGR+PCMSO", path: "/pgr-pcmso" },
-  { icon: LineChart, label: "Tendências", path: "/assessment-trends" },
-  { icon: Calculator, label: "Calculadora Financeira", path: "/financial-calculator" },
-  { icon: Calendar, label: "Cronograma NR-01", path: "/compliance-timeline" },
-  { icon: CheckSquare, label: "Checklist Conformidade", path: "/compliance-checklist" },
-  { icon: Award, label: "Certificado", path: "/compliance-certificate" },
-  { icon: FileText, label: "Laudo Técnico", path: "/laudo-tecnico" },
-  { icon: GitCompare, label: "Benchmark COPSOQ", path: "/benchmark" },
-  { icon: Megaphone, label: "Pesquisa de Clima", path: "/climate-surveys" },
-  { icon: GraduationCap, label: "Treinamentos", path: "/training" },
-  { icon: MessageSquareWarning, label: "Canal de Denúncia", path: "/anonymous-report" },
-  { icon: AlertTriangle, label: "Gestão Denúncias", path: "/report-management" },
-  { icon: Bell, label: "Alertas de Prazos", path: "/deadline-alerts" },
-  { icon: Ruler, label: "Avaliação Ergonômica", path: "/ergonomic-assessments" },
-  { icon: Upload, label: "Exportação eSocial", path: "/esocial-export" },
-  { icon: LifeBuoy, label: "Suporte", path: "/support" },
-  {
-    icon: Activity,
-    label: "Painel Admin",
-    path: "/admin/metrics",
-    adminOnly: true,
-  },
-  {
-    icon: CreditCard,
-    label: "Assinaturas Admin",
-    path: "/admin/subscriptions",
-    adminOnly: true,
-  },
-  {
-    icon: Ticket,
-    label: "Tickets Admin",
-    path: "/admin/support",
-    adminOnly: true,
-  },
-  { icon: HelpCircle, label: "Ajuda e Suporte", path: "/help" },
+type MenuItem = {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  path: string;
+  adminOnly?: boolean;
+  group?: string;
+};
+
+const menuItems: MenuItem[] = [
+  // --- Geral ---
+  { icon: LayoutDashboard, label: "Dashboard", path: "/", group: "Geral" },
+  { icon: Building2, label: "Empresas", path: "/tenants", adminOnly: true, group: "Geral" },
+  { icon: UserSquare2, label: "Setores", path: "/sectors", group: "Geral" },
+  { icon: Users, label: "Colaboradores", path: "/people", group: "Geral" },
+  { icon: TrendingUp, label: "Dashboard Executivo", path: "/executive-dashboard", group: "Geral" },
+
+  // --- Avaliações ---
+  { icon: FileText, label: "Avaliações NR-01", path: "/risk-assessments", group: "Avaliações" },
+  { icon: ClipboardList, label: "Planos de Ação", path: "/action-plans", group: "Avaliações" },
+  { icon: Target, label: "Matriz de Risco", path: "/risk-matrix", group: "Avaliações" },
+  { icon: HeartPulse, label: "Integração PGR+PCMSO", path: "/pgr-pcmso", group: "Avaliações" },
+
+  // --- COPSOQ-II ---
+  { icon: Clipboard, label: "COPSOQ-II", path: "/copsoq", group: "COPSOQ-II" },
+  { icon: FileText, label: "Análise COPSOQ-II", path: "/copsoq/analytics", group: "COPSOQ-II" },
+  { icon: GitCompare, label: "Benchmark COPSOQ", path: "/benchmark", group: "COPSOQ-II" },
+  { icon: Mail, label: "Enviar Convites", path: "/copsoq/invites", group: "COPSOQ-II" },
+  { icon: BarChart3, label: "Rastreamento", path: "/copsoq/tracking", group: "COPSOQ-II" },
+  { icon: FileText, label: "Histórico", path: "/assessment-history", group: "COPSOQ-II" },
+  { icon: LineChart, label: "Tendências", path: "/assessment-trends", group: "COPSOQ-II" },
+
+  // --- Indicadores & Relatórios ---
+  { icon: Brain, label: "Indicadores Psicossociais", path: "/psychosocial-dashboard", group: "Indicadores" },
+  { icon: Calculator, label: "Calculadora Financeira", path: "/financial-calculator", group: "Indicadores" },
+  { icon: FileText, label: "Laudo Técnico", path: "/laudo-tecnico", group: "Indicadores" },
+  { icon: FileText, label: "Relatórios Compliance", path: "/compliance-reports", group: "Indicadores" },
+
+  // --- Conformidade NR-01 ---
+  { icon: Calendar, label: "Cronograma NR-01", path: "/compliance-timeline", group: "Conformidade" },
+  { icon: CheckSquare, label: "Checklist Conformidade", path: "/compliance-checklist", group: "Conformidade" },
+  { icon: Award, label: "Certificado", path: "/compliance-certificate", group: "Conformidade" },
+  { icon: Bell, label: "Alertas de Prazos", path: "/deadline-alerts", group: "Conformidade" },
+  { icon: Bell, label: "Lembretes Automáticos", path: "/reminder-management", group: "Conformidade" },
+
+  // --- Pessoas & Cultura ---
+  { icon: Megaphone, label: "Pesquisa de Clima", path: "/climate-surveys", group: "Pessoas" },
+  { icon: GraduationCap, label: "Treinamentos", path: "/training", group: "Pessoas" },
+  { icon: MessageSquareWarning, label: "Canal de Denúncia", path: "/anonymous-report", group: "Pessoas" },
+  { icon: AlertTriangle, label: "Gestão Denúncias", path: "/report-management", group: "Pessoas" },
+  { icon: Ruler, label: "Avaliação Ergonômica", path: "/ergonomic-assessments", group: "Pessoas" },
+
+  // --- Comercial ---
+  { icon: Mail, label: "Convites de Usuários", path: "/user-invites", group: "Comercial" },
+  { icon: DollarSign, label: "Precificação", path: "/pricing-parameters", group: "Comercial" },
+  { icon: ShoppingCart, label: "Serviços", path: "/services", group: "Comercial" },
+  { icon: Building2, label: "Clientes", path: "/clients", group: "Comercial" },
+  { icon: FileText, label: "Propostas", path: "/proposals", group: "Comercial" },
+
+  // --- Integrações ---
+  { icon: Upload, label: "Exportação eSocial", path: "/esocial-export", group: "Integrações" },
+  { icon: Download, label: "Exportação LGPD", path: "/data-export", adminOnly: true, group: "Integrações" },
+
+  // --- Administração ---
+  { icon: Lock, label: "Perfis e Permissões", path: "/roles-permissions", adminOnly: true, group: "Administração" },
+  { icon: Eye, label: "Auditoria", path: "/audit-logs", adminOnly: true, group: "Administração" },
+  { icon: Shield, label: "Segurança", path: "/security-dashboard", adminOnly: true, group: "Administração" },
+  { icon: Palette, label: "Identidade Visual", path: "/branding-settings", adminOnly: true, group: "Administração" },
+  { icon: TestTube, label: "Dashboard de Testes", path: "/test-dashboard", adminOnly: true, group: "Administração" },
+  { icon: Activity, label: "Painel Admin", path: "/admin/metrics", adminOnly: true, group: "Administração" },
+  { icon: CreditCard, label: "Assinaturas Admin", path: "/admin/subscriptions", adminOnly: true, group: "Administração" },
+  { icon: Ticket, label: "Tickets Admin", path: "/admin/support", adminOnly: true, group: "Administração" },
+
+  // --- Suporte ---
+  { icon: LifeBuoy, label: "Suporte", path: "/support", group: "Suporte" },
+  { icon: HelpCircle, label: "Ajuda e Suporte", path: "/help", group: "Suporte" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -360,36 +338,52 @@ function DashboardLayoutContent({
 
         {/* === Navigation Menu === */}
         <SidebarContent className="gap-0">
-          <SidebarMenu className="px-2 py-2">
-            {menuItems
-              .filter(item => !item.adminOnly || user?.role === "admin")
-              .map(item => {
+          <SidebarMenu className="px-2 py-1">
+            {(() => {
+              const filtered = menuItems.filter(item => !item.adminOnly || user?.role === "admin");
+              let lastGroup = "";
+              return filtered.map(item => {
                 const isActive = location === item.path;
+                const showGroup = item.group && item.group !== lastGroup;
+                if (item.group) lastGroup = item.group;
                 return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      onClick={() => navigate(item.path)}
-                      tooltip={item.label}
-                      className={`h-10 transition-all font-normal rounded-lg ${
-                        isActive
-                          ? "bg-sidebar-accent text-[#c8a55a] font-medium border-l-2 border-l-[#c8a55a]"
-                          : "text-sidebar-foreground/70 hover:text-sidebar-foreground"
-                      }`}
-                    >
-                      <item.icon
-                        className={`h-4 w-4 shrink-0 ${
-                          isActive ? "text-[#c8a55a]" : ""
+                  <Fragment key={item.path}>
+                    {showGroup && !isCollapsed && (
+                      <li className="px-3 pt-4 pb-1 list-none">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+                          {item.group}
+                        </span>
+                      </li>
+                    )}
+                    {showGroup && isCollapsed && (
+                      <li className="my-1 mx-2 border-t border-sidebar-border/30 list-none" />
+                    )}
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        onClick={() => navigate(item.path)}
+                        tooltip={item.label}
+                        className={`h-9 transition-all font-normal rounded-lg ${
+                          isActive
+                            ? "bg-sidebar-accent text-[#c8a55a] font-medium border-l-2 border-l-[#c8a55a]"
+                            : "text-sidebar-foreground/70 hover:text-sidebar-foreground"
                         }`}
-                      />
-                      <span className="truncate">{item.label}</span>
-                      {isActive && !isCollapsed && (
-                        <ChevronRight className="ml-auto h-3 w-3 text-[#c8a55a]/60" />
-                      )}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                      >
+                        <item.icon
+                          className={`h-4 w-4 shrink-0 ${
+                            isActive ? "text-[#c8a55a]" : ""
+                          }`}
+                        />
+                        <span className="truncate text-[13px]">{item.label}</span>
+                        {isActive && !isCollapsed && (
+                          <ChevronRight className="ml-auto h-3 w-3 text-[#c8a55a]/60" />
+                        )}
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </Fragment>
                 );
-              })}
+              });
+            })()}
           </SidebarMenu>
         </SidebarContent>
 
