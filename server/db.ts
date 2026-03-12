@@ -302,6 +302,64 @@ export async function deleteTenant(id: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
+  // Cascade delete: remove dependent records in correct order
+  // Child tables that reference tenantId
+  const { ticketMessages, supportTickets, securityAlerts, loginAttempts,
+    sessions, ipWhitelist, user2FA, apiKeyUsage, apiKeys,
+    webhookDeliveries, webhooks, pdfExports, usageMetrics, invoices,
+    subscriptions, onboardingProgress, assessmentProposals, proposalItems, proposals,
+    pricingParameters, services, clients, dataConsents, auditLogs,
+    userRoles, userInvites, people, sectors, tenantSettings } = await import("../drizzle/schema");
+
+  // Delete in dependency order (most dependent first)
+  await db.delete(ticketMessages).where(
+    sql`ticketId IN (SELECT id FROM support_tickets WHERE tenantId = ${id})`
+  );
+  await db.delete(supportTickets).where(eq(supportTickets.tenantId, id));
+  await db.delete(securityAlerts).where(eq(securityAlerts.tenantId, id));
+  await db.delete(loginAttempts).where(
+    sql`email IN (SELECT email FROM users WHERE tenantId = ${id})`
+  );
+  await db.delete(sessions).where(
+    sql`userId IN (SELECT id FROM users WHERE tenantId = ${id})`
+  );
+  await db.delete(ipWhitelist).where(eq(ipWhitelist.tenantId, id));
+  await db.delete(user2FA).where(
+    sql`userId IN (SELECT id FROM users WHERE tenantId = ${id})`
+  );
+  await db.delete(apiKeyUsage).where(
+    sql`apiKeyId IN (SELECT id FROM api_keys WHERE tenantId = ${id})`
+  );
+  await db.delete(apiKeys).where(eq(apiKeys.tenantId, id));
+  await db.delete(webhookDeliveries).where(
+    sql`webhookId IN (SELECT id FROM webhooks WHERE tenantId = ${id})`
+  );
+  await db.delete(webhooks).where(eq(webhooks.tenantId, id));
+  await db.delete(pdfExports).where(eq(pdfExports.tenantId, id));
+  await db.delete(usageMetrics).where(eq(usageMetrics.tenantId, id));
+  await db.delete(invoices).where(eq(invoices.tenantId, id));
+  await db.delete(subscriptions).where(eq(subscriptions.tenantId, id));
+  await db.delete(onboardingProgress).where(eq(onboardingProgress.tenantId, id));
+  await db.delete(assessmentProposals).where(eq(assessmentProposals.tenantId, id));
+  await db.delete(proposalItems).where(
+    sql`proposalId IN (SELECT id FROM proposals WHERE tenantId = ${id})`
+  );
+  await db.delete(proposals).where(eq(proposals.tenantId, id));
+  await db.delete(pricingParameters).where(eq(pricingParameters.tenantId, id));
+  await db.delete(services).where(eq(services.tenantId, id));
+  await db.delete(clients).where(eq(clients.tenantId, id));
+  await db.delete(dataConsents).where(eq(dataConsents.tenantId, id));
+  await db.delete(auditLogs).where(eq(auditLogs.tenantId, id));
+  await db.delete(userRoles).where(eq(userRoles.tenantId, id));
+  await db.delete(userInvites).where(eq(userInvites.tenantId, id));
+  await db.delete(people).where(eq(people.tenantId, id));
+  await db.delete(sectors).where(eq(sectors.tenantId, id));
+  await db.delete(tenantSettings).where(eq(tenantSettings.tenantId, id));
+
+  // Desassociar users do tenant (não excluir users)
+  await db.update(users).set({ tenantId: null }).where(eq(users.tenantId, id));
+
+  // Finalmente, excluir o tenant
   await db.delete(tenants).where(eq(tenants.id, id));
 }
 
