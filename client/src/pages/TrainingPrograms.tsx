@@ -31,7 +31,9 @@ import {
   Clock,
   Users,
   Calendar,
+  FileDown,
 } from "lucide-react";
+import { usePdfExport } from "@/hooks/usePdfExport";
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   planned: { label: "Planejado", variant: "secondary" },
@@ -48,6 +50,7 @@ const TYPE_CONFIG: Record<string, { label: string; variant: "default" | "seconda
 
 export default function TrainingPrograms() {
   usePageMeta({ title: "Programas de Treinamento" });
+  const { exportPdf, isExporting } = usePdfExport();
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
   const navigate = useNavigate();
@@ -128,10 +131,21 @@ export default function TrainingPrograms() {
               Gerencie treinamentos, workshops e programas de lideranca
             </p>
           </div>
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Programa
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isExporting || !tenantId}
+              onClick={() => exportPdf(() => trpc.nr01Pdf.exportTrainingReport.mutate({ tenantId: tenantId! }))}
+            >
+              <FileDown className="h-4 w-4 mr-2" />
+              {isExporting ? "Exportando..." : "Exportar PDF"}
+            </Button>
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Programa
+            </Button>
+          </div>
         </div>
 
         {programs.length === 0 ? (

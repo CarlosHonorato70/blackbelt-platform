@@ -14,12 +14,15 @@ import {
   Calendar,
   Hash,
   BarChart3,
+  FileDown,
 } from "lucide-react";
+import { usePdfExport } from "@/hooks/usePdfExport";
 
 export default function ComplianceCertificate() {
   usePageMeta({ title: "Certificado de Conformidade" });
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const { exportPdf, isExporting } = usePdfExport();
 
   if (!tenantId) {
     return (
@@ -61,14 +64,25 @@ export default function ComplianceCertificate() {
   return (
     <DashboardLayout>
       <div className="space-y-6 p-6">
-        <div className="flex items-center gap-3">
-          <Award className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-2xl font-bold">Certificado de Conformidade</h1>
-            <p className="text-muted-foreground">
-              Emita e gerencie certificados de conformidade NR-01
-            </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Award className="h-8 w-8 text-primary" />
+            <div>
+              <h1 className="text-2xl font-bold">Certificado de Conformidade</h1>
+              <p className="text-muted-foreground">
+                Emita e gerencie certificados de conformidade NR-01
+              </p>
+            </div>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isExporting || !tenantId}
+            onClick={() => exportPdf(() => trpc.nr01Pdf.exportComplianceCertificate.mutate({ tenantId: tenantId! }))}
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            {isExporting ? "Exportando..." : "Exportar PDF"}
+          </Button>
         </div>
 
         {listQuery.isLoading ? (

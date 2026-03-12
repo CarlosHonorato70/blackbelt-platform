@@ -29,7 +29,9 @@ import {
   Loader2,
   RefreshCw,
   AlertTriangle,
+  FileDown,
 } from "lucide-react";
+import { usePdfExport } from "@/hooks/usePdfExport";
 
 const ENTITY_TYPE_LABELS: Record<string, string> = {
   action_plan: "Plano de Ação",
@@ -56,6 +58,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
 
 export default function DeadlineAlerts() {
   usePageMeta({ title: "Alertas de Prazos" });
+  const { exportPdf, isExporting } = usePdfExport();
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
   const [activeTab, setActiveTab] = useState<"upcoming" | "all">("upcoming");
@@ -118,6 +121,16 @@ export default function DeadlineAlerts() {
               Gerencie alertas e notificações de prazos importantes
             </p>
           </div>
+          <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isExporting || !tenantId}
+            onClick={() => exportPdf(() => trpc.nr01Pdf.exportDeadlineAlerts.mutate({ tenantId: tenantId! }))}
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            {isExporting ? "Exportando..." : "Exportar PDF"}
+          </Button>
           <Button
             onClick={() => autoGenerateMutation.mutate({ tenantId: tenantId! })}
             disabled={autoGenerateMutation.isPending}
@@ -129,6 +142,7 @@ export default function DeadlineAlerts() {
             )}
             Gerar Alertas Automáticos
           </Button>
+          </div>
         </div>
 
         <div className="flex gap-2">

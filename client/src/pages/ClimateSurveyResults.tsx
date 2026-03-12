@@ -5,7 +5,8 @@ import { trpc } from "@/lib/trpc";
 import { useTenant } from "@/contexts/TenantContext";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, BarChart3, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowLeft, Users, BarChart3, CheckCircle2, Loader2, FileDown } from "lucide-react";
+import { usePdfExport } from "@/hooks/usePdfExport";
 import {
   BarChart,
   Bar,
@@ -19,6 +20,7 @@ import {
 
 export default function ClimateSurveyResults() {
   usePageMeta({ title: "Resultados da Pesquisa" });
+  const { exportPdf, isExporting } = usePdfExport();
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
   const { id: surveyId } = useParams<{ id: string }>();
@@ -66,16 +68,27 @@ export default function ClimateSurveyResults() {
   return (
     <DashboardLayout>
       <div className="space-y-6 p-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/climate-surveys")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Resultados da Pesquisa</h1>
-            <p className="text-muted-foreground">
-              {results?.surveyTitle || "Carregando..."}
-            </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/climate-surveys")}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Resultados da Pesquisa</h1>
+              <p className="text-muted-foreground">
+                {results?.surveyTitle || "Carregando..."}
+              </p>
+            </div>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isExporting || !tenantId || !surveyId}
+            onClick={() => exportPdf(() => trpc.nr01Pdf.exportClimateSurvey.mutate({ tenantId: tenantId!, surveyId: surveyId! }))}
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            {isExporting ? "Exportando..." : "Exportar PDF"}
+          </Button>
         </div>
 
         {isLoading ? (

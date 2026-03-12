@@ -28,7 +28,8 @@ import { trpc } from "@/lib/trpc";
 import { useTenant } from "@/contexts/TenantContext";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { toast } from "sonner";
-import { Grid3X3, AlertTriangle, Loader2 } from "lucide-react";
+import { Grid3X3, AlertTriangle, Loader2, FileDown } from "lucide-react";
+import { usePdfExport } from "@/hooks/usePdfExport";
 
 const SEVERITY_LABELS = ["Baixa", "Média", "Alta", "Crítica"] as const;
 const PROBABILITY_LABELS = ["Rara", "Improvável", "Possível", "Provável", "Certa"] as const;
@@ -64,6 +65,7 @@ export default function RiskMatrix() {
   usePageMeta({ title: "Matriz de Risco Psicossocial" });
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const { exportPdf, isExporting } = usePdfExport();
 
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>("");
   const [selectedCell, setSelectedCell] = useState<{ severity: number; probability: number } | null>(null);
@@ -119,6 +121,15 @@ export default function RiskMatrix() {
               </p>
             </div>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isExporting || !tenantId}
+            onClick={() => exportPdf(() => trpc.nr01Pdf.exportRiskMatrix.mutate({ tenantId: tenantId! }))}
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            {isExporting ? "Exportando..." : "Exportar PDF"}
+          </Button>
         </div>
 
         <Card>

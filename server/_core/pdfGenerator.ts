@@ -956,3 +956,292 @@ export function bufferToStream(buffer: Buffer): Readable {
   stream.push(null);
   return stream;
 }
+
+// ============================================================================
+// Generic NR-01 Report PDF Generator
+// ============================================================================
+
+export interface PdfKpiCard {
+  label: string;
+  value: string;
+  color?: string;
+}
+
+export interface PdfTableColumn {
+  header: string;
+  width: number;
+  align?: "left" | "center" | "right";
+}
+
+export interface PdfTableRow {
+  cells: string[];
+  accentColor?: string;
+}
+
+export interface PdfSection {
+  type: "title" | "subtitle" | "text" | "kpis" | "table" | "spacer" | "divider" | "signature" | "list";
+  // title/subtitle/text
+  content?: string;
+  // kpis
+  kpis?: PdfKpiCard[];
+  // table
+  columns?: PdfTableColumn[];
+  rows?: PdfTableRow[];
+  // list
+  items?: string[];
+  // signature
+  signatureName?: string;
+  signatureRole?: string;
+  signatureRegistry?: string;
+}
+
+export interface GenericReportData {
+  reportTitle: string;
+  reportSubtitle?: string;
+  referenceText?: string;
+  companyName?: string;
+  date?: string;
+  sections: PdfSection[];
+  landscape?: boolean;
+}
+
+/**
+ * Generate a generic NR-01 report PDF with configurable sections.
+ * Supports: title, subtitle, text, KPI cards, tables, lists, signatures, dividers.
+ */
+export async function generateGenericReportPdf(
+  data: GenericReportData,
+  branding?: PdfBranding,
+  metadata?: PdfMetadata
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({
+      size: "A4",
+      layout: data.landscape ? "landscape" : "portrait",
+      margins: { top: 40, bottom: 50, left: 50, right: 50 },
+      info: {
+        Title: metadata?.title || data.reportTitle,
+        Subject: metadata?.subject || "Relatório NR-01",
+        Author: metadata?.author || branding?.companyName || "Black Belt Platform",
+        Keywords: metadata?.keywords?.join(", ") || "NR-01, relatório, compliance",
+        Creator: "Black Belt Platform PDF Generator",
+      },
+    });
+
+    const buffers: Buffer[] = [];
+    doc.on("data", buffers.push.bind(buffers));
+    doc.on("end", () => resolve(Buffer.concat(buffers)));
+    doc.on("error", reject);
+
+    const primaryColor = branding?.primaryColor || "#1a365d";
+    const secondaryColor = branding?.secondaryColor || "#666666";
+    const pageWidth = data.landscape ? 842 - 100 : 595 - 100; // A4 minus margins
+
+    // ── Header ──────────────────────────────────────────────────────────
+    doc
+      .fontSize(18)
+      .fillColor(primaryColor)
+      .text(branding?.companyName || "Black Belt Platform", { align: "center" });
+
+    doc.moveDown(0.3);
+    doc
+      .fontSize(14)
+      .fillColor(secondaryColor)
+      .text(data.reportTitle.toUpperCase(), { align: "center" });
+
+    if (data.reportSubtitle) {
+      doc.moveDown(0.2);
+      doc.fontSize(10).fillColor(secondaryColor).text(data.reportSubtitle, { align: "center" });
+    }
+
+    if (data.referenceText) {
+      doc.fontSize(8).fillColor(secondaryColor).text(data.referenceText, { align: "center" });
+    }
+
+    doc.moveDown(0.5);
+
+    // Company/date info line
+    if (data.companyName || data.date) {
+      const infoParts: string[] = [];
+      if (data.companyName) infoParts.push(`Empresa: ${data.companyName}`);
+      if (data.date) infoParts.push(`Data: ${data.date}`);
+      doc.fontSize(9).fillColor("#000000").text(infoParts.join("    |    "), { align: "left" });
+      doc.moveDown(0.8);
+    }
+
+    // ── Render sections ─────────────────────────────────────────────────
+    for (const section of data.sections) {
+      // Page break check
+      if (doc.y > (data.landscape ? 480 : 700)) {
+        doc.addPage();
+      }
+
+      switch (section.type) {
+        case "title":
+          doc.fontSize(12).fillColor(primaryColor).text(section.content || "", { align: "left" });
+          doc.moveDown(0.4);
+          break;
+
+        case "subtitle":
+          doc.fontSize(10).fillColor(primaryColor).text(section.content || "", { align: "left" });
+          doc.moveDown(0.3);
+          break;
+
+        case "text":
+          doc.fontSize(9).fillColor("#000000").text(section.content || "", { align: "justify" });
+          doc.moveDown(0.5);
+          break;
+
+        case "spacer":
+          doc.moveDown(1);
+          break;
+
+        case "divider":
+          doc.moveTo(50, doc.y).lineTo(50 + pageWidth, doc.y).lineWidth(0.5).strokeColor("#e5e7eb").stroke();
+          doc.moveDown(0.5);
+          break;
+
+        case "kpis":
+          if (section.kpis && section.kpis.length > 0) {
+            const kpiCount = Math.min(section.kpis.length, 5);
+            const kpiWidth = Math.floor(pageWidth / kpiCount) - 8;
+            const kpiY = doc.y;
+
+            section.kpis.slice(0, 5).forEach((kpi, i) => {
+              const kpiX = 50 + i * (kpiWidth + 8);
+              const kpiColor = kpi.color || primaryColor;
+
+              // Card background
+              doc.rect(kpiX, kpiY, kpiWidth, 50).lineWidth(1).strokeColor(kpiColor).stroke();
+              doc.rect(kpiX, kpiY, kpiWidth, 3).fill(kpiColor);
+
+              // Value
+              doc.fontSize(14).fillColor(kpiColor).text(kpi.value, kpiX + 5, kpiY + 10, {
+                width: kpiWidth - 10,
+                align: "center",
+              });
+
+              // Label
+              doc.fontSize(7).fillColor(secondaryColor).text(kpi.label, kpiX + 5, kpiY + 30, {
+                width: kpiWidth - 10,
+                align: "center",
+              });
+            });
+
+            doc.y = kpiY + 60;
+            doc.moveDown(0.3);
+          }
+          break;
+
+        case "table":
+          if (section.columns && section.rows) {
+            const tableLeft = 50;
+            const rowH = 22;
+            let y = doc.y;
+
+            // Header
+            const totalWidth = section.columns.reduce((sum, c) => sum + c.width, 0);
+            doc.rect(tableLeft, y, totalWidth, 18).fill(primaryColor);
+
+            let x = tableLeft + 3;
+            section.columns.forEach((col) => {
+              doc.fontSize(7).fillColor("#ffffff").text(col.header, x, y + 4, {
+                width: col.width - 6,
+                align: col.align || "left",
+              });
+              x += col.width;
+            });
+            y += 18;
+
+            // Rows
+            section.rows.forEach((row, ri) => {
+              if (y > (data.landscape ? 490 : 710)) {
+                doc.addPage();
+                y = 40;
+                // Repeat header
+                doc.rect(tableLeft, y, totalWidth, 18).fill(primaryColor);
+                let hx = tableLeft + 3;
+                section.columns!.forEach((col) => {
+                  doc.fontSize(7).fillColor("#ffffff").text(col.header, hx, y + 4, {
+                    width: col.width - 6,
+                    align: col.align || "left",
+                  });
+                  hx += col.width;
+                });
+                y += 18;
+              }
+
+              if (ri % 2 === 0) {
+                doc.rect(tableLeft, y, totalWidth, rowH).fill("#f8f9fa");
+              }
+
+              if (row.accentColor) {
+                doc.rect(tableLeft, y, 3, rowH).fill(row.accentColor);
+              }
+
+              x = tableLeft + 3;
+              row.cells.forEach((cell, ci) => {
+                const col = section.columns![ci];
+                doc.fontSize(7).fillColor("#000000").text(cell || "—", x, y + 5, {
+                  width: (col?.width || 80) - 6,
+                  height: rowH - 6,
+                  ellipsis: true,
+                  align: col?.align || "left",
+                });
+                x += col?.width || 80;
+              });
+              y += rowH;
+            });
+
+            doc.y = y + 5;
+          }
+          break;
+
+        case "list":
+          if (section.items) {
+            section.items.forEach((item) => {
+              if (doc.y > (data.landscape ? 490 : 710)) doc.addPage();
+              doc.fontSize(8).fillColor("#000000").text(`  •  ${item}`, { indent: 10 });
+              doc.moveDown(0.2);
+            });
+            doc.moveDown(0.3);
+          }
+          break;
+
+        case "signature":
+          if (doc.y > (data.landscape ? 430 : 650)) doc.addPage();
+          doc.moveDown(2);
+          const sigX = 50;
+          doc.moveTo(sigX, doc.y).lineTo(sigX + 250, doc.y).lineWidth(0.5).strokeColor("#000000").stroke();
+          doc.moveDown(0.2);
+          if (section.signatureName) {
+            doc.fontSize(10).fillColor("#000000").text(section.signatureName);
+          }
+          if (section.signatureRole) {
+            doc.fontSize(8).fillColor(secondaryColor).text(section.signatureRole);
+          }
+          if (section.signatureRegistry) {
+            doc.fontSize(8).fillColor(secondaryColor).text(section.signatureRegistry);
+          }
+          break;
+      }
+    }
+
+    // ── Footer on every page ────────────────────────────────────────────
+    const pages = doc.bufferedPageRange();
+    for (let i = pages.start; i < pages.start + pages.count; i++) {
+      doc.switchToPage(i);
+      doc
+        .fontSize(7)
+        .fillColor(secondaryColor)
+        .text(
+          `${data.reportTitle} — ${branding?.companyName || "Black Belt Platform"} — ${new Date().toLocaleDateString("pt-BR")} — Página ${i + 1} de ${pages.count}`,
+          50,
+          data.landscape ? 545 : 770,
+          { align: "center", width: pageWidth }
+        );
+    }
+
+    doc.end();
+  });
+}

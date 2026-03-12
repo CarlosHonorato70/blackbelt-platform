@@ -22,13 +22,16 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { Button } from "@/components/ui/button";
 import {
   TrendingUp,
   TrendingDown,
   Minus,
   Loader2,
   History,
+  FileDown,
 } from "lucide-react";
+import { usePdfExport } from "@/hooks/usePdfExport";
 
 const DIMENSION_LABELS: Record<string, string> = {
   demands: "Demanda",
@@ -64,6 +67,7 @@ export default function AssessmentTrends() {
   usePageMeta({ title: "Histórico e Tendências" });
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const { exportPdf, isExporting } = usePdfExport();
 
   if (!tenantId) {
     return (
@@ -88,14 +92,25 @@ export default function AssessmentTrends() {
   return (
     <DashboardLayout>
       <div className="space-y-6 p-6">
-        <div className="flex items-center gap-3">
-          <History className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-2xl font-bold">Histórico e Tendências</h1>
-            <p className="text-muted-foreground">
-              Acompanhe a evolução dos indicadores psicossociais ao longo do tempo
-            </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <History className="h-8 w-8 text-primary" />
+            <div>
+              <h1 className="text-2xl font-bold">Histórico e Tendências</h1>
+              <p className="text-muted-foreground">
+                Acompanhe a evolução dos indicadores psicossociais ao longo do tempo
+              </p>
+            </div>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isExporting || !tenantId}
+            onClick={() => exportPdf(() => trpc.nr01Pdf.exportAssessmentTrends.mutate({ tenantId: tenantId! }))}
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            {isExporting ? "Exportando..." : "Exportar PDF"}
+          </Button>
         </div>
 
         {trendsQuery.isLoading ? (

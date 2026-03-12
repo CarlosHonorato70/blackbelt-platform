@@ -15,7 +15,8 @@ import { trpc } from "@/lib/trpc";
 import { useTenant } from "@/contexts/TenantContext";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { toast } from "sonner";
-import { BarChart3, Loader2, Database, TrendingUp, TrendingDown } from "lucide-react";
+import { BarChart3, Loader2, Database, TrendingUp, TrendingDown, FileDown } from "lucide-react";
+import { usePdfExport } from "@/hooks/usePdfExport";
 import {
   RadarChart,
   PolarGrid,
@@ -43,6 +44,7 @@ const DIMENSION_LABELS: Record<string, string> = {
 
 export default function BenchmarkComparison() {
   usePageMeta({ title: "Benchmark Nacional" });
+  const { exportPdf, isExporting } = usePdfExport();
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
 
@@ -95,6 +97,15 @@ export default function BenchmarkComparison() {
               Compare os resultados da sua empresa com a referencia nacional
             </p>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isExporting || !tenantId}
+            onClick={() => exportPdf(() => trpc.nr01Pdf.exportBenchmark.mutate({ tenantId: tenantId! }))}
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            {isExporting ? "Exportando..." : "Exportar PDF"}
+          </Button>
         </div>
 
         {!hasBenchmarkData && !isLoading ? (
