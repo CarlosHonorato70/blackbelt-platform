@@ -50,7 +50,7 @@ export function requestTracing(req: Request, res: Response, next: NextFunction) 
  */
 export const apiRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: process.env.NODE_ENV === "production" ? 100 : 1000, // Limit each IP per windowMs
   message: {
     error: "Too many requests from this IP, please try again later.",
     retryAfter: "15 minutes",
@@ -70,7 +70,7 @@ export const apiRateLimiter = rateLimit({
  */
 export const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 requests per windowMs
+  max: process.env.NODE_ENV === "production" ? 5 : 50, // Limit each IP per windowMs
   message: {
     error: "Too many authentication attempts, please try again later.",
     retryAfter: "15 minutes",
@@ -86,7 +86,7 @@ export const authRateLimiter = rateLimit({
  */
 export const mutationRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 30, // Limit each IP to 30 requests per windowMs
+  max: process.env.NODE_ENV === "production" ? 30 : 500, // Limit each IP per windowMs
   message: {
     error: "Too many data modification requests, please slow down.",
     retryAfter: "15 minutes",
@@ -101,7 +101,7 @@ export const mutationRateLimiter = rateLimit({
  */
 export const emailRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // Limit each IP to 10 email requests per hour
+  max: process.env.NODE_ENV === "production" ? 10 : 100, // Limit each IP per hour
   message: {
     error: "Too many email requests, please try again later.",
     retryAfter: "1 hour",

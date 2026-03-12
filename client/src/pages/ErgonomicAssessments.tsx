@@ -37,7 +37,9 @@ import {
   Loader2,
   Plus,
   Activity,
+  FileDown,
 } from "lucide-react";
+import { usePdfExport } from "@/hooks/usePdfExport";
 
 const RISK_LEVEL_CONFIG: Record<string, { label: string; className: string }> = {
   acceptable: { label: "Aceitável", className: "bg-green-100 text-green-800 hover:bg-green-100" },
@@ -55,6 +57,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
 
 export default function ErgonomicAssessments() {
   usePageMeta({ title: "Avaliações Ergonômicas" });
+  const { exportPdf, isExporting } = usePdfExport();
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
   const navigate = useNavigate();
@@ -122,10 +125,21 @@ export default function ErgonomicAssessments() {
               Gerencie avaliações ergonômicas dos postos de trabalho
             </p>
           </div>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nova Avaliação
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isExporting || !tenantId}
+              onClick={() => exportPdf(() => trpc.nr01Pdf.exportErgonomicAssessment.mutate({ tenantId: tenantId! }))}
+            >
+              <FileDown className="h-4 w-4 mr-2" />
+              {isExporting ? "Exportando..." : "Exportar PDF"}
+            </Button>
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Avaliação
+            </Button>
+          </div>
         </div>
 
         <Card>

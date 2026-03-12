@@ -24,7 +24,8 @@ import { trpc } from "@/lib/trpc";
 import { useTenant } from "@/contexts/TenantContext";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { toast } from "sonner";
-import { Plus, FileText, Loader2 } from "lucide-react";
+import { Plus, FileText, Loader2, FileDown } from "lucide-react";
+import { usePdfExport } from "@/hooks/usePdfExport";
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   draft: { label: "Rascunho", variant: "secondary" },
@@ -35,6 +36,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secon
 
 export default function LaudoTecnico() {
   usePageMeta({ title: "Laudos Tecnicos" });
+  const { exportPdf, isExporting } = usePdfExport();
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
 
@@ -106,10 +108,21 @@ export default function LaudoTecnico() {
               Gerenciamento de laudos tecnicos de avaliacao psicossocial
             </p>
           </div>
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Laudo
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isExporting || !tenantId}
+              onClick={() => exportPdf(() => trpc.nr01Pdf.exportLaudoTecnico.mutate({ tenantId: tenantId! }))}
+            >
+              <FileDown className="h-4 w-4 mr-2" />
+              {isExporting ? "Exportando..." : "Exportar PDF"}
+            </Button>
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Laudo
+            </Button>
+          </div>
         </div>
 
         <Card>

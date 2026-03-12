@@ -38,7 +38,9 @@ import {
   Pencil,
   Trash2,
   Stethoscope,
+  FileDown,
 } from "lucide-react";
+import { usePdfExport } from "@/hooks/usePdfExport";
 
 const PRIORITY_COLORS: Record<string, string> = {
   alta: "bg-red-100 text-red-800 border-red-200",
@@ -62,6 +64,7 @@ export default function PgrPcmsoIntegration() {
   usePageMeta({ title: "Integração PGR/PCMSO" });
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const { exportPdf, isExporting } = usePdfExport();
 
   const [editItem, setEditItem] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -124,6 +127,16 @@ export default function PgrPcmsoIntegration() {
               </p>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isExporting || !tenantId}
+              onClick={() => exportPdf(() => trpc.nr01Pdf.exportPcmsoIntegration.mutate({ tenantId: tenantId! }))}
+            >
+              <FileDown className="h-4 w-4 mr-2" />
+              {isExporting ? "Exportando..." : "Exportar PDF"}
+            </Button>
           <Button
             onClick={handleGenerate}
             disabled={generateMutation.isPending}
@@ -135,6 +148,7 @@ export default function PgrPcmsoIntegration() {
             )}
             Gerar Recomendações PCMSO
           </Button>
+          </div>
         </div>
 
         <Card>

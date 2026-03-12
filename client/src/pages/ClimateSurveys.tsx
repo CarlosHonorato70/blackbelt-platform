@@ -31,7 +31,8 @@ import { trpc } from "@/lib/trpc";
 import { useTenant } from "@/contexts/TenantContext";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { toast } from "sonner";
-import { Plus, ClipboardList, Loader2, BarChart2 } from "lucide-react";
+import { Plus, ClipboardList, Loader2, BarChart2, FileDown } from "lucide-react";
+import { usePdfExport } from "@/hooks/usePdfExport";
 import { useNavigate } from "react-router-dom";
 
 const TYPE_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -56,6 +57,7 @@ const QUESTIONS_PLACEHOLDER = `[
 
 export default function ClimateSurveys() {
   usePageMeta({ title: "Pesquisas de Clima" });
+  const { exportPdf, isExporting } = usePdfExport();
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
   const navigate = useNavigate();
@@ -134,10 +136,21 @@ export default function ClimateSurveys() {
               Gerencie pesquisas de clima, estresse, burnout e engajamento
             </p>
           </div>
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nova Pesquisa
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isExporting || !tenantId}
+              onClick={() => exportPdf(() => trpc.nr01Pdf.exportClimateSurvey.mutate({ tenantId: tenantId! }))}
+            >
+              <FileDown className="h-4 w-4 mr-2" />
+              {isExporting ? "Exportando..." : "Exportar PDF"}
+            </Button>
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Pesquisa
+            </Button>
+          </div>
         </div>
 
         <Card>

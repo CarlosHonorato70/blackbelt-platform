@@ -52,6 +52,8 @@ import { anonymousReportsRouter } from "./routers/anonymousReports";
 import { deadlineAlertsRouter } from "./routers/deadlineAlerts";
 import { ergonomicAssessmentsRouter } from "./routers/ergonomicAssessments";
 import { esocialExportRouter } from "./routers/esocialExport";
+import { nr01PdfExportRouter } from "./routers/nr01PdfExport";
+import { companiesRouter } from "./routers/companies";
 
 
 export const appRouter = router({
@@ -135,6 +137,12 @@ export const appRouter = router({
   deadlineAlerts: deadlineAlertsRouter,
   ergonomicAssessments: ergonomicAssessmentsRouter,
   esocialExport: esocialExportRouter,
+
+  // PDF Export centralizado para todos os entregáveis NR-01
+  nr01Pdf: nr01PdfExportRouter,
+
+  // Gerenciamento de empresas (consultores)
+  companies: companiesRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -43,7 +43,9 @@ import {
   Plus,
   Trash2,
   Video,
+  FileDown,
 } from "lucide-react";
+import { usePdfExport } from "@/hooks/usePdfExport";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Rascunho",
@@ -77,6 +79,7 @@ const EMPTY_MODULE: ModuleForm = {
 
 export default function TrainingAdmin() {
   usePageMeta({ title: "Administração de Treinamento" });
+  const { exportPdf, isExporting } = usePdfExport();
   const { programId } = useParams<{ programId: string }>();
   const navigate = useNavigate();
   const { selectedTenant } = useTenant();
@@ -223,10 +226,21 @@ export default function TrainingAdmin() {
   return (
     <DashboardLayout>
       <div className="space-y-6 p-6">
-        <Button variant="ghost" onClick={() => navigate(-1)}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Voltar
-        </Button>
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" onClick={() => navigate(-1)}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isExporting || !tenantId}
+            onClick={() => exportPdf(() => trpc.nr01Pdf.exportTrainingReport.mutate({ tenantId: tenantId! }))}
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            {isExporting ? "Exportando..." : "Exportar PDF"}
+          </Button>
+        </div>
 
         <Card>
           <CardHeader>

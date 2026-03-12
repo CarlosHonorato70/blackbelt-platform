@@ -28,7 +28,9 @@ import {
   ChevronDown,
   ChevronRight,
   Shield,
+  FileDown,
 } from "lucide-react";
+import { usePdfExport } from "@/hooks/usePdfExport";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; badgeClass: string }> = {
   compliant: {
@@ -57,6 +59,7 @@ export default function ComplianceChecklist() {
   usePageMeta({ title: "Checklist de Conformidade Legal" });
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const { exportPdf, isExporting } = usePdfExport();
 
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
@@ -140,14 +143,25 @@ export default function ComplianceChecklist() {
   return (
     <DashboardLayout>
       <div className="space-y-6 p-6">
-        <div className="flex items-center gap-3">
-          <ClipboardCheck className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-2xl font-bold">Checklist de Conformidade Legal</h1>
-            <p className="text-muted-foreground">
-              Acompanhe a conformidade com os requisitos da NR-01
-            </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <ClipboardCheck className="h-8 w-8 text-primary" />
+            <div>
+              <h1 className="text-2xl font-bold">Checklist de Conformidade Legal</h1>
+              <p className="text-muted-foreground">
+                Acompanhe a conformidade com os requisitos da NR-01
+              </p>
+            </div>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isExporting || !tenantId}
+            onClick={() => exportPdf(() => trpc.nr01Pdf.exportComplianceChecklist.mutate({ tenantId: tenantId! }))}
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            {isExporting ? "Exportando..." : "Exportar PDF"}
+          </Button>
         </div>
 
         {isLoading ? (

@@ -36,7 +36,9 @@ import {
   CheckCircle,
   FileUp,
   AlertTriangle,
+  FileDown,
 } from "lucide-react";
+import { usePdfExport } from "@/hooks/usePdfExport";
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   "S-2220": "Monitoramento da Saúde",
@@ -53,6 +55,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
 
 export default function EsocialExport() {
   usePageMeta({ title: "Exportação eSocial" });
+  const { exportPdf, isExporting } = usePdfExport();
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
 
@@ -124,14 +127,25 @@ export default function EsocialExport() {
   return (
     <DashboardLayout>
       <div className="space-y-6 p-6">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <FileCode className="h-6 w-6" />
-            Exportação eSocial
-          </h1>
-          <p className="text-muted-foreground">
-            Gere e valide arquivos XML para envio ao eSocial
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <FileCode className="h-6 w-6" />
+              Exportação eSocial
+            </h1>
+            <p className="text-muted-foreground">
+              Gere e valide arquivos XML para envio ao eSocial
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isExporting || !tenantId}
+            onClick={() => exportPdf(() => trpc.nr01Pdf.exportEsocialReport.mutate({ tenantId: tenantId! }))}
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            {isExporting ? "Exportando..." : "Exportar PDF"}
+          </Button>
         </div>
 
         <Card>

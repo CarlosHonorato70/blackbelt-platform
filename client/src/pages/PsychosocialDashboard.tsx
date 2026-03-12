@@ -18,13 +18,16 @@ import {
   Legend,
   CartesianGrid,
 } from "recharts";
+import { Button } from "@/components/ui/button";
 import {
   Users,
   BarChart3,
   AlertTriangle,
   Activity,
   Loader2,
+  FileDown,
 } from "lucide-react";
+import { usePdfExport } from "@/hooks/usePdfExport";
 
 const DIMENSION_LABELS: Record<string, string> = {
   demands: "Demanda",
@@ -65,6 +68,7 @@ export default function PsychosocialDashboard() {
   usePageMeta({ title: "Dashboard de Indicadores Psicossociais" });
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const { exportPdf, isExporting } = usePdfExport();
 
   if (!tenantId) {
     return (
@@ -132,11 +136,22 @@ export default function PsychosocialDashboard() {
   return (
     <DashboardLayout>
       <div className="space-y-6 p-6">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard de Indicadores Psicossociais</h1>
-          <p className="text-muted-foreground">
-            Visão geral dos resultados COPSOQ e indicadores de saúde organizacional
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Dashboard de Indicadores Psicossociais</h1>
+            <p className="text-muted-foreground">
+              Visão geral dos resultados COPSOQ e indicadores de saúde organizacional
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isExporting || !tenantId}
+            onClick={() => exportPdf(() => trpc.nr01Pdf.exportPsychosocialDashboard.mutate({ tenantId: tenantId! }))}
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            {isExporting ? "Exportando..." : "Exportar PDF"}
+          </Button>
         </div>
 
         {isLoading ? (

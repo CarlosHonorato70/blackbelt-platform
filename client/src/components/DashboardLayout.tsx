@@ -71,6 +71,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { TenantSelectionModal } from "./TenantSelectionModal";
 import { NotificationCenter } from "./NotificationCenter";
+import { CompanySelector } from "./CompanySelector";
 import { Button } from "./ui/button";
 
 type MenuItem = {
@@ -78,64 +79,67 @@ type MenuItem = {
   label: string;
   path: string;
   adminOnly?: boolean;
+  consultantOnly?: boolean; // Visível apenas para consultores (e admin)
+  companyVisible?: boolean; // Visível para empresas clientes
   group?: string;
 };
 
 const menuItems: MenuItem[] = [
   // --- Geral ---
-  { icon: LayoutDashboard, label: "Dashboard", path: "/", group: "Geral" },
-  { icon: Building2, label: "Empresas", path: "/tenants", adminOnly: true, group: "Geral" },
-  { icon: UserSquare2, label: "Setores", path: "/sectors", group: "Geral" },
-  { icon: Users, label: "Colaboradores", path: "/people", group: "Geral" },
-  { icon: TrendingUp, label: "Dashboard Executivo", path: "/executive-dashboard", group: "Geral" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/", group: "Geral", companyVisible: true },
+  { icon: Building2, label: "Todas as Empresas", path: "/tenants", adminOnly: true, group: "Geral" },
+  { icon: Building2, label: "Minhas Empresas", path: "/companies", consultantOnly: true, group: "Geral" },
+  { icon: UserSquare2, label: "Setores", path: "/sectors", group: "Geral", companyVisible: true },
+  { icon: Users, label: "Colaboradores", path: "/people", group: "Geral", companyVisible: true },
+  { icon: TrendingUp, label: "Dashboard Executivo", path: "/executive-dashboard", group: "Geral", companyVisible: true },
 
-  // --- Avaliações ---
-  { icon: FileText, label: "Avaliações NR-01", path: "/risk-assessments", group: "Avaliações" },
-  { icon: ClipboardList, label: "Planos de Ação", path: "/action-plans", group: "Avaliações" },
-  { icon: Target, label: "Matriz de Risco", path: "/risk-matrix", group: "Avaliações" },
-  { icon: HeartPulse, label: "Integração PGR+PCMSO", path: "/pgr-pcmso", group: "Avaliações" },
+  // --- Avaliações (somente consultor) ---
+  { icon: FileText, label: "Avaliações NR-01", path: "/risk-assessments", group: "Avaliações", consultantOnly: true },
+  { icon: ClipboardList, label: "Planos de Ação", path: "/action-plans", group: "Avaliações", consultantOnly: true },
+  { icon: Target, label: "Matriz de Risco", path: "/risk-matrix", group: "Avaliações", companyVisible: true },
+  { icon: HeartPulse, label: "Integração PGR+PCMSO", path: "/pgr-pcmso", group: "Avaliações", consultantOnly: true },
 
   // --- COPSOQ-II ---
-  { icon: Clipboard, label: "COPSOQ-II", path: "/copsoq", group: "COPSOQ-II" },
-  { icon: FileText, label: "Análise COPSOQ-II", path: "/copsoq/analytics", group: "COPSOQ-II" },
-  { icon: GitCompare, label: "Benchmark COPSOQ", path: "/benchmark", group: "COPSOQ-II" },
-  { icon: Mail, label: "Enviar Convites", path: "/copsoq/invites", group: "COPSOQ-II" },
-  { icon: BarChart3, label: "Rastreamento", path: "/copsoq/tracking", group: "COPSOQ-II" },
-  { icon: FileText, label: "Histórico", path: "/assessment-history", group: "COPSOQ-II" },
-  { icon: LineChart, label: "Tendências", path: "/assessment-trends", group: "COPSOQ-II" },
+  { icon: Clipboard, label: "COPSOQ-II", path: "/copsoq", group: "COPSOQ-II", consultantOnly: true },
+  { icon: FileText, label: "Análise COPSOQ-II", path: "/copsoq/analytics", group: "COPSOQ-II", companyVisible: true },
+  { icon: GitCompare, label: "Benchmark COPSOQ", path: "/benchmark", group: "COPSOQ-II", companyVisible: true },
+  { icon: Mail, label: "Enviar Convites", path: "/copsoq/invites", group: "COPSOQ-II", consultantOnly: true },
+  { icon: BarChart3, label: "Rastreamento", path: "/copsoq/tracking", group: "COPSOQ-II", consultantOnly: true },
+  { icon: FileText, label: "Histórico", path: "/assessment-history", group: "COPSOQ-II", companyVisible: true },
+  { icon: LineChart, label: "Tendências", path: "/assessment-trends", group: "COPSOQ-II", companyVisible: true },
 
   // --- Indicadores & Relatórios ---
-  { icon: Brain, label: "Indicadores Psicossociais", path: "/psychosocial-dashboard", group: "Indicadores" },
-  { icon: Calculator, label: "Calculadora Financeira", path: "/financial-calculator", group: "Indicadores" },
-  { icon: FileText, label: "Laudo Técnico", path: "/laudo-tecnico", group: "Indicadores" },
-  { icon: FileText, label: "Relatórios Compliance", path: "/compliance-reports", group: "Indicadores" },
+  { icon: Brain, label: "Indicadores Psicossociais", path: "/psychosocial-dashboard", group: "Indicadores", companyVisible: true },
+  { icon: Calculator, label: "Calculadora Financeira", path: "/financial-calculator", group: "Indicadores", consultantOnly: true },
+  { icon: FileText, label: "Laudo Técnico", path: "/laudo-tecnico", group: "Indicadores", companyVisible: true },
+  { icon: FileText, label: "Relatórios Compliance", path: "/compliance-reports", group: "Indicadores", companyVisible: true },
 
   // --- Conformidade NR-01 ---
-  { icon: Calendar, label: "Cronograma NR-01", path: "/compliance-timeline", group: "Conformidade" },
-  { icon: CheckSquare, label: "Checklist Conformidade", path: "/compliance-checklist", group: "Conformidade" },
-  { icon: Award, label: "Certificado", path: "/compliance-certificate", group: "Conformidade" },
-  { icon: Bell, label: "Alertas de Prazos", path: "/deadline-alerts", group: "Conformidade" },
-  { icon: Bell, label: "Lembretes Automáticos", path: "/reminder-management", group: "Conformidade" },
+  { icon: Calendar, label: "Cronograma NR-01", path: "/compliance-timeline", group: "Conformidade", companyVisible: true },
+  { icon: CheckSquare, label: "Checklist Conformidade", path: "/compliance-checklist", group: "Conformidade", companyVisible: true },
+  { icon: Award, label: "Certificado", path: "/compliance-certificate", group: "Conformidade", companyVisible: true },
+  { icon: Bell, label: "Alertas de Prazos", path: "/deadline-alerts", group: "Conformidade", companyVisible: true },
+  { icon: Bell, label: "Lembretes Automáticos", path: "/reminder-management", group: "Conformidade", consultantOnly: true },
 
   // --- Pessoas & Cultura ---
-  { icon: Megaphone, label: "Pesquisa de Clima", path: "/climate-surveys", group: "Pessoas" },
-  { icon: GraduationCap, label: "Treinamentos", path: "/training", group: "Pessoas" },
-  { icon: MessageSquareWarning, label: "Canal de Denúncia", path: "/anonymous-report", group: "Pessoas" },
-  { icon: AlertTriangle, label: "Gestão Denúncias", path: "/report-management", group: "Pessoas" },
-  { icon: Ruler, label: "Avaliação Ergonômica", path: "/ergonomic-assessments", group: "Pessoas" },
+  { icon: Megaphone, label: "Pesquisa de Clima", path: "/climate-surveys", group: "Pessoas", companyVisible: true },
+  { icon: GraduationCap, label: "Treinamentos", path: "/training", group: "Pessoas", companyVisible: true },
+  { icon: MessageSquareWarning, label: "Canal de Denúncia", path: "/anonymous-report", group: "Pessoas", companyVisible: true },
+  { icon: AlertTriangle, label: "Gestão Denúncias", path: "/report-management", group: "Pessoas", consultantOnly: true },
+  { icon: Ruler, label: "Avaliação Ergonômica", path: "/ergonomic-assessments", group: "Pessoas", companyVisible: true },
 
-  // --- Comercial ---
-  { icon: Mail, label: "Convites de Usuários", path: "/user-invites", group: "Comercial" },
-  { icon: DollarSign, label: "Precificação", path: "/pricing-parameters", group: "Comercial" },
-  { icon: ShoppingCart, label: "Serviços", path: "/services", group: "Comercial" },
-  { icon: Building2, label: "Clientes", path: "/clients", group: "Comercial" },
-  { icon: FileText, label: "Propostas", path: "/proposals", group: "Comercial" },
+  // --- Comercial (somente consultor) ---
+  { icon: Mail, label: "Convites de Usuários", path: "/user-invites", group: "Comercial", consultantOnly: true },
+  { icon: DollarSign, label: "Precificação", path: "/pricing-parameters", group: "Comercial", consultantOnly: true },
+  { icon: ShoppingCart, label: "Serviços", path: "/services", group: "Comercial", consultantOnly: true },
+  { icon: Building2, label: "Clientes", path: "/clients", group: "Comercial", consultantOnly: true },
+  { icon: FileText, label: "Propostas", path: "/proposals", group: "Comercial", consultantOnly: true },
 
   // --- Integrações ---
-  { icon: Upload, label: "Exportação eSocial", path: "/esocial-export", group: "Integrações" },
+  { icon: Upload, label: "Exportação eSocial", path: "/esocial-export", group: "Integrações", consultantOnly: true },
   { icon: Download, label: "Exportação LGPD", path: "/data-export", adminOnly: true, group: "Integrações" },
 
-  // --- Administração ---
+  // --- Administração (somente admin master) ---
   { icon: Lock, label: "Perfis e Permissões", path: "/roles-permissions", adminOnly: true, group: "Administração" },
   { icon: Eye, label: "Auditoria", path: "/audit-logs", adminOnly: true, group: "Administração" },
   { icon: Shield, label: "Segurança", path: "/security-dashboard", adminOnly: true, group: "Administração" },
@@ -146,8 +150,8 @@ const menuItems: MenuItem[] = [
   { icon: Ticket, label: "Tickets Admin", path: "/admin/support", adminOnly: true, group: "Administração" },
 
   // --- Suporte ---
-  { icon: LifeBuoy, label: "Suporte", path: "/support", group: "Suporte" },
-  { icon: HelpCircle, label: "Ajuda e Suporte", path: "/help", group: "Suporte" },
+  { icon: LifeBuoy, label: "Suporte", path: "/support", group: "Suporte", companyVisible: true },
+  { icon: HelpCircle, label: "Ajuda e Suporte", path: "/help", group: "Suporte", companyVisible: true },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -242,6 +246,15 @@ function DashboardLayoutContent({
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
 
+  // Detectar tipo do tenant para controle de sidebar
+  const { data: tenantInfo } = trpc.companies.getMyTenantInfo.useQuery(undefined, {
+    retry: false,
+    enabled: !!user && user.role !== "admin",
+  });
+  const isAdmin = user?.role === "admin";
+  const isCompanyUser = tenantInfo?.tenantType === "company";
+  const isConsultant = isAdmin || tenantInfo?.tenantType === "consultant";
+
   useEffect(() => {
     if (isCollapsed) {
       setIsResizing(false);
@@ -329,10 +342,17 @@ function DashboardLayoutContent({
           </div>
         </SidebarHeader>
 
-        {/* === Tenant Selector === */}
-        {!isCollapsed && (
+        {/* === Tenant Selector (Admin only) === */}
+        {!isCollapsed && isAdmin && (
           <div className="px-3 py-2.5 border-b border-sidebar-border">
             <TenantSelectionModal />
+          </div>
+        )}
+
+        {/* === Company Selector (Consultants) === */}
+        {!isCollapsed && isConsultant && !isAdmin && (
+          <div className="px-3 py-2.5 border-b border-sidebar-border">
+            <CompanySelector />
           </div>
         )}
 
@@ -340,7 +360,17 @@ function DashboardLayoutContent({
         <SidebarContent className="gap-0">
           <SidebarMenu className="px-2 py-1">
             {(() => {
-              const filtered = menuItems.filter(item => !item.adminOnly || user?.role === "admin");
+              const filtered = menuItems.filter(item => {
+                // Admin vê tudo
+                if (isAdmin) return true;
+                // Items adminOnly: só admin vê
+                if (item.adminOnly) return false;
+                // Empresa: vê apenas items com companyVisible
+                if (isCompanyUser) return item.companyVisible === true;
+                // Consultor: vê tudo exceto adminOnly (já filtrado acima)
+                // Items consultantOnly: visíveis para consultor
+                return true;
+              });
               let lastGroup = "";
               return filtered.map(item => {
                 const isActive = location === item.path;

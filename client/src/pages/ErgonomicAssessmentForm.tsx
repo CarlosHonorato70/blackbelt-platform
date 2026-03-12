@@ -45,7 +45,9 @@ import {
   Plus,
   Trash2,
   ClipboardCheck,
+  FileDown,
 } from "lucide-react";
+import { usePdfExport } from "@/hooks/usePdfExport";
 
 const CATEGORY_LABELS: Record<string, string> = {
   workstation: "Posto de Trabalho",
@@ -75,6 +77,7 @@ const STATUS_OPTIONS = ["draft", "in_progress", "completed", "reviewed"];
 
 export default function ErgonomicAssessmentForm() {
   usePageMeta({ title: "Avaliação Ergonômica" });
+  const { exportPdf, isExporting } = usePdfExport();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { selectedTenant } = useTenant();
@@ -196,10 +199,21 @@ export default function ErgonomicAssessmentForm() {
   return (
     <DashboardLayout>
       <div className="space-y-6 p-6">
-        <Button variant="ghost" onClick={() => navigate("/ergonomic-assessments")}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Voltar
-        </Button>
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" onClick={() => navigate("/ergonomic-assessments")}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isExporting || !tenantId || !id}
+            onClick={() => exportPdf(() => trpc.nr01Pdf.exportErgonomicAssessment.mutate({ tenantId: tenantId!, assessmentId: id! }))}
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            {isExporting ? "Exportando..." : "Exportar PDF"}
+          </Button>
+        </div>
 
         <Card>
           <CardHeader>

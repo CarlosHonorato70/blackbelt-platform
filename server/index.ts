@@ -127,7 +127,7 @@ app.use(
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: process.env.NODE_ENV === "production" ? 100 : 2000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Muitas requisicoes, tente novamente mais tarde." },
@@ -136,7 +136,7 @@ const apiLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 15,
+  max: process.env.NODE_ENV === "production" ? 15 : 100,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Muitas tentativas de login. Aguarde 15 minutos." },

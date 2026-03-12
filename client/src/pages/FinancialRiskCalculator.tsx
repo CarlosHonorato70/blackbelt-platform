@@ -24,7 +24,9 @@ import {
   Save,
   Loader2,
   AlertTriangle,
+  FileDown,
 } from "lucide-react";
+import { usePdfExport } from "@/hooks/usePdfExport";
 
 function formatBRL(value: number): string {
   return new Intl.NumberFormat("pt-BR", {
@@ -62,6 +64,7 @@ export default function FinancialRiskCalculator() {
   usePageMeta({ title: "Calculadora de Risco Financeiro" });
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const { exportPdf, isExporting } = usePdfExport();
 
   const [params, setParams] = useState<FinancialParams>(INITIAL_PARAMS);
 
@@ -138,14 +141,25 @@ export default function FinancialRiskCalculator() {
   return (
     <DashboardLayout>
       <div className="space-y-6 p-6">
-        <div className="flex items-center gap-3">
-          <Calculator className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-2xl font-bold">Calculadora de Risco Financeiro</h1>
-            <p className="text-muted-foreground">
-              Estime o impacto financeiro dos riscos psicossociais na sua organização
-            </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Calculator className="h-8 w-8 text-primary" />
+            <div>
+              <h1 className="text-2xl font-bold">Calculadora de Risco Financeiro</h1>
+              <p className="text-muted-foreground">
+                Estime o impacto financeiro dos riscos psicossociais na sua organização
+              </p>
+            </div>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isExporting || !tenantId}
+            onClick={() => exportPdf(() => trpc.nr01Pdf.exportFinancialCalculator.mutate({ tenantId: tenantId! }))}
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            {isExporting ? "Exportando..." : "Exportar PDF"}
+          </Button>
         </div>
 
         {paramsQuery.isLoading || calcQuery.isLoading ? (

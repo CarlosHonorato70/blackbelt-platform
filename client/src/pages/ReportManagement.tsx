@@ -39,7 +39,9 @@ import {
   CheckCircle2,
   Clock,
   FileText,
+  FileDown,
 } from "lucide-react";
+import { usePdfExport } from "@/hooks/usePdfExport";
 
 const CATEGORY_LABELS: Record<string, string> = {
   harassment: "Assedio",
@@ -80,6 +82,7 @@ const SEVERITY_LABELS: Record<string, string> = {
 
 export default function ReportManagement() {
   usePageMeta({ title: "Gestao de Denuncias" });
+  const { exportPdf, isExporting } = usePdfExport();
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
 
@@ -148,11 +151,22 @@ export default function ReportManagement() {
   return (
     <DashboardLayout>
       <div className="space-y-6 p-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Gestao de Denuncias</h1>
-          <p className="text-muted-foreground">
-            Acompanhe e gerencie denuncias do canal anonimo
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Gestao de Denuncias</h1>
+            <p className="text-muted-foreground">
+              Acompanhe e gerencie denuncias do canal anonimo
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isExporting || !tenantId}
+            onClick={() => exportPdf(() => trpc.nr01Pdf.exportAnonymousReports.mutate({ tenantId: tenantId! }))}
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            {isExporting ? "Exportando..." : "Exportar PDF"}
+          </Button>
         </div>
 
         <div className="grid gap-4 md:grid-cols-4">

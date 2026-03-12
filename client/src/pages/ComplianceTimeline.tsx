@@ -24,7 +24,9 @@ import {
   Loader2,
   Plus,
   Calendar,
+  FileDown,
 } from "lucide-react";
+import { usePdfExport } from "@/hooks/usePdfExport";
 
 const STATUS_CONFIG: Record<string, { label: string; icon: any; color: string; badgeClass: string }> = {
   pending: {
@@ -57,6 +59,7 @@ export default function ComplianceTimeline() {
   usePageMeta({ title: "Cronograma NR-01" });
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const { exportPdf, isExporting } = usePdfExport();
 
   if (!tenantId) {
     return (
@@ -123,6 +126,15 @@ export default function ComplianceTimeline() {
               </p>
             </div>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isExporting || !tenantId}
+            onClick={() => exportPdf(() => trpc.nr01Pdf.exportComplianceTimeline.mutate({ tenantId: tenantId! }))}
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            {isExporting ? "Exportando..." : "Exportar PDF"}
+          </Button>
         </div>
 
         {isLoading ? (
