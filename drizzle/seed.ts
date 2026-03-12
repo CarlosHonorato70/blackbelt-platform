@@ -90,8 +90,10 @@ async function seed() {
   // 4. Seed Roles
   console.log("[4/8] Seeding roles...");
   const seedRoles = [
-    { id: nanoid(), systemName: "admin", displayName: "Administrador", description: "Acesso total ao sistema", scope: "global" },
+    { id: nanoid(), systemName: "admin", displayName: "Administrador Master", description: "Dono da plataforma - acesso total ao sistema", scope: "global" },
+    { id: nanoid(), systemName: "consultant", displayName: "Consultor", description: "Consultoria/consultor que paga assinatura e gerencia empresas clientes", scope: "tenant" },
     { id: nanoid(), systemName: "manager", displayName: "Gerente", description: "Gestao do tenant", scope: "tenant" },
+    { id: nanoid(), systemName: "company_admin", displayName: "Admin Empresa", description: "Admin da empresa cliente - visualiza relatorios e responde pesquisas", scope: "tenant" },
     { id: nanoid(), systemName: "analyst", displayName: "Analista", description: "Avaliacoes e relatorios", scope: "tenant" },
     { id: nanoid(), systemName: "viewer", displayName: "Visualizador", description: "Somente leitura", scope: "tenant" },
   ];
@@ -128,6 +130,19 @@ async function seed() {
     { id: nanoid(), name: "tickets:read", resource: "tickets", action: "read", description: "Visualizar tickets" },
     { id: nanoid(), name: "tickets:update", resource: "tickets", action: "update", description: "Editar tickets" },
     { id: nanoid(), name: "data_export:read", resource: "data_export", action: "read", description: "Exportar dados LGPD" },
+    { id: nanoid(), name: "companies:create", resource: "companies", action: "create", description: "Criar empresas clientes" },
+    { id: nanoid(), name: "companies:read", resource: "companies", action: "read", description: "Visualizar empresas clientes" },
+    { id: nanoid(), name: "companies:update", resource: "companies", action: "update", description: "Editar empresas clientes" },
+    { id: nanoid(), name: "companies:delete", resource: "companies", action: "delete", description: "Remover empresas clientes" },
+    { id: nanoid(), name: "proposals:create", resource: "proposals", action: "create", description: "Criar propostas" },
+    { id: nanoid(), name: "proposals:read", resource: "proposals", action: "read", description: "Visualizar propostas" },
+    { id: nanoid(), name: "services:create", resource: "services", action: "create", description: "Criar servicos" },
+    { id: nanoid(), name: "services:read", resource: "services", action: "read", description: "Visualizar servicos" },
+    { id: nanoid(), name: "surveys:create", resource: "surveys", action: "create", description: "Criar pesquisas" },
+    { id: nanoid(), name: "surveys:respond", resource: "surveys", action: "respond", description: "Responder pesquisas" },
+    { id: nanoid(), name: "training:create", resource: "training", action: "create", description: "Criar treinamentos" },
+    { id: nanoid(), name: "training:read", resource: "training", action: "read", description: "Visualizar treinamentos" },
+    { id: nanoid(), name: "reports:create_anonymous", resource: "reports", action: "create_anonymous", description: "Criar denuncia anonima" },
   ];
   for (const perm of seedPermissions) {
     const existing = await db.select().from(permissions).where(eq(permissions.name, perm.name)).limit(1);
@@ -146,16 +161,48 @@ async function seed() {
   const existingRP = await db.select().from(rolePermissions);
 
   if (existingRP.length === 0) {
+    const consultantRole = dbRoles.find((r: any) => r.systemName === "consultant");
     const managerRole = dbRoles.find((r: any) => r.systemName === "manager");
+    const companyAdminRole = dbRoles.find((r: any) => r.systemName === "company_admin");
     const analystRole = dbRoles.find((r: any) => r.systemName === "analyst");
     const viewerRole = dbRoles.find((r: any) => r.systemName === "viewer");
 
     const rpEntries: Array<{id: string; roleId: string; permissionId: string}> = [];
 
-    // Manager gets ALL permissions
+    // Consultant gets ALL permissions (manages companies, assessments, proposals, etc.)
+    if (consultantRole) {
+      for (const perm of dbPerms) {
+        rpEntries.push({ id: nanoid(), roleId: consultantRole.id, permissionId: perm.id });
+      }
+    }
+
+    // Manager gets ALL permissions (backward compat)
     if (managerRole) {
       for (const perm of dbPerms) {
         rpEntries.push({ id: nanoid(), roleId: managerRole.id, permissionId: perm.id });
+      }
+    }
+
+    // Company Admin: read reports/dashboards, respond surveys, create anonymous reports, view training, manage own sectors/people
+    if (companyAdminRole) {
+      const companyPerms = dbPerms.filter((p: any) =>
+        // Read-only: assessments, reports, subscriptions, services, proposals
+        (["assessments", "reports", "subscriptions", "services", "proposals", "training", "companies"].includes(p.resource) && p.action === "read") ||
+        // Full CRUD: sectors, people (own company)
+        ["sectors", "people"].includes(p.resource) ||
+        // Tickets: create + read
+        (p.resource === "tickets" && (p.action === "create" || p.action === "read")) ||
+        // Respond surveys
+        (p.resource === "surveys" && p.action === "respond") ||
+        // Create anonymous reports
+        (p.resource === "reports" && p.action === "create_anonymous") ||
+        // Export reports/PDFs
+        (p.resource === "reports" && p.action === "export") ||
+        // Data export
+        (p.resource === "data_export" && p.action === "read")
+      );
+      for (const perm of companyPerms) {
+        rpEntries.push({ id: nanoid(), roleId: companyAdminRole.id, permissionId: perm.id });
       }
     }
 

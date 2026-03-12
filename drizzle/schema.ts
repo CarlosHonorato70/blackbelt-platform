@@ -80,6 +80,10 @@ export const tenants = mysqlTable(
     emailSenderEmail: varchar("emailSenderEmail", { length: 320 }),
     whiteLabelEnabled: boolean("whiteLabelEnabled").default(false),
 
+    // Hierarquia de 3 níveis: consultant (nível 2) → company (nível 3)
+    tenantType: varchar("tenantType", { length: 20 }).default("consultant").notNull(),
+    parentTenantId: varchar("parentTenantId", { length: 64 }),
+
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
@@ -87,6 +91,8 @@ export const tenants = mysqlTable(
     nameIdx: index("idx_tenant_name").on(table.name),
     statusIdx: index("idx_tenant_status").on(table.status),
     customDomainIdx: index("idx_tenant_custom_domain").on(table.customDomain),
+    parentTenantIdx: index("idx_tenant_parent").on(table.parentTenantId),
+    tenantTypeIdx: index("idx_tenant_type").on(table.tenantType),
   })
 );
 

@@ -80,6 +80,7 @@ const DeadlineAlerts = lazy(() => import("./pages/DeadlineAlerts"));
 const ErgonomicAssessments = lazy(() => import("./pages/ErgonomicAssessments"));
 const ErgonomicAssessmentForm = lazy(() => import("./pages/ErgonomicAssessmentForm"));
 const EsocialExport = lazy(() => import("./pages/EsocialExport"));
+const Companies = lazy(() => import("./pages/Companies"));
 
 // Subscription pages
 const Pricing = lazy(() => import("./pages/subscription/Pricing"));
@@ -138,6 +139,7 @@ export default function App() {
 
                 {/* Gestao de empresas e equipe */}
                 <Route path="/tenants" element={<ProtectedPage><Tenants /></ProtectedPage>} />
+                <Route path="/companies" element={<ProtectedPage><Companies /></ProtectedPage>} />
                 <Route path="/sectors" element={<ProtectedPage><Sectors /></ProtectedPage>} />
                 <Route path="/people" element={<ProtectedPage><People /></ProtectedPage>} />
 

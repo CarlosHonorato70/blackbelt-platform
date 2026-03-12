@@ -32,36 +32,53 @@ export async function createContext({ req, res }: { req: Request; res: Response 
     // Se result === null, token expirado ou invalido -> user permanece null
   }
 
-  // Impersonacao: admin pode visualizar como outro tenant
+  // Impersonacao: admin pode impersonar qualquer tenant,
+  // consultor pode impersonar suas próprias empresas
   let isImpersonating = false;
-  if (user && user.role === "admin") {
+  if (user) {
     const impersonateTenantId = req.headers["x-impersonate-tenant"] as string | undefined;
     if (impersonateTenantId) {
-      // Validar que o tenant existe
       const tenant = await db.getTenant(impersonateTenantId);
       if (tenant) {
-        user = { ...user, tenantId: impersonateTenantId };
-        isImpersonating = true;
+        let allowed = false;
 
-        // Audit log de impersonacao por request
-        try {
-          await db.createAuditLog({
-            tenantId: impersonateTenantId,
+        if (user.role === "admin") {
+          // Admin pode impersonar qualquer tenant
+          allowed = true;
+        } else if (user.tenantId && tenant.parentTenantId === user.tenantId) {
+          // Consultor pode impersonar empresas filhas (parentTenantId = seu tenantId)
+          allowed = true;
+        }
+
+        if (allowed) {
+          user = { ...user, tenantId: impersonateTenantId };
+          isImpersonating = true;
+
+          // Audit log de impersonacao
+          try {
+            await db.createAuditLog({
+              tenantId: impersonateTenantId,
+              userId: user.id,
+              action: "IMPERSONATE",
+              entityType: "tenant",
+              entityId: impersonateTenantId,
+              oldValues: null,
+              newValues: { path: req.path, method: req.method },
+              ipAddress: req.ip,
+              userAgent: req.headers["user-agent"],
+            });
+          } catch (e) {
+            log.warn("Failed to log impersonation", { error: String(e) });
+          }
+        } else {
+          log.warn("Unauthorized impersonation attempt", {
             userId: user.id,
-            action: "IMPERSONATE",
-            entityType: "tenant",
-            entityId: impersonateTenantId,
-            oldValues: null,
-            newValues: { path: req.path, method: req.method },
-            ipAddress: req.ip,
-            userAgent: req.headers["user-agent"],
+            targetTenantId: impersonateTenantId,
           });
-        } catch (e) {
-          log.warn("Failed to log impersonation", { error: String(e) });
         }
       } else {
         log.warn("Impersonation attempt for non-existent tenant", {
-          adminId: user.id,
+          userId: user.id,
           tenantId: impersonateTenantId,
         });
       }

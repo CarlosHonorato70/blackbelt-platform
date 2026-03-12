@@ -821,7 +821,7 @@ export const servicesRouter = router({
     return await db.listServices(ctx.tenantId!);
   }),
 
-  create: protectedProcedure
+  create: tenantProcedure
     .input(
       z.object({
         name: z.string().min(1),
@@ -833,9 +833,8 @@ export const servicesRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       return await db.createService({
-        tenantId: ctx.tenantId!,
+        tenantId: ctx.tenantId,
         ...input,
       });
     }),
@@ -923,7 +922,7 @@ export const proposalsRouter = router({
       return await db.listProposals(ctx.tenantId!, input.clientId);
     }),
 
-  create: protectedProcedure
+  create: tenantProcedure
     .input(
       z.object({
         clientId: z.string(),
@@ -942,11 +941,10 @@ export const proposalsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       const client = await db.getClient(input.clientId);
-      if (client?.tenantId !== ctx.tenantId!) throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
+      if (client?.tenantId !== ctx.tenantId) throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
       return await db.createProposal({
-        tenantId: ctx.tenantId!,
+        tenantId: ctx.tenantId,
         ...input,
       });
     }),
@@ -1070,7 +1068,7 @@ export const pricingCalculationsRouter = router({
 // ============================================================================
 
 export const assessmentProposalsRouter = router({
-  link: protectedProcedure
+  link: tenantProcedure
     .input(
       z.object({
         assessmentId: z.string(),
@@ -1080,9 +1078,8 @@ export const assessmentProposalsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       return await db.createAssessmentProposal({
-        tenantId: ctx.tenantId!,
+        tenantId: ctx.tenantId,
         ...input,
       });
     }),
