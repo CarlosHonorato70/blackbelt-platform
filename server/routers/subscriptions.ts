@@ -19,6 +19,7 @@ import {
 } from "../../drizzle/schema";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { ensureTenantForUser } from "../_core/tenantHelpers";
 
 export const subscriptionsRouter = router({
   // ============================================================================
@@ -116,8 +117,10 @@ export const subscriptionsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      if (!ctx.tenantId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
+      // Garantir que usuário tenha tenant (auto-cria se necessário)
+      const tenantId = await ensureTenantForUser(ctx.user.id, ctx.user.name, ctx.user.email, ctx.user.tenantId);
+      if (!tenantId) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar sua organização. Tente novamente." });
       }
 
       const db = await getDb();
@@ -127,7 +130,7 @@ export const subscriptionsRouter = router({
       const [existing] = await db
         .select()
         .from(subscriptions)
-        .where(eq(subscriptions.tenantId, ctx.tenantId))
+        .where(eq(subscriptions.tenantId, tenantId))
         .limit(1);
 
       if (existing) {
@@ -166,7 +169,7 @@ export const subscriptionsRouter = router({
       const subscriptionId = nanoid();
       await db.insert(subscriptions).values({
         id: subscriptionId,
-        tenantId: ctx.tenantId,
+        tenantId: tenantId,
         planId: input.planId,
         status: "trialing",
         billingCycle: input.billingCycle,
