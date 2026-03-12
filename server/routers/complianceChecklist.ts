@@ -1,0 +1,227 @@
+import { TRPCError } from "@trpc/server";
+import { z } from "zod";
+import { nanoid } from "nanoid";
+import { publicProcedure, router } from "../_core/trpc";
+import { requireActiveSubscription } from "../_core/subscriptionMiddleware";
+import { getDb } from "../db";
+import { complianceChecklist } from "../../drizzle/schema_nr01";
+import { eq, and, desc, sql } from "drizzle-orm";
+
+export const complianceChecklistRouter = router({
+  // Listar itens do checklist
+  list: publicProcedure
+    .input(
+      z.object({
+        tenantId: z.string(),
+        category: z.string().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [];
+
+      const conditions = [eq(complianceChecklist.tenantId, input.tenantId)];
+
+      if (input.category) {
+        conditions.push(eq(complianceChecklist.category, input.category));
+      }
+
+      const items = await db
+        .select()
+        .from(complianceChecklist)
+        .where(and(...conditions))
+        .orderBy(complianceChecklist.requirementCode);
+
+      return items;
+    }),
+
+  // Atualizar status de item do checklist
+  updateStatus: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        status: z.enum(["compliant", "partial", "non_compliant", "not_applicable"]),
+        notes: z.string().optional(),
+        evidenceDocId: z.string().optional(),
+        verifiedBy: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
+
+      const updateData: any = {
+        status: input.status,
+        verifiedAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      if (input.notes !== undefined) updateData.notes = input.notes;
+      if (input.evidenceDocId !== undefined) updateData.evidenceDocId = input.evidenceDocId;
+      if (input.verifiedBy !== undefined) updateData.verifiedBy = input.verifiedBy;
+
+      await db
+        .update(complianceChecklist)
+        .set(updateData)
+        .where(eq(complianceChecklist.id, input.id));
+
+      return { success: true };
+    }),
+
+  // Obter score de conformidade
+  getComplianceScore: publicProcedure
+    .input(z.object({ tenantId: z.string() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
+
+      const items = await db
+        .select()
+        .from(complianceChecklist)
+        .where(eq(complianceChecklist.tenantId, input.tenantId));
+
+      const total = items.length;
+      const compliant = items.filter((i) => i.status === "compliant").length;
+      const partial = items.filter((i) => i.status === "partial").length;
+      const nonCompliant = items.filter((i) => i.status === "non_compliant").length;
+      const notApplicable = items.filter((i) => i.status === "not_applicable").length;
+
+      const applicable = total - notApplicable;
+      const scorePercent =
+        applicable > 0
+          ? Math.round(((compliant + partial * 0.5) / applicable) * 100)
+          : 0;
+
+      return { total, compliant, partial, nonCompliant, notApplicable, scorePercent };
+    }),
+
+  // Criar requisitos NR-01 padrão
+  seedNr01Requirements: publicProcedure
+    .input(z.object({ tenantId: z.string() }))
+    .mutation(async ({ input }) => {
+      await requireActiveSubscription(input.tenantId);
+      const db = await getDb();
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
+
+      // Verificar se já existem itens
+      const existing = await db
+        .select()
+        .from(complianceChecklist)
+        .where(eq(complianceChecklist.tenantId, input.tenantId))
+        .limit(1);
+
+      if (existing.length > 0) {
+        return { seeded: false, message: "Checklist já existe para este tenant" };
+      }
+
+      const requirements = [
+        // GRO - Gerenciamento de Riscos
+        { code: "NR01-1.5.3.1", text: "Inventário de riscos com fatores psicossociais identificados", category: "GRO - Gerenciamento de Riscos" },
+        { code: "NR01-1.5.3.2", text: "Avaliação de riscos psicossociais com metodologia validada", category: "GRO - Gerenciamento de Riscos" },
+        { code: "NR01-1.5.3.3", text: "Classificação de riscos por severidade e probabilidade", category: "GRO - Gerenciamento de Riscos" },
+        { code: "NR01-1.5.4.1", text: "Plano de ação com medidas preventivas para riscos psicossociais", category: "GRO - Gerenciamento de Riscos" },
+        { code: "NR01-1.5.4.2", text: "Hierarquia de controles aplicada (eliminação→PPE)", category: "GRO - Gerenciamento de Riscos" },
+        { code: "NR01-1.5.4.3", text: "Responsáveis e prazos definidos para cada ação", category: "GRO - Gerenciamento de Riscos" },
+        // Documentação
+        { code: "NR01-1.5.7.1", text: "PGR atualizado com seção de riscos psicossociais", category: "Documentação" },
+        { code: "NR01-1.5.7.2", text: "Laudo técnico assinado por profissional habilitado", category: "Documentação" },
+        { code: "NR01-1.5.7.3", text: "Registro de treinamentos realizados", category: "Documentação" },
+        { code: "NR01-1.5.7.4", text: "Atas de reunião de análise de riscos", category: "Documentação" },
+        // PCMSO
+        { code: "NR07-7.5.1", text: "PCMSO integrado com riscos psicossociais do PGR", category: "PCMSO" },
+        { code: "NR07-7.5.2", text: "Exames complementares para saúde mental definidos", category: "PCMSO" },
+        { code: "NR07-7.5.3", text: "Monitoramento periódico de saúde mental", category: "PCMSO" },
+        // Participação dos Trabalhadores
+        { code: "NR01-1.5.3.4", text: "Canal de escuta/denúncia anônima implementado", category: "Participação dos Trabalhadores" },
+        { code: "NR01-1.5.3.5", text: "Pesquisa de clima organizacional realizada", category: "Participação dos Trabalhadores" },
+        { code: "NR01-1.5.3.6", text: "COPSOQ-II ou instrumento validado aplicado", category: "Participação dos Trabalhadores" },
+        { code: "NR01-1.5.3.7", text: "Feedback dos resultados comunicado aos trabalhadores", category: "Participação dos Trabalhadores" },
+        // Treinamento
+        { code: "NR01-1.5.5.1", text: "Treinamento de lideranças sobre riscos psicossociais", category: "Treinamento" },
+        { code: "NR01-1.5.5.2", text: "Capacitação da CIPA em saúde mental", category: "Treinamento" },
+        { code: "NR01-1.5.5.3", text: "Programa de prevenção ao assédio moral e sexual", category: "Treinamento" },
+        // Monitoramento
+        { code: "NR01-1.5.6.1", text: "Indicadores de saúde mental monitorados mensalmente", category: "Monitoramento" },
+        { code: "NR01-1.5.6.2", text: "Reavaliação periódica dos riscos psicossociais", category: "Monitoramento" },
+        { code: "NR01-1.5.6.3", text: "Acompanhamento de eficácia das ações implementadas", category: "Monitoramento" },
+        // NR-17 Ergonomia
+        { code: "NR17-17.1.1", text: "AEP realizada com fatores organizacionais", category: "NR-17 Ergonomia" },
+        { code: "NR17-17.1.2", text: "AET quando requerida pela AEP", category: "NR-17 Ergonomia" },
+      ];
+
+      const ids: string[] = [];
+
+      for (const req of requirements) {
+        const id = nanoid();
+        ids.push(id);
+
+        await db.insert(complianceChecklist).values({
+          id,
+          tenantId: input.tenantId,
+          requirementCode: req.code,
+          requirementText: req.text,
+          category: req.category,
+          status: "non_compliant",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+
+      return { seeded: true, count: ids.length };
+    }),
+
+  // Exportar dados do checklist para geração de PDF
+  exportPdf: publicProcedure
+    .input(z.object({ tenantId: z.string() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
+
+      const items = await db
+        .select()
+        .from(complianceChecklist)
+        .where(eq(complianceChecklist.tenantId, input.tenantId))
+        .orderBy(complianceChecklist.requirementCode);
+
+      // Agrupar por categoria
+      const grouped: Record<string, typeof items> = {};
+      for (const item of items) {
+        const cat = item.category;
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(item);
+      }
+
+      const total = items.length;
+      const compliant = items.filter((i) => i.status === "compliant").length;
+      const notApplicable = items.filter((i) => i.status === "not_applicable").length;
+      const applicable = total - notApplicable;
+      const partial = items.filter((i) => i.status === "partial").length;
+      const scorePercent =
+        applicable > 0
+          ? Math.round(((compliant + partial * 0.5) / applicable) * 100)
+          : 0;
+
+      return {
+        generatedAt: new Date(),
+        tenantId: input.tenantId,
+        summary: { total, compliant, partial, nonCompliant: total - compliant - partial - notApplicable, notApplicable, scorePercent },
+        categories: grouped,
+      };
+    }),
+});

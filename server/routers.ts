@@ -39,6 +39,19 @@ import { aiRouter } from "./routers/ai";
 import { adminSubscriptionsRouter } from "./routers/adminSubscriptions";
 import { supportTicketsRouter } from "./routers/supportTickets";
 import { adminMetricsRouter } from "./routers/adminMetrics";
+import { pcmsoIntegrationRouter } from "./routers/pcmsoIntegration";
+import { psychosocialDashboardRouter } from "./routers/psychosocialDashboard";
+import { financialCalculatorRouter } from "./routers/financialCalculator";
+import { complianceTimelineRouter } from "./routers/complianceTimeline";
+import { complianceChecklistRouter } from "./routers/complianceChecklist";
+import { complianceCertificateRouter } from "./routers/complianceCertificate";
+import { benchmarkRouter } from "./routers/benchmark";
+import { climateSurveysRouter } from "./routers/climateSurveys";
+import { trainingRouter } from "./routers/training";
+import { anonymousReportsRouter } from "./routers/anonymousReports";
+import { deadlineAlertsRouter } from "./routers/deadlineAlerts";
+import { ergonomicAssessmentsRouter } from "./routers/ergonomicAssessments";
+import { esocialExportRouter } from "./routers/esocialExport";
 
 
 export const appRouter = router({
@@ -107,6 +120,21 @@ export const appRouter = router({
   adminSubscriptions: adminSubscriptionsRouter,
   supportTickets: supportTicketsRouter,
   adminMetrics: adminMetricsRouter,
+
+  // Entregáveis NR-01 Completos
+  pcmsoIntegration: pcmsoIntegrationRouter,
+  psychosocialDashboard: psychosocialDashboardRouter,
+  financialCalculator: financialCalculatorRouter,
+  complianceTimeline: complianceTimelineRouter,
+  complianceChecklist: complianceChecklistRouter,
+  complianceCertificate: complianceCertificateRouter,
+  benchmark: benchmarkRouter,
+  climateSurveys: climateSurveysRouter,
+  training: trainingRouter,
+  anonymousReports: anonymousReportsRouter,
+  deadlineAlerts: deadlineAlertsRouter,
+  ergonomicAssessments: ergonomicAssessmentsRouter,
+  esocialExport: esocialExportRouter,
 });
 
 export type AppRouter = typeof appRouter;
