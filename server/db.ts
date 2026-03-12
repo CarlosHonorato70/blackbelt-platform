@@ -37,6 +37,21 @@ import {
   userInvites,
   userRoles,
   users,
+  ticketMessages,
+  supportTickets,
+  securityAlerts,
+  sessions,
+  ipWhitelist,
+  user2FA,
+  apiKeyUsage,
+  apiKeys,
+  webhookDeliveries,
+  webhooks,
+  pdfExports,
+  usageMetrics,
+  invoices,
+  subscriptions,
+  onboardingProgress,
 } from "../drizzle/schema";
 import {
   copsoqAssessments,
@@ -302,65 +317,89 @@ export async function deleteTenant(id: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Cascade delete: remove dependent records in correct order
-  // Child tables that reference tenantId
-  const { ticketMessages, supportTickets, securityAlerts, loginAttempts,
-    sessions, ipWhitelist, user2FA, apiKeyUsage, apiKeys,
-    webhookDeliveries, webhooks, pdfExports, usageMetrics, invoices,
-    subscriptions, onboardingProgress, assessmentProposals, proposalItems, proposals,
-    pricingParameters, services, clients, dataConsents, auditLogs,
-    userRoles, userInvites, people, sectors, tenantSettings } = await import("../drizzle/schema");
+  // Helper: tenta deletar de uma tabela, ignora se a tabela não existir
+  async function safeDelete(fn: () => Promise<any>, label: string) {
+    try {
+      await fn();
+    } catch (err: any) {
+      // Ignora erros de tabela inexistente (1146) ou coluna inexistente (1054)
+      if (err?.errno === 1146 || err?.errno === 1054 || err?.code === "ER_NO_SUCH_TABLE") {
+        log.warn(`deleteTenant: table/column not found for ${label}, skipping`);
+      } else {
+        log.error(`deleteTenant: error deleting ${label}`, { error: err?.message || String(err) });
+        throw err;
+      }
+    }
+  }
 
-  // Delete in dependency order (most dependent first)
-  await db.delete(ticketMessages).where(
+  log.info("deleteTenant: starting cascade delete", { tenantId: id });
+
+  // NR-01 tables (schema_nr01)
+  try {
+    const { copsoqResponses, copsoqReports, copsoqAssessments } = await import("../drizzle/schema_nr01");
+    await safeDelete(() => db.delete(copsoqResponses).where(
+      sql`assessmentId IN (SELECT id FROM copsoq_assessments WHERE tenantId = ${id})`
+    ), "copsoqResponses");
+    await safeDelete(() => db.delete(copsoqReports).where(
+      sql`assessmentId IN (SELECT id FROM copsoq_assessments WHERE tenantId = ${id})`
+    ), "copsoqReports");
+    await safeDelete(() => db.delete(copsoqAssessments).where(eq(copsoqAssessments.tenantId, id)), "copsoqAssessments");
+  } catch (err) {
+    log.warn("deleteTenant: schema_nr01 cleanup skipped", { error: err instanceof Error ? err.message : String(err) });
+  }
+
+  // Delete in dependency order (most dependent first) - using static imports
+  await safeDelete(() => db.delete(ticketMessages).where(
     sql`ticketId IN (SELECT id FROM support_tickets WHERE tenantId = ${id})`
-  );
-  await db.delete(supportTickets).where(eq(supportTickets.tenantId, id));
-  await db.delete(securityAlerts).where(eq(securityAlerts.tenantId, id));
-  await db.delete(loginAttempts).where(
+  ), "ticketMessages");
+  await safeDelete(() => db.delete(supportTickets).where(eq(supportTickets.tenantId, id)), "supportTickets");
+  await safeDelete(() => db.delete(securityAlerts).where(eq(securityAlerts.tenantId, id)), "securityAlerts");
+  await safeDelete(() => db.delete(loginAttempts).where(
     sql`email IN (SELECT email FROM users WHERE tenantId = ${id})`
-  );
-  await db.delete(sessions).where(
+  ), "loginAttempts");
+  await safeDelete(() => db.delete(sessions).where(
     sql`userId IN (SELECT id FROM users WHERE tenantId = ${id})`
-  );
-  await db.delete(ipWhitelist).where(eq(ipWhitelist.tenantId, id));
-  await db.delete(user2FA).where(
+  ), "sessions");
+  await safeDelete(() => db.delete(ipWhitelist).where(eq(ipWhitelist.tenantId, id)), "ipWhitelist");
+  await safeDelete(() => db.delete(user2FA).where(
     sql`userId IN (SELECT id FROM users WHERE tenantId = ${id})`
-  );
-  await db.delete(apiKeyUsage).where(
+  ), "user2FA");
+  await safeDelete(() => db.delete(apiKeyUsage).where(
     sql`apiKeyId IN (SELECT id FROM api_keys WHERE tenantId = ${id})`
-  );
-  await db.delete(apiKeys).where(eq(apiKeys.tenantId, id));
-  await db.delete(webhookDeliveries).where(
+  ), "apiKeyUsage");
+  await safeDelete(() => db.delete(apiKeys).where(eq(apiKeys.tenantId, id)), "apiKeys");
+  await safeDelete(() => db.delete(webhookDeliveries).where(
     sql`webhookId IN (SELECT id FROM webhooks WHERE tenantId = ${id})`
-  );
-  await db.delete(webhooks).where(eq(webhooks.tenantId, id));
-  await db.delete(pdfExports).where(eq(pdfExports.tenantId, id));
-  await db.delete(usageMetrics).where(eq(usageMetrics.tenantId, id));
-  await db.delete(invoices).where(eq(invoices.tenantId, id));
-  await db.delete(subscriptions).where(eq(subscriptions.tenantId, id));
-  await db.delete(onboardingProgress).where(eq(onboardingProgress.tenantId, id));
-  await db.delete(assessmentProposals).where(eq(assessmentProposals.tenantId, id));
-  await db.delete(proposalItems).where(
+  ), "webhookDeliveries");
+  await safeDelete(() => db.delete(webhooks).where(eq(webhooks.tenantId, id)), "webhooks");
+  await safeDelete(() => db.delete(pdfExports).where(eq(pdfExports.tenantId, id)), "pdfExports");
+  await safeDelete(() => db.delete(usageMetrics).where(eq(usageMetrics.tenantId, id)), "usageMetrics");
+  await safeDelete(() => db.delete(invoices).where(eq(invoices.tenantId, id)), "invoices");
+  await safeDelete(() => db.delete(subscriptions).where(eq(subscriptions.tenantId, id)), "subscriptions");
+  await safeDelete(() => db.delete(onboardingProgress).where(eq(onboardingProgress.tenantId, id)), "onboardingProgress");
+  await safeDelete(() => db.delete(assessmentProposals).where(eq(assessmentProposals.tenantId, id)), "assessmentProposals");
+  await safeDelete(() => db.delete(proposalItems).where(
     sql`proposalId IN (SELECT id FROM proposals WHERE tenantId = ${id})`
-  );
-  await db.delete(proposals).where(eq(proposals.tenantId, id));
-  await db.delete(pricingParameters).where(eq(pricingParameters.tenantId, id));
-  await db.delete(services).where(eq(services.tenantId, id));
-  await db.delete(clients).where(eq(clients.tenantId, id));
-  await db.delete(dataConsents).where(eq(dataConsents.tenantId, id));
-  await db.delete(auditLogs).where(eq(auditLogs.tenantId, id));
-  await db.delete(userRoles).where(eq(userRoles.tenantId, id));
-  await db.delete(userInvites).where(eq(userInvites.tenantId, id));
-  await db.delete(people).where(eq(people.tenantId, id));
-  await db.delete(sectors).where(eq(sectors.tenantId, id));
-  await db.delete(tenantSettings).where(eq(tenantSettings.tenantId, id));
+  ), "proposalItems");
+  await safeDelete(() => db.delete(proposals).where(eq(proposals.tenantId, id)), "proposals");
+  await safeDelete(() => db.delete(pricingParameters).where(eq(pricingParameters.tenantId, id)), "pricingParameters");
+  await safeDelete(() => db.delete(services).where(eq(services.tenantId, id)), "services");
+  await safeDelete(() => db.delete(clients).where(eq(clients.tenantId, id)), "clients");
+  await safeDelete(() => db.delete(dataConsents).where(eq(dataConsents.tenantId, id)), "dataConsents");
+  await safeDelete(() => db.delete(auditLogs).where(eq(auditLogs.tenantId, id)), "auditLogs");
+  await safeDelete(() => db.delete(userRoles).where(eq(userRoles.tenantId, id)), "userRoles");
+  await safeDelete(() => db.delete(userInvites).where(eq(userInvites.tenantId, id)), "userInvites");
+  await safeDelete(() => db.delete(people).where(eq(people.tenantId, id)), "people");
+  await safeDelete(() => db.delete(sectors).where(eq(sectors.tenantId, id)), "sectors");
+  await safeDelete(() => db.delete(tenantSettings).where(eq(tenantSettings.tenantId, id)), "tenantSettings");
 
   // Desassociar users do tenant (não excluir users)
-  await db.update(users).set({ tenantId: null }).where(eq(users.tenantId, id));
+  await safeDelete(() => db.update(users).set({ tenantId: null }).where(eq(users.tenantId, id)), "users-disassociate");
 
   // Finalmente, excluir o tenant
   await db.delete(tenants).where(eq(tenants.id, id));
+
+  log.info("deleteTenant: cascade delete completed", { tenantId: id });
 }
 
 // ============================================================================

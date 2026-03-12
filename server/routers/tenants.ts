@@ -224,17 +224,25 @@ export const tenantsRouter = router({
 
       await db.deleteTenant(input.id);
 
-      await db.createAuditLog({
-        tenantId: input.id,
-        userId: ctx.user.id,
-        action: "DELETE",
-        entityType: "tenants",
-        entityId: input.id,
-        oldValues: tenant,
-        newValues: null,
-        ipAddress: ctx.req.ip,
-        userAgent: ctx.req.headers["user-agent"],
-      });
+      // Audit log com tenantId null porque o tenant já foi deletado
+      try {
+        await db.createAuditLog({
+          tenantId: null,
+          userId: ctx.user.id,
+          action: "DELETE",
+          entityType: "tenants",
+          entityId: input.id,
+          oldValues: tenant,
+          newValues: null,
+          ipAddress: ctx.req.ip,
+          userAgent: ctx.req.headers["user-agent"],
+        });
+      } catch (auditErr) {
+        log.warn("Failed to create audit log after tenant delete", {
+          tenantId: input.id,
+          error: auditErr instanceof Error ? auditErr.message : String(auditErr),
+        });
+      }
 
       return { success: true };
     }),
