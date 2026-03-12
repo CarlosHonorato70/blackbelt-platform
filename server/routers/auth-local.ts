@@ -12,7 +12,7 @@ import { getSessionCookieOptions, createSessionToken } from "../_core/cookies";
 import { ENV } from "../_core/env";
 import { sendEmail } from "../_core/email";
 import { eq } from "drizzle-orm";
-import { roles, userRoles, users } from "../../drizzle/schema";
+import { roles, userRoles, users, tenants } from "../../drizzle/schema";
 import { getSubscriptionContext } from "../_core/subscriptionMiddleware";
 
 // Password reset token helpers (HMAC-signed, no DB needed)
@@ -127,6 +127,29 @@ export const authLocalRouter = router({
 
       const passwordHash = await bcrypt.hash(input.password, 10);
       const userId = nanoid();
+      const drizzleDb = await getDb();
+
+      // Auto-create tenant for new user if none provided
+      let tenantId = input.tenantId || null;
+      if (!tenantId) {
+        try {
+          tenantId = nanoid();
+          const tempCnpj = `00.000.000/${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 90 + 10)}`;
+          await drizzleDb.insert(tenants).values({
+            id: tenantId,
+            name: input.name,
+            cnpj: tempCnpj,
+            contactName: input.name,
+            contactEmail: input.email,
+            status: "active",
+            strategy: "shared_rls",
+          });
+          log.info("Auto-created tenant for new user", { tenantId, userId, email: input.email });
+        } catch (err) {
+          log.error("Failed to auto-create tenant", { error: err instanceof Error ? err.message : String(err) });
+          tenantId = null;
+        }
+      }
 
       await db.upsertUser({
         id: userId,
@@ -134,20 +157,19 @@ export const authLocalRouter = router({
         email: input.email,
         passwordHash,
         loginMethod: "local",
-        tenantId: input.tenantId || null,
+        tenantId,
       });
 
-      // Assign default "manager" role to new user (if tenant provided)
-      if (input.tenantId) {
+      // Assign default "manager" role to new user (if tenant exists)
+      if (tenantId) {
         try {
-          const drizzleDb = await getDb();
           const managerRole = await drizzleDb.select().from(roles).where(eq(roles.systemName, "manager")).limit(1);
           if (managerRole.length > 0) {
-            await drizzleDb!.insert(userRoles).values({
+            await drizzleDb.insert(userRoles).values({
               id: nanoid(),
               userId,
               roleId: managerRole[0].id,
-              tenantId: input.tenantId,
+              tenantId,
             });
           }
         } catch (err) {
