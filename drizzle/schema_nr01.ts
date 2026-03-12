@@ -48,6 +48,13 @@ export const riskAssessments = mysqlTable("risk_assessments", {
     .default("draft")
     .notNull(),
   methodology: text("methodology"), // Metodologia utilizada
+
+  // PGR/GRO fields (Entregável 1)
+  pgrSection: varchar("pgrSection", { length: 50 }), // Seção no PGR (ex: "5.1")
+  groReference: varchar("groReference", { length: 100 }), // Referência GRO/NR-01
+  reviewDate: timestamp("reviewDate"), // Data de revisão
+  approvedBy: varchar("approvedBy", { length: 255 }), // Aprovado por
+
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt").defaultNow(),
 });
@@ -122,6 +129,12 @@ export const actionPlans = mysqlTable("action_plans", {
   monthlySchedule: json("monthly_schedule"),                 // boolean[12] cronograma Jan-Dez
   kpiIndicator: varchar("kpi_indicator", { length: 255 }),   // Indicador de acompanhamento
   expectedImpact: text("expected_impact"),                   // Impacto esperado
+
+  // Entregável 2: Plano de Ação NR-01
+  templateType: varchar("templateType", { length: 30 }), // nr01_preventive, nr01_corrective, custom
+  regulatoryBasis: text("regulatoryBasis"), // Base regulatória (NR-01, NR-17, etc.)
+  verificationMethod: text("verificationMethod"), // Método de verificação de eficácia
+  effectivenessIndicator: text("effectivenessIndicator"), // Indicador de efetividade
 
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt").defaultNow(),
@@ -254,6 +267,8 @@ export const complianceDocuments = mysqlTable("compliance_documents", {
     "action_plan",
     "training_record",
     "audit_report",
+    "laudo_tecnico",
+    "pgr_pcmso_integration",
   ]).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
@@ -266,6 +281,12 @@ export const complianceDocuments = mysqlTable("compliance_documents", {
     .notNull(),
   signedBy: varchar("signedBy", { length: 255 }), // Nome do responsável
   signedAt: timestamp("signedAt"),
+
+  // Entregável 4: Laudo Técnico
+  professionalName: varchar("professionalName", { length: 255 }), // Nome do profissional
+  professionalRegistry: varchar("professionalRegistry", { length: 50 }), // CRP/CRM
+  contentStructure: json("contentStructure"), // Seções do laudo (JSON)
+
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt").defaultNow(),
 });
@@ -387,6 +408,9 @@ export const copsoqReports = mysqlTable("copsoq_reports", {
   aiGeneratedAt: timestamp("ai_generated_at"),  // Quando a analise foi gerada
   aiModel: varchar("ai_model", { length: 100 }),// Modelo utilizado (ex: gemini-2.5-flash)
 
+  // Entregável 3: Relatório COPSOQ Completo
+  demographicBreakdown: json("demographic_breakdown"), // Breakdown por gênero, idade, setor
+
   generatedAt: timestamp("generatedAt"),
   createdAt: timestamp("createdAt").defaultNow(),
 }, (table) => ({
@@ -481,6 +505,314 @@ export const dsrRequests = mysqlTable("dsr_requests", {
 export type DsrRequest = typeof dsrRequests.$inferSelect;
 export type InsertDsrRequest = typeof dsrRequests.$inferInsert;
 
+// ============================================================================
+// Entregável 6: Integração PGR + PCMSO
+// ============================================================================
+
+export const pcmsoRecommendations = mysqlTable("pcmso_recommendations", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  riskAssessmentId: varchar("riskAssessmentId", { length: 64 }),
+  riskFactorId: varchar("riskFactorId", { length: 64 }),
+  examType: varchar("examType", { length: 100 }).notNull(), // ASO, audiometria, etc.
+  frequency: varchar("frequency", { length: 100 }), // Semestral, anual, etc.
+  targetPopulation: text("targetPopulation"),
+  medicalBasis: text("medicalBasis"), // Base legal/médica
+  priority: mysqlEnum("pcmsoPriority", ["low", "medium", "high", "urgent"]).default("medium"),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_pcmso_rec_tenant").on(table.tenantId),
+}));
+
+// ============================================================================
+// Entregável 8: Relatório Comparativo (Benchmark)
+// ============================================================================
+
+export const benchmarkData = mysqlTable("benchmark_data", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  dataSource: varchar("dataSource", { length: 50 }).notNull(), // national, sector, region
+  sectorCode: varchar("sectorCode", { length: 20 }), // CNAE
+  sectorName: varchar("sectorName", { length: 255 }),
+  region: varchar("region", { length: 100 }),
+  period: varchar("period", { length: 20 }), // Ex: "2024"
+  sampleSize: int("sampleSize"),
+  avgDemandScore: int("avgDemandScore"),
+  avgControlScore: int("avgControlScore"),
+  avgSupportScore: int("avgSupportScore"),
+  avgLeadershipScore: int("avgLeadershipScore"),
+  avgCommunityScore: int("avgCommunityScore"),
+  avgMeaningScore: int("avgMeaningScore"),
+  avgTrustScore: int("avgTrustScore"),
+  avgJusticeScore: int("avgJusticeScore"),
+  avgInsecurityScore: int("avgInsecurityScore"),
+  avgMentalHealthScore: int("avgMentalHealthScore"),
+  avgBurnoutScore: int("avgBurnoutScore"),
+  avgViolenceScore: int("avgViolenceScore"),
+  createdAt: timestamp("createdAt").defaultNow(),
+});
+
+// ============================================================================
+// Entregável 10: Cronograma de Adequação NR-01
+// ============================================================================
+
+export const complianceMilestones = mysqlTable("compliance_milestones", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  category: mysqlEnum("milestoneCategory", [
+    "assessment", "inventory", "action_plan", "training", "documentation", "review",
+  ]).notNull(),
+  targetDate: timestamp("targetDate").notNull(),
+  completedDate: timestamp("completedDate"),
+  status: mysqlEnum("milestoneStatus", [
+    "pending", "in_progress", "completed", "overdue",
+  ]).default("pending").notNull(),
+  dependsOnId: varchar("dependsOnId", { length: 64 }),
+  order: int("milestoneOrder").default(0),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_milestone_tenant").on(table.tenantId),
+}));
+
+// ============================================================================
+// Entregável 11: Treinamento Digital
+// ============================================================================
+
+export const trainingModules = mysqlTable("training_modules", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  programId: varchar("programId", { length: 64 }).notNull(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content"), // Markdown
+  order: int("moduleOrder").default(0),
+  duration: int("duration"), // Minutos
+  videoUrl: varchar("videoUrl", { length: 500 }),
+  quizQuestions: json("quizQuestions"), // Array de perguntas
+  passingScore: int("passingScore").default(70),
+  createdAt: timestamp("createdAt").defaultNow(),
+}, (table) => ({
+  programIdx: index("idx_training_mod_program").on(table.programId),
+  tenantIdx: index("idx_training_mod_tenant").on(table.tenantId),
+}));
+
+export const trainingProgress = mysqlTable("training_progress", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  participantId: varchar("participantId", { length: 64 }).notNull(),
+  moduleId: varchar("moduleId", { length: 64 }).notNull(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  status: mysqlEnum("trainingStatus", [
+    "not_started", "in_progress", "completed",
+  ]).default("not_started").notNull(),
+  startedAt: timestamp("startedAt"),
+  completedAt: timestamp("completedAt"),
+  quizScore: int("quizScore"),
+  attempts: int("attempts").default(0),
+  createdAt: timestamp("createdAt").defaultNow(),
+}, (table) => ({
+  participantIdx: index("idx_training_prog_participant").on(table.participantId),
+  tenantIdx: index("idx_training_prog_tenant").on(table.tenantId),
+}));
+
+// ============================================================================
+// Entregável 12: Canal de Denúncia Anônima
+// ============================================================================
+
+export const anonymousReports = mysqlTable("anonymous_reports", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  reportCode: varchar("reportCode", { length: 20 }).notNull().unique(), // RPT-XXXX
+  category: mysqlEnum("reportCategory", [
+    "harassment", "discrimination", "violence", "workload", "leadership", "other",
+  ]).notNull(),
+  description: text("description").notNull(),
+  severity: mysqlEnum("reportSeverity", ["low", "medium", "high", "critical"]).default("medium").notNull(),
+  status: mysqlEnum("reportStatus", [
+    "received", "investigating", "resolved", "dismissed",
+  ]).default("received").notNull(),
+  isAnonymous: boolean("isAnonymous").default(true),
+  reporterEmail: varchar("reporterEmail", { length: 320 }),
+  resolution: text("resolution"),
+  assignedTo: varchar("assignedTo", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
+  resolvedAt: timestamp("resolvedAt"),
+}, (table) => ({
+  tenantIdx: index("idx_anon_report_tenant").on(table.tenantId),
+  codeIdx: index("idx_anon_report_code").on(table.reportCode),
+}));
+
+// ============================================================================
+// Entregável 13: Pesquisa de Clima - Convites
+// ============================================================================
+
+export const surveyInvites = mysqlTable("survey_invites", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  surveyId: varchar("surveyId", { length: 64 }).notNull(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  respondentEmail: varchar("respondentEmail", { length: 320 }).notNull(),
+  respondentName: varchar("respondentName", { length: 255 }).notNull(),
+  inviteToken: varchar("inviteToken", { length: 255 }).notNull().unique(),
+  status: mysqlEnum("surveyInviteStatus", [
+    "pending", "sent", "completed", "expired",
+  ]).default("pending").notNull(),
+  sentAt: timestamp("sentAt"),
+  completedAt: timestamp("completedAt"),
+  expiresAt: timestamp("expiresAt"),
+  createdAt: timestamp("createdAt").defaultNow(),
+}, (table) => ({
+  surveyIdx: index("idx_survey_invite_survey").on(table.surveyId),
+  tenantIdx: index("idx_survey_invite_tenant").on(table.tenantId),
+}));
+
+// ============================================================================
+// Entregável 14: Relatório de Conformidade Legal
+// ============================================================================
+
+export const complianceChecklist = mysqlTable("compliance_checklist", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  requirementCode: varchar("requirementCode", { length: 30 }).notNull(), // NR01-1.5.3.1
+  requirementText: text("requirementText").notNull(),
+  category: varchar("checklistCategory", { length: 100 }).notNull(),
+  status: mysqlEnum("checklistStatus", [
+    "compliant", "partial", "non_compliant", "not_applicable",
+  ]).default("non_compliant").notNull(),
+  evidenceDocId: varchar("evidenceDocId", { length: 64 }),
+  notes: text("notes"),
+  verifiedAt: timestamp("verifiedAt"),
+  verifiedBy: varchar("verifiedBy", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_checklist_tenant").on(table.tenantId),
+}));
+
+// ============================================================================
+// Entregável 15: Certificado de Conformidade
+// ============================================================================
+
+export const complianceCertificates = mysqlTable("compliance_certificates", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  certificateNumber: varchar("certificateNumber", { length: 50 }).notNull().unique(),
+  issuedAt: timestamp("issuedAt").notNull(),
+  validUntil: timestamp("validUntil").notNull(),
+  status: mysqlEnum("certStatus", ["active", "expired", "revoked"]).default("active").notNull(),
+  complianceScore: int("complianceScore").notNull(),
+  issuedBy: varchar("issuedBy", { length: 255 }),
+  pdfUrl: varchar("pdfUrl", { length: 500 }),
+  qrCodeData: varchar("qrCodeData", { length: 500 }),
+  createdAt: timestamp("createdAt").defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_cert_tenant").on(table.tenantId),
+}));
+
+// ============================================================================
+// Entregável 17: Alertas de Vencimento e Prazos
+// ============================================================================
+
+export const deadlineAlerts = mysqlTable("deadline_alerts", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  userId: varchar("userId", { length: 64 }),
+  entityType: varchar("entityType", { length: 50 }).notNull(), // action_plan, compliance_doc, etc.
+  entityId: varchar("entityId", { length: 64 }).notNull(),
+  alertDate: timestamp("alertDate").notNull(),
+  message: text("message").notNull(),
+  status: mysqlEnum("alertStatus", [
+    "pending", "sent", "acknowledged", "expired",
+  ]).default("pending").notNull(),
+  channel: mysqlEnum("alertChannel", ["email", "in_app", "both"]).default("in_app").notNull(),
+  sentAt: timestamp("sentAt"),
+  acknowledgedAt: timestamp("acknowledgedAt"),
+  createdAt: timestamp("createdAt").defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_alert_tenant").on(table.tenantId),
+  dateIdx: index("idx_alert_date").on(table.alertDate),
+}));
+
+// ============================================================================
+// Entregável 9: Avaliação Ergonômica Preliminar (AEP) - NR-17
+// ============================================================================
+
+export const ergonomicAssessments = mysqlTable("ergonomic_assessments", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  sectorId: varchar("sectorId", { length: 64 }),
+  title: varchar("title", { length: 255 }).notNull(),
+  assessorName: varchar("assessorName", { length: 255 }),
+  assessmentDate: timestamp("assessmentDate").notNull(),
+  status: mysqlEnum("ergStatus", ["draft", "in_progress", "completed", "reviewed"]).default("draft").notNull(),
+  methodology: text("methodology"),
+  overallRiskLevel: mysqlEnum("ergOverallRisk", ["acceptable", "moderate", "high", "critical"]),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_ergo_assess_tenant").on(table.tenantId),
+}));
+
+export const ergonomicItems = mysqlTable("ergonomic_items", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  assessmentId: varchar("assessmentId", { length: 64 }).notNull(),
+  category: mysqlEnum("ergCategory", [
+    "workstation", "posture", "repetition", "lighting", "noise", "organization", "psychosocial",
+  ]).notNull(),
+  factor: varchar("factor", { length: 255 }).notNull(),
+  riskLevel: mysqlEnum("ergItemRisk", ["acceptable", "moderate", "high", "critical"]).notNull(),
+  observation: text("observation"),
+  recommendation: text("recommendation"),
+  photoUrl: varchar("photoUrl", { length: 500 }),
+  createdAt: timestamp("createdAt").defaultNow(),
+}, (table) => ({
+  assessmentIdx: index("idx_ergo_item_assessment").on(table.assessmentId),
+}));
+
+// ============================================================================
+// Entregável 18: Exportação para eSocial
+// ============================================================================
+
+export const esocialExports = mysqlTable("esocial_exports", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  eventType: mysqlEnum("esocialEventType", ["S-2220", "S-2240"]).notNull(),
+  referenceId: varchar("referenceId", { length: 64 }),
+  xmlContent: text("xmlContent"),
+  status: mysqlEnum("esocialStatus", [
+    "draft", "validated", "submitted", "accepted", "rejected",
+  ]).default("draft").notNull(),
+  submittedAt: timestamp("submittedAt"),
+  responseCode: varchar("responseCode", { length: 50 }),
+  responseMessage: text("responseMessage"),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_esocial_tenant").on(table.tenantId),
+}));
+
+// ============================================================================
+// Entregável 20: Calculadora de Risco Financeiro
+// ============================================================================
+
+export const financialParameters = mysqlTable("financial_parameters", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull().unique(),
+  averageSalary: int("averageSalary"), // Centavos
+  headcount: int("headcount"),
+  avgReplacementCost: int("avgReplacementCost"), // Centavos
+  dailyAbsenteeismCost: int("dailyAbsenteeismCost"), // Centavos
+  finePerWorker: int("finePerWorker").default(670808), // R$ 6.708,08 em centavos
+  litigationAvgCost: int("litigationAvgCost"), // Centavos
+  updatedAt: timestamp("updatedAt").defaultNow(),
+  createdAt: timestamp("createdAt").defaultNow(),
+});
+
+// ============================================================================
+// Type exports
+// ============================================================================
+
 export type RiskCategory = typeof riskCategories.$inferSelect;
 export type RiskFactor = typeof riskFactors.$inferSelect;
 export type RiskAssessment = typeof riskAssessments.$inferSelect;
@@ -493,3 +825,17 @@ export type ProgramParticipant = typeof programParticipants.$inferSelect;
 export type IndividualSession = typeof individualSessions.$inferSelect;
 export type MentalHealthIndicator = typeof mentalHealthIndicators.$inferSelect;
 export type ComplianceDocument = typeof complianceDocuments.$inferSelect;
+export type PcmsoRecommendation = typeof pcmsoRecommendations.$inferSelect;
+export type BenchmarkDataRow = typeof benchmarkData.$inferSelect;
+export type ComplianceMilestone = typeof complianceMilestones.$inferSelect;
+export type TrainingModule = typeof trainingModules.$inferSelect;
+export type TrainingProgressRecord = typeof trainingProgress.$inferSelect;
+export type AnonymousReport = typeof anonymousReports.$inferSelect;
+export type SurveyInvite = typeof surveyInvites.$inferSelect;
+export type ComplianceChecklistItem = typeof complianceChecklist.$inferSelect;
+export type ComplianceCertificate = typeof complianceCertificates.$inferSelect;
+export type DeadlineAlert = typeof deadlineAlerts.$inferSelect;
+export type ErgonomicAssessment = typeof ergonomicAssessments.$inferSelect;
+export type ErgonomicItem = typeof ergonomicItems.$inferSelect;
+export type EsocialExport = typeof esocialExports.$inferSelect;
+export type FinancialParameter = typeof financialParameters.$inferSelect;

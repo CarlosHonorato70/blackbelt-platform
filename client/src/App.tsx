@@ -56,6 +56,31 @@ const LGPD = lazy(() => import("./pages/LGPD"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
+// Entregáveis NR-01
+const RiskMatrix = lazy(() => import("./pages/RiskMatrix"));
+const PgrPcmsoIntegration = lazy(() => import("./pages/PgrPcmsoIntegration"));
+const PsychosocialDashboard = lazy(() => import("./pages/PsychosocialDashboard"));
+const AssessmentTrends = lazy(() => import("./pages/AssessmentTrends"));
+const FinancialRiskCalculator = lazy(() => import("./pages/FinancialRiskCalculator"));
+const ComplianceTimeline = lazy(() => import("./pages/ComplianceTimeline"));
+const ComplianceChecklist = lazy(() => import("./pages/ComplianceChecklist"));
+const ComplianceCertificate = lazy(() => import("./pages/ComplianceCertificate"));
+const LaudoTecnico = lazy(() => import("./pages/LaudoTecnico"));
+const BenchmarkComparison = lazy(() => import("./pages/BenchmarkComparison"));
+const ClimateSurveys = lazy(() => import("./pages/ClimateSurveys"));
+const ClimateSurveyResults = lazy(() => import("./pages/ClimateSurveyResults"));
+const ClimateSurveyRespond = lazy(() => import("./pages/ClimateSurveyRespond"));
+const TrainingPrograms = lazy(() => import("./pages/TrainingPrograms"));
+const TrainingModule = lazy(() => import("./pages/TrainingModule"));
+const TrainingAdmin = lazy(() => import("./pages/TrainingAdmin"));
+const AnonymousReport = lazy(() => import("./pages/AnonymousReport"));
+const AnonymousReportTrack = lazy(() => import("./pages/AnonymousReportTrack"));
+const ReportManagement = lazy(() => import("./pages/ReportManagement"));
+const DeadlineAlerts = lazy(() => import("./pages/DeadlineAlerts"));
+const ErgonomicAssessments = lazy(() => import("./pages/ErgonomicAssessments"));
+const ErgonomicAssessmentForm = lazy(() => import("./pages/ErgonomicAssessmentForm"));
+const EsocialExport = lazy(() => import("./pages/EsocialExport"));
+
 // Subscription pages
 const Pricing = lazy(() => import("./pages/subscription/Pricing"));
 const Checkout = lazy(() => import("./pages/subscription/Checkout"));
@@ -99,6 +124,7 @@ export default function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/copsoq/respond/:token" element={<Suspense fallback={<PageLoader />}><CopsoqRespond /></Suspense>} />
+                <Route path="/survey/respond/:token" element={<Suspense fallback={<PageLoader />}><ClimateSurveyRespond /></Suspense>} />
                 <Route path="/forgot-password" element={<Suspense fallback={<PageLoader />}><ForgotPassword /></Suspense>} />
                 <Route path="/reset-password/:token" element={<Suspense fallback={<PageLoader />}><ResetPassword /></Suspense>} />
                 <Route path="/verify-email/:token" element={<Suspense fallback={<PageLoader />}><VerifyEmail /></Suspense>} />
@@ -129,11 +155,35 @@ export default function App() {
 
                 {/* Planos de Ação */}
                 <Route path="/action-plans" element={<ProtectedPage><ActionPlans /></ProtectedPage>} />
+                <Route path="/risk-matrix" element={<ProtectedPage><RiskMatrix /></ProtectedPage>} />
 
                 {/* Relatorios e monitoramento */}
                 <Route path="/compliance-reports" element={<ProtectedPage><ComplianceReports /></ProtectedPage>} />
                 <Route path="/reminder-management" element={<ProtectedPage><ReminderManagement /></ProtectedPage>} />
                 <Route path="/executive-dashboard" element={<ProtectedPage><ExecutiveDashboard /></ProtectedPage>} />
+
+                {/* Entregáveis NR-01 */}
+                <Route path="/pgr-pcmso" element={<ProtectedPage><PgrPcmsoIntegration /></ProtectedPage>} />
+                <Route path="/psychosocial-dashboard" element={<ProtectedPage><PsychosocialDashboard /></ProtectedPage>} />
+                <Route path="/assessment-trends" element={<ProtectedPage><AssessmentTrends /></ProtectedPage>} />
+                <Route path="/financial-calculator" element={<ProtectedPage><FinancialRiskCalculator /></ProtectedPage>} />
+                <Route path="/compliance-timeline" element={<ProtectedPage><ComplianceTimeline /></ProtectedPage>} />
+                <Route path="/compliance-checklist" element={<ProtectedPage><ComplianceChecklist /></ProtectedPage>} />
+                <Route path="/compliance-certificate" element={<ProtectedPage><ComplianceCertificate /></ProtectedPage>} />
+                <Route path="/laudo-tecnico" element={<ProtectedPage><LaudoTecnico /></ProtectedPage>} />
+                <Route path="/benchmark" element={<ProtectedPage><BenchmarkComparison /></ProtectedPage>} />
+                <Route path="/climate-surveys" element={<ProtectedPage><ClimateSurveys /></ProtectedPage>} />
+                <Route path="/climate-surveys/:id/results" element={<ProtectedPage><ClimateSurveyResults /></ProtectedPage>} />
+                <Route path="/training" element={<ProtectedPage><TrainingPrograms /></ProtectedPage>} />
+                <Route path="/training/:programId" element={<ProtectedPage><TrainingAdmin /></ProtectedPage>} />
+                <Route path="/training/:programId/modules/:moduleId" element={<ProtectedPage><TrainingModule /></ProtectedPage>} />
+                <Route path="/anonymous-report" element={<ProtectedPage><AnonymousReport /></ProtectedPage>} />
+                <Route path="/anonymous-report/track" element={<ProtectedPage><AnonymousReportTrack /></ProtectedPage>} />
+                <Route path="/report-management" element={<ProtectedPage><ReportManagement /></ProtectedPage>} />
+                <Route path="/deadline-alerts" element={<ProtectedPage><DeadlineAlerts /></ProtectedPage>} />
+                <Route path="/ergonomic-assessments" element={<ProtectedPage><ErgonomicAssessments /></ProtectedPage>} />
+                <Route path="/ergonomic-assessments/:id" element={<ProtectedPage><ErgonomicAssessmentForm /></ProtectedPage>} />
+                <Route path="/esocial-export" element={<ProtectedPage><EsocialExport /></ProtectedPage>} />
 
                 {/* Comercial */}
                 <Route path="/pricing-parameters" element={<ProtectedPage><PricingParameters /></ProtectedPage>} />
