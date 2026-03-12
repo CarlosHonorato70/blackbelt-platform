@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { adminProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { tenants, users, subscriptions, plans, supportTickets } from "../../drizzle/schema";
+import { tenants, users, subscriptions, plans, supportTickets, userRoles, roles } from "../../drizzle/schema";
 import { copsoqAssessments } from "../../drizzle/schema_nr01";
 import { eq, and, sql, desc, gte, lte, like, or } from "drizzle-orm";
 
@@ -51,4 +51,64 @@ export const adminMetricsRouter = router({
       pastDue: pastDue.map(t => ({ tenantId: t.subscription.tenantId, tenantName: t.tenantName, type: "past_due" })),
     };
   }),
+
+  /**
+   * Lista todos os usuários da plataforma com seus níveis de acesso
+   */
+  usersList: adminProcedure
+    .input(z.object({
+      search: z.string().optional(),
+      limit: z.number().min(1).max(200).default(100),
+    }).optional())
+    .query(async ({ input }) => {
+      const database = await getDb();
+      if (!database) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Buscar todos os usuários
+      const allUsers = input?.search
+        ? await database.select().from(users).where(
+            or(
+              like(users.name, `%${input.search}%`),
+              like(users.email, `%${input.search}%`)
+            )
+          ).orderBy(desc(users.createdAt)).limit(input?.limit || 100)
+        : await database.select().from(users).orderBy(desc(users.createdAt)).limit(input?.limit || 100);
+
+      const results = [];
+      for (const user of allUsers) {
+        // Buscar roles do usuário
+        const userRolesList = await database
+          .select({ roleName: roles.displayName, systemName: roles.systemName })
+          .from(userRoles)
+          .innerJoin(roles, eq(userRoles.roleId, roles.id))
+          .where(eq(userRoles.userId, user.id));
+
+        // Buscar nome do tenant
+        let tenantName: string | null = null;
+        let subscriptionStatus: string | null = null;
+        if (user.tenantId) {
+          const [t] = await database.select({ name: tenants.name }).from(tenants).where(eq(tenants.id, user.tenantId)).limit(1);
+          tenantName = t?.name || null;
+
+          const [sub] = await database.select({ status: subscriptions.status }).from(subscriptions).where(eq(subscriptions.tenantId, user.tenantId)).limit(1);
+          subscriptionStatus = sub?.status || null;
+        }
+
+        results.push({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          emailVerified: (user as any).emailVerified || false,
+          tenantId: user.tenantId,
+          tenantName,
+          subscriptionStatus,
+          roles: userRolesList.map(r => r.roleName || r.systemName),
+          lastSignedIn: (user as any).lastSignedIn || null,
+          createdAt: user.createdAt,
+        });
+      }
+
+      return results;
+    }),
 });

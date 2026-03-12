@@ -77,7 +77,7 @@ function verifyVerifyToken(token: string): { userId: string } | null {
 }
 
 async function sendVerificationEmail(email: string, name: string | null, token: string) {
-  const frontendUrl = process.env.VITE_FRONTEND_URL || "http://localhost:5000";
+  const frontendUrl = process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:5000";
   const verifyUrl = `${frontendUrl}/verify-email/${token}`;
 
   await sendEmail({
