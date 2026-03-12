@@ -9,12 +9,13 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { MercadoPagoConfig, Preference, Payment, PreApproval } from "mercadopago";
 import { log } from "../_core/logger";
-import { publicProcedure, tenantProcedure, protectedProcedure, router } from "../_core/trpc";
+import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { getPaymentGatewayConfig } from "../_core/paymentConfig";
 import { subscriptions, plans, invoices } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { ensureTenantForUser } from "../_core/tenantHelpers";
 
 /**
  * Obter cliente Mercado Pago configurado (SDK v2)
@@ -46,7 +47,7 @@ export const mercadoPagoRouter = router({
   /**
    * Criar preferência de pagamento para assinatura
    */
-  createPreference: tenantProcedure
+  createPreference: protectedProcedure
     .input(
       z.object({
         planId: z.string(),
@@ -57,6 +58,17 @@ export const mercadoPagoRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      // Garantir que usuário tenha tenant (auto-cria se necessário)
+      const tenantId = await ensureTenantForUser(
+        ctx.user.id,
+        ctx.user.name,
+        ctx.user.email,
+        ctx.user.tenantId
+      );
+      if (!tenantId) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar sua organização. Tente novamente." });
+      }
+
       const client = getMercadoPagoClient();
       if (!client) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Mercado Pago não está configurado" });
@@ -105,9 +117,9 @@ export const mercadoPagoRouter = router({
             pending: input.pendingUrl,
           },
           auto_return: "approved",
-          external_reference: ctx.tenantId,
+          external_reference: tenantId,
           metadata: {
-            tenant_id: ctx.tenantId,
+            tenant_id: tenantId,
             plan_id: input.planId,
             billing_cycle: input.billingCycle,
           },
@@ -125,7 +137,7 @@ export const mercadoPagoRouter = router({
   /**
    * Criar assinatura recorrente (preapproval)
    */
-  createSubscriptionPlan: tenantProcedure
+  createSubscriptionPlan: protectedProcedure
     .input(
       z.object({
         planId: z.string(),
@@ -133,6 +145,12 @@ export const mercadoPagoRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      // Garantir que usuário tenha tenant
+      const tenantId = await ensureTenantForUser(ctx.user.id, ctx.user.name, ctx.user.email, ctx.user.tenantId);
+      if (!tenantId) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar sua organização. Tente novamente." });
+      }
+
       const client = getMercadoPagoClient();
       if (!client) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Mercado Pago não está configurado" });
@@ -174,7 +192,7 @@ export const mercadoPagoRouter = router({
             start_date: plan.trialDays > 0 ? startDate.toISOString() : undefined,
           },
           back_url: `${process.env.VITE_FRONTEND_URL}/subscription/success`,
-          external_reference: ctx.tenantId,
+          external_reference: tenantId,
           payer_email: ctx.user?.email || undefined,
           reason: `Black Belt Platform - ${plan.displayName}`,
         },
@@ -223,7 +241,7 @@ export const mercadoPagoRouter = router({
   /**
    * Cancelar assinatura
    */
-  cancelSubscription: tenantProcedure
+  cancelSubscription: protectedProcedure
     .input(
       z.object({
         subscriptionId: z.string(),

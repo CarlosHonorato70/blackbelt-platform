@@ -14,6 +14,7 @@ import { subscriptions, plans, invoices, tenants } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import Stripe from "stripe";
+import { ensureTenantForUser } from "../_core/tenantHelpers";
 
 /**
  * Inicializar cliente Stripe
@@ -56,8 +57,10 @@ export const stripeRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      if (!ctx.tenantId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
+      // Garantir que usuário tenha tenant (auto-cria se necessário)
+      const tenantId = await ensureTenantForUser(ctx.user.id, ctx.user.name, ctx.user.email, ctx.user.tenantId);
+      if (!tenantId) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar sua organização. Tente novamente." });
       }
 
       const stripe = getStripeClient();
@@ -83,14 +86,14 @@ export const stripeRouter = router({
       const [tenantInfo] = await db
         .select()
         .from(tenants)
-        .where(eq(tenants.id, ctx.tenantId))
+        .where(eq(tenants.id, tenantId))
         .limit(1);
 
       // Buscar assinatura existente para IDs Stripe
       const [existingSub] = await db
         .select()
         .from(subscriptions)
-        .where(eq(subscriptions.tenantId, ctx.tenantId))
+        .where(eq(subscriptions.tenantId, tenantId))
         .limit(1);
 
       // Calcular preço
@@ -130,13 +133,13 @@ export const stripeRouter = router({
         subscription_data: {
           trial_period_days: plan.trialDays,
           metadata: {
-            tenantId: ctx.tenantId,
+            tenantId: tenantId,
             planId: input.planId,
             billingCycle: input.billingCycle,
           },
         },
         metadata: {
-          tenantId: ctx.tenantId,
+          tenantId: tenantId,
           planId: input.planId,
           billingCycle: input.billingCycle,
         },
