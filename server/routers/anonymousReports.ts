@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { publicProcedure, router } from "../_core/trpc";
+import { publicProcedure, tenantProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { anonymousReports } from "../../drizzle/schema_nr01";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -82,20 +82,21 @@ export const anonymousReportsRouter = router({
       return report;
     }),
 
-  // Listar denúncias por tenant (admin)
-  list: publicProcedure
+  // Listar denúncias por tenant (autenticado)
+  list: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
         status: z.enum(["received", "investigating", "resolved", "dismissed"]).optional(),
         category: z.enum(["harassment", "discrimination", "violence", "workload", "leadership", "other"]).optional(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
-      const conditions = [eq(anonymousReports.tenantId, input.tenantId)];
+      const tid = input.tenantId || ctx.tenantId!;
+      const conditions = [eq(anonymousReports.tenantId, tid)];
 
       if (input.status) {
         conditions.push(eq(anonymousReports.status, input.status));
@@ -115,7 +116,7 @@ export const anonymousReportsRouter = router({
     }),
 
   // Atualizar denúncia
-  update: publicProcedure
+  update: tenantProcedure
     .input(
       z.object({
         id: z.string(),
@@ -153,13 +154,13 @@ export const anonymousReportsRouter = router({
     }),
 
   // Estatísticas de denúncias
-  getStats: publicProcedure
+  getStats: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -167,10 +168,11 @@ export const anonymousReportsRouter = router({
           message: "Database not available",
         });
 
+      const tid = input.tenantId || ctx.tenantId!;
       const reports = await db
         .select()
         .from(anonymousReports)
-        .where(eq(anonymousReports.tenantId, input.tenantId));
+        .where(eq(anonymousReports.tenantId, tid));
 
       const total = reports.length;
 

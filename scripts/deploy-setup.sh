@@ -334,7 +334,7 @@ docker compose exec -T app npx tsx node_modules/drizzle-kit/bin.cjs push 2>&1 | 
 ok "Tabelas criadas"
 
 echo -e "  Executando seed (admin + planos + roles)..."
-docker compose exec -T -e ADMIN_PASSWORD="$ADMIN_PASSWORD" app npx tsx drizzle/seed.ts 2>&1 | tail -5
+docker compose exec -T -e ADMIN_EMAIL="ricardo@consultoriasst.com.br" -e ADMIN_PASSWORD="$ADMIN_PASSWORD" app npx tsx drizzle/seed.ts 2>&1 | tail -5
 ok "Banco populado com dados iniciais"
 
 # ============================================================

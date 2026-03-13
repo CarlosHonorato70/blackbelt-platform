@@ -6,6 +6,7 @@
 
 import { trpc } from "@/lib/trpc";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
+import { useTenant } from "@/contexts/TenantContext";
 import { Building2, ChevronDown, X } from "lucide-react";
 import {
   DropdownMenu,
@@ -19,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 
 export function CompanySelector() {
   const { isImpersonating, impersonating, startImpersonation, stopImpersonation } = useImpersonation();
+  const { setSelectedTenant } = useTenant();
   const { data } = trpc.companies.list.useQuery({}, {
     retry: false,
   });
@@ -39,6 +41,7 @@ export function CompanySelector() {
           <button
             onClick={(e) => {
               e.stopPropagation();
+              setSelectedTenant(null);
               stopImpersonation();
             }}
             className="ml-1 hover:text-amber-900"
@@ -60,7 +63,10 @@ export function CompanySelector() {
           {isImpersonating && (
             <>
               <DropdownMenuItem
-                onClick={() => stopImpersonation()}
+                onClick={() => {
+                  setSelectedTenant(null);
+                  stopImpersonation();
+                }}
                 className="text-xs font-medium text-primary cursor-pointer"
               >
                 <Building2 className="h-3.5 w-3.5 mr-2" />
@@ -73,7 +79,10 @@ export function CompanySelector() {
             companies.map((company: any) => (
               <DropdownMenuItem
                 key={company.id}
-                onClick={() => startImpersonation(company.id, company.name)}
+                onClick={() => {
+                  setSelectedTenant({ id: company.id, name: company.name, cnpj: company.cnpj || "" });
+                  startImpersonation(company.id, company.name);
+                }}
                 className="text-xs cursor-pointer"
               >
                 <Building2 className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
