@@ -22,8 +22,8 @@ export interface SendEmailOptions {
   text?: string;
 }
 
-// Retry delays for transient SMTP failures (exponential backoff)
-const EMAIL_RETRY_DELAYS = [2000, 5000, 15000]; // 2s, 5s, 15s
+// Retry delays for transient SMTP failures (shorter backoff to stay within Nginx timeout)
+const EMAIL_RETRY_DELAYS = [1000, 3000, 5000]; // 1s, 3s, 5s
 
 /**
  * Envia um email usando o transporte configurado.
@@ -153,7 +153,9 @@ export async function sendCopsoqInvite(params: {
 }
 
 /**
- * Envia email em lote para múltiplos respondentes
+ * Envia email em lote para múltiplos respondentes.
+ * Processa em lotes de 5 com 500ms entre lotes para evitar rate limiting
+ * e manter o tempo total dentro do timeout do Nginx (300s).
  */
 export async function sendBulkCopsoqInvites(
   invites: Array<{
@@ -167,15 +169,25 @@ export async function sendBulkCopsoqInvites(
   let success = 0;
   let failed = 0;
 
-  for (const invite of invites) {
-    const result = await sendCopsoqInvite(invite);
-    if (result) {
-      success++;
-    } else {
-      failed++;
+  const BATCH_SIZE = 5;
+  for (let i = 0; i < invites.length; i += BATCH_SIZE) {
+    const batch = invites.slice(i, i + BATCH_SIZE);
+    const results = await Promise.allSettled(
+      batch.map(invite => sendCopsoqInvite(invite))
+    );
+
+    for (const result of results) {
+      if (result.status === "fulfilled" && result.value) {
+        success++;
+      } else {
+        failed++;
+      }
     }
-    // Aguarda 1 segundo entre emails para evitar rate limiting
-    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Aguarda 500ms entre lotes para evitar rate limiting
+    if (i + BATCH_SIZE < invites.length) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
   }
 
   return { success, failed };

@@ -445,7 +445,7 @@ function calculateDimensionScores(responses: Record<string | number, number>) {
   const scores: Record<string, number> = {};
 
   for (const [dimension, questions] of Object.entries(dimensions)) {
-    const values = questions.map(q => responses[q] || 0).filter(v => v > 0);
+    const values = questions.map(q => responses[q] || responses[`q${q}`] || 0).filter(v => v > 0);
 
     if (values.length === 0) {
       scores[dimension] = 0;

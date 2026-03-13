@@ -272,9 +272,9 @@ function gerarRespostasCopsoq(perfil) {
   const p = perfis[perfil] || perfis.moderado;
   const rand = (range) => Math.floor(Math.random() * (range[1] - range[0] + 1)) + range[0];
 
-  // Gerar 76 respostas (q1-q76) com valores 1-5
+  // Gerar 76 respostas (1-76) com valores 1-5 (chaves numéricas como o frontend)
   const responses = {};
-  for (let i = 1; i <= 76; i++) responses[`q${i}`] = Math.floor(Math.random() * 5) + 1;
+  for (let i = 1; i <= 76; i++) responses[i] = Math.floor(Math.random() * 5) + 1;
 
   return { responses, perfil };
 }
