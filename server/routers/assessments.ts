@@ -65,7 +65,7 @@ export const assessmentsRouter = router({
       const result = await db
         .select()
         .from(copsoqAssessments)
-        .where(eq(copsoqAssessments.id, input.id))
+        .where(and(eq(copsoqAssessments.id, input.id), eq(copsoqAssessments.tenantId, ctx.tenantId!)))
         .limit(1);
 
       return result[0] || null;

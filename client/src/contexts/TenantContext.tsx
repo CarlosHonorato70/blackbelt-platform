@@ -21,22 +21,29 @@ interface TenantContextType {
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
 
 const STORAGE_KEY = "blackbelt_selected_tenant";
+const IMPERSONATION_KEY = "blackbelt_impersonating_tenant";
+
+function readInitialTenant(): Tenant | null {
+  // 1. Tentar TenantContext próprio
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch { /* ignore */ }
+  }
+  // 2. Fallback: sincronizar com ImpersonationContext
+  const impersonating = localStorage.getItem(IMPERSONATION_KEY);
+  if (impersonating) {
+    try {
+      const { id, name } = JSON.parse(impersonating);
+      if (id) return { id, name, cnpj: "" };
+    } catch { /* ignore */ }
+  }
+  return null;
+}
 
 export function TenantProvider({ children }: { children: ReactNode }) {
-  const [selectedTenant, setSelectedTenantState] = useState<Tenant | null>(
-    () => {
-      // Recuperar tenant selecionado do localStorage
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        try {
-          return JSON.parse(stored);
-        } catch {
-          return null;
-        }
-      }
-      return null;
-    }
-  );
+  const [selectedTenant, setSelectedTenantState] = useState<Tenant | null>(readInitialTenant);
 
   const setSelectedTenant = (tenant: Tenant | null) => {
     setSelectedTenantState(tenant);

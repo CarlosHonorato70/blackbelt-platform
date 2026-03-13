@@ -1,4 +1,5 @@
 import { useTenant } from "@/contexts/TenantContext";
+import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { trpc } from "@/lib/trpc";
 import { Building2, Check } from "lucide-react";
 import { useState } from "react";
@@ -14,6 +15,7 @@ import {
 
 export function TenantSelectionModal() {
   const { selectedTenant, setSelectedTenant } = useTenant();
+  const { startImpersonation } = useImpersonation();
   const [open, setOpen] = useState(false);
   const { data: tenants, isLoading } = trpc.tenants.list.useQuery({});
 
@@ -25,7 +27,8 @@ export function TenantSelectionModal() {
         name: tenant.name,
         cnpj: tenant.cnpj,
       });
-      setOpen(false);
+      // Also set impersonation so backend receives x-impersonate-tenant header
+      startImpersonation(tenant.id, tenant.name);
     }
   };
 

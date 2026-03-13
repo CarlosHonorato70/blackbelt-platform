@@ -20,17 +20,30 @@ export const auditLogsRouter = router({
         offset: z.number().default(0),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
+
+      // Security: non-admin users can only see their own tenant's logs
+      const isAdmin = ctx.user?.role === "admin";
+      const userTenantId = ctx.user?.tenantId;
 
       const conditions = [];
 
       if (input.tenantId !== undefined) {
+        if (!isAdmin && input.tenantId !== "" && input.tenantId !== userTenantId) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
+        }
         if (input.tenantId === "") {
+          if (!isAdmin) throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
           conditions.push(isNull(auditLogs.tenantId));
         } else {
           conditions.push(eq(auditLogs.tenantId, input.tenantId));
+        }
+      } else if (!isAdmin) {
+        // Non-admin must see only their tenant's logs
+        if (userTenantId) {
+          conditions.push(eq(auditLogs.tenantId, userTenantId));
         }
       }
 
