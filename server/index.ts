@@ -127,7 +127,7 @@ app.use(
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === "production" ? 100 : 2000,
+  max: process.env.NODE_ENV === "production" ? 500 : 2000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Muitas requisicoes, tente novamente mais tarde." },
