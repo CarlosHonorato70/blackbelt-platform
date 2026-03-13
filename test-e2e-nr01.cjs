@@ -822,6 +822,8 @@ async function main() {
         console.log(`  ❌ ${proc.label}: ${e.message.substring(0, 80)}`);
         totalFails++;
       }
+      // Delay entre PDFs para evitar rate limiting em produção
+      await new Promise(r => setTimeout(r, 200));
     }
     console.log();
   }
