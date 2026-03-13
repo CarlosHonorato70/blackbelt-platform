@@ -116,6 +116,17 @@ else
   ok "Certbot instalado"
 fi
 
+# Firewall
+if command -v ufw &>/dev/null; then
+  ufw allow 22/tcp >/dev/null 2>&1
+  ufw allow 80/tcp >/dev/null 2>&1
+  ufw allow 443/tcp >/dev/null 2>&1
+  echo "y" | ufw enable >/dev/null 2>&1 || true
+  ok "Firewall configurado (SSH + HTTP + HTTPS)"
+else
+  warn "ufw não encontrado — configure o firewall manualmente"
+fi
+
 # ============================================================
 step "2" "Clonando repositório"
 
@@ -233,7 +244,7 @@ MP_ENABLED="false"
 [ -n "$STRIPE_SECRET_KEY" ] && STRIPE_ENABLED="true"
 [ -n "$MP_ACCESS_TOKEN" ] && MP_ENABLED="true"
 
-cat > .env << ENVFILE
+cat > .env.production << ENVFILE
 # ============================================================
 # Black Belt Platform — Produção
 # Gerado automaticamente em $(date '+%Y-%m-%d %H:%M:%S')
@@ -247,7 +258,7 @@ NODE_ENV=production
 PORT=5000
 
 # --- Segurança ---
-SESSION_SECRET=${SESSION_SECRET}
+COOKIE_SECRET=${SESSION_SECRET}
 
 # --- Domínio / CORS ---
 FRONTEND_URL=https://${DOMAIN}
@@ -278,7 +289,7 @@ MYSQL_USER=blackbelt
 MYSQL_PASSWORD=${DB_PASSWORD}
 ENVFILE
 
-ok "Arquivo .env gerado com todas as variáveis"
+ok "Arquivo .env.production gerado com todas as variáveis"
 
 # ============================================================
 step "7" "Iniciando containers Docker"
@@ -348,7 +359,7 @@ echo -e "${GREEN}║              ✨ Plataforma no ar! ✨                     
 echo -e "${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 echo -e "  ${BOLD}URL:${NC}           https://${DOMAIN}"
-echo -e "  ${BOLD}Admin email:${NC}   admin@blackbeltconsultoria.com"
+echo -e "  ${BOLD}Admin email:${NC}   ricardo@consultoriasst.com.br"
 echo -e "  ${BOLD}Admin senha:${NC}   ${YELLOW}${ADMIN_PASSWORD}${NC}"
 echo ""
 echo -e "  ${RED}${BOLD}IMPORTANTE: Anote a senha acima e troque no primeiro login!${NC}"
@@ -360,18 +371,18 @@ echo -e "    docker compose down        — parar tudo"
 echo -e "    docker compose up -d       — iniciar tudo"
 echo ""
 
-# Salvar credenciais em arquivo (leitura só pelo root)
-CREDS_FILE="$PROJECT_DIR/.credentials"
+# Salvar credenciais fora do projeto (leitura só pelo root)
+CREDS_FILE="/root/.blackbelt-credentials"
 cat > "$CREDS_FILE" << CREDS
 # Credenciais geradas em $(date)
 # APAGUE ESTE ARQUIVO APÓS ANOTAR AS SENHAS
 
 URL=https://${DOMAIN}
-ADMIN_EMAIL=admin@blackbeltconsultoria.com
+ADMIN_EMAIL=ricardo@consultoriasst.com.br
 ADMIN_PASSWORD=${ADMIN_PASSWORD}
 DB_PASSWORD=${DB_PASSWORD}
 DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
-SESSION_SECRET=${SESSION_SECRET}
+COOKIE_SECRET=${SESSION_SECRET}
 CREDS
 chmod 600 "$CREDS_FILE"
 ok "Credenciais salvas em $CREDS_FILE (apague após anotar)"

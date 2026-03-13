@@ -11,8 +11,8 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=mysql://blackbelt:${MYSQL_PASSWORD:-blackbelt_secret}@mysql:3306/blackbelt
-    ports:
-      - "${APP_PORT:-5000}:5000"
+    expose:
+      - "5000"
     depends_on:
       mysql:
         condition: service_healthy
@@ -36,8 +36,9 @@ services:
       MYSQL_DATABASE: blackbelt
       MYSQL_USER: blackbelt
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-blackbelt_secret}
-    ports:
-      - "${MYSQL_PORT:-3306}:3306"
+    # MySQL só acessível via rede interna Docker (não exposto ao público)
+    expose:
+      - "3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./docker/mysql-init:/docker-entrypoint-initdb.d
