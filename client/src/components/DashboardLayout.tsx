@@ -64,6 +64,7 @@ import {
   LineChart,
   HeartPulse,
   MessageSquareWarning,
+  ListChecks,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { CSSProperties, Fragment, useEffect, useState } from "react";
@@ -87,6 +88,7 @@ type MenuItem = {
 const menuItems: MenuItem[] = [
   // --- Geral ---
   { icon: LayoutDashboard, label: "Dashboard", path: "/", group: "Geral", companyVisible: true },
+  { icon: ListChecks, label: "Fluxo Guiado", path: "/guided-workflow", group: "Geral", consultantOnly: true },
   { icon: Building2, label: "Todas as Empresas", path: "/tenants", adminOnly: true, group: "Geral" },
   { icon: Building2, label: "Minhas Empresas", path: "/companies", consultantOnly: true, group: "Geral" },
   { icon: UserSquare2, label: "Setores", path: "/sectors", group: "Geral", companyVisible: true },

@@ -81,6 +81,7 @@ const ErgonomicAssessments = lazy(() => import("./pages/ErgonomicAssessments"));
 const ErgonomicAssessmentForm = lazy(() => import("./pages/ErgonomicAssessmentForm"));
 const EsocialExport = lazy(() => import("./pages/EsocialExport"));
 const Companies = lazy(() => import("./pages/Companies"));
+const GuidedWorkflow = lazy(() => import("./pages/GuidedWorkflow"));
 
 // Subscription pages
 const Pricing = lazy(() => import("./pages/subscription/Pricing"));
@@ -182,6 +183,7 @@ export default function App() {
                 <Route path="/anonymous-report" element={<ProtectedPage><AnonymousReport /></ProtectedPage>} />
                 <Route path="/anonymous-report/track" element={<ProtectedPage><AnonymousReportTrack /></ProtectedPage>} />
                 <Route path="/report-management" element={<ProtectedPage><ReportManagement /></ProtectedPage>} />
+                <Route path="/guided-workflow" element={<ProtectedPage><GuidedWorkflow /></ProtectedPage>} />
                 <Route path="/deadline-alerts" element={<ProtectedPage><DeadlineAlerts /></ProtectedPage>} />
                 <Route path="/ergonomic-assessments" element={<ProtectedPage><ErgonomicAssessments /></ProtectedPage>} />
                 <Route path="/ergonomic-assessments/:id" element={<ProtectedPage><ErgonomicAssessmentForm /></ProtectedPage>} />
