@@ -83,7 +83,7 @@ export const complianceCertificateRouter = router({
       const validUntil = new Date(issuedAt);
       validUntil.setFullYear(validUntil.getFullYear() + 1);
 
-      const qrCodeData = `https://blackbeltconsultoria.com.br/verify/${certificateNumber}`;
+      const qrCodeData = `https://blackbeltconsultoria.com/verify/${certificateNumber}`;
 
       await db.insert(complianceCertificates).values({
         id,

@@ -84,7 +84,7 @@ Voce tem 2 opcoes:
 
 1. Abra **https://dash.cloudflare.com**
 2. Faca login
-3. Na lista de sites, clique em **"blackbeltconsultoria.com.br"**
+3. Na lista de sites, clique em **"blackbeltconsultoria.com"**
 
 ### 2.2 Ir para DNS
 
@@ -99,7 +99,7 @@ Voce vai ver uma lista de registros DNS. Procure por:
 
 ### 2.4 Criar/editar registro principal (@)
 
-Se ja existe um registro A com nome `@` ou `blackbeltconsultoria.com.br`:
+Se ja existe um registro A com nome `@` ou `blackbeltconsultoria.com`:
 1. Clique em **"Edit"** (lapis)
 2. Mude o campo **"IPv4 address"** para o IP do seu Droplet (ex: `164.90.152.37`)
 3. **IMPORTANTE:** Clique na nuvem laranja para mudar para **nuvem cinza** ("DNS only")
@@ -143,12 +143,12 @@ Use "DNS only" para que o Cloudflare so resolva o DNS sem interferir.
 Abra o **PowerShell** no seu PC e rode:
 
 ```powershell
-nslookup blackbeltconsultoria.com.br
+nslookup blackbeltconsultoria.com
 ```
 
 Deve retornar algo como:
 ```
-Name:    blackbeltconsultoria.com.br
+Name:    blackbeltconsultoria.com
 Address: 164.90.152.37
 ```
 
@@ -250,8 +250,8 @@ O script vai parar e pedir informacoes. Responda exatamente assim:
 
   Informacoes obrigatorias:
 
-  Seu dominio (ex: blackbelt.com.br): blackbeltconsultoria.com.br
-  Email para SSL (Let's Encrypt): contato@blackbeltconsultoria.com.br
+  Seu dominio (ex: blackbelt.com.br): blackbeltconsultoria.com
+  Email para SSL (Let's Encrypt): contato@blackbeltconsultoria.com
 
   Configuracao de Email (SMTP):
   Dica: Brevo (brevo.com) e gratis ate 300 emails/dia
@@ -260,7 +260,7 @@ O script vai parar e pedir informacoes. Responda exatamente assim:
   SMTP Port [587]: (aperte Enter — usar padrao)
   SMTP User: a48473001@smtp-brevo.com
   SMTP Password: (cole a senha do Brevo e aperte Enter — nao aparece na tela)
-  Email remetente (from) [noreply@blackbeltconsultoria.com.br]: contato@blackbeltconsultoria.com
+  Email remetente (from) [noreply@blackbeltconsultoria.com]: contato@blackbeltconsultoria.com
 
   Pagamentos (opcional — pule se ainda nao configurou):
 
@@ -278,7 +278,7 @@ O script vai parar e pedir informacoes. Responda exatamente assim:
 O script tenta gerar o certificado SSL automaticamente:
 ```
 [5/10] Gerando certificado SSL (Let's Encrypt)
-  Gerando certificado para blackbeltconsultoria.com.br...
+  Gerando certificado para blackbeltconsultoria.com...
   ✓ Certificado SSL gerado com sucesso
 ```
 
@@ -314,7 +314,7 @@ Ao terminar, o script exibe:
 ║              ✨ Plataforma no ar! ✨                        ║
 ╚══════════════════════════════════════════════════════════════╝
 
-  URL:           https://blackbeltconsultoria.com.br
+  URL:           https://blackbeltconsultoria.com
   Admin email:   ricardo@consultoriasst.com.br
   Admin senha:   xK7mBq2pLnR4Aa1!
 
@@ -357,7 +357,7 @@ Todos devem estar **"Up"**. O app e mysql devem estar **"(healthy)"**.
 ### 5.2 Testar pelo navegador
 
 1. Abra o navegador no seu PC
-2. Acesse **https://blackbeltconsultoria.com.br**
+2. Acesse **https://blackbeltconsultoria.com**
 3. Deve aparecer a tela de login da BlackBelt Platform
 4. Faca login com:
    - **Email:** `ricardo@consultoriasst.com.br`
@@ -380,9 +380,9 @@ docker compose logs nginx --tail 50
 ls -la docker/nginx/ssl/
 
 # Se nao existem, gerar agora (o DNS ja deve ter propagado)
-certbot certonly --standalone -d blackbeltconsultoria.com.br -d www.blackbeltconsultoria.com.br --email contato@blackbeltconsultoria.com.br --agree-tos --non-interactive
-cp /etc/letsencrypt/live/blackbeltconsultoria.com.br/fullchain.pem docker/nginx/ssl/
-cp /etc/letsencrypt/live/blackbeltconsultoria.com.br/privkey.pem docker/nginx/ssl/
+certbot certonly --standalone -d blackbeltconsultoria.com -d www.blackbeltconsultoria.com --email contato@blackbeltconsultoria.com --agree-tos --non-interactive
+cp /etc/letsencrypt/live/blackbeltconsultoria.com/fullchain.pem docker/nginx/ssl/
+cp /etc/letsencrypt/live/blackbeltconsultoria.com/privkey.pem docker/nginx/ssl/
 docker compose restart nginx
 ```
 
@@ -416,7 +416,7 @@ cd "C:\Users\Carlos Honorato\OneDrive\Área de trabalho\blackbelt-platform-main"
 ### 6.2 Rodar teste E2E apontando para producao
 
 ```powershell
-$env:BASE_URL="https://blackbeltconsultoria.com.br/api/trpc"; node test-e2e-full.cjs
+$env:BASE_URL="https://blackbeltconsultoria.com/api/trpc"; node test-e2e-full.cjs
 ```
 
 Se o script usa `const BASE = "http://localhost:5000/api/trpc"` fixo,
@@ -506,8 +506,8 @@ O cron faz isso automaticamente a cada 60 dias, mas se precisar manualmente:
 
 ```bash
 certbot renew --force-renewal
-cp /etc/letsencrypt/live/blackbeltconsultoria.com.br/fullchain.pem /opt/blackbelt/docker/nginx/ssl/
-cp /etc/letsencrypt/live/blackbeltconsultoria.com.br/privkey.pem /opt/blackbelt/docker/nginx/ssl/
+cp /etc/letsencrypt/live/blackbeltconsultoria.com/fullchain.pem /opt/blackbelt/docker/nginx/ssl/
+cp /etc/letsencrypt/live/blackbeltconsultoria.com/privkey.pem /opt/blackbelt/docker/nginx/ssl/
 docker compose restart nginx
 ```
 
@@ -553,7 +553,7 @@ Se precisar mais performance: upgrade para $12/mes (2 vCPU, 2GB RAM) direto no p
 |-------|------|
 | Painel DigitalOcean | https://cloud.digitalocean.com |
 | Painel Cloudflare | https://dash.cloudflare.com |
-| Plataforma | https://blackbeltconsultoria.com.br |
+| Plataforma | https://blackbeltconsultoria.com |
 | SSH no servidor | `ssh root@IP_DO_DROPLET` |
 | Arquivos no servidor | `/opt/blackbelt/` |
 | Logs do app | `docker compose logs -f app` |
