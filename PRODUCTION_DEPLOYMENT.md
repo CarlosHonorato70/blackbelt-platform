@@ -42,7 +42,7 @@ O script faz tudo automaticamente:
 
 ### Apos o setup
 
-Acesse `https://blackbeltconsultoria.com.br` e faca login:
+Acesse `https://blackbeltconsultoria.com` e faca login:
 - **Email:** ricardo@consultoriasst.com.br
 - **Senha:** exibida no final do script (anote e troque no primeiro login)
 
