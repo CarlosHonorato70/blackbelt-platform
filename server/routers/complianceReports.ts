@@ -92,10 +92,10 @@ export const complianceReportsRouter = router({
         description: z.string().optional(),
         fileUrl: z.string().optional(),
         version: z.string(),
-        validFrom: z.date(),
-        validUntil: z.date().optional(),
+        validFrom: z.coerce.date(),
+        validUntil: z.coerce.date().optional(),
         signedBy: z.string().optional(),
-        signedAt: z.date().optional(),
+        signedAt: z.coerce.date().optional(),
       })
     )
     .mutation(async ({ input }) => {
