@@ -4,6 +4,8 @@
  *        → Serviços → Clientes → Propostas → Emails → NR-01 → PDFs
  */
 const http = require("http");
+const https = require("https");
+const pickHttp = (url) => url.startsWith("https") ? https : http;
 const fs = require("fs");
 const path = require("path");
 
@@ -33,7 +35,7 @@ function trpcMutate(procedure, body, impersonateTenantId) {
       hostname: url.hostname, port: url.port, path: url.pathname,
       method: "POST", headers,
     };
-    const req = http.request(opts, (res) => {
+    const req = pickHttp(BASE).request(opts, (res) => {
       let body = "";
       if (res.headers["set-cookie"]) {
         for (const c of res.headers["set-cookie"]) {
@@ -67,7 +69,7 @@ function trpcQuery(procedure, input, impersonateTenantId) {
       hostname: url.hostname, port: url.port, path: url.pathname + url.search,
       method: "GET", headers,
     };
-    const req = http.request(opts, (res) => {
+    const req = pickHttp(BASE).request(opts, (res) => {
       let body = "";
       if (res.headers["set-cookie"]) {
         for (const c of res.headers["set-cookie"]) {
@@ -207,7 +209,7 @@ async function main() {
   // ── 1. LOGIN ─────────────────────────────────────────────────────
   console.log("\n[1/12] Login como Admin Master...");
   const loginResult = await trpcMutate("auth.login", {
-    email: "ricardo@consultoriasst.com.br",
+    email: process.env.ADMIN_EMAIL || "ricardo@consultoriasst.com.br",
     password: "Senha@123",
   });
   if (!COOKIE) {
@@ -560,6 +562,27 @@ async function main() {
     }, comp.id);
     console.log(`  ✓ Avaliacao ergonomica: ${comp.name}`);
 
+    // Seed compliance checklist (required before issuing certificate)
+    await safeMutate("complianceChecklist.seedNr01Requirements", {
+      tenantId: comp.id,
+    }, comp.id);
+    console.log(`  ✓ Checklist NR-01 populado: ${comp.name}`);
+
+    // Mark some checklist items as compliant (need 80% score for certificate)
+    const checklistItems = await safeQuery("complianceChecklist.list", { tenantId: comp.id }, comp.id);
+    if (checklistItems && Array.isArray(checklistItems)) {
+      // Mark 84% as compliant (21 out of 25)
+      const toMark = Math.ceil(checklistItems.length * 0.84);
+      for (let ci = 0; ci < toMark && ci < checklistItems.length; ci++) {
+        await safeMutate("complianceChecklist.updateStatus", {
+          id: checklistItems[ci].id,
+          status: "compliant",
+          notes: "Verificado via E2E test",
+        }, comp.id);
+      }
+      console.log(`  ✓ Checklist: ${toMark}/${checklistItems.length} itens conformes`);
+    }
+
     // Compliance certificate
     await safeMutate("complianceCertificate.issue", {
       tenantId: comp.id,
@@ -578,14 +601,17 @@ async function main() {
     for (const pdf of PDF_EXPORTS) {
       const result = await safeMutate(pdf.proc, { tenantId: comp.id }, comp.id);
       const base64 = typeof result === "object" && result !== null ? result.data : null;
-      if (base64) {
+      if (base64 && typeof base64 === "string" && base64.length > 100) {
         const filepath = savePdf(folderName, pdf.file, base64);
         const size = fs.statSync(filepath).size;
         console.log(`    ✓ ${pdf.file} (${(size / 1024).toFixed(1)} KB)`);
       } else if (result === null) {
         console.log(`    ✗ ${pdf.file} - erro (ver acima)`);
       } else {
-        console.log(`    ✗ ${pdf.file} - sem dados (tipo: ${typeof result}, keys: ${result && typeof result === 'object' ? Object.keys(result).join(',') : 'N/A'})`);
+        const detail = typeof result === "object" && result !== null
+          ? `keys: ${Object.keys(result).join(',')}, message: ${result.message || 'N/A'}`
+          : `tipo: ${typeof result}, valor: ${String(result).substring(0, 100)}`;
+        console.log(`    ✗ ${pdf.file} - sem dados (${detail})`);
       }
     }
   }
