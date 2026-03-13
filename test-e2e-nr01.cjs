@@ -429,6 +429,79 @@ async function main() {
 
     let savedAssessmentId = null;
     let savedPersonIds = [];
+    let sectorIds = [];
+
+    // ── 2.5 Setores e Colaboradores ─────────────────────────────────
+    const SETORES_POR_SETOR = {
+      "Metalurgia e Siderurgia": [
+        { name: "Produção", description: "Linha de produção metalúrgica", responsibleName: "João Silva", shift: "1º Turno" },
+        { name: "Fundição", description: "Setor de fundição e moldagem", responsibleName: "Maria Santos", shift: "2º Turno" },
+        { name: "Qualidade", description: "Controle de qualidade e ensaios", responsibleName: "Pedro Costa" },
+        { name: "Manutenção", description: "Manutenção preventiva e corretiva", responsibleName: "Carlos Oliveira" },
+        { name: "Administrativo", description: "Gestão administrativa e financeira", responsibleName: "Ana Ferreira" },
+      ],
+      "Tecnologia da Informação": [
+        { name: "Desenvolvimento", description: "Equipe de desenvolvimento de software", responsibleName: "Lucas Almeida" },
+        { name: "Infraestrutura", description: "Servidores, redes e cloud", responsibleName: "Bruno Lima" },
+        { name: "Produto", description: "Gestão de produto e UX", responsibleName: "Camila Rocha" },
+        { name: "Suporte", description: "Help desk e suporte ao cliente", responsibleName: "Fernanda Torres" },
+        { name: "RH / People", description: "Recursos humanos e cultura", responsibleName: "Patrícia Mendes" },
+      ],
+      "Construção Civil": [
+        { name: "Obra A — Residencial", description: "Canteiro de obras residencial", responsibleName: "Roberto Gomes", shift: "Diurno" },
+        { name: "Obra B — Comercial", description: "Canteiro de obras comercial", responsibleName: "Eduardo Souza", shift: "Diurno" },
+        { name: "Engenharia", description: "Projetos e cálculos estruturais", responsibleName: "Marcos Pereira" },
+        { name: "Segurança do Trabalho", description: "SESMT e segurança ocupacional", responsibleName: "Luís Ribeiro" },
+        { name: "Administrativo", description: "Compras, RH e financeiro", responsibleName: "Sandra Martins" },
+      ],
+      "Transporte e Logística": [
+        { name: "Motoristas", description: "Equipe de motoristas de carga", responsibleName: "Antônio Barbosa", shift: "Escala 6x1" },
+        { name: "Armazém", description: "Operações de armazenagem e separação", responsibleName: "Ricardo Araújo", shift: "1º Turno" },
+        { name: "Expedição", description: "Controle de cargas e entregas", responsibleName: "Cláudio Nunes" },
+        { name: "Frota", description: "Manutenção e gestão de veículos", responsibleName: "Jorge Cardoso" },
+        { name: "Administrativo", description: "Gestão operacional e financeira", responsibleName: "Mariana Teixeira" },
+      ],
+    };
+
+    const setoresEmpresa = SETORES_POR_SETOR[company.sector] || SETORES_POR_SETOR["Tecnologia da Informação"];
+    let sectorCount = 0;
+    for (const setor of setoresEmpresa) {
+      try {
+        const s = await trpcMutate("sectors.create", setor);
+        sectorIds.push(s?.id || s);
+        sectorCount++;
+      } catch (e) { /* setor pode já existir */ }
+    }
+    console.log(`  ✅ ${sectorCount} setores criados`);
+
+    // Criar colaboradores distribuídos nos setores
+    const CARGOS = ["Analista", "Coordenador", "Técnico", "Assistente", "Gerente", "Operador", "Engenheiro", "Supervisor"];
+    const NOMES = [
+      "Ana Souza", "Bruno Lima", "Carla Santos", "Diego Ferreira", "Elena Costa",
+      "Felipe Oliveira", "Gabriela Almeida", "Henrique Rocha", "Isabela Torres", "João Mendes",
+      "Karen Ribeiro", "Lucas Araújo", "Marina Pereira", "Nathan Gomes", "Olívia Martins",
+      "Paulo Silva", "Raquel Barbosa", "Samuel Nunes", "Tatiana Cardoso", "Vinícius Teixeira",
+    ];
+    const numColaboradores = Math.min(20, Math.floor(company.headcount * 0.06));
+    let pessoasOk = 0;
+    for (let i = 0; i < numColaboradores; i++) {
+      const sectorId = sectorIds.length > 0 ? sectorIds[i % sectorIds.length] : undefined;
+      const nome = NOMES[i % NOMES.length];
+      const cargo = CARGOS[i % CARGOS.length];
+      try {
+        const p = await trpcMutate("people.create", {
+          sectorId,
+          name: nome,
+          position: cargo,
+          email: `${nome.toLowerCase().replace(/ /g, ".")}@${company.name.toLowerCase().replace(/[^a-z]/g, "")}.com.br`,
+          phone: `(11) 9${String(Math.floor(Math.random() * 90000000 + 10000000))}`,
+          employmentType: i < numColaboradores * 0.85 ? "own" : "outsourced",
+        });
+        savedPersonIds.push(p?.id || p);
+        pessoasOk++;
+      } catch (e) { /* ignore */ }
+    }
+    console.log(`  ✅ ${pessoasOk} colaboradores criados em ${sectorIds.length} setores`);
 
     // ── 3. Avaliação de Risco + Itens ────────────────────────────────
     try {
