@@ -7,7 +7,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
-const BASE = "http://localhost:5000/api/trpc";
+const BASE = process.env.BASE_URL || "http://localhost:5000/api/trpc";
 let COOKIE = "";
 
 // Contadores
