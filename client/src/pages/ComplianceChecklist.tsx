@@ -29,6 +29,7 @@ import {
   ChevronRight,
   Shield,
   FileDown,
+  Award,
 } from "lucide-react";
 import { usePdfExport } from "@/hooks/usePdfExport";
 
@@ -243,6 +244,33 @@ export default function ComplianceChecklist() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Certificate Prompt when score >= 80% */}
+            {compliancePercent >= 80 && (
+              <Card className="border-green-200 bg-green-50">
+                <CardContent className="py-4">
+                  <div className="flex items-center gap-3">
+                    <Award className="h-8 w-8 text-green-600 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="font-semibold text-green-900">
+                        Conformidade atingiu {Math.round(compliancePercent)}%!
+                      </p>
+                      <p className="text-sm text-green-700">
+                        Sua empresa está apta a receber o Certificado de Conformidade NR-01.
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700"
+                      onClick={() => window.location.href = "/compliance-certificate"}
+                    >
+                      <Award className="h-4 w-4 mr-1" />
+                      Emitir Certificado
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Requirements by Category */}
             <div className="space-y-3">

@@ -12,6 +12,7 @@ import { router } from "../_core/trpc";
 import { consultantProcedure } from "../_core/trpc";
 import { tenantProcedure } from "../_core/trpc";
 import { tenants } from "../../drizzle/schema";
+import { complianceChecklist, complianceMilestones } from "../../drizzle/schema_nr01";
 import * as db from "../db";
 
 // Validação de CNPJ
@@ -183,6 +184,85 @@ export const companiesRouter = router({
           userAgent: ctx.req.headers["user-agent"],
         });
       } catch (_) {}
+
+      // Auto-seed: Checklist NR-01 (23 requisitos) + Cronograma (11 milestones)
+      try {
+        const nr01Requirements = [
+          { code: "NR01-1.5.3.1", text: "Inventário de riscos com fatores psicossociais identificados", category: "GRO - Gerenciamento de Riscos" },
+          { code: "NR01-1.5.3.2", text: "Avaliação de riscos psicossociais com metodologia validada", category: "GRO - Gerenciamento de Riscos" },
+          { code: "NR01-1.5.3.3", text: "Classificação de riscos por severidade e probabilidade", category: "GRO - Gerenciamento de Riscos" },
+          { code: "NR01-1.5.4.1", text: "Plano de ação com medidas preventivas para riscos psicossociais", category: "GRO - Gerenciamento de Riscos" },
+          { code: "NR01-1.5.4.2", text: "Hierarquia de controles aplicada (eliminação→PPE)", category: "GRO - Gerenciamento de Riscos" },
+          { code: "NR01-1.5.4.3", text: "Responsáveis e prazos definidos para cada ação", category: "GRO - Gerenciamento de Riscos" },
+          { code: "NR01-1.5.7.1", text: "PGR atualizado com seção de riscos psicossociais", category: "Documentação" },
+          { code: "NR01-1.5.7.2", text: "Laudo técnico assinado por profissional habilitado", category: "Documentação" },
+          { code: "NR01-1.5.7.3", text: "Registro de treinamentos realizados", category: "Documentação" },
+          { code: "NR01-1.5.7.4", text: "Atas de reunião de análise de riscos", category: "Documentação" },
+          { code: "NR07-7.5.1", text: "PCMSO integrado com riscos psicossociais do PGR", category: "PCMSO" },
+          { code: "NR07-7.5.2", text: "Exames complementares para saúde mental definidos", category: "PCMSO" },
+          { code: "NR07-7.5.3", text: "Monitoramento periódico de saúde mental", category: "PCMSO" },
+          { code: "NR01-1.5.3.4", text: "Canal de escuta/denúncia anônima implementado", category: "Participação dos Trabalhadores" },
+          { code: "NR01-1.5.3.5", text: "Pesquisa de clima organizacional realizada", category: "Participação dos Trabalhadores" },
+          { code: "NR01-1.5.3.6", text: "COPSOQ-II ou instrumento validado aplicado", category: "Participação dos Trabalhadores" },
+          { code: "NR01-1.5.3.7", text: "Feedback dos resultados comunicado aos trabalhadores", category: "Participação dos Trabalhadores" },
+          { code: "NR01-1.5.5.1", text: "Treinamento de lideranças sobre riscos psicossociais", category: "Treinamento" },
+          { code: "NR01-1.5.5.2", text: "Capacitação da CIPA em saúde mental", category: "Treinamento" },
+          { code: "NR01-1.5.5.3", text: "Programa de prevenção ao assédio moral e sexual", category: "Treinamento" },
+          { code: "NR01-1.5.6.1", text: "Indicadores de saúde mental monitorados mensalmente", category: "Monitoramento" },
+          { code: "NR01-1.5.6.2", text: "Reavaliação periódica dos riscos psicossociais", category: "Monitoramento" },
+          { code: "NR01-1.5.6.3", text: "Acompanhamento de eficácia das ações implementadas", category: "Monitoramento" },
+          { code: "NR17-17.1.1", text: "AEP realizada com fatores organizacionais", category: "NR-17 Ergonomia" },
+          { code: "NR17-17.1.2", text: "AET quando requerida pela AEP", category: "NR-17 Ergonomia" },
+        ];
+
+        for (const req of nr01Requirements) {
+          await database.insert(complianceChecklist).values({
+            id: nanoid(),
+            tenantId: companyId,
+            requirementCode: req.code,
+            requirementText: req.text,
+            category: req.category,
+            status: "non_compliant",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+        }
+
+        const addDays = (days: number) => {
+          const d = new Date();
+          d.setDate(d.getDate() + days);
+          return d;
+        };
+        const milestones = [
+          { title: "Capacitação da equipe SST", category: "training", targetDate: addDays(30), order: 1 },
+          { title: "Definição de metodologia", category: "assessment", targetDate: addDays(45), order: 2 },
+          { title: "Aplicação COPSOQ-II", category: "assessment", targetDate: addDays(75), order: 3 },
+          { title: "Análise e relatório", category: "inventory", targetDate: addDays(90), order: 4 },
+          { title: "Elaboração do PGR psicossocial", category: "documentation", targetDate: addDays(105), order: 5 },
+          { title: "Plano de ação preventivo", category: "action_plan", targetDate: addDays(120), order: 6 },
+          { title: "Implementação das ações", category: "action_plan", targetDate: addDays(180), order: 7 },
+          { title: "Integração PGR+PCMSO", category: "documentation", targetDate: addDays(150), order: 8 },
+          { title: "Treinamento de lideranças", category: "training", targetDate: addDays(135), order: 9 },
+          { title: "Revisão e auditoria", category: "review", targetDate: addDays(210), order: 10 },
+          { title: "Adequação completa NR-01", category: "review", targetDate: new Date("2026-05-26"), order: 11 },
+        ];
+
+        for (const m of milestones) {
+          await database.insert(complianceMilestones).values({
+            id: nanoid(),
+            tenantId: companyId,
+            title: m.title,
+            category: m.category,
+            targetDate: m.targetDate,
+            status: "pending",
+            order: m.order,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+        }
+      } catch (_) {
+        // Auto-seed failure is non-critical, company was already created
+      }
 
       return { id: companyId, name: input.name };
     }),
