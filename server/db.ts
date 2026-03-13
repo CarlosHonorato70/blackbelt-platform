@@ -554,7 +554,25 @@ export async function listPeople(tenantId: string, filters: { sectorId?: string;
   if (filters.sectorId) conditions.push(eq(people.sectorId, filters.sectorId));
   if (filters.employmentType) conditions.push(eq(people.employmentType, filters.employmentType as any));
   if (filters.search) conditions.push(or(like(people.name, `%${filters.search}%`), like(people.email, `%${filters.search}%`)) as any);
-  return db.select().from(people).where(and(...conditions)).orderBy(desc(people.createdAt));
+  const rows = await db
+    .select({
+      id: people.id,
+      tenantId: people.tenantId,
+      sectorId: people.sectorId,
+      name: people.name,
+      position: people.position,
+      email: people.email,
+      phone: people.phone,
+      employmentType: people.employmentType,
+      createdAt: people.createdAt,
+      updatedAt: people.updatedAt,
+      sectorName: sectors.name,
+    })
+    .from(people)
+    .leftJoin(sectors, eq(people.sectorId, sectors.id))
+    .where(and(...conditions))
+    .orderBy(desc(people.createdAt));
+  return rows;
 }
 
 export async function getPerson(id: string, tenantId: string) {
