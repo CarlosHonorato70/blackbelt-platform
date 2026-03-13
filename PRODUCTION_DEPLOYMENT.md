@@ -1,248 +1,182 @@
-# Production Deployment Guide - Quick Reference
-# Black Belt Platform
+# Deploy em Producao — BlackBelt Platform
 
-## Prerequisites Checklist
-- [ ] Linux server (Ubuntu 20.04+ or similar)
-- [ ] Docker and Docker Compose installed
-- [ ] Domain name configured with DNS
-- [ ] SSL certificate (Let's Encrypt recommended)
-- [ ] SSH access to server
-- [ ] MongoDB backup strategy
+## Arquitetura
 
-## Step 1: Initial Server Setup
-
-```bash
-# Update system
-sudo apt update && sudo apt upgrade -y
-
-# Install Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-sudo usermod -aG docker $USER
-
-# Install Docker Compose
-sudo apt install docker-compose-plugin -y
-
-# Verify installation
-docker --version
-docker compose version
+```
+Internet → Nginx (80/443 SSL) → Node.js App (5000) → MySQL 8.0 (3306)
+                                                    → Backup diario (cron)
 ```
 
-## Step 2: Clone and Configure
+Tudo roda em Docker via `docker-compose.yml`. Nginx faz proxy reverso com SSL.
+
+---
+
+## Opcao 1: Deploy Automatico (Recomendado)
+
+### Pre-requisitos
+- Droplet DigitalOcean Ubuntu 24.04 ($6/mes — 1 vCPU, 1GB RAM, 25GB SSD)
+- Dominio apontando para o IP do Droplet (DNS A record)
+
+### Executar
 
 ```bash
-# Clone repository
-git clone https://github.com/CarlosHonorato70/blackbelt-platform.git
-cd blackbelt-platform
+# SSH no servidor
+ssh root@SEU_IP
 
-# Checkout production branch
-git checkout main
-
-# Create production environment file
-cp .env.production.template .env
-nano .env  # Edit with your values
+# Clonar e rodar setup
+git clone https://github.com/CarlosHonorato70/blackbelt-platform.git /opt/blackbelt
+cd /opt/blackbelt
+chmod +x scripts/deploy-setup.sh
+./scripts/deploy-setup.sh
 ```
 
-## Step 3: SSL Certificate Setup
+O script faz tudo automaticamente:
+1. Instala Docker, Git, Certbot
+2. Configura firewall (SSH + HTTP + HTTPS)
+3. Gera certificado SSL (Let's Encrypt)
+4. Pede configuracoes (dominio, email SMTP, pagamentos)
+5. Gera `.env.production` com secrets seguros
+6. Sobe containers Docker (app + mysql + nginx + backup)
+7. Roda migrations e seed (admin + planos + roles)
+8. Configura cron de backup diario e renovacao SSL
 
-### Option A: Let's Encrypt (Recommended)
+### Apos o setup
+
+Acesse `https://blackbeltconsultoria.com.br` e faca login:
+- **Email:** ricardo@consultoriasst.com.br
+- **Senha:** exibida no final do script (anote e troque no primeiro login)
+
+---
+
+## Opcao 2: Deploy Manual
+
+### 1. Instalar Docker
+
 ```bash
-# Install certbot
-sudo apt install certbot -y
-
-# Generate certificate
-sudo certbot certonly --standalone \
-  -d yourdomain.com \
-  -d www.yourdomain.com \
-  --email your-email@domain.com \
-  --agree-tos
-
-# Copy certificates
-sudo mkdir -p docker/nginx/ssl
-sudo cp /etc/letsencrypt/live/yourdomain.com/fullchain.pem docker/nginx/ssl/
-sudo cp /etc/letsencrypt/live/yourdomain.com/privkey.pem docker/nginx/ssl/
-sudo chown -R $USER:$USER docker/nginx/ssl
+curl -fsSL https://get.docker.com | sh
 ```
 
-### Option B: Self-Signed (Development/Testing)
+### 2. Clonar repositorio
+
 ```bash
+git clone https://github.com/CarlosHonorato70/blackbelt-platform.git /opt/blackbelt
+cd /opt/blackbelt
+```
+
+### 3. Criar `.env.production`
+
+```bash
+cp .env.production.template .env.production
+nano .env.production
+```
+
+Preencher obrigatoriamente:
+- `DATABASE_URL=mysql://blackbelt:SUA_SENHA@mysql:3306/blackbelt`
+- `COOKIE_SECRET=` (minimo 64 caracteres: `openssl rand -base64 48`)
+- `FRONTEND_URL=https://seudominio.com.br`
+- `ALLOWED_ORIGINS=https://seudominio.com.br`
+- `MYSQL_PASSWORD=SUA_SENHA` (mesma do DATABASE_URL)
+- `MYSQL_ROOT_PASSWORD=OUTRA_SENHA`
+
+### 4. Gerar SSL
+
+```bash
+apt install certbot -y
+certbot certonly --standalone -d seudominio.com.br -d www.seudominio.com.br --email seu@email.com --agree-tos
 mkdir -p docker/nginx/ssl
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout docker/nginx/ssl/privkey.pem \
-  -out docker/nginx/ssl/fullchain.pem
+cp /etc/letsencrypt/live/seudominio.com.br/fullchain.pem docker/nginx/ssl/
+cp /etc/letsencrypt/live/seudominio.com.br/privkey.pem docker/nginx/ssl/
 ```
 
-## Step 4: Deploy Application
+### 5. Subir containers
 
 ```bash
-# Build and start services
-docker compose -f docker-compose.production.yml up -d
-
-# Check status
-docker compose -f docker-compose.production.yml ps
-
-# View logs
-docker compose -f docker-compose.production.yml logs -f
-
-# Run database migrations
-docker compose -f docker-compose.production.yml exec backend sh -c "pnpm db:push"
+docker compose up --build -d
 ```
 
-## Step 5: Verify Deployment
+### 6. Rodar migrations e seed
 
 ```bash
-# Health check
-curl http://localhost:3000/health
-
-# Check API endpoint
-curl http://localhost:3000/api/health
-
-# Check via domain (after DNS configured)
-curl https://yourdomain.com/health
+docker compose exec -T app npx tsx node_modules/drizzle-kit/bin.cjs push
+docker compose exec -T app npx tsx drizzle/seed.ts
 ```
 
-## Step 6: Setup Automated Backups
+### 7. Verificar
 
 ```bash
-# Create cron job for daily backups
-crontab -e
-
-# Add this line (daily backup at 2 AM)
-0 2 * * * cd /opt/blackbelt-platform && docker compose -f docker-compose.production.yml run --rm mongodb-backup
+docker compose ps
+curl https://seudominio.com.br/api/health
 ```
 
-## Step 7: Configure GitHub Actions (CI/CD)
+---
 
-Add these secrets to your GitHub repository (Settings → Secrets):
-
-- `DOCKER_USERNAME`: Your Docker Hub username
-- `DOCKER_PASSWORD`: Your Docker Hub password/token
-- `SSH_PRIVATE_KEY`: SSH private key for server access
-- `SERVER_HOST`: Your server IP or domain
-- `SERVER_USER`: SSH user (e.g., deploy)
-- `DEPLOY_PATH`: Path on server (e.g., /opt/blackbelt-platform)
-- `PRODUCTION_URL`: Your production domain
-- `SLACK_WEBHOOK`: (Optional) Slack webhook for notifications
-
-## Step 8: Monitoring Setup
+## Comandos Uteis
 
 ```bash
-# View container logs
-docker compose -f docker-compose.production.yml logs -f backend
+# Ver status dos servicos
+docker compose ps
 
-# Check resource usage
-docker stats
+# Ver logs da aplicacao
+docker compose logs -f app
 
-# Monitor disk space
-df -h
+# Ver logs do nginx
+docker compose logs -f nginx
 
-# Monitor MongoDB
-docker compose -f docker-compose.production.yml exec mongodb mongosh -u admin -p
+# Reiniciar tudo
+docker compose restart
+
+# Parar tudo
+docker compose down
+
+# Atualizar aplicacao
+cd /opt/blackbelt && git pull origin main && docker compose up --build -d
+
+# Backup manual do banco
+docker compose exec -T mysql mysqldump -u blackbelt -p'SENHA' --single-transaction blackbelt | gzip > backup_$(date +%Y%m%d).sql.gz
+
+# Restaurar backup
+gunzip < backup_20260312.sql.gz | docker compose exec -T mysql mysql -u blackbelt -p'SENHA' blackbelt
+
+# Renovar SSL manualmente
+certbot renew
+cp /etc/letsencrypt/live/seudominio.com.br/*.pem /opt/blackbelt/docker/nginx/ssl/
+docker compose restart nginx
 ```
 
-## Common Commands
+---
 
-```bash
-# Stop services
-docker compose -f docker-compose.production.yml down
+## Servicos Docker
 
-# Restart services
-docker compose -f docker-compose.production.yml restart
+| Servico | Container | Funcao |
+|---------|-----------|--------|
+| `app` | blackbelt-app | Node.js (porta 5000, interno) |
+| `mysql` | blackbelt-mysql | MySQL 8.0 (porta 3306, interno) |
+| `nginx` | blackbelt-nginx | Proxy reverso (portas 80/443) |
+| `backup` | blackbelt-backup | Backup diario as 3h (30 dias retencao) |
 
-# Update application
-git pull origin main
-docker compose -f docker-compose.production.yml up -d --build
-
-# Manual backup
-docker compose -f docker-compose.production.yml run --rm mongodb-backup
-
-# Restore backup
-docker compose -f docker-compose.production.yml run --rm \
-  -v $(pwd)/docker/backups:/backups \
-  mongodb bash /scripts/restore.sh /backups/backup_file.tar.gz
-
-# View Nginx logs
-docker compose -f docker-compose.production.yml logs nginx
-
-# Access MongoDB shell
-docker compose -f docker-compose.production.yml exec mongodb mongosh -u admin -p
-```
+---
 
 ## Troubleshooting
 
-### Container won't start
+**App nao inicia:**
 ```bash
-docker compose -f docker-compose.production.yml logs backend
-docker compose -f docker-compose.production.yml restart backend
+docker compose logs app | tail -30
 ```
 
-### Database connection issues
+**MySQL nao conecta:**
 ```bash
-# Check MongoDB is running
-docker compose -f docker-compose.production.yml ps mongodb
-
-# Check connection string
-docker compose -f docker-compose.production.yml exec backend env | grep DATABASE_URL
+docker compose exec mysql mysqladmin ping -u root -p'SENHA'
 ```
 
-### SSL certificate issues
+**SSL expirou:**
 ```bash
-# Check certificate files
-ls -l docker/nginx/ssl/
-
-# Renew Let's Encrypt certificate
-sudo certbot renew
-sudo cp /etc/letsencrypt/live/yourdomain.com/*.pem docker/nginx/ssl/
-docker compose -f docker-compose.production.yml restart nginx
+certbot renew --force-renewal
+cp /etc/letsencrypt/live/seudominio.com.br/*.pem /opt/blackbelt/docker/nginx/ssl/
+docker compose restart nginx
 ```
 
-### Performance issues
+**Disco cheio:**
 ```bash
-# Check resource usage
-docker stats
-
-# Increase container resources
-# Edit docker-compose.production.yml and add resource limits
-
-# Clear logs
-docker compose -f docker-compose.production.yml logs --tail=0 -f > /dev/null
+docker system prune -a    # Remove imagens/containers antigos
+find docker/backups -name '*.sql.gz' -mtime +7 -delete
 ```
-
-## Security Best Practices
-
-1. **Change all default passwords** in .env file
-2. **Enable firewall** (UFW recommended)
-3. **Keep system updated**: `sudo apt update && sudo apt upgrade`
-4. **Regular backups**: Verify backup cron job is running
-5. **Monitor logs**: Check for suspicious activity
-6. **Use HTTPS only**: Ensure SSL is properly configured
-7. **Rate limiting**: Configured in Nginx
-8. **Strong JWT secrets**: Minimum 32 characters
-
-## Maintenance Schedule
-
-- **Daily**: Automated backups
-- **Weekly**: Check logs and disk space
-- **Monthly**: Update packages and dependencies
-- **Quarterly**: Security audit and review
-
-## Support
-
-- Documentation: See DEPLOYMENT_GUIDE.md for detailed information
-- Issues: GitHub Issues
-- Security: Report to security@blackbelt.com
-
-## Production Checklist
-
-- [ ] All environment variables configured
-- [ ] SSL certificate installed and working
-- [ ] Database backup system tested
-- [ ] Monitoring and logging configured
-- [ ] Firewall rules configured
-- [ ] Domain DNS configured
-- [ ] Health checks passing
-- [ ] CI/CD pipeline configured
-- [ ] Security headers verified
-- [ ] Rate limiting tested
-- [ ] Email delivery tested
-- [ ] All services running and healthy
