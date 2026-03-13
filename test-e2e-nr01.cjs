@@ -841,6 +841,144 @@ async function main() {
       console.log(`  ⚠️  Certificado: ${e.message.substring(0, 80)}`);
     }
 
+    // ── 15. Indicadores de saúde mental ────────────────────────────
+    try {
+      const periodos = ["2025-S2", "2026-S1"];
+      for (const periodo of periodos) {
+        await trpcMutate("psychosocialDashboard.updateIndicators", {
+          tenantId: tid,
+          period: periodo,
+          absenteeismRate: Math.floor(Math.random() * 8 + 2),
+          turnoverRate: Math.floor(Math.random() * 15 + 5),
+          burnoutCases: Math.floor(Math.random() * 10 + 1),
+          stressLevel: Math.floor(Math.random() * 40 + 30),
+          engagementScore: Math.floor(Math.random() * 30 + 50),
+          satisfactionScore: Math.floor(Math.random() * 30 + 45),
+          incidentsReported: Math.floor(Math.random() * 8),
+        });
+      }
+      console.log("  ✅ Indicadores de saúde mental (2 períodos)");
+    } catch (e) {
+      console.log(`  ⚠️  Indicadores: ${e.message.substring(0, 80)}`);
+    }
+
+    // ── 16. Treinamento: inscrição + conclusão de módulos ──────────
+    try {
+      // Listar programas criados anteriormente
+      const programs = await trpcQuery("training.listPrograms", { tenantId: tid });
+      let enrollOk = 0;
+      if (programs && programs.length > 0 && savedPersonIds.length > 0) {
+        for (let pi = 0; pi < Math.min(programs.length, 2); pi++) {
+          const prog = programs[pi];
+          // Inscrever até 3 pessoas no programa
+          const participantIds = [];
+          for (let pIdx = 0; pIdx < Math.min(savedPersonIds.length, 3); pIdx++) {
+            try {
+              const enrolled = await trpcMutate("training.enrollParticipant", {
+                programId: prog.id,
+                personId: savedPersonIds[pIdx],
+                tenantId: tid,
+              });
+              const partId = enrolled?.id || enrolled;
+              if (partId) participantIds.push(partId);
+              enrollOk++;
+            } catch (e) { /* duplicate or error - skip */ }
+          }
+          // Buscar módulos do programa
+          try {
+            const progDetail = await trpcQuery("training.getProgram", { id: prog.id, tenantId: tid });
+            const modules = progDetail?.modules || [];
+            // Para cada participante inscrito, iniciar e completar módulos
+            for (const partId of participantIds) {
+              for (const mod of modules) {
+                try {
+                  await trpcMutate("training.startModule", {
+                    participantId: partId,
+                    moduleId: mod.id,
+                    tenantId: tid,
+                  });
+                  await trpcMutate("training.completeModule", {
+                    participantId: partId,
+                    moduleId: mod.id,
+                    tenantId: tid,
+                    quizScore: Math.floor(Math.random() * 25 + 75), // 75-100
+                  });
+                } catch (e) { /* ignore */ }
+              }
+            }
+          } catch (e) { /* ignore */ }
+        }
+      }
+      console.log(`  ✅ Treinamento: ${enrollOk} inscrições + módulos concluídos`);
+    } catch (e) {
+      console.log(`  ⚠️  Treinamento enroll: ${e.message.substring(0, 80)}`);
+    }
+
+    // ── 17. Pesquisa de clima + respostas ──────────────────────────
+    let savedSurveyId = null;
+    try {
+      const surveyResult = await trpcMutate("climateSurveys.create", {
+        tenantId: tid,
+        title: `Pesquisa de Clima Organizacional — ${company.name} — 2026`,
+        description: "Avaliação do clima organizacional com foco em satisfação, engajamento e bem-estar dos colaboradores.",
+        surveyType: "climate",
+        questions: [
+          { id: "q1", text: "Como você avalia o ambiente de trabalho?", type: "scale" },
+          { id: "q2", text: "Você se sente valorizado pela empresa?", type: "scale" },
+          { id: "q3", text: "A comunicação interna é clara e eficiente?", type: "scale" },
+          { id: "q4", text: "Você tem oportunidades de crescimento profissional?", type: "scale" },
+          { id: "q5", text: "O relacionamento com sua liderança é positivo?", type: "scale" },
+          { id: "q6", text: "Você está satisfeito com os benefícios oferecidos?", type: "scale" },
+          { id: "q7", text: "O equilíbrio entre vida pessoal e trabalho é adequado?", type: "scale" },
+          { id: "q8", text: "Você recomendaria esta empresa como um bom lugar para trabalhar?", type: "scale" },
+        ],
+      });
+      savedSurveyId = surveyResult?.id || surveyResult;
+      console.log(`  ✅ Pesquisa de clima criada: ${savedSurveyId}`);
+
+      // Enviar convites e submeter respostas
+      if (savedSurveyId) {
+        const nomes = ["Maria Silva", "João Santos", "Ana Oliveira", "Pedro Costa", "Lucia Ferreira",
+                       "Carlos Souza", "Fernanda Lima", "Ricardo Almeida", "Patricia Rocha", "Bruno Torres"];
+        const numRespondentes = Math.min(10, Math.floor(company.headcount * 0.05) + 3);
+        const inviteEmails = [];
+        for (let i = 0; i < numRespondentes; i++) {
+          inviteEmails.push({
+            email: `clima${i+1}@${company.name.toLowerCase().replace(/[^a-z]/g, "")}.test`,
+            name: nomes[i % nomes.length],
+          });
+        }
+
+        const inviteResult = await trpcMutate("climateSurveys.sendInvites", {
+          surveyId: savedSurveyId,
+          tenantId: tid,
+          invites: inviteEmails,
+        });
+
+        // Submeter respostas usando os tokens dos convites
+        let respostasOk = 0;
+        if (inviteResult?.invites) {
+          for (const inv of inviteResult.invites) {
+            try {
+              const respostas = {};
+              for (let q = 1; q <= 8; q++) {
+                respostas[`q${q}`] = Math.floor(Math.random() * 40 + 40); // 40-80
+              }
+              await trpcQuery("climateSurveys.submitResponse", {
+                token: inv.token,
+                responses: respostas,
+                isAnonymous: true,
+              });
+              respostasOk++;
+            } catch (e) { /* ignore */ }
+          }
+        }
+        console.log(`  ✅ Pesquisa de clima: ${respostasOk}/${numRespondentes} respostas`);
+      }
+    } catch (e) {
+      console.log(`  ⚠️  Clima: ${e.message.substring(0, 80)}`);
+    }
+
     await sleep(500); // Pequena pausa entre empresas
   }
 
@@ -898,6 +1036,37 @@ async function main() {
       // Delay entre PDFs para evitar rate limiting em produção
       await new Promise(r => setTimeout(r, 200));
     }
+
+    // PDFs com parâmetros extras (surveyId, assessmentId)
+    // 16. Pesquisa de Clima (requer surveyId)
+    try {
+      const surveys = await trpcQuery("climateSurveys.list", { tenantId: company.id });
+      if (surveys && surveys.length > 0) {
+        const result = await trpcMutate("nr01Pdf.exportClimateSurvey", { tenantId: company.id, surveyId: surveys[0].id });
+        if (result?.data && typeof result.data === "string" && result.data.length > 100) {
+          const size = savePdf(companyDir, "16-Pesquisa-Clima.pdf", result.data);
+          console.log(`  ✅ 16-Pesquisa-Clima.pdf (${(size / 1024).toFixed(1)} KB)`);
+          totalPdfs++;
+          totalSize += size;
+        } else { console.log("  ⚠️  16-Pesquisa-Clima: sem dados"); totalFails++; }
+      } else { console.log("  ⚠️  16-Pesquisa-Clima: nenhuma pesquisa"); totalFails++; }
+    } catch (e) { console.log(`  ❌ 16-Pesquisa-Clima: ${e.message.substring(0, 80)}`); totalFails++; }
+    await new Promise(r => setTimeout(r, 200));
+
+    // 17. Avaliação Ergonômica (requer assessmentId)
+    try {
+      const ergoList = await trpcQuery("ergonomicAssessments.list", { tenantId: company.id });
+      if (ergoList && ergoList.length > 0) {
+        const result = await trpcMutate("nr01Pdf.exportErgonomicAssessment", { tenantId: company.id, assessmentId: ergoList[0].id });
+        if (result?.data && typeof result.data === "string" && result.data.length > 100) {
+          const size = savePdf(companyDir, "17-Avaliacao-Ergonomica.pdf", result.data);
+          console.log(`  ✅ 17-Avaliacao-Ergonomica.pdf (${(size / 1024).toFixed(1)} KB)`);
+          totalPdfs++;
+          totalSize += size;
+        } else { console.log("  ⚠️  17-Avaliacao-Ergonomica: sem dados"); totalFails++; }
+      } else { console.log("  ⚠️  17-Avaliacao-Ergonomica: nenhuma avaliação"); totalFails++; }
+    } catch (e) { console.log(`  ❌ 17-Avaliacao-Ergonomica: ${e.message.substring(0, 80)}`); totalFails++; }
+
     console.log();
   }
 

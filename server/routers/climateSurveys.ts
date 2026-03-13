@@ -264,6 +264,23 @@ export const climateSurveysRouter = router({
         });
       }
 
+      // Calcular score e riskLevel a partir das respostas
+      let score = 0;
+      let riskLevel: "low" | "medium" | "high" | "critical" = "low";
+      try {
+        const resp = input.responses;
+        const values = Array.isArray(resp)
+          ? resp.map((r: any) => Number(r.value || r.score || r) || 0)
+          : Object.values(resp as Record<string, any>).map((v: any) => Number(v) || 0);
+        if (values.length > 0) {
+          score = Math.round(values.reduce((a: number, b: number) => a + b, 0) / values.length);
+        }
+        if (score < 30) riskLevel = "critical";
+        else if (score < 50) riskLevel = "high";
+        else if (score < 70) riskLevel = "medium";
+        else riskLevel = "low";
+      } catch { /* fallback to defaults */ }
+
       // Criar resposta
       const responseId = nanoid();
 
@@ -273,6 +290,8 @@ export const climateSurveysRouter = router({
         personId: invite.id, // Use invite ID as person reference
         tenantId: invite.tenantId,
         responses: input.responses,
+        score,
+        riskLevel,
         isAnonymous: input.isAnonymous ?? true,
         completedAt: new Date(),
         createdAt: new Date(),

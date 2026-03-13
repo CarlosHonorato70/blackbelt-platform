@@ -12,6 +12,7 @@ import {
   actionPlans,
 } from "../../drizzle/schema_nr01";
 import { eq, and, desc, sql } from "drizzle-orm";
+import { nanoid } from "nanoid";
 
 export const psychosocialDashboardRouter = router({
   // Resumo geral do dashboard psicossocial
@@ -371,5 +372,63 @@ export const psychosocialDashboardRouter = router({
           completionRate: actionPlanCompletionRate,
         },
       };
+    }),
+
+  // Criar/atualizar indicadores de saúde mental
+  updateIndicators: publicProcedure
+    .input(
+      z.object({
+        tenantId: z.string(),
+        sectorId: z.string().optional(),
+        period: z.string(),
+        absenteeismRate: z.number().optional(),
+        turnoverRate: z.number().optional(),
+        burnoutCases: z.number().optional(),
+        stressLevel: z.number().optional(),
+        engagementScore: z.number().optional(),
+        satisfactionScore: z.number().optional(),
+        incidentsReported: z.number().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
+
+      const { tenantId, sectorId, period, ...scores } = input;
+
+      // Verificar se já existe indicador para este tenant+period
+      const [existing] = await db
+        .select()
+        .from(mentalHealthIndicators)
+        .where(
+          and(
+            eq(mentalHealthIndicators.tenantId, tenantId),
+            eq(mentalHealthIndicators.period, period)
+          )
+        )
+        .limit(1);
+
+      if (existing) {
+        await db
+          .update(mentalHealthIndicators)
+          .set(scores)
+          .where(eq(mentalHealthIndicators.id, existing.id));
+        return { id: existing.id, updated: true };
+      }
+
+      const id = nanoid();
+      await db.insert(mentalHealthIndicators).values({
+        id,
+        tenantId,
+        sectorId: sectorId || null,
+        period,
+        ...scores,
+      });
+
+      return { id, updated: false };
     }),
 });
