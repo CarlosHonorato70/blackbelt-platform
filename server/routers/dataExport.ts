@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { subscribedProcedure, publicProcedure, router } from "../_core/trpc";
+import { subscribedProcedure, publicProcedure, adminProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { nanoid } from "nanoid";
 import { eq, and, desc } from "drizzle-orm";
-import { dsrRequests } from "../../drizzle/schema_nr01";
+import { dsrRequests, copsoqResponses, copsoqInvites } from "../../drizzle/schema_nr01";
+import { users } from "../../drizzle/schema";
 import { log } from "../_core/logger";
 
 export const dataExportRouter = router({
@@ -150,5 +151,149 @@ export const dataExportRouter = router({
         );
 
       return { success: true };
+    }),
+
+  // ============================================================
+  // Admin endpoints for DSR processing
+  // ============================================================
+
+  adminList: adminProcedure
+    .input(z.object({
+      status: z.enum(["pendente", "processando", "completo", "erro"]).optional(),
+      limit: z.number().min(1).max(200).default(50),
+    }).optional())
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [];
+
+      if (input?.status) {
+        return db.select().from(dsrRequests)
+          .where(eq(dsrRequests.status, input.status))
+          .orderBy(desc(dsrRequests.requestDate))
+          .limit(input.limit || 50);
+      }
+
+      return db.select().from(dsrRequests)
+        .orderBy(desc(dsrRequests.requestDate))
+        .limit(input?.limit || 50);
+    }),
+
+  processExport: adminProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      const [dsr] = await db.select().from(dsrRequests).where(eq(dsrRequests.id, input.id)).limit(1);
+      if (!dsr) throw new TRPCError({ code: "NOT_FOUND", message: "Solicitação não encontrada" });
+
+      await db.update(dsrRequests).set({ status: "processando", updatedAt: new Date() }).where(eq(dsrRequests.id, input.id));
+
+      try {
+        const email = dsr.email;
+        const userData: Record<string, any> = {};
+
+        // 1. User account info (excluding passwordHash)
+        const userRecords = await db.select({
+          id: users.id, name: users.name, email: users.email,
+          role: users.role, tenantId: users.tenantId,
+          emailVerified: users.emailVerified, createdAt: users.createdAt,
+          lastSignedIn: users.lastSignedIn,
+        }).from(users).where(eq(users.email, email));
+        userData.account = userRecords;
+
+        // 2. COPSOQ responses (by email match)
+        const copsoqData = await db.select().from(copsoqResponses).where(eq(copsoqResponses.respondentEmail, email));
+        if (copsoqData.length > 0) userData.copsoqResponses = copsoqData;
+
+        // 3. COPSOQ invites
+        const inviteData = await db.select().from(copsoqInvites).where(eq(copsoqInvites.email, email));
+        if (inviteData.length > 0) userData.copsoqInvites = inviteData;
+
+        // 4. DSR requests history
+        const dsrHistory = await db.select().from(dsrRequests).where(eq(dsrRequests.email, email));
+        userData.dsrRequests = dsrHistory;
+
+        const exportData = {
+          exportDate: new Date().toISOString(),
+          dataSubject: email,
+          platform: "BlackBelt Platform",
+          data: userData,
+        };
+
+        const jsonStr = JSON.stringify(exportData, null, 2);
+        const fileSize = `${(Buffer.byteLength(jsonStr) / 1024).toFixed(1)} KB`;
+
+        await db.update(dsrRequests).set({
+          status: "completo",
+          format: "JSON",
+          fileSize,
+          completionDate: new Date(),
+          updatedAt: new Date(),
+        }).where(eq(dsrRequests.id, input.id));
+
+        return { success: true, data: exportData, fileSize };
+      } catch (err) {
+        await db.update(dsrRequests).set({
+          status: "erro",
+          errorMessage: err instanceof Error ? err.message : "Erro desconhecido",
+          updatedAt: new Date(),
+        }).where(eq(dsrRequests.id, input.id));
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Erro ao processar exportação" });
+      }
+    }),
+
+  processDeletion: adminProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      const [dsr] = await db.select().from(dsrRequests).where(eq(dsrRequests.id, input.id)).limit(1);
+      if (!dsr) throw new TRPCError({ code: "NOT_FOUND" });
+      if (dsr.requestType !== "delete") throw new TRPCError({ code: "BAD_REQUEST", message: "Esta solicitação não é de exclusão" });
+
+      await db.update(dsrRequests).set({ status: "processando", updatedAt: new Date() }).where(eq(dsrRequests.id, input.id));
+
+      try {
+        const email = dsr.email;
+        const anonymized = `deleted_${Date.now()}@anon.blackbelt`;
+        let deletedCount = 0;
+
+        // 1. Anonymize COPSOQ responses
+        await db.update(copsoqResponses)
+          .set({ respondentEmail: anonymized, respondentName: "Dados Removidos" })
+          .where(eq(copsoqResponses.respondentEmail, email));
+        deletedCount++;
+
+        // 2. Delete COPSOQ invites
+        await db.delete(copsoqInvites).where(eq(copsoqInvites.email, email));
+        deletedCount++;
+
+        // 3. Anonymize user account (don't delete - keep for audit)
+        await db.update(users).set({
+          name: "Usuário Removido",
+          email: anonymized,
+          passwordHash: null,
+          emailVerified: false,
+        }).where(eq(users.email, email));
+        deletedCount++;
+
+        // Mark DSR as complete
+        await db.update(dsrRequests).set({
+          status: "completo",
+          completionDate: new Date(),
+          updatedAt: new Date(),
+        }).where(eq(dsrRequests.id, input.id));
+
+        return { success: true, deletedCount };
+      } catch (err) {
+        await db.update(dsrRequests).set({
+          status: "erro",
+          errorMessage: err instanceof Error ? err.message : "Erro desconhecido",
+          updatedAt: new Date(),
+        }).where(eq(dsrRequests.id, input.id));
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Erro ao processar exclusão" });
+      }
     }),
 });

@@ -15,6 +15,8 @@ import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import Stripe from "stripe";
 import { ensureTenantForUser } from "../_core/tenantHelpers";
+import { sendEmail } from "../_core/email";
+import { getInvoiceEmailTemplate, getTenantBranding } from "../_core/emailTemplates";
 
 /**
  * Inicializar cliente Stripe
@@ -500,6 +502,50 @@ export async function handleStripeWebhook(
           paymentMethod: "card",
           invoiceUrl: invoice.hosted_invoice_url || undefined,
         });
+
+        // Send invoice email to tenant
+        try {
+          const [tenant] = await db
+            .select()
+            .from(tenants)
+            .where(eq(tenants.id, localSub.tenantId))
+            .limit(1);
+
+          if (tenant?.contactEmail) {
+            const branding = await getTenantBranding(tenant.id);
+            const totalFormatted = new Intl.NumberFormat("pt-BR", {
+              style: "currency",
+              currency: "BRL",
+            }).format((invoice.total || 0) / 100);
+
+            const periodEnd = invoice.lines.data[0]?.period.end;
+            const dueDate = periodEnd
+              ? new Intl.DateTimeFormat("pt-BR").format(new Date(periodEnd * 1000))
+              : "N/A";
+
+            const html = getInvoiceEmailTemplate(
+              branding,
+              tenant.contactName || tenant.name,
+              invoice.id || "N/A",
+              totalFormatted,
+              dueDate
+            );
+
+            await sendEmail({
+              to: tenant.contactEmail,
+              subject: `Fatura Paga - ${branding.companyName}`,
+              html,
+            });
+
+            log.info("Invoice email sent", { tenantId: tenant.id, invoiceId: invoice.id });
+          }
+        } catch (emailErr) {
+          // Don't fail the webhook if email fails
+          log.error("Failed to send invoice email", {
+            error: emailErr instanceof Error ? emailErr.message : String(emailErr),
+            tenantId: localSub.tenantId,
+          });
+        }
 
         break;
       }
