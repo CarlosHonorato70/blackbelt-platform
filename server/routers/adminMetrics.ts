@@ -15,7 +15,28 @@ export const adminMetricsRouter = router({
     const [subStats] = await database.select({ total: sql`COUNT(*)`, active: sql`SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END)`, trialing: sql`SUM(CASE WHEN status = 'trialing' THEN 1 ELSE 0 END)`, pastDue: sql`SUM(CASE WHEN status = 'past_due' THEN 1 ELSE 0 END)`, revenue: sql`SUM(CASE WHEN status = 'active' THEN currentPrice ELSE 0 END)` }).from(subscriptions);
     let openTickets = 0;
     try { const [ts] = await database.select({ c: sql`COUNT(*)` }).from(supportTickets).where(sql`status IN ('open','in_progress')`); openTickets = Number(ts?.c) || 0; } catch {}
-    return { tenants: { total: Number(tenantStats?.total) || 0, active: Number(tenantStats?.active) || 0 }, users: { total: Number(userStats?.total) || 0 }, subscriptions: { total: Number(subStats?.total) || 0, active: Number(subStats?.active) || 0, trialing: Number(subStats?.trialing) || 0, pastDue: Number(subStats?.pastDue) || 0, monthlyRevenue: Number(subStats?.revenue) || 0 }, tickets: { open: openTickets } };
+
+    // Churn: subscriptions canceled in last 30 days / total active at start of period
+    const thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const [canceledStats] = await database.select({ count: sql`SUM(CASE WHEN status = 'canceled' AND updatedAt >= ${thirtyDaysAgo} THEN 1 ELSE 0 END)` }).from(subscriptions);
+    const canceledCount = Number(canceledStats?.count) || 0;
+    const activeStart = (Number(subStats?.active) || 0) + canceledCount; // approximate
+    const churnRate = activeStart > 0 ? Math.round((canceledCount / activeStart) * 100) : 0;
+
+    // Trial-to-paid conversion
+    const [conversionStats] = await database.select({
+      converted: sql`SUM(CASE WHEN status = 'active' AND trialEnd IS NOT NULL AND trialEnd < NOW() THEN 1 ELSE 0 END)`,
+      totalTrialed: sql`SUM(CASE WHEN trialEnd IS NOT NULL THEN 1 ELSE 0 END)`
+    }).from(subscriptions);
+    const convertedCount = Number(conversionStats?.converted) || 0;
+    const totalTrialed = Number(conversionStats?.totalTrialed) || 0;
+    const conversionRate = totalTrialed > 0 ? Math.round((convertedCount / totalTrialed) * 100) : 0;
+
+    // ARR = MRR * 12
+    const mrr = Number(subStats?.revenue) || 0;
+    const arr = mrr * 12;
+
+    return { tenants: { total: Number(tenantStats?.total) || 0, active: Number(tenantStats?.active) || 0 }, users: { total: Number(userStats?.total) || 0 }, subscriptions: { total: Number(subStats?.total) || 0, active: Number(subStats?.active) || 0, trialing: Number(subStats?.trialing) || 0, pastDue: Number(subStats?.pastDue) || 0, monthlyRevenue: Number(subStats?.revenue) || 0 }, tickets: { open: openTickets }, churnRate, conversionRate, arr, canceledSubscriptions: canceledCount };
   }),
 
   tenantsList: adminProcedure

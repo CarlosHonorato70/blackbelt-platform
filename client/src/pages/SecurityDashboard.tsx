@@ -24,6 +24,10 @@ import {
   Plus,
   Trash2,
   Globe,
+  Monitor,
+  Key,
+  Smartphone,
+  Copy,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useTenant } from "@/contexts/TenantContext";
@@ -35,6 +39,15 @@ export default function SecurityDashboard() {
   // Local state for add-IP form
   const [newIP, setNewIP] = useState("");
   const [newIPDescription, setNewIPDescription] = useState("");
+
+  // 2FA state
+  const [twoFAStep, setTwoFAStep] = useState<"idle" | "setup" | "verify" | "backup">("idle");
+  const [twoFASecret, setTwoFASecret] = useState("");
+  const [twoFAQrUrl, setTwoFAQrUrl] = useState("");
+  const [twoFACode, setTwoFACode] = useState("");
+  const [twoFABackupCodes, setTwoFABackupCodes] = useState<string[]>([]);
+  const [twoFADisableCode, setTwoFADisableCode] = useState("");
+  const [twoFARegenCode, setTwoFARegenCode] = useState("");
 
   // ── tRPC Queries ──────────────────────────────────────────────────────
   const {
@@ -66,6 +79,13 @@ export default function SecurityDashboard() {
     data: whitelistedIPs = [],
     refetch: refetchIPs,
   } = trpc.security.listWhitelistedIPs.useQuery(undefined, {
+    enabled: !!selectedTenant,
+  });
+
+  const {
+    data: activeSessions = [],
+    refetch: refetchSessions,
+  } = (trpc as any).security.listSessions.useQuery(undefined, {
     enabled: !!selectedTenant,
   });
 
@@ -102,6 +122,80 @@ export default function SecurityDashboard() {
       toast.error("Erro ao remover IP", { description: err.message }),
   });
 
+  const revokeSessionMutation = (trpc as any).security.revokeSession.useMutation({
+    onSuccess: () => {
+      toast.success("Sessão revogada");
+      refetchSessions();
+      refetchStats();
+    },
+    onError: (err: any) =>
+      toast.error("Erro ao revogar sessão", { description: err.message }),
+  });
+
+  const revokeAllSessionsMutation = (trpc as any).security.revokeAllSessions.useMutation({
+    onSuccess: () => {
+      toast.success("Todas as sessões foram revogadas");
+      refetchSessions();
+      refetchStats();
+    },
+    onError: (err: any) =>
+      toast.error("Erro ao revogar sessões", { description: err.message }),
+  });
+
+  // ── 2FA tRPC ─────────────────────────────────────────────────────────
+  const {
+    data: twoFAStatus,
+    isLoading: twoFALoading,
+    refetch: refetchTwoFA,
+  } = (trpc as any).twoFactor.getStatus.useQuery(undefined, {
+    enabled: !!selectedTenant,
+  });
+
+  const enableTwoFAMutation = (trpc as any).twoFactor.enable.useMutation({
+    onSuccess: (data: any) => {
+      setTwoFASecret(data.secret);
+      setTwoFAQrUrl(data.qrCodeURL);
+      setTwoFAStep("setup");
+      toast.success("Escaneie o QR code com seu app autenticador");
+    },
+    onError: (err: any) =>
+      toast.error("Erro ao ativar 2FA", { description: err.message }),
+  });
+
+  const verifyTwoFAMutation = (trpc as any).twoFactor.verify.useMutation({
+    onSuccess: (data: any) => {
+      setTwoFABackupCodes(data.backupCodes);
+      setTwoFAStep("backup");
+      setTwoFACode("");
+      refetchTwoFA();
+      toast.success("2FA ativado com sucesso!");
+    },
+    onError: (err: any) =>
+      toast.error("Codigo invalido", { description: err.message }),
+  });
+
+  const disableTwoFAMutation = (trpc as any).twoFactor.disable.useMutation({
+    onSuccess: () => {
+      setTwoFAStep("idle");
+      setTwoFADisableCode("");
+      refetchTwoFA();
+      toast.success("2FA desativado");
+    },
+    onError: (err: any) =>
+      toast.error("Erro ao desativar 2FA", { description: err.message }),
+  });
+
+  const regenBackupMutation = (trpc as any).twoFactor.regenerateBackupCodes.useMutation({
+    onSuccess: (data: any) => {
+      setTwoFABackupCodes(data.backupCodes);
+      setTwoFAStep("backup");
+      setTwoFARegenCode("");
+      toast.success("Codigos de backup regenerados");
+    },
+    onError: (err: any) =>
+      toast.error("Erro ao regenerar codigos", { description: err.message }),
+  });
+
   // ── Helpers ───────────────────────────────────────────────────────────
   const formatTimeAgo = (timestamp: string | Date) => {
     const seconds = Math.floor(
@@ -133,6 +227,7 @@ export default function SecurityDashboard() {
     refetchAlerts();
     refetchLogins();
     refetchIPs();
+    refetchSessions();
     toast.success("Dados atualizados");
   };
 
@@ -306,6 +401,8 @@ export default function SecurityDashboard() {
             <TabsTrigger value="alerts">Alertas de Segurança</TabsTrigger>
             <TabsTrigger value="logins">Tentativas de Login</TabsTrigger>
             <TabsTrigger value="whitelist">IPs Whitelist</TabsTrigger>
+            <TabsTrigger value="sessions">Sessões Ativas</TabsTrigger>
+            <TabsTrigger value="2fa">Autenticação 2FA</TabsTrigger>
           </TabsList>
 
           {/* ── Alertas de Segurança ─────────────────────────────────── */}
@@ -543,6 +640,345 @@ export default function SecurityDashboard() {
                     ))}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── Sessões Ativas ─────────────────────────────────────── */}
+          <TabsContent value="sessions" className="space-y-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Sessões Ativas</CardTitle>
+                  <CardDescription>
+                    Gerencie as sessões conectadas à sua conta
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={revokeAllSessionsMutation.isPending}
+                  onClick={() =>
+                    revokeAllSessionsMutation.mutate({ currentSessionId: "" })
+                  }
+                >
+                  {revokeAllSessionsMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                  ) : (
+                    <Ban className="h-4 w-4 mr-1" />
+                  )}
+                  Revogar Todas
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {(activeSessions as any[]).length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Monitor className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                    <p className="text-sm">Nenhuma sessão ativa encontrada</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {(activeSessions as any[]).map((session) => (
+                      <div
+                        key={session.id}
+                        className="flex items-center justify-between border-b pb-4 last:border-0"
+                      >
+                        <div className="space-y-1 flex-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant={session.active ? "default" : "secondary"}>
+                              {session.active ? "Ativa" : "Inativa"}
+                            </Badge>
+                            <span className="text-sm font-medium font-mono">
+                              {session.ipAddress || "IP desconhecido"}
+                            </span>
+                            <span className="text-sm text-muted-foreground">
+                              {formatTimeAgo(session.lastActivity || session.createdAt)}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate max-w-md">
+                            UA: {session.userAgent || "Desconhecido"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Criada: {new Date(session.createdAt).toLocaleString("pt-BR")}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="ml-4 shrink-0 text-destructive hover:text-destructive"
+                          disabled={revokeSessionMutation.isPending}
+                          onClick={() =>
+                            revokeSessionMutation.mutate({ sessionId: session.id })
+                          }
+                        >
+                          {revokeSessionMutation.isPending ? (
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                          ) : (
+                            <XCircle className="h-3 w-3 mr-1" />
+                          )}
+                          Revogar
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── Autenticacao 2FA ──────────────────────────────────── */}
+          <TabsContent value="2fa" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Smartphone className="h-5 w-5" />
+                      Autenticacao em Duas Etapas (2FA)
+                    </CardTitle>
+                    <CardDescription>
+                      Proteja sua conta com autenticacao TOTP via app autenticador
+                    </CardDescription>
+                  </div>
+                  {twoFAStatus?.enabled && (
+                    <Badge className="bg-green-600 text-white">
+                      <Shield className="h-3 w-3 mr-1" />
+                      2FA Ativo
+                    </Badge>
+                  )}
+                  {!twoFAStatus?.enabled && !twoFALoading && (
+                    <Badge variant="secondary">
+                      2FA Inativo
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {twoFALoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : !twoFAStatus?.enabled && twoFAStep === "idle" ? (
+                  /* ── Not enabled, show enable button ── */
+                  <div className="text-center py-6">
+                    <Key className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                    <p className="text-sm text-muted-foreground mb-4">
+                      A autenticacao em duas etapas adiciona uma camada extra de seguranca a sua conta.
+                    </p>
+                    <Button
+                      onClick={() => enableTwoFAMutation.mutate()}
+                      disabled={enableTwoFAMutation.isPending}
+                    >
+                      {enableTwoFAMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Shield className="h-4 w-4 mr-2" />
+                      )}
+                      Ativar 2FA
+                    </Button>
+                  </div>
+                ) : twoFAStep === "setup" ? (
+                  /* ── Setup: QR code + secret + verify ── */
+                  <div className="space-y-6">
+                    <div className="flex flex-col items-center gap-4">
+                      <p className="text-sm text-muted-foreground text-center">
+                        Escaneie o QR code abaixo com seu app autenticador (Google Authenticator, Authy, etc.)
+                      </p>
+                      <img
+                        src={`https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=${encodeURIComponent(twoFAQrUrl)}`}
+                        alt="QR Code 2FA"
+                        className="border rounded-lg p-2"
+                        width={200}
+                        height={200}
+                      />
+                      <div className="w-full max-w-md">
+                        <p className="text-xs text-muted-foreground mb-1 text-center">
+                          Ou insira a chave manualmente:
+                        </p>
+                        <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                          <code className="flex-1 text-sm font-mono text-center break-all">
+                            {twoFASecret}
+                          </code>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              navigator.clipboard.writeText(twoFASecret);
+                              toast.success("Chave copiada!");
+                            }}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="max-w-md mx-auto space-y-3">
+                      <label className="text-sm font-medium">
+                        Digite o codigo de 6 digitos do app:
+                      </label>
+                      <Input
+                        type="text"
+                        placeholder="000000"
+                        value={twoFACode}
+                        onChange={(e) => setTwoFACode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        className="text-center text-lg tracking-widest"
+                        maxLength={6}
+                      />
+                      <Button
+                        className="w-full"
+                        onClick={() => verifyTwoFAMutation.mutate({ code: twoFACode })}
+                        disabled={twoFACode.length !== 6 || verifyTwoFAMutation.isPending}
+                      >
+                        {verifyTwoFAMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                        )}
+                        Confirmar
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="w-full"
+                        onClick={() => {
+                          setTwoFAStep("idle");
+                          setTwoFACode("");
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                ) : twoFAStep === "backup" ? (
+                  /* ── Backup codes display ── */
+                  <div className="space-y-4">
+                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm font-medium text-yellow-800 mb-2">
+                        Salve seus codigos de backup em um local seguro!
+                      </p>
+                      <p className="text-xs text-yellow-700">
+                        Estes codigos so serao exibidos uma vez. Use-os para acessar sua conta caso perca acesso ao app autenticador.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 max-w-md mx-auto">
+                      {twoFABackupCodes.map((code, i) => (
+                        <div
+                          key={i}
+                          className="p-2 bg-muted rounded text-center font-mono text-sm"
+                        >
+                          {code}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-center gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          navigator.clipboard.writeText(twoFABackupCodes.join("\n"));
+                          toast.success("Codigos copiados!");
+                        }}
+                      >
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copiar Todos
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setTwoFAStep("idle");
+                          setTwoFABackupCodes([]);
+                        }}
+                      >
+                        Concluir
+                      </Button>
+                    </div>
+                  </div>
+                ) : twoFAStatus?.enabled ? (
+                  /* ── Enabled state: disable + regenerate ── */
+                  <div className="space-y-6">
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        <p className="text-sm font-medium text-green-800">
+                          2FA esta ativo desde {twoFAStatus.verifiedAt
+                            ? new Date(twoFAStatus.verifiedAt).toLocaleDateString("pt-BR")
+                            : "data desconhecida"}
+                        </p>
+                      </div>
+                      <p className="text-xs text-green-700">
+                        Sua conta esta protegida com autenticacao em duas etapas.
+                      </p>
+                    </div>
+
+                    {/* Disable 2FA */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Desativar 2FA</CardTitle>
+                        <CardDescription>
+                          Insira um codigo do app autenticador para desativar
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-end gap-3">
+                          <div className="flex-1">
+                            <Input
+                              type="text"
+                              placeholder="Codigo de 6 digitos ou backup"
+                              value={twoFADisableCode}
+                              onChange={(e) => setTwoFADisableCode(e.target.value)}
+                              maxLength={12}
+                            />
+                          </div>
+                          <Button
+                            variant="destructive"
+                            disabled={!twoFADisableCode || disableTwoFAMutation.isPending}
+                            onClick={() => disableTwoFAMutation.mutate({ code: twoFADisableCode })}
+                          >
+                            {disableTwoFAMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                            ) : (
+                              <XCircle className="h-4 w-4 mr-1" />
+                            )}
+                            Desativar 2FA
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Regenerate backup codes */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Regenerar Codigos de Backup</CardTitle>
+                        <CardDescription>
+                          Gere novos codigos de backup (os anteriores serao invalidados)
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-end gap-3">
+                          <div className="flex-1">
+                            <Input
+                              type="text"
+                              placeholder="Codigo de 6 digitos"
+                              value={twoFARegenCode}
+                              onChange={(e) => setTwoFARegenCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                              maxLength={6}
+                            />
+                          </div>
+                          <Button
+                            variant="outline"
+                            disabled={twoFARegenCode.length !== 6 || regenBackupMutation.isPending}
+                            onClick={() => regenBackupMutation.mutate({ code: twoFARegenCode })}
+                          >
+                            {regenBackupMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                            ) : (
+                              <RefreshCw className="h-4 w-4 mr-1" />
+                            )}
+                            Regenerar Codigos
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
           </TabsContent>

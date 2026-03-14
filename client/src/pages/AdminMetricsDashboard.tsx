@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
-import { Building2, Users, CreditCard, AlertTriangle, Eye, DollarSign, Ticket, ShieldCheck, Mail, MailX } from "lucide-react";
+import { Building2, Users, CreditCard, AlertTriangle, Eye, DollarSign, Ticket, ShieldCheck, Mail, MailX, TrendingDown, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,9 +27,12 @@ export default function AdminMetricsDashboard() {
     totalUsers: raw.users?.total || 0,
     activeSubscriptions: raw.subscriptions?.active || 0,
     trialingSubscriptions: raw.subscriptions?.trialing || 0,
-    canceledSubscriptions: raw.subscriptions?.canceled || 0,
+    canceledSubscriptions: raw.canceledSubscriptions || 0,
     monthlyRevenue: raw.subscriptions?.monthlyRevenue || 0,
     openTickets: raw.tickets?.open || 0,
+    churnRate: raw.churnRate || 0,
+    conversionRate: raw.conversionRate || 0,
+    arr: raw.arr || 0,
   };
   const tenantsList = tenantsQuery.data || [];
   const alerts = alertsQuery.data || {};
@@ -45,7 +48,7 @@ export default function AdminMetricsDashboard() {
       </div>
 
       {/* Overview Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
@@ -119,6 +122,39 @@ export default function AdminMetricsDashboard() {
               <div>
                 <p className="text-2xl font-bold">{ov.openTickets || 0}</p>
                 <p className="text-xs text-muted-foreground">Tickets</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <TrendingDown className="h-5 w-5 text-red-500" />
+              <div>
+                <p className="text-2xl font-bold">{ov.churnRate}%</p>
+                <p className="text-xs text-muted-foreground">Cancelamentos (30d)</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-emerald-500" />
+              <div>
+                <p className="text-2xl font-bold">{ov.conversionRate}%</p>
+                <p className="text-xs text-muted-foreground">Trial para pago</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-purple-500" />
+              <div>
+                <p className="text-2xl font-bold">R$ {((ov.arr || 0) / 100).toFixed(0)}</p>
+                <p className="text-xs text-muted-foreground">Receita anual</p>
               </div>
             </div>
           </CardContent>

@@ -12,9 +12,13 @@ import { getSessionCookieOptions, createSessionToken } from "../_core/cookies";
 import { ENV } from "../_core/env";
 import { sendEmail } from "../_core/email";
 import { eq } from "drizzle-orm";
-import { roles, userRoles, users } from "../../drizzle/schema";
+import { roles, userRoles, users, user2FA } from "../../drizzle/schema";
 import { getSubscriptionContext } from "../_core/subscriptionMiddleware";
 import { ensureTenantForUser } from "../_core/tenantHelpers";
+import { verifyTOTP } from "../_core/totp";
+
+// 2FA temporary token expiry (5 minutes)
+const TWO_FA_TOKEN_EXPIRY_MS = 5 * 60 * 1000;
 
 // Password reset token helpers (HMAC-signed, no DB needed)
 const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
@@ -249,7 +253,24 @@ export const authLocalRouter = router({
         lastSignedIn: new Date(),
       });
 
-      // Cria token de sessao OPACO e ASSINADO com expiracao
+      // ── 2FA check ──────────────────────────────────────────────────
+      const drizzleDb = await getDb();
+      if (!drizzleDb) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      }
+      const [twoFA] = await drizzleDb
+        .select()
+        .from(user2FA)
+        .where(eq(user2FA.userId, user.id))
+        .limit(1);
+
+      if (twoFA?.enabled) {
+        // Create temporary 2FA token instead of session cookie
+        const twoFactorToken = createHmacToken(user.id, "-2fa", TWO_FA_TOKEN_EXPIRY_MS);
+        return { success: true, requires2FA: true, twoFactorToken };
+      }
+
+      // No 2FA — create session cookie normally
       const sessionToken = createSessionToken(user.id);
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.cookie(COOKIE_NAME, sessionToken, cookieOptions);
@@ -427,4 +448,88 @@ export const authLocalRouter = router({
 
     return { success: true };
   }),
+
+  /**
+   * Verify 2FA code after login (public — user has no session yet)
+   */
+  verify2FA: publicProcedure
+    .input(
+      z.object({
+        token: z.string(),
+        code: z.string().min(6).max(12),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      // Verify temporary 2FA token
+      const result = verifyHmacToken(input.token, "-2fa");
+      if (!result) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Token 2FA invalido ou expirado. Faca login novamente.",
+        });
+      }
+
+      const userId = result.userId;
+
+      // Get user's 2FA record
+      const drizzleDb = await getDb();
+      if (!drizzleDb) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      }
+      const [twoFA] = await drizzleDb
+        .select()
+        .from(user2FA)
+        .where(eq(user2FA.userId, userId))
+        .limit(1);
+
+      if (!twoFA?.enabled) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "2FA nao esta ativado para este usuario.",
+        });
+      }
+
+      let isValid = false;
+
+      // Try TOTP code (6 digits)
+      if (input.code.length === 6 && /^\d{6}$/.test(input.code)) {
+        isValid = verifyTOTP(twoFA.secret, input.code);
+      }
+
+      // Try backup code (format XXXXX-XXXXX)
+      if (!isValid && input.code.includes("-")) {
+        const backupCodes = JSON.parse(twoFA.backupCodes as string) as string[];
+        const normalizedCode = input.code.toUpperCase().trim();
+        for (let i = 0; i < backupCodes.length; i++) {
+          const match = await bcrypt.compare(normalizedCode, backupCodes[i]);
+          if (match) {
+            isValid = true;
+            // Remove used backup code
+            backupCodes.splice(i, 1);
+            await drizzleDb
+              .update(user2FA)
+              .set({
+                backupCodes: JSON.stringify(backupCodes),
+                updatedAt: new Date(),
+              })
+              .where(eq(user2FA.userId, userId));
+            break;
+          }
+        }
+      }
+
+      if (!isValid) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Codigo de verificacao invalido.",
+        });
+      }
+
+      // Code verified — create session cookie
+      const sessionToken = createSessionToken(userId);
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.cookie(COOKIE_NAME, sessionToken, cookieOptions);
+
+      return { success: true };
+    }),
 });
