@@ -4,6 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -28,25 +35,26 @@ import {
 } from "recharts";
 
 const DIMENSION_LABELS: Record<string, string> = {
-  quantitative_demands: "Exigencias Quantitativas",
-  work_pace: "Ritmo de Trabalho",
-  cognitive_demands: "Exigencias Cognitivas",
-  emotional_demands: "Exigencias Emocionais",
-  influence_at_work: "Influencia no Trabalho",
-  possibilities_development: "Possibilidades de Desenvolvimento",
-  meaning_of_work: "Significado do Trabalho",
-  commitment: "Comprometimento",
-  predictability: "Previsibilidade",
-  role_clarity: "Clareza de Papel",
-  social_support: "Apoio Social",
-  sense_of_community: "Senso de Comunidade",
+  demand: "Demanda de Trabalho",
+  control: "Controle",
+  support: "Apoio Social",
+  leadership: "Liderança",
+  community: "Comunidade",
+  meaning: "Significado do Trabalho",
+  trust: "Confiança",
+  justice: "Justiça",
+  insecurity: "Insegurança",
+  mentalHealth: "Saúde Mental",
+  burnout: "Burnout",
+  violence: "Violência e Assédio",
 };
 
 export default function BenchmarkComparison() {
-  usePageMeta({ title: "Benchmark Nacional" });
+  usePageMeta({ title: "Benchmark Comparativo" });
   const { exportPdf, isExporting } = usePdfExport();
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const [selectedSector, setSelectedSector] = useState<string>("");
 
   if (!tenantId) {
     return (
@@ -62,14 +70,18 @@ export default function BenchmarkComparison() {
     );
   }
 
+  const benchmarksQuery = trpc.benchmark.listBenchmarks.useQuery({});
+  const sectorBenchmarks = (benchmarksQuery.data ?? []).filter((b: any) => b.dataSource === "sector");
+
   const { data: comparison, refetch, isLoading } = trpc.benchmark.getComparison.useQuery(
-    { tenantId },
+    { tenantId, ...(selectedSector ? { sectorCode: selectedSector } : {}) },
     { enabled: !!tenantId }
   );
 
   const seedMutation = trpc.benchmark.seedBenchmarkData.useMutation({
-    onSuccess: () => {
-      toast.success("Dados de referencia nacional carregados com sucesso!");
+    onSuccess: (data: any) => {
+      toast.success(`Dados de benchmark carregados! ${data.total || 9} registros.`);
+      benchmarksQuery.refetch();
       refetch();
     },
     onError: (err: any) => {
@@ -77,24 +89,30 @@ export default function BenchmarkComparison() {
     },
   });
 
-  const dimensions = comparison?.dimensions || [];
+  // Build dimensions array from company + benchmark objects
+  const dimensionKeys = Object.keys(DIMENSION_LABELS);
+  const company = comparison?.company;
+  const benchmark = comparison?.benchmark;
+  const hasBenchmarkData = !!company && !!benchmark;
 
-  const radarData = dimensions.map((d: any) => ({
-    dimension: DIMENSION_LABELS[d.key] || d.key,
-    empresa: d.companyScore ?? 0,
-    benchmark: d.benchmarkScore ?? 0,
+  const radarData = dimensionKeys.map((key) => ({
+    dimension: DIMENSION_LABELS[key],
+    empresa: (company as any)?.[key] ?? 0,
+    benchmark: (benchmark as any)?.[key] ?? 0,
   }));
 
-  const hasBenchmarkData = dimensions.length > 0;
+  const benchmarkLabel = selectedSector
+    ? sectorBenchmarks.find((b: any) => b.sectorCode === selectedSector)?.sectorName || "Setor"
+    : "Média Nacional";
 
   return (
     <DashboardLayout>
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Comparacao com Benchmark Nacional COPSOQ-II</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Benchmark Comparativo COPSOQ-II</h1>
             <p className="text-muted-foreground">
-              Compare os resultados da sua empresa com a referencia nacional
+              Compare os resultados da sua empresa com referências nacionais e setoriais
             </p>
           </div>
           <Button
@@ -114,21 +132,50 @@ export default function BenchmarkComparison() {
               <Database className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">Sem dados de benchmark</h3>
               <p className="text-muted-foreground mb-6">
-                Carregue os dados de referencia nacional para comparar com os resultados da sua empresa.
+                Carregue os dados de referência nacional e setorial para comparar com os resultados da sua empresa.
               </p>
-              <Button onClick={() => seedMutation.mutate({ tenantId })} disabled={seedMutation.isPending}>
+              <Button onClick={() => seedMutation.mutate({})} disabled={seedMutation.isPending}>
                 {seedMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Carregar Dados de Referencia Nacional
+                Carregar Dados de Referência (Nacional + 8 Setores)
               </Button>
             </CardContent>
           </Card>
         ) : (
           <>
+            {/* Sector selector */}
+            {sectorBenchmarks.length > 0 && (
+              <Card>
+                <CardContent className="py-4">
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-medium whitespace-nowrap">Comparar com:</span>
+                    <Select value={selectedSector} onValueChange={(v) => setSelectedSector(v === "__national__" ? "" : v)}>
+                      <SelectTrigger className="w-[300px]">
+                        <SelectValue placeholder="Média Nacional" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__national__">Média Nacional (n=5.000)</SelectItem>
+                        {sectorBenchmarks.map((b: any) => (
+                          <SelectItem key={b.sectorCode} value={b.sectorCode}>
+                            {b.sectorName} (n={b.sampleSize?.toLocaleString()})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {comparison?.sampleSize ? (
+                      <Badge variant="secondary" className="whitespace-nowrap">
+                        Amostra: {comparison.sampleSize.toLocaleString()} respondentes
+                      </Badge>
+                    ) : null}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <BarChart3 className="h-5 w-5" />
-                  Grafico Radar - Empresa vs. Benchmark
+                  Gráfico Radar — Empresa vs. {benchmarkLabel}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -145,7 +192,7 @@ export default function BenchmarkComparison() {
                       fillOpacity={0.3}
                     />
                     <Radar
-                      name="Benchmark Nacional"
+                      name={benchmarkLabel}
                       dataKey="benchmark"
                       stroke="#6b7280"
                       fill="#6b7280"
@@ -159,40 +206,36 @@ export default function BenchmarkComparison() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Detalhamento por Dimensao</CardTitle>
+                <CardTitle>Detalhamento por Dimensão</CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Dimensao</TableHead>
+                      <TableHead>Dimensão</TableHead>
                       <TableHead className="text-right">Empresa</TableHead>
-                      <TableHead className="text-right">Benchmark</TableHead>
-                      <TableHead className="text-right">Diferenca</TableHead>
-                      <TableHead className="text-right">Percentil</TableHead>
+                      <TableHead className="text-right">{benchmarkLabel}</TableHead>
+                      <TableHead className="text-right">Diferença</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {dimensions.map((d: any) => {
-                      const diff = (d.companyScore ?? 0) - (d.benchmarkScore ?? 0);
+                    {dimensionKeys.map((key) => {
+                      const companyScore = (company as any)?.[key] ?? 0;
+                      const benchmarkScore = (benchmark as any)?.[key] ?? 0;
+                      const diff = companyScore - benchmarkScore;
                       const isPositive = diff >= 0;
                       return (
-                        <TableRow key={d.key}>
+                        <TableRow key={key}>
                           <TableCell className="font-medium">
-                            {DIMENSION_LABELS[d.key] || d.key}
+                            {DIMENSION_LABELS[key]}
                           </TableCell>
-                          <TableCell className="text-right">{d.companyScore?.toFixed(1) ?? "—"}</TableCell>
-                          <TableCell className="text-right">{d.benchmarkScore?.toFixed(1) ?? "—"}</TableCell>
+                          <TableCell className="text-right">{companyScore}</TableCell>
+                          <TableCell className="text-right">{benchmarkScore}</TableCell>
                           <TableCell className="text-right">
                             <span className={`inline-flex items-center gap-1 ${isPositive ? "text-green-600" : "text-red-600"}`}>
                               {isPositive ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                              {diff > 0 ? "+" : ""}{diff.toFixed(1)}
+                              {diff > 0 ? "+" : ""}{diff}
                             </span>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Badge variant={d.percentile >= 50 ? "default" : "secondary"}>
-                              P{d.percentile ?? 0}
-                            </Badge>
                           </TableCell>
                         </TableRow>
                       );
