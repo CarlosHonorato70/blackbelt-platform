@@ -1,8 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, protectedProcedure, adminProcedure } from "../_core/trpc";
 import * as db from "../db";
 import { log } from "../_core/logger";
+import { tenants } from "../../drizzle/schema";
+import { eq } from "drizzle-orm";
 
 // Validacao de CNPJ
 function validateCNPJ(cnpj: string): boolean {
@@ -33,7 +35,7 @@ function validateCNPJ(cnpj: string): boolean {
 }
 
 export const tenantsRouter = router({
-  // Listar tenants (apenas admin ou consultor BB)
+  // Listar tenants — admin vê todos, consultor vê apenas seus filhos, empresa vê apenas a si mesma
   list: protectedProcedure
     .input(
       z
@@ -44,28 +46,32 @@ export const tenantsRouter = router({
         .optional()
     )
     .query(async ({ ctx, input }) => {
-      const tenantsList = await db.listTenants(input);
-
-      try {
-        await db.createAuditLog({
-          tenantId: null,
-          userId: ctx.user.id,
-          action: "READ",
-          entityType: "tenants",
-          entityId: null,
-          oldValues: null,
-          newValues: null,
-          ipAddress: ctx.req.ip,
-          userAgent: ctx.req.headers["user-agent"],
-        });
-      } catch (auditError) {
-        log.error("Failed to create audit log", { error: auditError instanceof Error ? auditError.message : String(auditError) });
+      // Admin vê todos os tenants
+      if (ctx.user.role === "admin") {
+        const tenantsList = await db.listTenants(input);
+        return tenantsList;
       }
 
-      return tenantsList;
+      // Consultor vê apenas seus tenants filhos + o próprio
+      if (ctx.user.tenantId) {
+        const ownTenant = await db.getTenant(ctx.user.tenantId);
+
+        if (ownTenant?.tenantType === "consultant") {
+          // Buscar filhos (empresas deste consultor) + o próprio
+          const allTenants = await db.listTenants(input);
+          return allTenants.filter(
+            (t: any) => t.id === ctx.user.tenantId || t.parentTenantId === ctx.user.tenantId
+          );
+        }
+
+        // Empresa vê apenas a si mesma
+        return ownTenant ? [ownTenant] : [];
+      }
+
+      return [];
     }),
 
-  // Obter um tenant especifico
+  // Obter um tenant especifico (admin vê qualquer, consultor vê filhos, empresa vê a si)
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -78,17 +84,14 @@ export const tenantsRouter = router({
         });
       }
 
-      await db.createAuditLog({
-        tenantId: tenant.id,
-        userId: ctx.user.id,
-        action: "READ",
-        entityType: "tenants",
-        entityId: tenant.id,
-        oldValues: null,
-        newValues: null,
-        ipAddress: ctx.req.ip,
-        userAgent: ctx.req.headers["user-agent"],
-      });
+      // Verificar autorização: admin OK, mesmo tenant OK, filho do consultor OK
+      if (ctx.user.role !== "admin") {
+        const isOwnTenant = tenant.id === ctx.user.tenantId;
+        const isChild = tenant.parentTenantId === ctx.user.tenantId;
+        if (!isOwnTenant && !isChild) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
+        }
+      }
 
       return tenant;
     }),

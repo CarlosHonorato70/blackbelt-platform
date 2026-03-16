@@ -15,6 +15,11 @@ const SUBSCRIPTION_EXEMPT_PATHS = [
   "/subscription/failure",
 ];
 
+// Rotas que exigem role de admin
+const ADMIN_ONLY_PATHS = [
+  "/admin/",
+];
+
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
   const location = useLocation();
@@ -32,6 +37,12 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Bloquear rotas admin para não-admins
+  const isAdminRoute = ADMIN_ONLY_PATHS.some((p) => location.pathname.startsWith(p));
+  if (isAdminRoute && user.role !== "admin") {
+    return <Navigate to="/dashboard" replace />;
   }
 
   // Admin bypass — admins não precisam de assinatura

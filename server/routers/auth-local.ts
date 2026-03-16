@@ -286,6 +286,15 @@ export const authLocalRouter = router({
     if (ctx.user.tenantId) {
       const subCtx = await getSubscriptionContext(ctx.user.tenantId);
       subscriptionStatus = subCtx?.subscription?.status ?? null;
+
+      // Se empresa-filha sem assinatura própria, herdar do tenant pai (consultor)
+      if (!subscriptionStatus) {
+        const tenant = await db.getTenant(ctx.user.tenantId);
+        if (tenant?.parentTenantId) {
+          const parentSubCtx = await getSubscriptionContext(tenant.parentTenantId);
+          subscriptionStatus = parentSubCtx?.subscription?.status ?? null;
+        }
+      }
     }
 
     return {

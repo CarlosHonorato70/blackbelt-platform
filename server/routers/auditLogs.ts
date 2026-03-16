@@ -2,11 +2,12 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
+import * as dbOps from "../db";
 import { auditLogs } from "../../drizzle/schema";
 import { eq, and, desc, gte, lte, isNull } from "drizzle-orm";
 
 export const auditLogsRouter = router({
-  // Listar logs de auditoria
+  // Listar logs de auditoria (admin e consultores apenas)
   list: protectedProcedure
     .input(
       z.object({
@@ -24,8 +25,15 @@ export const auditLogsRouter = router({
       const db = await getDb();
       if (!db) return [];
 
-      // Security: non-admin users can only see their own tenant's logs
       const isAdmin = ctx.user?.role === "admin";
+
+      // Empresas-filhas não podem ver audit logs — apenas admin e consultores
+      if (!isAdmin && ctx.user?.tenantId) {
+        const tenant = await dbOps.getTenant(ctx.user.tenantId);
+        if (tenant?.tenantType === "company") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a consultores e administradores" });
+        }
+      }
       const userTenantId = ctx.user?.tenantId;
 
       const conditions = [];
