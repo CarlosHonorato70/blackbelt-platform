@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { publicProcedure, router, protectedProcedure, tenantProcedure } from "../_core/trpc";
+import { tenantProcedure, router, protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
 import * as db from "../db";
 import {
@@ -19,7 +19,7 @@ export const pricingRouter = router({
   // ============================================================================
 
   clients: router({
-    list: publicProcedure
+    list: tenantProcedure
       .input(
         z.object({
           tenantId: z.string(),
@@ -27,14 +27,14 @@ export const pricingRouter = router({
           offset: z.number().default(0),
         })
       )
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) return [];
 
         const clientsList = await db
           .select()
           .from(clients)
-          .where(eq(clients.tenantId, input.tenantId))
+          .where(eq(clients.tenantId, ctx.tenantId!))
           .orderBy(desc(clients.createdAt))
           .limit(input.limit)
           .offset(input.offset);
@@ -42,14 +42,14 @@ export const pricingRouter = router({
         return clientsList;
       }),
 
-    get: publicProcedure
+    get: tenantProcedure
       .input(
         z.object({
           id: z.string(),
           tenantId: z.string(),
         })
       )
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -61,7 +61,7 @@ export const pricingRouter = router({
           .select()
           .from(clients)
           .where(
-            and(eq(clients.id, input.id), eq(clients.tenantId, input.tenantId))
+            and(eq(clients.id, input.id), eq(clients.tenantId, ctx.tenantId!))
           );
 
         if (!client) {
@@ -74,7 +74,7 @@ export const pricingRouter = router({
         return client;
       }),
 
-    create: publicProcedure
+    create: tenantProcedure
       .input(
         z.object({
           tenantId: z.string(),
@@ -94,7 +94,7 @@ export const pricingRouter = router({
           zipCode: z.string().optional(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -106,7 +106,7 @@ export const pricingRouter = router({
 
         await db.insert(clients).values({
           id,
-          tenantId: input.tenantId,
+          tenantId: ctx.tenantId!,
           name: input.name,
           cnpj: input.cnpj || null,
           industry: input.industry || null,
@@ -129,14 +129,14 @@ export const pricingRouter = router({
         return { id };
       }),
 
-    update: publicProcedure
+    update: tenantProcedure
       .input(
         z.object({
           id: z.string(),
           tenantId: z.string(),
         }).passthrough()
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -157,14 +157,14 @@ export const pricingRouter = router({
         return { success: true };
       }),
 
-    delete: publicProcedure
+    delete: tenantProcedure
       .input(
         z.object({
           id: z.string(),
           tenantId: z.string(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -175,7 +175,7 @@ export const pricingRouter = router({
         await db
           .delete(clients)
           .where(
-            and(eq(clients.id, input.id), eq(clients.tenantId, input.tenantId))
+            and(eq(clients.id, input.id), eq(clients.tenantId, ctx.tenantId!))
           );
 
         return { success: true };
@@ -187,7 +187,7 @@ export const pricingRouter = router({
   // ============================================================================
 
   services: router({
-    list: publicProcedure
+    list: tenantProcedure
       .input(
         z.object({
           tenantId: z.string(),
@@ -196,11 +196,11 @@ export const pricingRouter = router({
           offset: z.number().default(0),
         })
       )
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) return [];
 
-        const conditions = [eq(services.tenantId, input.tenantId)];
+        const conditions = [eq(services.tenantId, ctx.tenantId!)];
 
         if (input.category) {
           conditions.push(eq(services.category, input.category));
@@ -217,14 +217,14 @@ export const pricingRouter = router({
         return servicesList;
       }),
 
-    get: publicProcedure
+    get: tenantProcedure
       .input(
         z.object({
           id: z.string(),
           tenantId: z.string(),
         })
       )
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -238,7 +238,7 @@ export const pricingRouter = router({
           .where(
             and(
               eq(services.id, input.id),
-              eq(services.tenantId, input.tenantId)
+              eq(services.tenantId, ctx.tenantId!)
             )
           );
 
@@ -252,7 +252,7 @@ export const pricingRouter = router({
         return service;
       }),
 
-    create: publicProcedure
+    create: tenantProcedure
       .input(
         z.object({
           tenantId: z.string(),
@@ -264,7 +264,7 @@ export const pricingRouter = router({
           maxPrice: z.number(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -276,7 +276,7 @@ export const pricingRouter = router({
 
         await db.insert(services).values({
           id,
-          tenantId: input.tenantId,
+          tenantId: ctx.tenantId!,
           name: input.name,
           description: input.description || null,
           category: input.category,
@@ -291,14 +291,14 @@ export const pricingRouter = router({
         return { id };
       }),
 
-    update: publicProcedure
+    update: tenantProcedure
       .input(
         z.object({
           id: z.string(),
           tenantId: z.string(),
         }).passthrough()
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -319,14 +319,14 @@ export const pricingRouter = router({
         return { success: true };
       }),
 
-    delete: publicProcedure
+    delete: tenantProcedure
       .input(
         z.object({
           id: z.string(),
           tenantId: z.string(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -339,7 +339,7 @@ export const pricingRouter = router({
           .where(
             and(
               eq(services.id, input.id),
-              eq(services.tenantId, input.tenantId)
+              eq(services.tenantId, ctx.tenantId!)
             )
           );
 
@@ -352,25 +352,25 @@ export const pricingRouter = router({
   // ============================================================================
 
   parameters: router({
-    get: publicProcedure
+    get: tenantProcedure
       .input(
         z.object({
           tenantId: z.string(),
         })
       )
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) return null;
 
         const [params] = await db
           .select()
           .from(pricingParameters)
-          .where(eq(pricingParameters.tenantId, input.tenantId));
+          .where(eq(pricingParameters.tenantId, ctx.tenantId!));
 
         return params || null;
       }),
 
-    upsert: publicProcedure
+    upsert: tenantProcedure
       .input(
         z.object({
           tenantId: z.string(),
@@ -384,7 +384,7 @@ export const pricingRouter = router({
           taxRates: z.any().optional(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -395,7 +395,7 @@ export const pricingRouter = router({
         const existing = await db
           .select()
           .from(pricingParameters)
-          .where(eq(pricingParameters.tenantId, input.tenantId));
+          .where(eq(pricingParameters.tenantId, ctx.tenantId!));
 
         if (existing.length > 0) {
           // Update
@@ -412,13 +412,13 @@ export const pricingRouter = router({
               taxRates: input.taxRates || null,
               updatedAt: new Date(),
             })
-            .where(eq(pricingParameters.tenantId, input.tenantId));
+            .where(eq(pricingParameters.tenantId, ctx.tenantId!));
         } else {
           // Insert
           const id = nanoid();
           await db.insert(pricingParameters).values({
             id,
-            tenantId: input.tenantId,
+            tenantId: ctx.tenantId!,
             monthlyFixedCost: input.monthlyFixedCost,
             laborCost: input.laborCost,
             productiveHoursPerMonth: input.productiveHoursPerMonth,
@@ -441,7 +441,7 @@ export const pricingRouter = router({
   // ============================================================================
 
   proposals: router({
-    list: publicProcedure
+    list: tenantProcedure
       .input(
         z.object({
           tenantId: z.string(),
@@ -451,11 +451,11 @@ export const pricingRouter = router({
           offset: z.number().default(0),
         })
       )
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) return [];
 
-        const conditions = [eq(proposals.tenantId, input.tenantId)];
+        const conditions = [eq(proposals.tenantId, ctx.tenantId!)];
 
         if (input.clientId) {
           conditions.push(eq(proposals.clientId, input.clientId));
@@ -476,14 +476,14 @@ export const pricingRouter = router({
         return proposalsList;
       }),
 
-    get: publicProcedure
+    get: tenantProcedure
       .input(
         z.object({
           id: z.string(),
           tenantId: z.string(),
         })
       )
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -497,7 +497,7 @@ export const pricingRouter = router({
           .where(
             and(
               eq(proposals.id, input.id),
-              eq(proposals.tenantId, input.tenantId)
+              eq(proposals.tenantId, ctx.tenantId!)
             )
           );
 
@@ -520,7 +520,7 @@ export const pricingRouter = router({
         };
       }),
 
-    create: publicProcedure
+    create: tenantProcedure
       .input(
         z.object({
           tenantId: z.string(),
@@ -539,7 +539,7 @@ export const pricingRouter = router({
           ),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -569,7 +569,7 @@ export const pricingRouter = router({
         // Criar proposta
         await db.insert(proposals).values({
           id,
-          tenantId: input.tenantId,
+          tenantId: ctx.tenantId!,
           clientId: input.clientId,
           title: input.title,
           description: input.description || null,
@@ -606,14 +606,14 @@ export const pricingRouter = router({
         return { id };
       }),
 
-    update: publicProcedure
+    update: tenantProcedure
       .input(
         z.object({
           id: z.string(),
           tenantId: z.string(),
         }).passthrough()
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -634,14 +634,14 @@ export const pricingRouter = router({
         return { success: true };
       }),
 
-    delete: publicProcedure
+    delete: tenantProcedure
       .input(
         z.object({
           id: z.string(),
           tenantId: z.string(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -660,7 +660,7 @@ export const pricingRouter = router({
           .where(
             and(
               eq(proposals.id, input.id),
-              eq(proposals.tenantId, input.tenantId)
+              eq(proposals.tenantId, ctx.tenantId!)
             )
           );
 
@@ -673,13 +673,13 @@ export const pricingRouter = router({
   // ============================================================================
 
   calculate: router({
-    servicePrice: publicProcedure
+    servicePrice: tenantProcedure
       .input(
         z.object({
           tenantId: z.string(),
         }).passthrough()
       )
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -690,7 +690,7 @@ export const pricingRouter = router({
         const [params] = await db
           .select()
           .from(pricingParameters)
-          .where(eq(pricingParameters.tenantId, input.tenantId));
+          .where(eq(pricingParameters.tenantId, ctx.tenantId!));
 
         if (!params) {
           throw new TRPCError({

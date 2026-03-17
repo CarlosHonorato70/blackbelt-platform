@@ -1,6 +1,16 @@
 import nodemailer from "nodemailer";
 import { log } from "./logger";
 
+/** Escape HTML para prevenir injection em templates de email */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 // Configuração do transporte de email (usando variáveis de ambiente)
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp.gmail.com",
@@ -93,7 +103,7 @@ export async function sendCopsoqInvite(params: {
     expiresIn,
   } = params;
 
-  const inviteUrl = `${process.env.VITE_FRONTEND_URL || "http://localhost:3000"}/copsoq/respond/${inviteToken}`;
+  const inviteUrl = `${process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:3000"}/copsoq/respond/${inviteToken}`;
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -108,7 +118,7 @@ export async function sendCopsoqInvite(params: {
         </p>
 
         <p style="margin: 0 0 20px 0; font-size: 14px; color: #666;">
-          Você foi convidado para participar da avaliação de riscos psicossociais <strong>"${assessmentTitle}"</strong>.
+          Você foi convidado para participar da avaliação de riscos psicossociais <strong>"${escapeHtml(assessmentTitle)}"</strong>.
         </p>
 
         <p style="margin: 0 0 20px 0; font-size: 14px; color: #666;">
@@ -148,7 +158,7 @@ export async function sendCopsoqInvite(params: {
     to: respondentEmail,
     subject: `Convite para Avaliação: ${assessmentTitle}`,
     html,
-    text: `Você foi convidado para responder a avaliação "${assessmentTitle}". Acesse: ${inviteUrl}`,
+    text: `Você foi convidado para responder a avaliação "${escapeHtml(assessmentTitle)}". Acesse: ${inviteUrl}`,
   });
 }
 
@@ -215,7 +225,7 @@ export async function sendResponseConfirmation(params: {
         </p>
 
         <p style="margin: 0 0 20px 0; font-size: 14px; color: #666;">
-          Obrigado por responder a avaliação <strong>"${assessmentTitle}"</strong>!
+          Obrigado por responder a avaliação <strong>"${escapeHtml(assessmentTitle)}"</strong>!
         </p>
 
         <div style="background: #f0fdf4; padding: 20px; border-left: 4px solid #10b981; margin: 20px 0;">
@@ -241,7 +251,7 @@ export async function sendResponseConfirmation(params: {
     to: respondentEmail,
     subject: `Confirmação: Avaliação ${assessmentTitle} Concluída`,
     html,
-    text: `Sua resposta para a avaliação "${assessmentTitle}" foi registrada com sucesso.`,
+    text: `Sua resposta para a avaliação "${escapeHtml(assessmentTitle)}" foi registrada com sucesso.`,
   });
 }
 
@@ -263,7 +273,7 @@ export async function sendReminderEmail(params: {
     assessmentTitle,
   } = params;
 
-  const inviteUrl = `${process.env.VITE_FRONTEND_URL || "http://localhost:3000"}/copsoq/respond/${inviteToken}`;
+  const inviteUrl = `${process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:3000"}/copsoq/respond/${inviteToken}`;
 
   const reminderMessages = {
     1: {
@@ -361,7 +371,7 @@ export async function sendProposalEmail(params: {
     validUntil,
   } = params;
 
-  const proposalUrl = `${process.env.VITE_FRONTEND_URL || "http://localhost:3000"}/proposals/${proposalId}`;
+  const proposalUrl = `${process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:3000"}/proposals/${proposalId}`;
   
   const riskLevelColors = {
     low: { bg: "#dcfce7", border: "#10b981", text: "#166534", label: "Baixo" },
@@ -380,7 +390,7 @@ export async function sendProposalEmail(params: {
     .map(
       service => `
         <tr>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px;">${service.name}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px;">${escapeHtml(service.name)}</td>
           <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px; text-align: center;">${service.quantity}</td>
           <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px; text-align: right;">
             ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(service.unitPrice / 100)}
@@ -403,7 +413,7 @@ export async function sendProposalEmail(params: {
 
       <div style="background: white; padding: 40px 20px; border: 1px solid #e5e7eb; border-top: none;">
         <p style="margin: 0 0 20px 0; font-size: 16px;">
-          Prezado(a) <strong>${clientName}</strong>,
+          Prezado(a) <strong>${escapeHtml(clientName)}</strong>,
         </p>
 
         <p style="margin: 0 0 20px 0; font-size: 14px; color: #666;">
@@ -485,7 +495,7 @@ export async function sendProposalEmail(params: {
   const textContent = `
 Proposta Comercial - Black Belt Consultoria
 
-Prezado(a) ${clientName},
+Prezado(a) ${escapeHtml(clientName)},
 
 Com base na avaliação de riscos psicossociais realizada, preparamos uma proposta personalizada.
 

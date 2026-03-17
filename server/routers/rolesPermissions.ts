@@ -17,7 +17,7 @@ export const rolesPermissionsRouter = router({
   // ============================================================================
 
   roles: router({
-    list: protectedProcedure
+    list: adminProcedure
       .input(
         z.object({
           scope: z.enum(["global", "tenant"]).optional(),
@@ -157,7 +157,7 @@ export const rolesPermissionsRouter = router({
   // ============================================================================
 
   permissions: router({
-    list: protectedProcedure
+    list: adminProcedure
       .input(
         z.object({
           resource: z.string().optional(),

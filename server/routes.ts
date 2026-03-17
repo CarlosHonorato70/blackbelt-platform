@@ -22,15 +22,20 @@ export function registerRoutes(app: Express) {
     const status = dbHealthy ? "ok" : "degraded";
     const httpCode = dbHealthy ? 200 : 503;
 
-    res.status(httpCode).json({
-      status,
-      timestamp: new Date().toISOString(),
-      service: "blackbelt-platform",
-      version: "1.0.7",
-      environment: process.env.NODE_ENV || "development",
-      uptime: process.uptime(),
-      database: dbHealthy ? "connected" : "unavailable",
-    });
+    // Producao: retornar apenas status minimo (sem vazar info do ambiente)
+    if (process.env.NODE_ENV === "production") {
+      res.status(httpCode).json({ status });
+    } else {
+      res.status(httpCode).json({
+        status,
+        timestamp: new Date().toISOString(),
+        service: "blackbelt-platform",
+        version: "1.0.7",
+        environment: process.env.NODE_ENV || "development",
+        uptime: process.uptime(),
+        database: dbHealthy ? "connected" : "unavailable",
+      });
+    }
   });
 
   // ============================================
@@ -71,8 +76,13 @@ export function registerRoutes(app: Express) {
   // ============================================
 
   app.post("/api/webhooks/mercadopago", async (req: Request, res: Response) => {
-    // Verificar assinatura do Mercado Pago (se configurada)
+    // Verificar assinatura do Mercado Pago (obrigatório em produção)
     const mpWebhookSecret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+
+    if (!mpWebhookSecret && process.env.NODE_ENV === "production") {
+      log.error("[MercadoPago Webhook] MERCADO_PAGO_WEBHOOK_SECRET not configured in production");
+      return res.status(500).json({ error: "Webhook not configured" });
+    }
 
     if (mpWebhookSecret) {
       const xSignature = req.headers["x-signature"] as string;
@@ -103,7 +113,10 @@ export function registerRoutes(app: Express) {
         .update(manifest)
         .digest("hex");
 
-      if (expectedSignature !== v1) {
+      // Timing-safe comparison para evitar timing attacks
+      const sigBuffer = Buffer.from(v1, "hex");
+      const expectedBuffer = Buffer.from(expectedSignature, "hex");
+      if (sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
         log.warn("[MercadoPago Webhook] Invalid signature");
         return res.status(401).json({ error: "Invalid signature" });
       }

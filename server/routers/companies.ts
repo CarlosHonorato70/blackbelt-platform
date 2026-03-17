@@ -8,12 +8,14 @@
 import { z } from "zod";
 import { eq, and, like, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { TRPCError } from "@trpc/server";
 import { router } from "../_core/trpc";
 import { consultantProcedure } from "../_core/trpc";
 import { tenantProcedure } from "../_core/trpc";
 import { tenants } from "../../drizzle/schema";
 import { complianceChecklist, complianceMilestones } from "../../drizzle/schema_nr01";
 import * as db from "../db";
+import { getSubscriptionContext } from "../_core/subscriptionMiddleware";
 
 // Validação de CNPJ
 function validateCNPJ(cnpj: string): boolean {
@@ -134,6 +136,30 @@ export const companiesRouter = router({
     .mutation(async ({ ctx, input }) => {
       const database = await db.getDb();
       if (!database) throw new Error("Database not available");
+
+      // Verificar limite de empresas do plano
+      const subCtx = await getSubscriptionContext(ctx.tenantId);
+      if (subCtx && subCtx.isActive) {
+        const maxTenants = subCtx.plan.maxTenants;
+        if (maxTenants > 0) {
+          const [countResult] = await database
+            .select({ count: sql<number>`count(*)` })
+            .from(tenants)
+            .where(
+              and(
+                eq(tenants.parentTenantId, ctx.tenantId),
+                eq(tenants.tenantType, "company")
+              )
+            );
+          const currentCount = countResult?.count ?? 0;
+          if (currentCount >= maxTenants) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: `Limite de ${maxTenants} empresa(s) atingido no seu plano. Faça upgrade para adicionar mais empresas.`,
+            });
+          }
+        }
+      }
 
       // Validar CNPJ
       const cleanCnpj = input.cnpj.replace(/\D/g, "");

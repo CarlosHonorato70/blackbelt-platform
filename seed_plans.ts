@@ -68,10 +68,10 @@ export const seedPlans = [
       "Para grandes corporações. Recursos ilimitados, white-label, webhooks e SLA garantido.",
     monthlyPrice: 0, // Customizado
     yearlyPrice: 0, // Customizado
-    maxTenants: -1, // Ilimitado
-    maxUsersPerTenant: -1, // Ilimitado
-    maxStorageGB: -1, // Ilimitado
-    maxApiRequestsPerDay: -1, // Ilimitado
+    maxTenants: 100, // Até 100 empresas (negociável por contrato)
+    maxUsersPerTenant: 500, // Até 500 usuários por empresa
+    maxStorageGB: 100, // 100 GB
+    maxApiRequestsPerDay: 100000, // 100k requisições/dia
     hasAdvancedReports: true,
     hasApiAccess: true,
     hasWebhooks: true,

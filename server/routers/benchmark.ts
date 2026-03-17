@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { publicProcedure, router } from "../_core/trpc";
+import { tenantProcedure, adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { requireActiveSubscription } from "../_core/subscriptionMiddleware";
 import { getDb } from "../db";
 import { benchmarkData, copsoqReports } from "../../drizzle/schema_nr01";
@@ -9,14 +9,14 @@ import { eq, and, desc, sql } from "drizzle-orm";
 
 export const benchmarkRouter = router({
   // Comparação empresa vs benchmark
-  getComparison: publicProcedure
+  getComparison: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(), // ignorado — usa ctx.tenantId
         sectorCode: z.string().optional(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -28,7 +28,7 @@ export const benchmarkRouter = router({
       const [latestReport] = await db
         .select()
         .from(copsoqReports)
-        .where(eq(copsoqReports.tenantId, input.tenantId))
+        .where(eq(copsoqReports.tenantId, ctx.tenantId!))
         .orderBy(desc(copsoqReports.generatedAt))
         .limit(1);
 
@@ -98,7 +98,7 @@ export const benchmarkRouter = router({
     }),
 
   // Listar todos os benchmarks disponíveis
-  listBenchmarks: publicProcedure
+  listBenchmarks: protectedProcedure
     .input(z.object({}))
     .query(async () => {
       const db = await getDb();
@@ -113,7 +113,7 @@ export const benchmarkRouter = router({
     }),
 
   // Criar dados de benchmark nacional + setoriais
-  seedBenchmarkData: publicProcedure
+  seedBenchmarkData: adminProcedure
     .input(z.object({}))
     .mutation(async () => {
       const db = await getDb();

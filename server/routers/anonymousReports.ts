@@ -95,8 +95,7 @@ export const anonymousReportsRouter = router({
       const db = await getDb();
       if (!db) return [];
 
-      const tid = input.tenantId || ctx.tenantId!;
-      const conditions = [eq(anonymousReports.tenantId, tid)];
+      const conditions = [eq(anonymousReports.tenantId, ctx.tenantId!)];
 
       if (input.status) {
         conditions.push(eq(anonymousReports.status, input.status));
@@ -125,7 +124,7 @@ export const anonymousReportsRouter = router({
         assignedTo: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -148,7 +147,7 @@ export const anonymousReportsRouter = router({
       await db
         .update(anonymousReports)
         .set(updateData)
-        .where(eq(anonymousReports.id, id));
+        .where(and(eq(anonymousReports.id, id), eq(anonymousReports.tenantId, ctx.tenantId!)));
 
       return { success: true };
     }),
@@ -168,11 +167,10 @@ export const anonymousReportsRouter = router({
           message: "Database not available",
         });
 
-      const tid = input.tenantId || ctx.tenantId!;
       const reports = await db
         .select()
         .from(anonymousReports)
-        .where(eq(anonymousReports.tenantId, tid));
+        .where(eq(anonymousReports.tenantId, ctx.tenantId!));
 
       const total = reports.length;
 

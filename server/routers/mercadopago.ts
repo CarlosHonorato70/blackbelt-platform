@@ -191,7 +191,7 @@ export const mercadoPagoRouter = router({
             currency_id: "BRL",
             start_date: plan.trialDays > 0 ? startDate.toISOString() : undefined,
           },
-          back_url: `${process.env.VITE_FRONTEND_URL}/subscription/success`,
+          back_url: `${process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:5000"}/subscription/success`,
           external_reference: tenantId,
           payer_email: ctx.user?.email || undefined,
           reason: `Black Belt Platform - ${plan.displayName}`,

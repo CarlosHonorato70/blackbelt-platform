@@ -117,7 +117,11 @@ export const authLocalRouter = router({
       z.object({
         name: z.string().min(2, "Nome deve ter no minimo 2 caracteres"),
         email: z.string().email("Email invalido"),
-        password: z.string().min(8, "Senha deve ter no minimo 8 caracteres"),
+        password: z.string()
+          .min(8, "Senha deve ter no minimo 8 caracteres")
+          .regex(/[A-Z]/, "Senha deve conter pelo menos 1 letra maiuscula")
+          .regex(/[0-9]/, "Senha deve conter pelo menos 1 numero")
+          .regex(/[^A-Za-z0-9]/, "Senha deve conter pelo menos 1 caractere especial"),
         tenantId: z.string().optional(),
       })
     )
@@ -126,7 +130,7 @@ export const authLocalRouter = router({
       if (existing) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: "Email ja cadastrado",
+          message: "Verifique seu email para continuar",
         });
       }
 
@@ -325,10 +329,10 @@ export const authLocalRouter = router({
 
       const resetToken = createResetToken(user.id);
       const frontendUrl =
-        process.env.VITE_FRONTEND_URL || "http://localhost:5000";
+        process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:5000";
       const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
 
-      await sendEmail({
+      const emailSent = await sendEmail({
         to: input.email,
         subject: "Recuperação de Senha - Black Belt Platform",
         html: `
@@ -351,6 +355,14 @@ export const authLocalRouter = router({
         text: `Recuperação de Senha\n\nAcesse o link para redefinir sua senha: ${resetUrl}\n\nEste link expira em 1 hora.`,
       });
 
+      if (!emailSent) {
+        log.error("Password reset email failed to send", { email: input.email });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Não foi possível enviar o email de recuperação. Tente novamente em alguns minutos.",
+        });
+      }
+
       return { success: true };
     }),
 
@@ -358,7 +370,11 @@ export const authLocalRouter = router({
     .input(
       z.object({
         token: z.string(),
-        password: z.string().min(8, "Senha deve ter no mínimo 8 caracteres"),
+        password: z.string()
+          .min(8, "Senha deve ter no minimo 8 caracteres")
+          .regex(/[A-Z]/, "Senha deve conter pelo menos 1 letra maiuscula")
+          .regex(/[0-9]/, "Senha deve conter pelo menos 1 numero")
+          .regex(/[^A-Za-z0-9]/, "Senha deve conter pelo menos 1 caractere especial"),
       })
     )
     .mutation(async ({ input }) => {
