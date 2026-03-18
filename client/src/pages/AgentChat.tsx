@@ -153,43 +153,41 @@ function AgentChatPage() {
       <div className="flex h-[calc(100vh-4rem)] gap-4 p-4">
         {/* Chat Panel */}
         <div className="flex flex-1 flex-col min-w-0">
-          <Card className="flex flex-1 flex-col overflow-hidden">
-            {/* Chat Header */}
-            <CardHeader className="border-b py-3 px-4 flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <Brain className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Assistente IA NR-01</CardTitle>
-                <div className="ml-auto flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs gap-1"
-                    onClick={() => newConversation.mutate({})}
-                    disabled={isTyping}
-                    title="Novo chat"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Novo Chat
-                  </Button>
-                  {conversationId && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs gap-1 text-destructive hover:text-destructive"
-                      onClick={() => {
-                        if (confirm("Excluir esta conversa? Esta ação não pode ser desfeita.")) {
-                          deleteConversation.mutate({ conversationId });
-                        }
-                      }}
-                      disabled={isTyping}
-                      title="Excluir chat"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </CardHeader>
+          {/* Chat Header — fixed outside scroll */}
+          <div className="flex items-center gap-2 bg-card border rounded-t-lg py-3 px-4 z-10 flex-shrink-0">
+            <Brain className="h-5 w-5 text-primary" />
+            <h3 className="text-lg font-semibold">Assistente IA NR-01</h3>
+            <div className="ml-auto flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs gap-1"
+                onClick={() => newConversation.mutate({})}
+                disabled={isTyping}
+                title="Novo chat"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Novo Chat
+              </Button>
+              {conversationId && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs gap-1 text-destructive hover:text-destructive"
+                  onClick={() => {
+                    if (confirm("Excluir esta conversa? Esta ação não pode ser desfeita.")) {
+                      deleteConversation.mutate({ conversationId });
+                    }
+                  }}
+                  disabled={isTyping}
+                  title="Excluir chat"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+          </div>
+          <Card className="flex flex-1 flex-col overflow-hidden rounded-t-none border-t-0">
 
             {/* Messages */}
             <ScrollArea className="flex-1 p-4">
