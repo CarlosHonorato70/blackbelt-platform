@@ -30,6 +30,106 @@ function cleanContent(content: string): string {
   return content.replace(/```action\s*\n[\s\S]*?\n```/g, "").trim();
 }
 
+// Rule-based fallback when LLM is unavailable
+function generateFallbackResponse(
+  userMessage: string,
+  company: any,
+  status: any
+): { content: string; actions: Array<{ type: string; label: string; params: Record<string, any> }> } {
+  const msg = userMessage.toLowerCase();
+  const actions: Array<{ type: string; label: string; params: Record<string, any> }> = [];
+
+  // Detect CNPJ pattern
+  const cnpjMatch = userMessage.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
+  if (cnpjMatch) {
+    const cnpj = cnpjMatch[0];
+    // Extract headcount if mentioned
+    const headcountMatch = userMessage.match(/(\d+)\s*(?:funcionário|funcionario|empregado|colaborador|trabalhador)/i);
+    const headcount = headcountMatch ? parseInt(headcountMatch[1]) : undefined;
+
+    let strategy = "";
+    if (headcount && headcount < 20) {
+      strategy = `Como a empresa tem ${headcount} funcionários (pequeno porte), recomendo uma **avaliação simplificada** focando nos riscos mais críticos do setor. O processo completo levará aproximadamente 120 dias.`;
+    } else if (headcount && headcount <= 100) {
+      strategy = `Com ${headcount} funcionários (médio porte), recomendo o **COPSOQ-II completo** com análise de todas as 12 dimensões psicossociais. O processo levará aproximadamente 180 dias.`;
+    } else if (headcount && headcount > 100) {
+      strategy = `Com ${headcount} funcionários (grande porte), recomendo **COPSOQ-II por setor** com plano detalhado por área. O processo levará aproximadamente 210 dias.`;
+    }
+
+    const content = `Identifiquei o CNPJ: **${cnpj}**${headcount ? ` com **${headcount} funcionários**` : ""}.
+
+${strategy || "Para definir a melhor estratégia, preciso saber o número de funcionários e o setor de atividade."}
+
+Para prosseguir, preciso das seguintes informações:
+1. **Razão social** da empresa
+2. **Setor de atividade** (ex: saúde, indústria, comércio, serviços)
+${!headcount ? "3. **Número de funcionários**\n" : ""}
+Após confirmar os dados, criarei a empresa na plataforma e iniciarei o processo NR-01 com:
+- Checklist de conformidade (25 itens obrigatórios)
+- Cronograma personalizado com milestones
+- Prazo final: **26/05/2025** (data limite NR-01)
+
+Deseja prosseguir com o cadastro?`;
+
+    actions.push({
+      type: "create_company",
+      label: "Cadastrar Empresa",
+      params: { cnpj, headcount: headcount || 0 },
+    });
+
+    return { content, actions };
+  }
+
+  // Check for status/progress queries
+  if (msg.includes("status") || msg.includes("progresso") || msg.includes("andamento")) {
+    if (status) {
+      const completedPhases = status.phases.filter((p: any) => p.status === "completed").length;
+      const content = `Progresso atual: **${status.overallProgress}%** (${completedPhases}/10 fases concluídas).
+
+Fase atual: **${status.currentPhase}**
+
+${status.nextActions.length > 0 ? "Próximas ações recomendadas:\n" + status.nextActions.map((a: any) => `- **${a.label}**: ${a.description}`).join("\n") : "Nenhuma ação pendente."}
+
+${status.alerts.length > 0 ? "\nAlertas:\n" + status.alerts.map((a: string) => `⚠️ ${a}`).join("\n") : ""}`;
+      return { content, actions: status.nextActions.map((a: any) => ({ type: a.actionType, label: a.label, params: a.params || {} })) };
+    }
+    return { content: "Nenhuma empresa selecionada. Me informe o CNPJ da empresa para verificar o status.", actions: [] };
+  }
+
+  // Check for help/capabilities
+  if (msg.includes("ajuda") || msg.includes("help") || msg.includes("pode fazer") || msg.includes("capaz")) {
+    return {
+      content: `Posso ajudá-lo com todo o processo de conformidade NR-01:
+
+1. **Cadastrar empresas** — Informe o CNPJ e dados básicos
+2. **Configurar o processo** — Checklist e cronograma automáticos
+3. **Avaliação COPSOQ-II** — Criar, enviar convites, acompanhar respostas
+4. **Análise com IA** — Gerar relatórios com dimensões críticas
+5. **Inventário de Riscos** — Identificação e classificação de perigos
+6. **Plano de Ação** — Medidas preventivas com cronograma
+7. **Treinamentos** — Programas de capacitação obrigatórios
+8. **Documentação** — PGR, PCMSO, laudos técnicos em PDF
+9. **Certificação** — Emissão quando score ≥ 80%
+10. **Monitoramento** — Alertas de prazos e riscos
+
+Para começar, me informe o **CNPJ** da empresa.`,
+      actions: [],
+    };
+  }
+
+  // Default response
+  return {
+    content: `Entendi sua mensagem. Para que eu possa ajudá-lo da melhor forma, por favor:
+
+- Informe o **CNPJ** da empresa para iniciar ou acompanhar o processo NR-01
+- Pergunte sobre o **status** de uma empresa já cadastrada
+- Peça **ajuda** para ver todas as funcionalidades disponíveis
+
+Estou aqui para conduzir todo o processo de conformidade com a NR-01!`,
+    actions: [],
+  };
+}
+
 export const agentRouter = router({
   // Start or get conversation
   getOrCreateConversation: tenantProcedure
@@ -172,7 +272,10 @@ export const agentRouter = router({
         }
       } catch (error) {
         log.error("Agent LLM error", { error: String(error) });
-        assistantContent = "Ocorreu um erro ao processar sua mensagem. O serviço de IA pode estar temporariamente indisponível. Tente novamente em alguns instantes.";
+        // Rule-based fallback when LLM is unavailable
+        const fallback = generateFallbackResponse(input.content, company, status);
+        assistantContent = fallback.content;
+        actions = fallback.actions;
       }
 
       // Save assistant message
