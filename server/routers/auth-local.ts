@@ -134,7 +134,7 @@ export const authLocalRouter = router({
         });
       }
 
-      const passwordHash = await bcrypt.hash(input.password, 10);
+      const passwordHash = await bcrypt.hash(input.password, 12);
       const userId = nanoid();
 
       // Auto-create tenant for new user if none provided
@@ -412,7 +412,7 @@ export const authLocalRouter = router({
         usedResetTokens.clear();
       }
 
-      const passwordHash = await bcrypt.hash(input.password, 10);
+      const passwordHash = await bcrypt.hash(input.password, 12);
       await db.upsertUser({
         id: result.userId,
         passwordHash,

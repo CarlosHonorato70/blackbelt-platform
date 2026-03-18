@@ -1,8 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { publicProcedure, router } from "../_core/trpc";
-import { requireActiveSubscription } from "../_core/subscriptionMiddleware";
+import { publicProcedure, tenantProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   psychosocialSurveys,
@@ -13,34 +12,34 @@ import { eq, and, desc, sql } from "drizzle-orm";
 
 export const climateSurveysRouter = router({
   // Listar pesquisas de clima por tenant
-  list: publicProcedure
+  list: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
       const surveys = await db
         .select()
         .from(psychosocialSurveys)
-        .where(eq(psychosocialSurveys.tenantId, input.tenantId))
+        .where(eq(psychosocialSurveys.tenantId, ctx.tenantId!))
         .orderBy(desc(psychosocialSurveys.createdAt));
 
       return surveys;
     }),
 
   // Obter pesquisa por ID com contagem de respostas
-  get: publicProcedure
+  get: tenantProcedure
     .input(
       z.object({
         id: z.string(),
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -54,7 +53,7 @@ export const climateSurveysRouter = router({
         .where(
           and(
             eq(psychosocialSurveys.id, input.id),
-            eq(psychosocialSurveys.tenantId, input.tenantId)
+            eq(psychosocialSurveys.tenantId, ctx.tenantId!)
           )
         );
 
@@ -77,18 +76,17 @@ export const climateSurveysRouter = router({
     }),
 
   // Criar nova pesquisa de clima
-  create: publicProcedure
+  create: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
         title: z.string(),
         description: z.string().optional(),
         surveyType: z.enum(["climate", "stress", "burnout", "engagement", "custom"]),
         questions: z.array(z.any()),
       })
     )
-    .mutation(async ({ input }) => {
-      await requireActiveSubscription(input.tenantId);
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -100,7 +98,7 @@ export const climateSurveysRouter = router({
 
       await db.insert(psychosocialSurveys).values({
         id,
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         title: input.title,
         description: input.description || null,
         surveyType: input.surveyType,
@@ -114,7 +112,7 @@ export const climateSurveysRouter = router({
     }),
 
   // Atualizar pesquisa
-  update: publicProcedure
+  update: tenantProcedure
     .input(
       z.object({
         id: z.string(),
@@ -124,7 +122,7 @@ export const climateSurveysRouter = router({
         isActive: z.boolean().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -143,15 +141,15 @@ export const climateSurveysRouter = router({
       await db
         .update(psychosocialSurveys)
         .set(updateData)
-        .where(eq(psychosocialSurveys.id, id));
+        .where(and(eq(psychosocialSurveys.id, id), eq(psychosocialSurveys.tenantId, ctx.tenantId!)));
 
       return { success: true };
     }),
 
   // Deletar pesquisa
-  delete: publicProcedure
+  delete: tenantProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -161,17 +159,17 @@ export const climateSurveysRouter = router({
 
       await db
         .delete(psychosocialSurveys)
-        .where(eq(psychosocialSurveys.id, input.id));
+        .where(and(eq(psychosocialSurveys.id, input.id), eq(psychosocialSurveys.tenantId, ctx.tenantId!)));
 
       return { success: true };
     }),
 
   // Enviar convites para pesquisa
-  sendInvites: publicProcedure
+  sendInvites: tenantProcedure
     .input(
       z.object({
         surveyId: z.string(),
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
         invites: z.array(
           z.object({
             email: z.string().email(),
@@ -180,8 +178,7 @@ export const climateSurveysRouter = router({
         ),
       })
     )
-    .mutation(async ({ input }) => {
-      await requireActiveSubscription(input.tenantId);
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -201,7 +198,7 @@ export const climateSurveysRouter = router({
         await db.insert(surveyInvites).values({
           id,
           surveyId: input.surveyId,
-          tenantId: input.tenantId,
+          tenantId: ctx.tenantId!,
           respondentEmail: invite.email,
           respondentName: invite.name,
           inviteToken: token,
@@ -307,14 +304,14 @@ export const climateSurveysRouter = router({
     }),
 
   // Obter resultados agregados da pesquisa
-  getResults: publicProcedure
+  getResults: tenantProcedure
     .input(
       z.object({
         surveyId: z.string(),
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -329,7 +326,7 @@ export const climateSurveysRouter = router({
         .where(
           and(
             eq(surveyResponses.surveyId, input.surveyId),
-            eq(surveyResponses.tenantId, input.tenantId)
+            eq(surveyResponses.tenantId, ctx.tenantId!)
           )
         );
 

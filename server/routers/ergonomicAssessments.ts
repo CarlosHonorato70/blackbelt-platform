@@ -1,8 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { publicProcedure, router } from "../_core/trpc";
-import { requireActiveSubscription } from "../_core/subscriptionMiddleware";
+import { tenantProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   ergonomicAssessments,
@@ -12,20 +11,20 @@ import { eq, and, desc, sql } from "drizzle-orm";
 
 export const ergonomicAssessmentsRouter = router({
   // Listar avaliações ergonômicas com contagem de itens
-  list: publicProcedure
+  list: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
       const assessments = await db
         .select()
         .from(ergonomicAssessments)
-        .where(eq(ergonomicAssessments.tenantId, input.tenantId))
+        .where(eq(ergonomicAssessments.tenantId, ctx.tenantId!))
         .orderBy(desc(ergonomicAssessments.createdAt));
 
       const result = [];
@@ -45,14 +44,14 @@ export const ergonomicAssessmentsRouter = router({
     }),
 
   // Obter avaliação com todos os itens
-  get: publicProcedure
+  get: tenantProcedure
     .input(
       z.object({
         id: z.string(),
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -66,7 +65,7 @@ export const ergonomicAssessmentsRouter = router({
         .where(
           and(
             eq(ergonomicAssessments.id, input.id),
-            eq(ergonomicAssessments.tenantId, input.tenantId)
+            eq(ergonomicAssessments.tenantId, ctx.tenantId!)
           )
         );
 
@@ -89,10 +88,10 @@ export const ergonomicAssessmentsRouter = router({
     }),
 
   // Criar avaliação ergonômica
-  create: publicProcedure
+  create: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
         sectorId: z.string().optional(),
         title: z.string(),
         assessorName: z.string().optional(),
@@ -100,8 +99,7 @@ export const ergonomicAssessmentsRouter = router({
         methodology: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
-      await requireActiveSubscription(input.tenantId);
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -113,7 +111,7 @@ export const ergonomicAssessmentsRouter = router({
 
       await db.insert(ergonomicAssessments).values({
         id,
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         sectorId: input.sectorId || null,
         title: input.title,
         assessorName: input.assessorName || null,
@@ -128,7 +126,7 @@ export const ergonomicAssessmentsRouter = router({
     }),
 
   // Atualizar avaliação
-  update: publicProcedure
+  update: tenantProcedure
     .input(
       z.object({
         id: z.string(),
@@ -139,7 +137,7 @@ export const ergonomicAssessmentsRouter = router({
         overallRiskLevel: z.enum(["acceptable", "moderate", "high", "critical"]).optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -159,15 +157,15 @@ export const ergonomicAssessmentsRouter = router({
       await db
         .update(ergonomicAssessments)
         .set(updateData)
-        .where(eq(ergonomicAssessments.id, id));
+        .where(and(eq(ergonomicAssessments.id, id), eq(ergonomicAssessments.tenantId, ctx.tenantId!)));
 
       return { success: true };
     }),
 
   // Deletar avaliação (itens primeiro, depois avaliação)
-  delete: publicProcedure
+  delete: tenantProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -183,13 +181,13 @@ export const ergonomicAssessmentsRouter = router({
       // Depois deletar a avaliação
       await db
         .delete(ergonomicAssessments)
-        .where(eq(ergonomicAssessments.id, input.id));
+        .where(and(eq(ergonomicAssessments.id, input.id), eq(ergonomicAssessments.tenantId, ctx.tenantId!)));
 
       return { success: true };
     }),
 
   // Adicionar item ergonômico
-  addItem: publicProcedure
+  addItem: tenantProcedure
     .input(
       z.object({
         assessmentId: z.string(),
@@ -201,13 +199,17 @@ export const ergonomicAssessmentsRouter = router({
         photoUrl: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Database not available",
         });
+
+      // Verify assessment belongs to tenant
+      const [assessment] = await db.select().from(ergonomicAssessments).where(and(eq(ergonomicAssessments.id, input.assessmentId), eq(ergonomicAssessments.tenantId, ctx.tenantId!)));
+      if (!assessment) throw new TRPCError({ code: "NOT_FOUND", message: "Avaliação não encontrada" });
 
       const id = nanoid();
 
@@ -227,7 +229,7 @@ export const ergonomicAssessmentsRouter = router({
     }),
 
   // Atualizar item ergonômico
-  updateItem: publicProcedure
+  updateItem: tenantProcedure
     .input(
       z.object({
         id: z.string(),
@@ -236,13 +238,17 @@ export const ergonomicAssessmentsRouter = router({
         recommendation: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Database not available",
         });
+
+      // Verify item belongs to tenant's assessment
+      const [item] = await db.select({ id: ergonomicItems.id }).from(ergonomicItems).innerJoin(ergonomicAssessments, eq(ergonomicItems.assessmentId, ergonomicAssessments.id)).where(and(eq(ergonomicItems.id, input.id), eq(ergonomicAssessments.tenantId, ctx.tenantId!)));
+      if (!item) throw new TRPCError({ code: "NOT_FOUND", message: "Item não encontrado" });
 
       const { id, ...data } = input;
       const updateData: any = {};
@@ -260,15 +266,19 @@ export const ergonomicAssessmentsRouter = router({
     }),
 
   // Deletar item ergonômico
-  deleteItem: publicProcedure
+  deleteItem: tenantProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Database not available",
         });
+
+      // Verify item belongs to tenant's assessment
+      const [item] = await db.select({ id: ergonomicItems.id }).from(ergonomicItems).innerJoin(ergonomicAssessments, eq(ergonomicItems.assessmentId, ergonomicAssessments.id)).where(and(eq(ergonomicItems.id, input.id), eq(ergonomicAssessments.tenantId, ctx.tenantId!)));
+      if (!item) throw new TRPCError({ code: "NOT_FOUND", message: "Item não encontrado" });
 
       await db
         .delete(ergonomicItems)

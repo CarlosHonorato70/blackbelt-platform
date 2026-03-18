@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { tenantProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   generateGenericReportPdf,
@@ -57,14 +57,14 @@ async function requireDb() {
 
 export const nr01PdfExportRouter = router({
   // 1. Matriz de Risco
-  exportRiskMatrix: publicProcedure
-    .input(z.object({ tenantId: z.string(), assessmentId: z.string().optional() }))
-    .mutation(async ({ input }) => {
+  exportRiskMatrix: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional(), assessmentId: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const assessments = await db.select().from(riskAssessments)
         .where(input.assessmentId
-          ? and(eq(riskAssessments.tenantId, input.tenantId), eq(riskAssessments.id, input.assessmentId))
-          : eq(riskAssessments.tenantId, input.tenantId));
+          ? and(eq(riskAssessments.tenantId, ctx.tenantId!), eq(riskAssessments.id, input.assessmentId))
+          : eq(riskAssessments.tenantId, ctx.tenantId!));
 
       const ids = assessments.map((a) => a.id);
       const items = ids.length > 0
@@ -116,12 +116,12 @@ export const nr01PdfExportRouter = router({
     }),
 
   // 2. Integracao PCMSO
-  exportPcmsoIntegration: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .mutation(async ({ input }) => {
+  exportPcmsoIntegration: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const recs = await db.select().from(pcmsoRecommendations)
-        .where(eq(pcmsoRecommendations.tenantId, input.tenantId));
+        .where(eq(pcmsoRecommendations.tenantId, ctx.tenantId!));
 
       const sections: PdfSection[] = [
         { type: "title", content: "Recomendacoes PCMSO — Integracao PGR" },
@@ -148,12 +148,12 @@ export const nr01PdfExportRouter = router({
     }),
 
   // 3. Dashboard Psicossocial
-  exportPsychosocialDashboard: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .mutation(async ({ input }) => {
+  exportPsychosocialDashboard: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const [report] = await db.select().from(copsoqReports)
-        .where(eq(copsoqReports.tenantId, input.tenantId))
+        .where(eq(copsoqReports.tenantId, ctx.tenantId!))
         .orderBy(desc(copsoqReports.generatedAt)).limit(1);
 
       if (!report) {
@@ -211,12 +211,12 @@ export const nr01PdfExportRouter = router({
     }),
 
   // 4. Tendencias de Avaliacao
-  exportAssessmentTrends: publicProcedure
-    .input(z.object({ tenantId: z.string(), periods: z.number().default(6) }))
-    .mutation(async ({ input }) => {
+  exportAssessmentTrends: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional(), periods: z.number().default(6) }))
+    .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const reports = await db.select().from(copsoqReports)
-        .where(eq(copsoqReports.tenantId, input.tenantId))
+        .where(eq(copsoqReports.tenantId, ctx.tenantId!))
         .orderBy(desc(copsoqReports.generatedAt)).limit(input.periods);
 
       const sorted = reports.reverse();
@@ -254,12 +254,12 @@ export const nr01PdfExportRouter = router({
     }),
 
   // 5. Calculadora Financeira
-  exportFinancialCalculator: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .mutation(async ({ input }) => {
+  exportFinancialCalculator: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const [params] = await db.select().from(financialParameters)
-        .where(eq(financialParameters.tenantId, input.tenantId)).limit(1);
+        .where(eq(financialParameters.tenantId, ctx.tenantId!)).limit(1);
 
       const fp = {
         averageSalary: params?.averageSalary || 500000,
@@ -271,7 +271,7 @@ export const nr01PdfExportRouter = router({
       };
 
       const [indicators] = await db.select().from(mentalHealthIndicators)
-        .where(eq(mentalHealthIndicators.tenantId, input.tenantId))
+        .where(eq(mentalHealthIndicators.tenantId, ctx.tenantId!))
         .orderBy(desc(mentalHealthIndicators.createdAt)).limit(1);
 
       const absenteeismRate = (indicators?.absenteeismRate || 0) / 100;
@@ -326,12 +326,12 @@ export const nr01PdfExportRouter = router({
     }),
 
   // 6. Cronograma de Compliance
-  exportComplianceTimeline: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .mutation(async ({ input }) => {
+  exportComplianceTimeline: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const milestones = await db.select().from(complianceMilestones)
-        .where(eq(complianceMilestones.tenantId, input.tenantId))
+        .where(eq(complianceMilestones.tenantId, ctx.tenantId!))
         .orderBy(complianceMilestones.order);
 
       const completed = milestones.filter((m) => m.status === "completed").length;
@@ -371,12 +371,12 @@ export const nr01PdfExportRouter = router({
     }),
 
   // 7. Checklist de Conformidade
-  exportComplianceChecklist: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .mutation(async ({ input }) => {
+  exportComplianceChecklist: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const items = await db.select().from(complianceChecklist)
-        .where(eq(complianceChecklist.tenantId, input.tenantId));
+        .where(eq(complianceChecklist.tenantId, ctx.tenantId!));
 
       const compliant = items.filter((i) => i.status === "compliant").length;
       const partial = items.filter((i) => i.status === "partial").length;
@@ -416,14 +416,14 @@ export const nr01PdfExportRouter = router({
     }),
 
   // 8. Certificado de Conformidade
-  exportComplianceCertificate: publicProcedure
-    .input(z.object({ tenantId: z.string(), certificateId: z.string().optional() }))
-    .mutation(async ({ input }) => {
+  exportComplianceCertificate: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional(), certificateId: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const certs = await db.select().from(complianceCertificates)
         .where(input.certificateId
-          ? and(eq(complianceCertificates.tenantId, input.tenantId), eq(complianceCertificates.id, input.certificateId))
-          : eq(complianceCertificates.tenantId, input.tenantId))
+          ? and(eq(complianceCertificates.tenantId, ctx.tenantId!), eq(complianceCertificates.id, input.certificateId))
+          : eq(complianceCertificates.tenantId, ctx.tenantId!))
         .orderBy(desc(complianceCertificates.issuedAt)).limit(1);
 
       const cert = certs[0];
@@ -469,14 +469,14 @@ export const nr01PdfExportRouter = router({
     }),
 
   // 9. Laudo Tecnico
-  exportLaudoTecnico: publicProcedure
-    .input(z.object({ tenantId: z.string(), documentId: z.string().optional() }))
-    .mutation(async ({ input }) => {
+  exportLaudoTecnico: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional(), documentId: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const docs = await db.select().from(complianceDocuments)
         .where(input.documentId
-          ? and(eq(complianceDocuments.tenantId, input.tenantId), eq(complianceDocuments.id, input.documentId))
-          : and(eq(complianceDocuments.tenantId, input.tenantId), eq(complianceDocuments.documentType, "laudo_tecnico")))
+          ? and(eq(complianceDocuments.tenantId, ctx.tenantId!), eq(complianceDocuments.id, input.documentId))
+          : and(eq(complianceDocuments.tenantId, ctx.tenantId!), eq(complianceDocuments.documentType, "laudo_tecnico")))
         .orderBy(desc(complianceDocuments.createdAt)).limit(1);
 
       const doc = docs[0];
@@ -531,13 +531,13 @@ export const nr01PdfExportRouter = router({
     }),
 
   // 10. Benchmark Comparativo
-  exportBenchmark: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .mutation(async ({ input }) => {
+  exportBenchmark: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const benchmarks = await db.select().from(benchmarkData);
       const [report] = await db.select().from(copsoqReports)
-        .where(eq(copsoqReports.tenantId, input.tenantId))
+        .where(eq(copsoqReports.tenantId, ctx.tenantId!))
         .orderBy(desc(copsoqReports.generatedAt)).limit(1);
 
       const dimKeys = [
@@ -594,17 +594,17 @@ export const nr01PdfExportRouter = router({
     }),
 
   // 11. Pesquisa de Clima
-  exportClimateSurvey: publicProcedure
-    .input(z.object({ tenantId: z.string(), surveyId: z.string() }))
-    .mutation(async ({ input }) => {
+  exportClimateSurvey: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional(), surveyId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const [survey] = await db.select().from(psychosocialSurveys)
-        .where(and(eq(psychosocialSurveys.tenantId, input.tenantId), eq(psychosocialSurveys.id, input.surveyId)));
+        .where(and(eq(psychosocialSurveys.tenantId, ctx.tenantId!), eq(psychosocialSurveys.id, input.surveyId)));
 
       if (!survey) throw new TRPCError({ code: "NOT_FOUND", message: "Pesquisa nao encontrada" });
 
       const responses = await db.select().from(surveyResponses)
-        .where(and(eq(surveyResponses.tenantId, input.tenantId), eq(surveyResponses.surveyId, input.surveyId)));
+        .where(and(eq(surveyResponses.tenantId, ctx.tenantId!), eq(surveyResponses.surveyId, input.surveyId)));
 
       const totalResponses = responses.length;
       const avgScore = totalResponses > 0 ? Math.round(responses.reduce((sum, r) => sum + (r.score || 0), 0) / totalResponses) : 0;
@@ -641,15 +641,15 @@ export const nr01PdfExportRouter = router({
     }),
 
   // 12. Relatorio de Treinamento
-  exportTrainingReport: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .mutation(async ({ input }) => {
+  exportTrainingReport: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const modules = await db.select().from(trainingModules)
-        .where(eq(trainingModules.tenantId, input.tenantId));
+        .where(eq(trainingModules.tenantId, ctx.tenantId!));
 
       const progress = await db.select().from(trainingProgress)
-        .where(eq(trainingProgress.tenantId, input.tenantId));
+        .where(eq(trainingProgress.tenantId, ctx.tenantId!));
 
       const totalModules = modules.length;
       const completedProgress = progress.filter((p) => p.status === "completed").length;
@@ -693,12 +693,12 @@ export const nr01PdfExportRouter = router({
     }),
 
   // 13. Denuncias Anonimas (sem PII)
-  exportAnonymousReports: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .mutation(async ({ input }) => {
+  exportAnonymousReports: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const reports = await db.select().from(anonymousReports)
-        .where(eq(anonymousReports.tenantId, input.tenantId));
+        .where(eq(anonymousReports.tenantId, ctx.tenantId!));
 
       const catCounts: Record<string, number> = {};
       const sevCounts: Record<string, number> = {};
@@ -749,12 +749,12 @@ export const nr01PdfExportRouter = router({
     }),
 
   // 14. Alertas de Prazos
-  exportDeadlineAlerts: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .mutation(async ({ input }) => {
+  exportDeadlineAlerts: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const alerts = await db.select().from(deadlineAlerts)
-        .where(eq(deadlineAlerts.tenantId, input.tenantId))
+        .where(eq(deadlineAlerts.tenantId, ctx.tenantId!))
         .orderBy(deadlineAlerts.alertDate);
 
       const pending = alerts.filter((a) => a.status === "pending").length;
@@ -792,12 +792,12 @@ export const nr01PdfExportRouter = router({
     }),
 
   // 15. Avaliacao Ergonomica
-  exportErgonomicAssessment: publicProcedure
-    .input(z.object({ tenantId: z.string(), assessmentId: z.string() }))
-    .mutation(async ({ input }) => {
+  exportErgonomicAssessment: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional(), assessmentId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const [assessment] = await db.select().from(ergonomicAssessments)
-        .where(and(eq(ergonomicAssessments.tenantId, input.tenantId), eq(ergonomicAssessments.id, input.assessmentId)));
+        .where(and(eq(ergonomicAssessments.tenantId, ctx.tenantId!), eq(ergonomicAssessments.id, input.assessmentId)));
 
       if (!assessment) throw new TRPCError({ code: "NOT_FOUND", message: "Avaliacao ergonomica nao encontrada" });
 
@@ -838,12 +838,12 @@ export const nr01PdfExportRouter = router({
     }),
 
   // 16. Relatorio eSocial
-  exportEsocialReport: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .mutation(async ({ input }) => {
+  exportEsocialReport: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const exports = await db.select().from(esocialExports)
-        .where(eq(esocialExports.tenantId, input.tenantId))
+        .where(eq(esocialExports.tenantId, ctx.tenantId!))
         .orderBy(desc(esocialExports.createdAt));
 
       const statusLabels: Record<string, string> = { draft: "Rascunho", validated: "Validado", submitted: "Enviado", accepted: "Aceito", rejected: "Rejeitado" };
@@ -880,19 +880,19 @@ export const nr01PdfExportRouter = router({
     }),
 
   // 17. Relatorio Executivo
-  exportExecutiveReport: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .mutation(async ({ input }) => {
+  exportExecutiveReport: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
 
       // Dashboard summary
       const [latestReport] = await db.select().from(copsoqReports)
-        .where(eq(copsoqReports.tenantId, input.tenantId))
+        .where(eq(copsoqReports.tenantId, ctx.tenantId!))
         .orderBy(desc(copsoqReports.generatedAt)).limit(1);
 
       // Financial calculation
       const [params] = await db.select().from(financialParameters)
-        .where(eq(financialParameters.tenantId, input.tenantId)).limit(1);
+        .where(eq(financialParameters.tenantId, ctx.tenantId!)).limit(1);
 
       const fp = {
         headcount: params?.headcount || 100,
@@ -903,7 +903,7 @@ export const nr01PdfExportRouter = router({
       };
 
       const [indicators] = await db.select().from(mentalHealthIndicators)
-        .where(eq(mentalHealthIndicators.tenantId, input.tenantId))
+        .where(eq(mentalHealthIndicators.tenantId, ctx.tenantId!))
         .orderBy(desc(mentalHealthIndicators.createdAt)).limit(1);
 
       const fineRisk = fp.headcount * fp.finePerWorker;
@@ -912,7 +912,7 @@ export const nr01PdfExportRouter = router({
 
       // Compliance score
       const checklistItems = await db.select().from(complianceChecklist)
-        .where(eq(complianceChecklist.tenantId, input.tenantId));
+        .where(eq(complianceChecklist.tenantId, ctx.tenantId!));
 
       const compliant = checklistItems.filter((i) => i.status === "compliant").length;
       const partial = checklistItems.filter((i) => i.status === "partial").length;
@@ -923,7 +923,7 @@ export const nr01PdfExportRouter = router({
       const plans = await db.select({
         total: sql<number>`COUNT(*)`,
         completed: sql<number>`SUM(CASE WHEN ${actionPlans.status} = 'completed' THEN 1 ELSE 0 END)`,
-      }).from(actionPlans).where(eq(actionPlans.tenantId, input.tenantId));
+      }).from(actionPlans).where(eq(actionPlans.tenantId, ctx.tenantId!));
 
       const apTotal = plans[0]?.total || 0;
       const apCompleted = plans[0]?.completed || 0;

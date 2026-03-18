@@ -1,8 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { publicProcedure, router } from "../_core/trpc";
-import { requireActiveSubscription } from "../_core/subscriptionMiddleware";
+import { tenantProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   esocialExports,
@@ -13,36 +12,35 @@ import { eq, and, desc, sql } from "drizzle-orm";
 
 export const esocialExportRouter = router({
   // Listar exportações eSocial
-  list: publicProcedure
+  list: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
       const exports = await db
         .select()
         .from(esocialExports)
-        .where(eq(esocialExports.tenantId, input.tenantId))
+        .where(eq(esocialExports.tenantId, ctx.tenantId!))
         .orderBy(desc(esocialExports.createdAt));
 
       return exports;
     }),
 
   // Gerar XML para eSocial
-  generateXml: publicProcedure
+  generateXml: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
         eventType: z.enum(["S-2220", "S-2240"]),
         riskAssessmentId: z.string(),
       })
     )
-    .mutation(async ({ input }) => {
-      await requireActiveSubscription(input.tenantId);
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -57,7 +55,7 @@ export const esocialExportRouter = router({
         .where(
           and(
             eq(riskAssessments.id, input.riskAssessmentId),
-            eq(riskAssessments.tenantId, input.tenantId)
+            eq(riskAssessments.tenantId, ctx.tenantId!)
           )
         );
 
@@ -89,7 +87,7 @@ export const esocialExportRouter = router({
 <eSocial xmlns="http://www.esocial.gov.br/schema/evt/evtExpRisco/v_S_01_02_00">
   <evtExpRisco>
     <ideEvento><tpAmb>2</tpAmb></ideEvento>
-    <ideEmpregador><nrInsc>${input.tenantId}</nrInsc></ideEmpregador>
+    <ideEmpregador><nrInsc>${ctx.tenantId!}</nrInsc></ideEmpregador>
     <infoExpRisco>
 ${agNocEntries}
     </infoExpRisco>
@@ -101,7 +99,7 @@ ${agNocEntries}
 <eSocial xmlns="http://www.esocial.gov.br/schema/evt/evtMonit/v_S_01_02_00">
   <evtMonit>
     <ideEvento><tpAmb>2</tpAmb></ideEvento>
-    <ideEmpregador><nrInsc>${input.tenantId}</nrInsc></ideEmpregador>
+    <ideEmpregador><nrInsc>${ctx.tenantId!}</nrInsc></ideEmpregador>
     <exMedOcup>
       <tpExameOcup>0</tpExameOcup>
       <aso>
@@ -118,7 +116,7 @@ ${agNocEntries}
 
       await db.insert(esocialExports).values({
         id,
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         eventType: input.eventType,
         referenceId: input.riskAssessmentId,
         xmlContent,
@@ -134,9 +132,9 @@ ${agNocEntries}
     }),
 
   // Validar XML
-  validate: publicProcedure
+  validate: tenantProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -147,7 +145,7 @@ ${agNocEntries}
       const [exportRecord] = await db
         .select()
         .from(esocialExports)
-        .where(eq(esocialExports.id, input.id));
+        .where(and(eq(esocialExports.id, input.id), eq(esocialExports.tenantId, ctx.tenantId!)));
 
       if (!exportRecord) {
         throw new TRPCError({
@@ -178,7 +176,7 @@ ${agNocEntries}
             responseMessage: "XML mal formado",
             updatedAt: new Date(),
           })
-          .where(eq(esocialExports.id, input.id));
+          .where(and(eq(esocialExports.id, input.id), eq(esocialExports.tenantId, ctx.tenantId!)));
 
         return { valid: false, message: "XML mal formado" };
       }
@@ -189,15 +187,15 @@ ${agNocEntries}
           status: "validated",
           updatedAt: new Date(),
         })
-        .where(eq(esocialExports.id, input.id));
+        .where(and(eq(esocialExports.id, input.id), eq(esocialExports.tenantId, ctx.tenantId!)));
 
       return { valid: true, message: "XML validado com sucesso" };
     }),
 
   // Download do XML
-  download: publicProcedure
+  download: tenantProcedure
     .input(z.object({ id: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -208,7 +206,7 @@ ${agNocEntries}
       const [exportRecord] = await db
         .select()
         .from(esocialExports)
-        .where(eq(esocialExports.id, input.id));
+        .where(and(eq(esocialExports.id, input.id), eq(esocialExports.tenantId, ctx.tenantId!)));
 
       if (!exportRecord) {
         throw new TRPCError({

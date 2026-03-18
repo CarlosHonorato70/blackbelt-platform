@@ -1,8 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { publicProcedure, router } from "../_core/trpc";
-import { requireActiveSubscription } from "../_core/subscriptionMiddleware";
+import { tenantProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   pcmsoRecommendations,
@@ -13,18 +12,18 @@ import { eq, and, desc } from "drizzle-orm";
 
 export const pcmsoIntegrationRouter = router({
   // Listar recomendações PCMSO por tenant
-  list: publicProcedure
+  list: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
         riskAssessmentId: z.string().optional(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
-      const conditions = [eq(pcmsoRecommendations.tenantId, input.tenantId)];
+      const conditions = [eq(pcmsoRecommendations.tenantId, ctx.tenantId!)];
 
       if (input.riskAssessmentId) {
         conditions.push(
@@ -42,15 +41,14 @@ export const pcmsoIntegrationRouter = router({
     }),
 
   // Gerar recomendações PCMSO automaticamente a partir de avaliação de risco
-  generate: publicProcedure
+  generate: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
         riskAssessmentId: z.string(),
       })
     )
-    .mutation(async ({ input }) => {
-      await requireActiveSubscription(input.tenantId);
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -103,7 +101,7 @@ export const pcmsoIntegrationRouter = router({
 
         await db.insert(pcmsoRecommendations).values({
           id,
-          tenantId: input.tenantId,
+          tenantId: ctx.tenantId!,
           riskAssessmentId: input.riskAssessmentId,
           riskFactorId: item.riskFactorId,
           examType,
@@ -122,7 +120,7 @@ export const pcmsoIntegrationRouter = router({
     }),
 
   // Atualizar recomendação PCMSO
-  update: publicProcedure
+  update: tenantProcedure
     .input(
       z.object({
         id: z.string(),
@@ -133,7 +131,7 @@ export const pcmsoIntegrationRouter = router({
         priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -153,15 +151,15 @@ export const pcmsoIntegrationRouter = router({
       await db
         .update(pcmsoRecommendations)
         .set(updateData)
-        .where(eq(pcmsoRecommendations.id, id));
+        .where(and(eq(pcmsoRecommendations.id, id), eq(pcmsoRecommendations.tenantId, ctx.tenantId!)));
 
       return { success: true };
     }),
 
   // Deletar recomendação PCMSO
-  delete: publicProcedure
+  delete: tenantProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -171,7 +169,7 @@ export const pcmsoIntegrationRouter = router({
 
       await db
         .delete(pcmsoRecommendations)
-        .where(eq(pcmsoRecommendations.id, input.id));
+        .where(and(eq(pcmsoRecommendations.id, input.id), eq(pcmsoRecommendations.tenantId, ctx.tenantId!)));
 
       return { success: true };
     }),
