@@ -328,9 +328,17 @@ export const authLocalRouter = router({
       }
 
       const resetToken = createResetToken(user.id);
-      const frontendUrl =
-        process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:5000";
+      // Prioridade: FRONTEND_URL env > VITE_FRONTEND_URL env > fallback localhost
+      const frontendUrl = (
+        process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:5000"
+      ).replace(/\/$/, ""); // Remove trailing slash
       const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+
+      log.info("Password reset requested", {
+        email: input.email,
+        frontendUrlBase: frontendUrl,
+        userId: user.id,
+      });
 
       const emailSent = await sendEmail({
         to: input.email,
@@ -363,6 +371,7 @@ export const authLocalRouter = router({
         });
       }
 
+      log.info("Password reset email sent successfully", { email: input.email });
       return { success: true };
     }),
 

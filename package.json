@@ -69,6 +69,7 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
+    "dompurify": "^3.2.4",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
     "embla-carousel-react": "^8.6.0",
@@ -89,6 +90,7 @@
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.64.0",
     "react-icons": "^5.5.0",
+    "react-markdown": "^10.1.0",
     "react-resizable-panels": "^2.1.9",
     "react-router-dom": "^6.30.2",
     "recharts": "^2.15.4",
@@ -101,13 +103,13 @@
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0",
     "xlsx": "^0.18.5",
-    "zod": "^3.25.76",
-    "dompurify": "^3.2.4"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@babel/preset-typescript": "^7.28.5",
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.7",
+    "@types/dompurify": "^3.0.5",
     "@types/express": "^4.17.21",
     "@types/node": "^20.19.26",
     "@types/react": "^18.3.27",
@@ -120,7 +122,6 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
     "tsx": "^4.20.6",
-    "typescript": "^5.9.3",
-    "@types/dompurify": "^3.0.5"
+    "typescript": "^5.9.3"
   }
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import Markdown from "react-markdown";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -170,7 +171,7 @@ function AgentChatPage() {
                     <Plus className="h-3.5 w-3.5" />
                     Novo Chat
                   </Button>
-                  {conversationId && localMessages.length > 0 && (
+                  {conversationId && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -207,13 +208,15 @@ function AgentChatPage() {
                     </div>
                     <div className={`flex flex-col gap-2 max-w-[80%] ${msg.role === "user" ? "items-end" : ""}`}>
                       <div
-                        className={`rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap ${
+                        className={`rounded-2xl px-4 py-2.5 text-sm ${
                           msg.role === "user"
-                            ? "bg-primary text-primary-foreground rounded-tr-sm"
-                            : "bg-muted rounded-tl-sm"
+                            ? "bg-primary text-primary-foreground rounded-tr-sm whitespace-pre-wrap"
+                            : "bg-muted rounded-tl-sm prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-li:my-0 prose-table:my-2 prose-th:px-2 prose-th:py-1 prose-td:px-2 prose-td:py-1 prose-table:text-xs"
                         }`}
                       >
-                        {msg.content}
+                        {msg.role === "user" ? msg.content : (
+                          <Markdown>{msg.content}</Markdown>
+                        )}
                       </div>
                       {/* Action buttons */}
                       {msg.actions && msg.actions.length > 0 && (
