@@ -83,6 +83,7 @@ const ErgonomicAssessmentForm = lazy(() => import("./pages/ErgonomicAssessmentFo
 const EsocialExport = lazy(() => import("./pages/EsocialExport"));
 const Companies = lazy(() => import("./pages/Companies"));
 const GuidedWorkflow = lazy(() => import("./pages/GuidedWorkflow"));
+const AgentChat = lazy(() => import("./pages/AgentChat"));
 
 // Subscription pages
 const Pricing = lazy(() => import("./pages/subscription/Pricing"));
@@ -189,6 +190,7 @@ export default function App() {
                 <Route path="/ergonomic-assessments" element={<ProtectedPage><ErgonomicAssessments /></ProtectedPage>} />
                 <Route path="/ergonomic-assessments/:id" element={<ProtectedPage><ErgonomicAssessmentForm /></ProtectedPage>} />
                 <Route path="/esocial-export" element={<ProtectedPage><EsocialExport /></ProtectedPage>} />
+                <Route path="/agent" element={<ProtectedPage><AgentChat /></ProtectedPage>} />
 
                 {/* Comercial */}
                 <Route path="/pricing-parameters" element={<ProtectedPage><PricingParameters /></ProtectedPage>} />

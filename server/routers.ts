@@ -54,6 +54,7 @@ import { ergonomicAssessmentsRouter } from "./routers/ergonomicAssessments";
 import { esocialExportRouter } from "./routers/esocialExport";
 import { nr01PdfExportRouter } from "./routers/nr01PdfExport";
 import { companiesRouter } from "./routers/companies";
+import { agentRouter } from "./routers/agent";
 
 
 export const appRouter = router({
@@ -143,6 +144,9 @@ export const appRouter = router({
 
   // Gerenciamento de empresas (consultores)
   companies: companiesRouter,
+
+  // Agente IA NR-01
+  agent: agentRouter,
 });
 
 export type AppRouter = typeof appRouter;
