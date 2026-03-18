@@ -186,10 +186,8 @@ app.use((req, res, next) => {
 // ============================================
 
 (async () => {
-  console.log("[BOOT] Starting initialization...");
   // 1. REGISTRAR ROTAS REST (health + webhooks)
   registerRoutes(app);
-  console.log("[BOOT] Routes registered");
 
   // 2. REGISTRAR tRPC
   app.use(
@@ -199,8 +197,6 @@ app.use((req, res, next) => {
       createContext,
     })
   );
-
-  console.log("[BOOT] tRPC registered");
 
   // 3. ERROR HANDLER GLOBAL
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -218,8 +214,6 @@ app.use((req, res, next) => {
 
     res.status(status).json({ message });
   });
-
-  console.log("[BOOT] Error handler registered");
 
   // 4. SERVIR FRONTEND
   if (!isProduction) {
@@ -261,11 +255,8 @@ app.use((req, res, next) => {
     }
   }
 
-  console.log("[BOOT] Frontend setup complete");
-
   // 5. START
   const PORT = ENV.port;
-  console.log("[BOOT] About to listen on port", PORT);
 
   // Validar secrets e logar warnings antes de aceitar conexoes
   logSecurityWarnings();
