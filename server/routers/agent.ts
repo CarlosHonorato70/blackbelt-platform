@@ -32,9 +32,14 @@ async function executeCreateCompany(
 
   const formattedCnpj = cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
 
-  // Check if already exists
+  // Check if already exists — if so, return success with existing ID
   const existing = await dbOps.getTenantByCNPJ(formattedCnpj);
-  if (existing) return { success: false, message: `Empresa com CNPJ ${formattedCnpj} já está cadastrada na plataforma.` };
+  if (existing) {
+    return {
+      success: true, companyId: existing.id,
+      message: `Empresa **${existing.name}** (${formattedCnpj}) já está cadastrada. Continuando com o processo NR-01.`,
+    };
+  }
 
   const companyId = nanoid();
   try {
@@ -381,6 +386,48 @@ Clique em **"Iniciar Processo NR-01"** para prosseguir automaticamente.`;
   // ── 3. Execute action: "Executar:" command OR affirmative with data ready ──
   const isExecuteCommand = msg.startsWith("executar:");
   const isAffirmative = /^(sim|ok|pode|prossegu|inici|vamos|confirm|faz|comec|start|go|yes|claro|certo|beleza|bora)/i.test(msg.trim());
+  const wantsCopsoq = msg.includes("copsoq") || msg.includes("avaliação") || msg.includes("avaliacao") || msg.includes("criar avaliação") || msg.includes("criar avaliacao") || (isExecuteCommand && msg.includes("copsoq"));
+
+  // Handle COPSOQ / assessment creation request
+  if ((wantsCopsoq || ((isExecuteCommand || isAffirmative) && memory.lastAction === "create_assessment")) && memory.cnpj) {
+    // Find the company
+    const formattedCnpj = memory.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+    const company = await dbOps.getTenantByCNPJ(formattedCnpj);
+    if (company) {
+      return {
+        content: `**Fase de Diagnóstico Iniciada!**
+
+A avaliação COPSOQ-II será configurada para a empresa **${company.name}**.
+
+**O que precisa ser feito agora:**
+1. Acesse o menu **"Avaliações"** na plataforma
+2. Crie uma nova avaliação do tipo COPSOQ-II para a empresa
+3. Adicione os emails dos ${memory.headcount || 5} funcionários
+4. Envie os convites — cada funcionário receberá um link único para responder
+
+**Dimensões avaliadas pelo COPSOQ-II:**
+- Exigências quantitativas e cognitivas
+- Ritmo e influência no trabalho
+- Possibilidades de desenvolvimento
+- Significado e compromisso
+- Previsibilidade e transparência
+- Reconhecimento e liderança
+- Comunidade social e confiança
+- Justiça e respeito
+- Conflito trabalho-família
+- Saúde geral, burnout e estresse
+- Comportamentos ofensivos (assédio/violência)
+
+**Prazo recomendado:** Aguardar 2-3 semanas para coleta de respostas. O agente irá monitorar a taxa de resposta e alertar quando atingir 70%.
+
+Após a coleta, eu gerarei automaticamente:
+- Relatório analítico por dimensão
+- Inventário de riscos psicossociais
+- Plano de ação com medidas preventivas`,
+        actions: [],
+      };
+    }
+  }
 
   if ((isExecuteCommand || isAffirmative) && memory.cnpj && memory.headcount && memory.lastAction === "create_company") {
     // EXECUTE: Actually create the company
