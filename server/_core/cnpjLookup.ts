@@ -144,12 +144,71 @@ export function sectorLabel(sector: string): string {
 }
 
 /**
- * Consulta dados de CNPJ via BrasilAPI
+ * Consulta dados de CNPJ via ReceitaWS (primário) com fallback para BrasilAPI
  */
 export async function lookupCNPJ(cnpj: string): Promise<CNPJData | null> {
   const cleaned = cnpj.replace(/\D/g, "");
   if (cleaned.length !== 14) return null;
 
+  // Tentar ReceitaWS primeiro (funciona de datacenter)
+  const result = await lookupReceitaWS(cleaned) || await lookupBrasilAPI(cleaned);
+  return result;
+}
+
+async function lookupReceitaWS(cleaned: string): Promise<CNPJData | null> {
+  try {
+    const response = await fetch(`https://receitaws.com.br/v1/cnpj/${cleaned}`, {
+      headers: { "Accept": "application/json" },
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) {
+      log.warn(`[CNPJ ReceitaWS] API returned ${response.status} for ${cleaned}`);
+      return null;
+    }
+
+    const data = await response.json() as any;
+
+    if (data.status === "ERROR") {
+      log.warn(`[CNPJ ReceitaWS] Error: ${data.message}`);
+      return null;
+    }
+
+    // ReceitaWS has different field structure
+    const atividadePrincipal = data.atividade_principal?.[0] || {};
+    const cnaeCode = parseInt(String(atividadePrincipal.code || "0").replace(/\D/g, "")) || 0;
+
+    return {
+      cnpj: cleaned,
+      razao_social: data.nome || "",
+      nome_fantasia: data.fantasia || "",
+      cnae_fiscal: cnaeCode,
+      cnae_fiscal_descricao: atividadePrincipal.text || "",
+      natureza_juridica: data.natureza_juridica || "",
+      porte: data.porte || "",
+      situacao_cadastral: data.situacao || "",
+      logradouro: data.logradouro || "",
+      numero: data.numero || "",
+      complemento: data.complemento || "",
+      bairro: data.bairro || "",
+      municipio: data.municipio || "",
+      uf: data.uf || "",
+      cep: (data.cep || "").replace(/\D/g, ""),
+      telefone: data.telefone || "",
+      email: data.email || "",
+      data_inicio_atividade: data.abertura || "",
+      cnaes_secundarios: (data.atividades_secundarias || []).map((c: any) => ({
+        codigo: parseInt(String(c.code || "0").replace(/\D/g, "")) || 0,
+        descricao: c.text || "",
+      })),
+    };
+  } catch (error) {
+    log.error(`[CNPJ ReceitaWS] Error fetching ${cleaned}`, { error: String(error) });
+    return null;
+  }
+}
+
+async function lookupBrasilAPI(cleaned: string): Promise<CNPJData | null> {
   try {
     const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleaned}`, {
       headers: { "Accept": "application/json" },
@@ -157,7 +216,7 @@ export async function lookupCNPJ(cnpj: string): Promise<CNPJData | null> {
     });
 
     if (!response.ok) {
-      log.warn(`[CNPJ Lookup] API returned ${response.status} for ${cleaned}`);
+      log.warn(`[CNPJ BrasilAPI] API returned ${response.status} for ${cleaned}`);
       return null;
     }
 
@@ -188,7 +247,7 @@ export async function lookupCNPJ(cnpj: string): Promise<CNPJData | null> {
       })),
     };
   } catch (error) {
-    log.error(`[CNPJ Lookup] Error fetching ${cleaned}`, { error: String(error) });
+    log.error(`[CNPJ BrasilAPI] Error fetching ${cleaned}`, { error: String(error) });
     return null;
   }
 }
