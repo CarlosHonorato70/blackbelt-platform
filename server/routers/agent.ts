@@ -12,6 +12,7 @@ import { buildAgentSystemPrompt, buildContextMessage } from "../_ai/prompts/agen
 import { processCNPJForAgent, formatCNPJ, sectorLabel, isHighRiskSector } from "../_core/cnpjLookup";
 import { tenants } from "../../drizzle/schema";
 import { complianceChecklist, complianceMilestones } from "../../drizzle/schema_nr01";
+import { executeCreateAssessment, executeGenerateInventoryAndPlan, executeCreateTraining, executeCompleteChecklist } from "../_ai/agentExecutor";
 import { log } from "../_core/logger";
 import * as dbOps from "../db";
 
@@ -388,44 +389,80 @@ Clique em **"Iniciar Processo NR-01"** para prosseguir automaticamente.`;
   const isAffirmative = /^(sim|ok|pode|prossegu|inici|vamos|confirm|faz|comec|start|go|yes|claro|certo|beleza|bora)/i.test(msg.trim());
   const wantsCopsoq = msg.includes("copsoq") || msg.includes("avaliação") || msg.includes("avaliacao") || msg.includes("criar avaliação") || msg.includes("criar avaliacao") || (isExecuteCommand && msg.includes("copsoq"));
 
-  // Handle COPSOQ / assessment creation request
+  // Handle COPSOQ / assessment creation — AUTO-EXECUTE
   if ((wantsCopsoq || ((isExecuteCommand || isAffirmative) && memory.lastAction === "create_assessment")) && memory.cnpj) {
-    // Find the company
     const formattedCnpj = memory.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
-    const company = await dbOps.getTenantByCNPJ(formattedCnpj);
-    if (company) {
-      return {
-        content: `**Fase de Diagnóstico Iniciada!**
+    const existingCompany = await dbOps.getTenantByCNPJ(formattedCnpj);
+    if (existingCompany) {
+      const result = await executeCreateAssessment(existingCompany.id, existingCompany.name, memory.headcount || 5);
+      if (result.success) {
+        return {
+          content: result.message + `\n\n**Próxima etapa:** Gerar inventário de riscos e plano de ação com base nos resultados.`,
+          actions: [
+            { type: "generate_inventory", label: "Gerar Inventário e Plano de Ação", params: { assessmentId: result.assessmentId, companyId: existingCompany.id } },
+          ],
+        };
+      }
+      return { content: result.message, actions: [] };
+    }
+  }
 
-A avaliação COPSOQ-II será configurada para a empresa **${company.name}**.
+  // Handle Risk Inventory + Action Plan generation
+  const wantsInventory = msg.includes("inventário") || msg.includes("inventario") || msg.includes("plano de ação") || msg.includes("plano de acao") || msg.includes("risco");
+  if ((wantsInventory || ((isExecuteCommand || isAffirmative) && memory.lastAction === "generate_inventory")) && memory.cnpj) {
+    const formattedCnpj = memory.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+    const existingCompany = await dbOps.getTenantByCNPJ(formattedCnpj);
+    if (existingCompany) {
+      // Find latest assessment
+      const db2 = await getDb();
+      if (db2) {
+        const { copsoqAssessments } = await import("../../drizzle/schema_nr01");
+        const [latestAssessment] = await db2.select().from(copsoqAssessments)
+          .where(eq(copsoqAssessments.tenantId, existingCompany.id))
+          .orderBy(desc(copsoqAssessments.createdAt)).limit(1);
+        if (latestAssessment) {
+          const result = await executeGenerateInventoryAndPlan(existingCompany.id, latestAssessment.id, existingCompany.name, memory.headcount || 5);
+          if (result.success) {
+            return {
+              content: result.message + `\n\n**Próxima etapa:** Criar programa de treinamento sobre riscos psicossociais.`,
+              actions: [
+                { type: "create_training", label: "Criar Programa de Treinamento", params: { companyId: existingCompany.id } },
+              ],
+            };
+          }
+          return { content: result.message, actions: [] };
+        }
+      }
+    }
+  }
 
-**O que precisa ser feito agora:**
-1. Acesse o menu **"Avaliações"** na plataforma
-2. Crie uma nova avaliação do tipo COPSOQ-II para a empresa
-3. Adicione os emails dos ${memory.headcount || 5} funcionários
-4. Envie os convites — cada funcionário receberá um link único para responder
+  // Handle Training Program creation
+  const wantsTraining = msg.includes("treinamento") || msg.includes("capacitação") || msg.includes("capacitacao") || msg.includes("training");
+  if ((wantsTraining || ((isExecuteCommand || isAffirmative) && memory.lastAction === "create_training")) && memory.cnpj) {
+    const formattedCnpj = memory.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+    const existingCompany = await dbOps.getTenantByCNPJ(formattedCnpj);
+    if (existingCompany) {
+      const result = await executeCreateTraining(existingCompany.id, existingCompany.name);
+      if (result.success) {
+        return {
+          content: result.message + `\n\n**Próxima etapa:** Finalizar checklist e emitir certificado de conformidade.`,
+          actions: [
+            { type: "complete_checklist", label: "Finalizar e Emitir Certificado", params: { companyId: existingCompany.id } },
+          ],
+        };
+      }
+      return { content: result.message, actions: [] };
+    }
+  }
 
-**Dimensões avaliadas pelo COPSOQ-II:**
-- Exigências quantitativas e cognitivas
-- Ritmo e influência no trabalho
-- Possibilidades de desenvolvimento
-- Significado e compromisso
-- Previsibilidade e transparência
-- Reconhecimento e liderança
-- Comunidade social e confiança
-- Justiça e respeito
-- Conflito trabalho-família
-- Saúde geral, burnout e estresse
-- Comportamentos ofensivos (assédio/violência)
-
-**Prazo recomendado:** Aguardar 2-3 semanas para coleta de respostas. O agente irá monitorar a taxa de resposta e alertar quando atingir 70%.
-
-Após a coleta, eu gerarei automaticamente:
-- Relatório analítico por dimensão
-- Inventário de riscos psicossociais
-- Plano de ação com medidas preventivas`,
-        actions: [],
-      };
+  // Handle Checklist completion + Certificate issuance
+  const wantsCertificate = msg.includes("certificado") || msg.includes("certificação") || msg.includes("certificacao") || msg.includes("checklist") || msg.includes("finalizar") || msg.includes("documentação") || msg.includes("documentacao") || msg.includes("pgr") || msg.includes("pcmso");
+  if ((wantsCertificate || ((isExecuteCommand || isAffirmative) && (memory.lastAction === "complete_checklist" || memory.lastAction === "create_training"))) && memory.cnpj) {
+    const formattedCnpj = memory.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+    const existingCompany = await dbOps.getTenantByCNPJ(formattedCnpj);
+    if (existingCompany) {
+      const result = await executeCompleteChecklist(existingCompany.id);
+      return { content: result.message, actions: [] };
     }
   }
 
