@@ -190,7 +190,7 @@ function AgentChatPage() {
           <Card className="flex flex-1 flex-col overflow-hidden rounded-t-none border-t-0">
 
             {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
+            <div className="flex-1 overflow-y-auto p-4">
               <div className="space-y-4 max-w-3xl mx-auto">
                 {displayMessages.map((msg) => (
                   <div
@@ -260,7 +260,7 @@ function AgentChatPage() {
                 )}
                 <div ref={messagesEndRef} />
               </div>
-            </ScrollArea>
+            </div>
 
             {/* Input */}
             <div className="border-t p-4 flex-shrink-0">
