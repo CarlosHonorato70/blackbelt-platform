@@ -10,7 +10,124 @@ import { getNR01Status, getCompanyStrategy } from "../_ai/agentOrchestrator";
 import { scanTenantAlerts } from "../_ai/agentAlerts";
 import { buildAgentSystemPrompt, buildContextMessage } from "../_ai/prompts/agent-system";
 import { processCNPJForAgent, formatCNPJ, sectorLabel, isHighRiskSector } from "../_core/cnpjLookup";
+import { tenants } from "../../drizzle/schema";
+import { complianceChecklist, complianceMilestones } from "../../drizzle/schema_nr01";
 import { log } from "../_core/logger";
+import * as dbOps from "../db";
+
+// ============================================================================
+// ACTION EXECUTOR: Actually creates company and sets up NR-01 process
+// ============================================================================
+
+async function executeCreateCompany(
+  params: Record<string, any>,
+  tenantId: string,
+  userId: string
+): Promise<{ success: boolean; companyId?: string; message: string }> {
+  const db = await getDb();
+  if (!db) return { success: false, message: "Database not available" };
+
+  const cnpj = (params.cnpj || "").replace(/\D/g, "");
+  if (cnpj.length !== 14) return { success: false, message: "CNPJ inválido" };
+
+  const formattedCnpj = cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+
+  // Check if already exists
+  const existing = await dbOps.getTenantByCNPJ(formattedCnpj);
+  if (existing) return { success: false, message: `Empresa com CNPJ ${formattedCnpj} já está cadastrada na plataforma.` };
+
+  const companyId = nanoid();
+  try {
+    // Create company tenant
+    await db.insert(tenants).values({
+      id: companyId,
+      name: params.name || "Empresa",
+      cnpj: formattedCnpj,
+      street: params.street || null,
+      number: params.number || null,
+      complement: params.complement || null,
+      neighborhood: params.neighborhood || null,
+      city: params.city || null,
+      state: params.state || null,
+      zipCode: params.zipCode || null,
+      contactEmail: params.contactEmail || null,
+      contactPhone: params.contactPhone || null,
+      status: "active",
+      strategy: "shared_rls",
+      tenantType: "company",
+      parentTenantId: tenantId,
+    });
+
+    // Auto-seed NR-01 checklist (25 items)
+    const nr01Requirements = [
+      { code: "NR01-1.5.3.1", text: "Inventário de riscos com fatores psicossociais identificados", category: "GRO - Gerenciamento de Riscos" },
+      { code: "NR01-1.5.3.2", text: "Avaliação de riscos psicossociais com metodologia validada", category: "GRO - Gerenciamento de Riscos" },
+      { code: "NR01-1.5.3.3", text: "Classificação de riscos por severidade e probabilidade", category: "GRO - Gerenciamento de Riscos" },
+      { code: "NR01-1.5.4.1", text: "Plano de ação com medidas preventivas", category: "GRO - Gerenciamento de Riscos" },
+      { code: "NR01-1.5.4.2", text: "Hierarquia de controles aplicada", category: "GRO - Gerenciamento de Riscos" },
+      { code: "NR01-1.5.4.3", text: "Responsáveis e prazos definidos", category: "GRO - Gerenciamento de Riscos" },
+      { code: "NR01-1.5.7.1", text: "PGR com seção de riscos psicossociais", category: "Documentação" },
+      { code: "NR01-1.5.7.2", text: "Laudo técnico assinado", category: "Documentação" },
+      { code: "NR01-1.5.7.3", text: "Registro de treinamentos", category: "Documentação" },
+      { code: "NR07-7.5.1", text: "PCMSO integrado com riscos psicossociais", category: "PCMSO" },
+      { code: "NR07-7.5.2", text: "Exames de saúde mental definidos", category: "PCMSO" },
+      { code: "NR01-1.5.3.6", text: "COPSOQ-II aplicado", category: "Participação dos Trabalhadores" },
+      { code: "NR01-1.5.3.7", text: "Feedback comunicado aos trabalhadores", category: "Participação dos Trabalhadores" },
+      { code: "NR01-1.5.5.1", text: "Treinamento de lideranças", category: "Treinamento" },
+      { code: "NR01-1.5.5.2", text: "Capacitação da CIPA", category: "Treinamento" },
+      { code: "NR01-1.5.5.3", text: "Prevenção ao assédio", category: "Treinamento" },
+      { code: "NR01-1.5.6.1", text: "Indicadores de saúde mental monitorados", category: "Monitoramento" },
+      { code: "NR01-1.5.6.2", text: "Reavaliação periódica dos riscos", category: "Monitoramento" },
+    ];
+
+    for (const req of nr01Requirements) {
+      await db.insert(complianceChecklist).values({
+        id: nanoid(), tenantId: companyId, requirementCode: req.code,
+        requirementText: req.text, category: req.category, status: "non_compliant",
+        createdAt: new Date(), updatedAt: new Date(),
+      });
+    }
+
+    // Auto-seed milestones
+    const addDays = (days: number) => { const d = new Date(); d.setDate(d.getDate() + days); return d; };
+    const milestones = [
+      { title: "Capacitação da equipe SST", category: "training", targetDate: addDays(30), order: 1 },
+      { title: "Definição de metodologia", category: "assessment", targetDate: addDays(45), order: 2 },
+      { title: "Aplicação COPSOQ-II", category: "assessment", targetDate: addDays(75), order: 3 },
+      { title: "Análise e relatório", category: "inventory", targetDate: addDays(90), order: 4 },
+      { title: "Elaboração do PGR psicossocial", category: "documentation", targetDate: addDays(105), order: 5 },
+      { title: "Plano de ação preventivo", category: "action_plan", targetDate: addDays(120), order: 6 },
+      { title: "Implementação das ações", category: "action_plan", targetDate: addDays(180), order: 7 },
+      { title: "Integração PGR+PCMSO", category: "documentation", targetDate: addDays(150), order: 8 },
+      { title: "Treinamento de lideranças", category: "training", targetDate: addDays(135), order: 9 },
+      { title: "Revisão e auditoria", category: "review", targetDate: addDays(210), order: 10 },
+      { title: "Adequação completa NR-01", category: "review", targetDate: new Date("2026-05-26"), order: 11 },
+    ];
+
+    for (const m of milestones) {
+      await db.insert(complianceMilestones).values({
+        id: nanoid(), tenantId: companyId, title: m.title, category: m.category,
+        targetDate: m.targetDate, status: "pending", order: m.order,
+        createdAt: new Date(), updatedAt: new Date(),
+      });
+    }
+
+    // Record action
+    await db.insert(agentActions).values({
+      id: nanoid(), tenantId, actionType: "create_company",
+      status: "completed", input: params, output: { companyId, name: params.name },
+      startedAt: new Date(), completedAt: new Date(),
+    });
+
+    return {
+      success: true, companyId,
+      message: `Empresa **${params.name}** cadastrada com sucesso! Checklist NR-01 (${nr01Requirements.length} itens) e cronograma (${milestones.length} milestones) configurados automaticamente.`,
+    };
+  } catch (error: any) {
+    log.error("Agent create_company failed", { error: error.message });
+    return { success: false, message: `Erro ao cadastrar empresa: ${error.message}` };
+  }
+}
 
 // Parse action blocks from LLM response
 function parseActions(content: string): Array<{ type: string; label: string; params: Record<string, any> }> {
@@ -145,7 +262,9 @@ async function generateFallbackResponse(
   userMessage: string,
   company: any,
   status: any,
-  conversationHistory: Array<{ role: string; content: string; metadata?: any; actionPayload?: any }>
+  conversationHistory: Array<{ role: string; content: string; metadata?: any; actionPayload?: any }>,
+  tenantId: string,
+  userId: string
 ): Promise<{ content: string; actions: Array<{ type: string; label: string; params: Record<string, any> }> }> {
   const msg = userMessage.toLowerCase();
   const actions: Array<{ type: string; label: string; params: Record<string, any> }> = [];
@@ -259,10 +378,52 @@ Clique em **"Iniciar Processo NR-01"** para prosseguir automaticamente.`;
     }
   }
 
-  // ── 3. Affirmative response (sim, ok, prosseguir, iniciar) with CNPJ in memory ──
+  // ── 3. Execute action: "Executar:" command OR affirmative with data ready ──
+  const isExecuteCommand = msg.startsWith("executar:");
   const isAffirmative = /^(sim|ok|pode|prossegu|inici|vamos|confirm|faz|comec|start|go|yes|claro|certo|beleza|bora)/i.test(msg.trim());
-  if (isAffirmative && memory.cnpj && memory.headcount) {
-    // User confirmed — present the action again
+
+  if ((isExecuteCommand || isAffirmative) && memory.cnpj && memory.headcount && memory.lastAction === "create_company") {
+    // EXECUTE: Actually create the company
+    const result = await processCNPJForAgent(memory.cnpj, memory.headcount);
+    if (result.found && result.active) {
+      const data = result.data!;
+      const execResult = await executeCreateCompany({
+        cnpj: data.cnpj,
+        name: data.nome_fantasia || data.razao_social,
+        sector: result.sector,
+        headcount: memory.headcount,
+        street: data.logradouro, number: data.numero, complement: data.complemento,
+        neighborhood: data.bairro, city: data.municipio, state: data.uf,
+        zipCode: data.cep, contactPhone: data.telefone, contactEmail: data.email,
+      }, tenantId, userId);
+
+      if (execResult.success) {
+        return {
+          content: `**Processo NR-01 iniciado com sucesso!**
+
+${execResult.message}
+
+**O que foi configurado automaticamente:**
+- Empresa cadastrada na plataforma
+- Checklist de conformidade NR-01 populado
+- Cronograma com 11 milestones e prazos
+- Prazo final: **26/05/2026**
+
+**Próxima etapa: Diagnóstico Inicial**
+Agora precisamos criar a avaliação COPSOQ-II e enviar para os ${memory.headcount} funcionários responderem. Deseja que eu crie a avaliação agora?`,
+          actions: [
+            { type: "create_assessment", label: "Criar Avaliação COPSOQ-II", params: { companyId: execResult.companyId } },
+            { type: "view_checklist", label: "Ver Checklist NR-01", params: { companyId: execResult.companyId } },
+          ],
+        };
+      } else {
+        return { content: execResult.message, actions: [] };
+      }
+    }
+  }
+
+  // Affirmative but no lastAction — just show summary with action button
+  if (isAffirmative && memory.cnpj && memory.headcount && !memory.lastAction) {
     const result = await processCNPJForAgent(memory.cnpj, memory.headcount);
     if (result.found && result.active) {
       const data = result.data!;
@@ -274,16 +435,14 @@ Clique em **"Iniciar Processo NR-01"** para prosseguir automaticamente.`;
 - Setor: ${result.sectorName}
 - Estratégia: ${memory.headcount < 20 ? "Simplificada (120 dias)" : memory.headcount <= 100 ? "COPSOQ-II Completo (180 dias)" : "COPSOQ-II por Setor (210 dias)"}
 
-Clique no botão abaixo para cadastrar a empresa e iniciar automaticamente todo o processo.`;
+Clique em **"Iniciar Processo NR-01"** para cadastrar a empresa e configurar tudo automaticamente.`;
 
       actions.push({
         type: "create_company",
         label: "Iniciar Processo NR-01",
         params: {
-          cnpj: data.cnpj,
-          name: data.nome_fantasia || data.razao_social,
-          sector: result.sector,
-          headcount: memory.headcount,
+          cnpj: data.cnpj, name: data.nome_fantasia || data.razao_social,
+          sector: result.sector, headcount: memory.headcount,
           street: data.logradouro, number: data.numero,
           city: data.municipio, state: data.uf, zipCode: data.cep,
         },
@@ -334,27 +493,41 @@ Clique em **"Iniciar Processo NR-01"** para prosseguir.`;
     };
   }
 
-  // ── 5. We have all data from memory — guide the user ──
+  // ── 5. We have all data from memory — execute directly ──
   if (memory.cnpj && memory.headcount) {
-    const content = `Já tenho os dados da empresa **${memory.companyName || formatCNPJ(memory.cnpj)}** com **${memory.headcount} funcionários**.
+    // Auto-execute: create the company
+    const result = await processCNPJForAgent(memory.cnpj, memory.headcount);
+    if (result.found && result.active) {
+      const data = result.data!;
+      const execResult = await executeCreateCompany({
+        cnpj: data.cnpj, name: data.nome_fantasia || data.razao_social,
+        sector: result.sector, headcount: memory.headcount,
+        street: data.logradouro, number: data.numero, complement: data.complemento,
+        neighborhood: data.bairro, city: data.municipio, state: data.uf,
+        zipCode: data.cep, contactPhone: data.telefone, contactEmail: data.email,
+      }, tenantId, userId);
 
-O que deseja fazer?
-- Diga **"iniciar"** para cadastrar a empresa e começar o processo NR-01
-- Pergunte sobre o **status** do processo
-- Envie outro **CNPJ** para uma nova empresa`;
+      if (execResult.success) {
+        return {
+          content: `**Processo NR-01 iniciado com sucesso!**
 
-    actions.push({
-      type: "create_company",
-      label: "Iniciar Processo NR-01",
-      params: {
-        cnpj: memory.cnpj,
-        name: memory.companyName || "",
-        sector: memory.sector || "servicos",
-        headcount: memory.headcount,
-      },
-    });
+${execResult.message}
 
-    return { content, actions };
+**Próxima etapa: Diagnóstico Inicial**
+Deseja que eu crie a avaliação COPSOQ-II para os ${memory.headcount} funcionários?`,
+          actions: [
+            { type: "create_assessment", label: "Criar Avaliação COPSOQ-II", params: { companyId: execResult.companyId } },
+          ],
+        };
+      } else {
+        return { content: execResult.message, actions: [] };
+      }
+    }
+
+    return {
+      content: `Tenho os dados mas não consegui consultar o CNPJ. Diga **"iniciar"** para tentar novamente.`,
+      actions: [],
+    };
   }
 
   // ── 6. Status/progress queries ──
@@ -573,14 +746,14 @@ ${extractHeadcount(input.content) ? `Funcionários informados: ${extractHeadcoun
           actions = parseActions(rawContent);
           assistantContent = cleanContent(rawContent);
         } else {
-          const fallback = await generateFallbackResponse(input.content, company, status, orderedHistory);
+          const fallback = await generateFallbackResponse(input.content, company, status, orderedHistory, ctx.tenantId!, ctx.user!.id);
           assistantContent = fallback.content;
           actions = fallback.actions;
         }
       } catch (error) {
         log.error("Agent LLM error, using fallback with memory", { error: String(error) });
         // Fallback WITH conversation memory
-        const fallback = await generateFallbackResponse(input.content, company, status, orderedHistory);
+        const fallback = await generateFallbackResponse(input.content, company, status, orderedHistory, ctx.tenantId!, ctx.user!.id);
         assistantContent = fallback.content;
         actions = fallback.actions;
       }
