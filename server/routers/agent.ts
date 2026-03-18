@@ -45,8 +45,6 @@ function extractHeadcount(text: string): number | undefined {
 
 // Build strategy text based on company profile
 function buildStrategyText(headcount: number, sector: string, sectorName: string, highRisk: boolean): string {
-  const strategy = getCompanyStrategy(headcount, sector);
-
   let riskFocus = "";
   if (highRisk) {
     riskFocus = "\n\n**Atenção:** O setor **" + sectorName + "** é classificado como **alto risco psicossocial**. " +
@@ -71,32 +69,99 @@ function buildStrategyText(headcount: number, sector: string, sectorName: string
   }
 }
 
-// Rule-based fallback when LLM is unavailable — now with CNPJ auto-lookup
+// ============================================================================
+// CONVERSATION MEMORY: Extract context from previous messages
+// ============================================================================
+
+interface ConversationContext {
+  cnpj?: string;
+  companyName?: string;
+  sector?: string;
+  sectorName?: string;
+  headcount?: number;
+  highRisk?: boolean;
+  address?: string;
+  cnpjData?: any;
+  lastAction?: string;
+  phase?: string;
+}
+
+function extractContextFromHistory(messages: Array<{ role: string; content: string; metadata?: any; actionPayload?: any }>): ConversationContext {
+  const ctx: ConversationContext = {};
+
+  for (const msg of messages) {
+    // Extract CNPJ from any message
+    const cnpj = extractCNPJ(msg.content);
+    if (cnpj) ctx.cnpj = cnpj.replace(/\D/g, "");
+
+    // Extract headcount from any message
+    const hc = extractHeadcount(msg.content);
+    if (hc) ctx.headcount = hc;
+
+    // Extract company data from assistant responses
+    if (msg.role === "assistant") {
+      // Look for company name in table format
+      const nameMatch = msg.content.match(/\*\*Razão Social\*\*\s*\|\s*(.+)/);
+      if (nameMatch) ctx.companyName = nameMatch[1].trim();
+
+      const fantasyMatch = msg.content.match(/\*\*Nome Fantasia\*\*\s*\|\s*(.+)/);
+      if (fantasyMatch && fantasyMatch[1].trim() !== "—") ctx.companyName = fantasyMatch[1].trim();
+
+      const sectorMatch = msg.content.match(/\*\*Setor:\*\*\s*(.+?)(?:\s*⚠️|$)/);
+      if (sectorMatch) ctx.sectorName = sectorMatch[1].trim();
+
+      if (msg.content.includes("ALTO RISCO PSICOSSOCIAL")) ctx.highRisk = true;
+
+      // Extract from action payloads (most reliable)
+      if (msg.metadata?.actions) {
+        for (const action of msg.metadata.actions) {
+          if (action.params?.cnpj) ctx.cnpj = action.params.cnpj.replace(/\D/g, "");
+          if (action.params?.name) ctx.companyName = action.params.name;
+          if (action.params?.sector) ctx.sector = action.params.sector;
+          if (action.params?.headcount) ctx.headcount = action.params.headcount;
+          ctx.lastAction = action.type;
+        }
+      }
+      if (msg.actionPayload) {
+        if (msg.actionPayload.cnpj) ctx.cnpj = msg.actionPayload.cnpj.replace(/\D/g, "");
+        if (msg.actionPayload.name) ctx.companyName = msg.actionPayload.name;
+        if (msg.actionPayload.sector) ctx.sector = msg.actionPayload.sector;
+        if (msg.actionPayload.headcount) ctx.headcount = msg.actionPayload.headcount;
+      }
+    }
+  }
+
+  if (ctx.sector && !ctx.sectorName) ctx.sectorName = sectorLabel(ctx.sector);
+  if (ctx.sector) ctx.highRisk = isHighRiskSector(ctx.sector);
+
+  return ctx;
+}
+
+// ============================================================================
+// FALLBACK WITH MEMORY: Uses conversation history for context
+// ============================================================================
+
 async function generateFallbackResponse(
   userMessage: string,
   company: any,
-  status: any
+  status: any,
+  conversationHistory: Array<{ role: string; content: string; metadata?: any; actionPayload?: any }>
 ): Promise<{ content: string; actions: Array<{ type: string; label: string; params: Record<string, any> }> }> {
   const msg = userMessage.toLowerCase();
   const actions: Array<{ type: string; label: string; params: Record<string, any> }> = [];
 
-  // Detect CNPJ pattern
+  // Build memory from conversation history
+  const memory = extractContextFromHistory(conversationHistory);
+
+  // ── 1. Current message has CNPJ: do fresh lookup ──
   const cnpj = extractCNPJ(userMessage);
   if (cnpj) {
-    const headcount = extractHeadcount(userMessage);
-
-    // AUTO-LOOKUP: consulta BrasilAPI
+    const headcount = extractHeadcount(userMessage) || memory.headcount;
     const result = await processCNPJForAgent(cnpj, headcount);
 
-    if (!result.found) {
-      return { content: result.message!, actions: [] };
-    }
+    if (!result.found) return { content: result.message!, actions: [] };
+    if (!result.active) return { content: result.message!, actions: [] };
 
-    if (!result.active) {
-      return { content: result.message!, actions: [] };
-    }
-
-    // Empresa encontrada e ativa
     const data = result.data!;
     const formattedCNPJ = formatCNPJ(cnpj);
 
@@ -130,7 +195,7 @@ async function generateFallbackResponse(
 4. ✅ Criar avaliação COPSOQ-II
 5. 📧 Enviar convites para funcionários responderem
 
-**Deseja que eu inicie o processo completo agora?**`;
+Clique em **"Iniciar Processo NR-01"** para prosseguir automaticamente.`;
 
       actions.push({
         type: "create_company",
@@ -152,20 +217,22 @@ async function generateFallbackResponse(
         },
       });
     } else {
-      content += "\nPara definir a estratégia de implementação da NR-01, preciso saber o **número de funcionários** da empresa.";
+      content += "\nPara definir a estratégia, preciso saber o **número de funcionários** da empresa.";
     }
 
     return { content, actions };
   }
 
-  // If we already have a CNPJ context and user provides headcount
-  if (company && extractHeadcount(userMessage)) {
-    const headcount = extractHeadcount(userMessage)!;
-    const sector = company.sector || "servicos";
-    const sectorName = sectorLabel(sector);
-    const highRisk = isHighRiskSector(sector);
+  // ── 2. User mentions headcount and we already have CNPJ from history ──
+  const currentHeadcount = extractHeadcount(userMessage);
+  if (currentHeadcount && memory.cnpj) {
+    // Re-lookup CNPJ to get fresh data
+    const result = await processCNPJForAgent(memory.cnpj, currentHeadcount);
+    if (result.found && result.active) {
+      const data = result.data!;
+      const content = buildStrategyText(currentHeadcount, result.sector!, result.sectorName!, result.highRisk!) + `
 
-    const content = buildStrategyText(headcount, sector, sectorName, highRisk) + `
+Empresa: **${data.nome_fantasia || data.razao_social}** (${formatCNPJ(memory.cnpj)})
 
 **Próximos passos automáticos após cadastro:**
 1. ✅ Cadastrar empresa na plataforma
@@ -174,18 +241,123 @@ async function generateFallbackResponse(
 4. ✅ Criar avaliação COPSOQ-II
 5. 📧 Enviar convites para funcionários responderem
 
-**Deseja que eu inicie o processo completo agora?**`;
+Clique em **"Iniciar Processo NR-01"** para prosseguir automaticamente.`;
+
+      actions.push({
+        type: "create_company",
+        label: "Iniciar Processo NR-01",
+        params: {
+          cnpj: data.cnpj,
+          name: data.nome_fantasia || data.razao_social,
+          sector: result.sector,
+          headcount: currentHeadcount,
+          street: data.logradouro, number: data.numero,
+          city: data.municipio, state: data.uf, zipCode: data.cep,
+        },
+      });
+      return { content, actions };
+    }
+  }
+
+  // ── 3. Affirmative response (sim, ok, prosseguir, iniciar) with CNPJ in memory ──
+  const isAffirmative = /^(sim|ok|pode|prossegu|inici|vamos|confirm|faz|comec|start|go|yes|claro|certo|beleza|bora)/i.test(msg.trim());
+  if (isAffirmative && memory.cnpj && memory.headcount) {
+    // User confirmed — present the action again
+    const result = await processCNPJForAgent(memory.cnpj, memory.headcount);
+    if (result.found && result.active) {
+      const data = result.data!;
+      const content = `Perfeito! Vou iniciar o processo NR-01 para **${data.nome_fantasia || data.razao_social}**.
+
+**Resumo:**
+- CNPJ: ${formatCNPJ(memory.cnpj)}
+- Funcionários: ${memory.headcount}
+- Setor: ${result.sectorName}
+- Estratégia: ${memory.headcount < 20 ? "Simplificada (120 dias)" : memory.headcount <= 100 ? "COPSOQ-II Completo (180 dias)" : "COPSOQ-II por Setor (210 dias)"}
+
+Clique no botão abaixo para cadastrar a empresa e iniciar automaticamente todo o processo.`;
+
+      actions.push({
+        type: "create_company",
+        label: "Iniciar Processo NR-01",
+        params: {
+          cnpj: data.cnpj,
+          name: data.nome_fantasia || data.razao_social,
+          sector: result.sector,
+          headcount: memory.headcount,
+          street: data.logradouro, number: data.numero,
+          city: data.municipio, state: data.uf, zipCode: data.cep,
+        },
+      });
+      return { content, actions };
+    }
+  }
+
+  // ── 4. We have CNPJ in memory but no headcount yet ──
+  if (memory.cnpj && !memory.headcount) {
+    // Check if user just sent a number
+    const numberMatch = userMessage.match(/^(\d+)$/);
+    if (numberMatch) {
+      const hc = parseInt(numberMatch[1]);
+      if (hc > 0 && hc < 100000) {
+        // Treat bare number as headcount
+        const result = await processCNPJForAgent(memory.cnpj, hc);
+        if (result.found && result.active) {
+          const data = result.data!;
+          const content = `Entendido: **${hc} funcionários**.
+
+` + buildStrategyText(hc, result.sector!, result.sectorName!, result.highRisk!) + `
+
+Empresa: **${data.nome_fantasia || data.razao_social}** (${formatCNPJ(memory.cnpj)})
+
+Clique em **"Iniciar Processo NR-01"** para prosseguir.`;
+
+          actions.push({
+            type: "create_company",
+            label: "Iniciar Processo NR-01",
+            params: {
+              cnpj: data.cnpj,
+              name: data.nome_fantasia || data.razao_social,
+              sector: result.sector,
+              headcount: hc,
+              street: data.logradouro, number: data.numero,
+              city: data.municipio, state: data.uf, zipCode: data.cep,
+            },
+          });
+          return { content, actions };
+        }
+      }
+    }
+
+    return {
+      content: `Já tenho o CNPJ **${formatCNPJ(memory.cnpj)}**${memory.companyName ? ` (${memory.companyName})` : ""}. Para definir a estratégia NR-01, preciso saber: **quantos funcionários** a empresa possui?`,
+      actions: [],
+    };
+  }
+
+  // ── 5. We have all data from memory — guide the user ──
+  if (memory.cnpj && memory.headcount) {
+    const content = `Já tenho os dados da empresa **${memory.companyName || formatCNPJ(memory.cnpj)}** com **${memory.headcount} funcionários**.
+
+O que deseja fazer?
+- Diga **"iniciar"** para cadastrar a empresa e começar o processo NR-01
+- Pergunte sobre o **status** do processo
+- Envie outro **CNPJ** para uma nova empresa`;
 
     actions.push({
       type: "create_company",
       label: "Iniciar Processo NR-01",
-      params: { cnpj: company.cnpj, headcount, name: company.companyName, sector },
+      params: {
+        cnpj: memory.cnpj,
+        name: memory.companyName || "",
+        sector: memory.sector || "servicos",
+        headcount: memory.headcount,
+      },
     });
 
     return { content, actions };
   }
 
-  // Check for status/progress queries
+  // ── 6. Status/progress queries ──
   if (msg.includes("status") || msg.includes("progresso") || msg.includes("andamento")) {
     if (status) {
       const completedPhases = status.phases.filter((p: any) => p.status === "completed").length;
@@ -201,7 +373,7 @@ ${status.alerts.length > 0 ? "\nAlertas:\n" + status.alerts.map((a: string) => `
     return { content: "Nenhuma empresa selecionada. Me informe o CNPJ da empresa para verificar o status.", actions: [] };
   }
 
-  // Check for help/capabilities
+  // ── 7. Help/capabilities ──
   if (msg.includes("ajuda") || msg.includes("help") || msg.includes("pode fazer") || msg.includes("capaz")) {
     return {
       content: `Sou o **Assistente IA NR-01** da BlackBelt. Posso conduzir **todo o processo de conformidade** automaticamente:
@@ -223,7 +395,7 @@ ${status.alerts.length > 0 ? "\nAlertas:\n" + status.alerts.map((a: string) => `
     };
   }
 
-  // Default response
+  // ── 8. Default response ──
   return {
     content: `Para iniciar o processo de conformidade NR-01, me envie:
 
@@ -247,7 +419,6 @@ export const agentRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-      // Look for existing conversation
       const conditions = [
         eq(agentConversations.tenantId, ctx.tenantId!),
         eq(agentConversations.userId, ctx.user!.id),
@@ -263,7 +434,6 @@ export const agentRouter = router({
 
       if (existing) return existing;
 
-      // Create new conversation
       const id = nanoid();
       await db.insert(agentConversations).values({
         id,
@@ -336,7 +506,15 @@ export const agentRouter = router({
         alerts = dbAlerts;
       } catch { /* no alerts */ }
 
-      // AUTO-LOOKUP: If user message contains a CNPJ, enrich context automatically
+      // Fetch recent conversation history (last 20 messages)
+      const recentMessages = await db.select().from(agentMessages)
+        .where(eq(agentMessages.conversationId, input.conversationId))
+        .orderBy(desc(agentMessages.createdAt))
+        .limit(20);
+
+      const orderedHistory = [...recentMessages].reverse();
+
+      // AUTO-LOOKUP: If user message contains a CNPJ, enrich LLM context
       const cnpj = extractCNPJ(input.content);
       let cnpjContext = "";
       if (cnpj) {
@@ -358,15 +536,9 @@ Email: ${d.email || "N/A"}
 Início Atividade: ${d.data_inicio_atividade}
 ${extractHeadcount(input.content) ? `Funcionários informados: ${extractHeadcount(input.content)}` : "Número de funcionários: NÃO INFORMADO (perguntar ao usuário)"}`;
         } else if (cnpjResult.message) {
-          cnpjContext = `\n\n[CNPJ LOOKUP RESULT]: ${cnpjResult.message}`;
+          cnpjContext = `\n\n[CNPJ LOOKUP]: ${cnpjResult.message}`;
         }
       }
-
-      // Fetch recent conversation history (last 20 messages)
-      const recentMessages = await db.select().from(agentMessages)
-        .where(eq(agentMessages.conversationId, input.conversationId))
-        .orderBy(desc(agentMessages.createdAt))
-        .limit(20);
 
       // Build LLM messages
       const systemPrompt = buildAgentSystemPrompt();
@@ -380,7 +552,7 @@ ${extractHeadcount(input.content) ? `Funcionários informados: ${extractHeadcoun
       const llmMessages = [
         { role: "system" as const, content: systemPrompt },
         { role: "system" as const, content: contextMessage + cnpjContext },
-        ...recentMessages.reverse().map(m => ({
+        ...orderedHistory.map(m => ({
           role: m.role as "user" | "assistant",
           content: m.content,
         })),
@@ -401,15 +573,14 @@ ${extractHeadcount(input.content) ? `Funcionários informados: ${extractHeadcoun
           actions = parseActions(rawContent);
           assistantContent = cleanContent(rawContent);
         } else {
-          // LLM returned empty — use fallback
-          const fallback = await generateFallbackResponse(input.content, company, status);
+          const fallback = await generateFallbackResponse(input.content, company, status, orderedHistory);
           assistantContent = fallback.content;
           actions = fallback.actions;
         }
       } catch (error) {
-        log.error("Agent LLM error, using fallback", { error: String(error) });
-        // Rule-based fallback with CNPJ auto-lookup
-        const fallback = await generateFallbackResponse(input.content, company, status);
+        log.error("Agent LLM error, using fallback with memory", { error: String(error) });
+        // Fallback WITH conversation memory
+        const fallback = await generateFallbackResponse(input.content, company, status, orderedHistory);
         assistantContent = fallback.content;
         actions = fallback.actions;
       }
@@ -473,9 +644,7 @@ ${extractHeadcount(input.content) ? `Funcionários informados: ${extractHeadcoun
 
   // Get NR-01 status for a company
   getStatus: tenantProcedure
-    .input(z.object({
-      companyId: z.string().optional(),
-    }))
+    .input(z.object({ companyId: z.string().optional() }))
     .query(async ({ ctx, input }) => {
       const targetTenantId = input.companyId || ctx.tenantId!;
       try {
@@ -485,7 +654,7 @@ ${extractHeadcount(input.content) ? `Funcionários informados: ${extractHeadcoun
       }
     }),
 
-  // Get strategy recommendation for a company profile
+  // Get strategy recommendation
   getStrategy: tenantProcedure
     .input(z.object({
       headcount: z.number(),
@@ -506,8 +675,6 @@ ${extractHeadcount(input.content) ? `Funcionários informados: ${extractHeadcoun
       if (!db) return [];
 
       const targetTenantId = input.companyId || ctx.tenantId!;
-
-      // Scan for new alerts first
       await scanTenantAlerts(ctx.tenantId!, input.companyId);
 
       const alerts = await db.select().from(agentAlerts)
@@ -535,7 +702,7 @@ ${extractHeadcount(input.content) ? `Funcionários informados: ${extractHeadcoun
       return { success: true };
     }),
 
-  // List all conversations for the user
+  // List conversations
   listConversations: tenantProcedure
     .query(async ({ ctx }) => {
       const db = await getDb();
@@ -548,5 +715,52 @@ ${extractHeadcount(input.content) ? `Funcionários informados: ${extractHeadcoun
         ))
         .orderBy(desc(agentConversations.updatedAt))
         .limit(20);
+    }),
+
+  // Delete a conversation and all its messages
+  deleteConversation: tenantProcedure
+    .input(z.object({ conversationId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Verify ownership
+      const [conv] = await db.select().from(agentConversations)
+        .where(and(
+          eq(agentConversations.id, input.conversationId),
+          eq(agentConversations.tenantId, ctx.tenantId!),
+          eq(agentConversations.userId, ctx.user!.id)
+        ))
+        .limit(1);
+
+      if (!conv) throw new TRPCError({ code: "NOT_FOUND", message: "Conversa não encontrada" });
+
+      // Delete messages first, then conversation
+      await db.delete(agentMessages).where(eq(agentMessages.conversationId, input.conversationId));
+      await db.delete(agentConversations).where(eq(agentConversations.id, input.conversationId));
+
+      return { success: true };
+    }),
+
+  // Start a new conversation (force create, ignoring existing)
+  newConversation: tenantProcedure
+    .input(z.object({ companyId: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const id = nanoid();
+      await db.insert(agentConversations).values({
+        id,
+        tenantId: ctx.tenantId!,
+        userId: ctx.user!.id,
+        companyId: input.companyId || null,
+        title: "Assistente NR-01",
+        phase: "ONBOARDING",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      return { id, tenantId: ctx.tenantId!, userId: ctx.user!.id, companyId: input.companyId || null, title: "Assistente NR-01", phase: "ONBOARDING" };
     }),
 });

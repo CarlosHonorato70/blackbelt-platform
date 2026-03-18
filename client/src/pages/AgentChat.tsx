@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Bot, User, AlertTriangle, CheckCircle2, Clock, Brain, RefreshCw, MessageSquare, X } from "lucide-react";
+import { Send, Bot, User, AlertTriangle, CheckCircle2, Clock, Brain, RefreshCw, MessageSquare, X, Plus, Trash2 } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
 function AgentChatPage() {
@@ -65,6 +65,24 @@ function AgentChatPage() {
 
   // Dismiss alert
   const dismissAlert = trpc.agent.dismissAlert.useMutation();
+
+  // New conversation
+  const newConversation = trpc.agent.newConversation.useMutation({
+    onSuccess: (data) => {
+      setConversationId(data.id);
+      setLocalMessages([]);
+    },
+  });
+
+  // Delete conversation
+  const deleteConversation = trpc.agent.deleteConversation.useMutation({
+    onSuccess: () => {
+      setConversationId(null);
+      setLocalMessages([]);
+      // Create a fresh conversation
+      createConversation.mutate({});
+    },
+  });
 
   // Init conversation
   useEffect(() => {
@@ -140,7 +158,35 @@ function AgentChatPage() {
               <div className="flex items-center gap-2">
                 <Brain className="h-5 w-5 text-primary" />
                 <CardTitle className="text-lg">Assistente IA NR-01</CardTitle>
-                <Badge variant="secondary" className="ml-auto">Gemini 2.5 Flash</Badge>
+                <div className="ml-auto flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs gap-1"
+                    onClick={() => newConversation.mutate({})}
+                    disabled={isTyping}
+                    title="Novo chat"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Novo Chat
+                  </Button>
+                  {conversationId && localMessages.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs gap-1 text-destructive hover:text-destructive"
+                      onClick={() => {
+                        if (confirm("Excluir esta conversa? Esta ação não pode ser desfeita.")) {
+                          deleteConversation.mutate({ conversationId });
+                        }
+                      }}
+                      disabled={isTyping}
+                      title="Excluir chat"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
 
