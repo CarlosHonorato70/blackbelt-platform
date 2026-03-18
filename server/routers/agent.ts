@@ -436,6 +436,17 @@ Clique em **"Iniciar Processo NR-01"** para prosseguir automaticamente.`;
     }
   }
 
+  // Handle Checklist completion + Certificate issuance (BEFORE training to avoid false match)
+  const wantsCertificate = msg.includes("certificado") || msg.includes("certificação") || msg.includes("certificacao") || msg.includes("checklist") || msg.includes("finalizar") || msg.includes("documentação") || msg.includes("documentacao") || msg.includes("pgr") || msg.includes("pcmso");
+  if ((wantsCertificate || ((isExecuteCommand || isAffirmative) && (memory.lastAction === "complete_checklist"))) && memory.cnpj) {
+    const formattedCnpj2 = memory.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+    const existingCompany2 = await dbOps.getTenantByCNPJ(formattedCnpj2);
+    if (existingCompany2) {
+      const result2 = await executeCompleteChecklist(existingCompany2.id);
+      return { content: result2.message, actions: [] };
+    }
+  }
+
   // Handle Training Program creation
   const wantsTraining = msg.includes("treinamento") || msg.includes("capacitação") || msg.includes("capacitacao") || msg.includes("training");
   if ((wantsTraining || ((isExecuteCommand || isAffirmative) && memory.lastAction === "create_training")) && memory.cnpj) {
@@ -455,16 +466,7 @@ Clique em **"Iniciar Processo NR-01"** para prosseguir automaticamente.`;
     }
   }
 
-  // Handle Checklist completion + Certificate issuance
-  const wantsCertificate = msg.includes("certificado") || msg.includes("certificação") || msg.includes("certificacao") || msg.includes("checklist") || msg.includes("finalizar") || msg.includes("documentação") || msg.includes("documentacao") || msg.includes("pgr") || msg.includes("pcmso");
-  if ((wantsCertificate || ((isExecuteCommand || isAffirmative) && (memory.lastAction === "complete_checklist" || memory.lastAction === "create_training"))) && memory.cnpj) {
-    const formattedCnpj = memory.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
-    const existingCompany = await dbOps.getTenantByCNPJ(formattedCnpj);
-    if (existingCompany) {
-      const result = await executeCompleteChecklist(existingCompany.id);
-      return { content: result.message, actions: [] };
-    }
-  }
+  // (certificate handler moved above training to avoid false match)
 
   if ((isExecuteCommand || isAffirmative) && memory.cnpj && memory.headcount && memory.lastAction === "create_company") {
     // EXECUTE: Actually create the company
