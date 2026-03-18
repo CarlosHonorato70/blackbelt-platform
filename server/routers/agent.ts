@@ -9,6 +9,7 @@ import { invokeLLM } from "../_core/llm";
 import { getNR01Status, getCompanyStrategy } from "../_ai/agentOrchestrator";
 import { scanTenantAlerts } from "../_ai/agentAlerts";
 import { buildAgentSystemPrompt, buildContextMessage } from "../_ai/prompts/agent-system";
+import { processCNPJForAgent, formatCNPJ, sectorLabel, isHighRiskSector } from "../_core/cnpjLookup";
 import { log } from "../_core/logger";
 
 // Parse action blocks from LLM response
@@ -30,51 +31,155 @@ function cleanContent(content: string): string {
   return content.replace(/```action\s*\n[\s\S]*?\n```/g, "").trim();
 }
 
-// Rule-based fallback when LLM is unavailable
-function generateFallbackResponse(
+// Extract CNPJ from text
+function extractCNPJ(text: string): string | null {
+  const match = text.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
+  return match ? match[0] : null;
+}
+
+// Extract headcount from text
+function extractHeadcount(text: string): number | undefined {
+  const match = text.match(/(\d+)\s*(?:funcionário|funcionario|empregado|colaborador|trabalhador)/i);
+  return match ? parseInt(match[1]) : undefined;
+}
+
+// Build strategy text based on company profile
+function buildStrategyText(headcount: number, sector: string, sectorName: string, highRisk: boolean): string {
+  const strategy = getCompanyStrategy(headcount, sector);
+
+  let riskFocus = "";
+  if (highRisk) {
+    riskFocus = "\n\n**Atenção:** O setor **" + sectorName + "** é classificado como **alto risco psicossocial**. " +
+      "A avaliação terá foco especial nas dimensões de violência, assédio, burnout e demanda emocional.";
+  }
+
+  if (headcount < 20) {
+    return `**Estratégia recomendada para ${headcount} funcionários (pequeno porte):**
+- Avaliação **simplificada** focando nos riscos mais críticos do setor
+- Prazo estimado: **120 dias**
+- Metodologia: COPSOQ-II adaptado (dimensões prioritárias)${riskFocus}`;
+  } else if (headcount <= 100) {
+    return `**Estratégia recomendada para ${headcount} funcionários (médio porte):**
+- **COPSOQ-II completo** — todas as 12 dimensões psicossociais
+- Prazo estimado: **180 dias**
+- Análise por grupos de trabalho${riskFocus}`;
+  } else {
+    return `**Estratégia recomendada para ${headcount} funcionários (grande porte):**
+- **COPSOQ-II por setor/departamento** — plano detalhado por área
+- Prazo estimado: **210 dias**
+- Análise estratificada com relatórios departamentais${riskFocus}`;
+  }
+}
+
+// Rule-based fallback when LLM is unavailable — now with CNPJ auto-lookup
+async function generateFallbackResponse(
   userMessage: string,
   company: any,
   status: any
-): { content: string; actions: Array<{ type: string; label: string; params: Record<string, any> }> } {
+): Promise<{ content: string; actions: Array<{ type: string; label: string; params: Record<string, any> }> }> {
   const msg = userMessage.toLowerCase();
   const actions: Array<{ type: string; label: string; params: Record<string, any> }> = [];
 
   // Detect CNPJ pattern
-  const cnpjMatch = userMessage.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
-  if (cnpjMatch) {
-    const cnpj = cnpjMatch[0];
-    // Extract headcount if mentioned
-    const headcountMatch = userMessage.match(/(\d+)\s*(?:funcionário|funcionario|empregado|colaborador|trabalhador)/i);
-    const headcount = headcountMatch ? parseInt(headcountMatch[1]) : undefined;
+  const cnpj = extractCNPJ(userMessage);
+  if (cnpj) {
+    const headcount = extractHeadcount(userMessage);
 
-    let strategy = "";
-    if (headcount && headcount < 20) {
-      strategy = `Como a empresa tem ${headcount} funcionários (pequeno porte), recomendo uma **avaliação simplificada** focando nos riscos mais críticos do setor. O processo completo levará aproximadamente 120 dias.`;
-    } else if (headcount && headcount <= 100) {
-      strategy = `Com ${headcount} funcionários (médio porte), recomendo o **COPSOQ-II completo** com análise de todas as 12 dimensões psicossociais. O processo levará aproximadamente 180 dias.`;
-    } else if (headcount && headcount > 100) {
-      strategy = `Com ${headcount} funcionários (grande porte), recomendo **COPSOQ-II por setor** com plano detalhado por área. O processo levará aproximadamente 210 dias.`;
+    // AUTO-LOOKUP: consulta BrasilAPI
+    const result = await processCNPJForAgent(cnpj, headcount);
+
+    if (!result.found) {
+      return { content: result.message!, actions: [] };
     }
 
-    const content = `Identifiquei o CNPJ: **${cnpj}**${headcount ? ` com **${headcount} funcionários**` : ""}.
+    if (!result.active) {
+      return { content: result.message!, actions: [] };
+    }
 
-${strategy || "Para definir a melhor estratégia, preciso saber o número de funcionários e o setor de atividade."}
+    // Empresa encontrada e ativa
+    const data = result.data!;
+    const formattedCNPJ = formatCNPJ(cnpj);
 
-Para prosseguir, preciso das seguintes informações:
-1. **Razão social** da empresa
-2. **Setor de atividade** (ex: saúde, indústria, comércio, serviços)
-${!headcount ? "3. **Número de funcionários**\n" : ""}
-Após confirmar os dados, criarei a empresa na plataforma e iniciarei o processo NR-01 com:
-- Checklist de conformidade (25 itens obrigatórios)
-- Cronograma personalizado com milestones
-- Prazo final: **26/05/2025** (data limite NR-01)
+    let content = `Consultei a Receita Federal e encontrei os dados da empresa:
 
-Deseja prosseguir com o cadastro?`;
+**📋 Dados da Empresa:**
+| Campo | Valor |
+|-------|-------|
+| **Razão Social** | ${data.razao_social} |
+| **Nome Fantasia** | ${data.nome_fantasia || "—"} |
+| **CNPJ** | ${formattedCNPJ} |
+| **Situação** | ${data.situacao_cadastral} |
+| **CNAE Principal** | ${data.cnae_fiscal} — ${data.cnae_fiscal_descricao} |
+| **Porte** | ${data.porte} |
+| **Endereço** | ${result.address} |
+| **CEP** | ${data.cep} |
+| **Telefone** | ${data.telefone || "—"} |
+| **Email** | ${data.email || "—"} |
+| **Início Atividade** | ${data.data_inicio_atividade} |
+
+**🏭 Classificação NR-01:**
+- **Setor:** ${result.sectorName}${result.highRisk ? " ⚠️ **ALTO RISCO PSICOSSOCIAL**" : ""}
+`;
+
+    if (headcount) {
+      content += "\n" + buildStrategyText(headcount, result.sector!, result.sectorName!, result.highRisk!);
+      content += `\n\n**Próximos passos automáticos após cadastro:**
+1. ✅ Cadastrar empresa na plataforma
+2. ✅ Popular checklist NR-01 (25 itens obrigatórios)
+3. ✅ Criar cronograma com milestones personalizados
+4. ✅ Criar avaliação COPSOQ-II
+5. 📧 Enviar convites para funcionários responderem
+
+**Deseja que eu inicie o processo completo agora?**`;
+
+      actions.push({
+        type: "create_company",
+        label: "Iniciar Processo NR-01",
+        params: {
+          cnpj: data.cnpj,
+          name: data.nome_fantasia || data.razao_social,
+          sector: result.sector,
+          headcount,
+          street: data.logradouro,
+          number: data.numero,
+          complement: data.complemento,
+          neighborhood: data.bairro,
+          city: data.municipio,
+          state: data.uf,
+          zipCode: data.cep,
+          contactPhone: data.telefone,
+          contactEmail: data.email,
+        },
+      });
+    } else {
+      content += "\nPara definir a estratégia de implementação da NR-01, preciso saber o **número de funcionários** da empresa.";
+    }
+
+    return { content, actions };
+  }
+
+  // If we already have a CNPJ context and user provides headcount
+  if (company && extractHeadcount(userMessage)) {
+    const headcount = extractHeadcount(userMessage)!;
+    const sector = company.sector || "servicos";
+    const sectorName = sectorLabel(sector);
+    const highRisk = isHighRiskSector(sector);
+
+    const content = buildStrategyText(headcount, sector, sectorName, highRisk) + `
+
+**Próximos passos automáticos após cadastro:**
+1. ✅ Cadastrar empresa na plataforma
+2. ✅ Popular checklist NR-01 (25 itens obrigatórios)
+3. ✅ Criar cronograma com milestones personalizados
+4. ✅ Criar avaliação COPSOQ-II
+5. 📧 Enviar convites para funcionários responderem
+
+**Deseja que eu inicie o processo completo agora?**`;
 
     actions.push({
       type: "create_company",
-      label: "Cadastrar Empresa",
-      params: { cnpj, headcount: headcount || 0 },
+      label: "Iniciar Processo NR-01",
+      params: { cnpj: company.cnpj, headcount, name: company.companyName, sector },
     });
 
     return { content, actions };
@@ -99,33 +204,35 @@ ${status.alerts.length > 0 ? "\nAlertas:\n" + status.alerts.map((a: string) => `
   // Check for help/capabilities
   if (msg.includes("ajuda") || msg.includes("help") || msg.includes("pode fazer") || msg.includes("capaz")) {
     return {
-      content: `Posso ajudá-lo com todo o processo de conformidade NR-01:
+      content: `Sou o **Assistente IA NR-01** da BlackBelt. Posso conduzir **todo o processo de conformidade** automaticamente:
 
-1. **Cadastrar empresas** — Informe o CNPJ e dados básicos
-2. **Configurar o processo** — Checklist e cronograma automáticos
-3. **Avaliação COPSOQ-II** — Criar, enviar convites, acompanhar respostas
-4. **Análise com IA** — Gerar relatórios com dimensões críticas
-5. **Inventário de Riscos** — Identificação e classificação de perigos
-6. **Plano de Ação** — Medidas preventivas com cronograma
-7. **Treinamentos** — Programas de capacitação obrigatórios
-8. **Documentação** — PGR, PCMSO, laudos técnicos em PDF
-9. **Certificação** — Emissão quando score ≥ 80%
-10. **Monitoramento** — Alertas de prazos e riscos
+1. **Consulta de CNPJ** — Busco automaticamente os dados na Receita Federal
+2. **Cadastro e Diagnóstico** — Classifico o setor e defino a estratégia ideal
+3. **Checklist + Cronograma** — 25 itens obrigatórios + milestones personalizados
+4. **Avaliação COPSOQ-II** — Crio e envio para os funcionários responderem
+5. **Análise com IA** — Relatório com dimensões críticas identificadas
+6. **Inventário de Riscos** — Classificação completa dos perigos psicossociais
+7. **Plano de Ação** — Medidas preventivas com cronograma e responsáveis
+8. **Treinamentos** — Programas de capacitação obrigatórios
+9. **Documentação PGR/PCMSO** — Geração automática em PDF
+10. **Certificação** — Emissão quando compliance ≥ 80%
+11. **Monitoramento** — Alertas automáticos de prazos, riscos e falhas
 
-Para começar, me informe o **CNPJ** da empresa.`,
+**Para começar, me envie o CNPJ da empresa e o número de funcionários.**`,
       actions: [],
     };
   }
 
   // Default response
   return {
-    content: `Entendi sua mensagem. Para que eu possa ajudá-lo da melhor forma, por favor:
+    content: `Para iniciar o processo de conformidade NR-01, me envie:
 
-- Informe o **CNPJ** da empresa para iniciar ou acompanhar o processo NR-01
-- Pergunte sobre o **status** de uma empresa já cadastrada
-- Peça **ajuda** para ver todas as funcionalidades disponíveis
+- **CNPJ** da empresa (vou consultar automaticamente na Receita Federal)
+- **Número de funcionários** (para definir a estratégia de avaliação)
 
-Estou aqui para conduzir todo o processo de conformidade com a NR-01!`,
+Exemplo: *"CNPJ 30.428.133/0001-24, 5 funcionários"*
+
+Ou pergunte sobre o **status** de uma empresa já cadastrada, ou peça **ajuda** para ver todas as funcionalidades.`,
     actions: [],
   };
 }
@@ -229,6 +336,32 @@ export const agentRouter = router({
         alerts = dbAlerts;
       } catch { /* no alerts */ }
 
+      // AUTO-LOOKUP: If user message contains a CNPJ, enrich context automatically
+      const cnpj = extractCNPJ(input.content);
+      let cnpjContext = "";
+      if (cnpj) {
+        const cnpjResult = await processCNPJForAgent(cnpj, extractHeadcount(input.content));
+        if (cnpjResult.found && cnpjResult.active) {
+          const d = cnpjResult.data!;
+          cnpjContext = `\n\n[DADOS DO CNPJ CONSULTADOS NA RECEITA FEDERAL]
+Razão Social: ${d.razao_social}
+Nome Fantasia: ${d.nome_fantasia || "N/A"}
+CNPJ: ${formatCNPJ(cnpj)}
+CNAE: ${d.cnae_fiscal} - ${d.cnae_fiscal_descricao}
+Setor NR-01: ${cnpjResult.sectorName} ${cnpjResult.highRisk ? "(ALTO RISCO PSICOSSOCIAL)" : ""}
+Porte: ${d.porte}
+Situação: ${d.situacao_cadastral}
+Endereço: ${cnpjResult.address}
+CEP: ${d.cep}
+Telefone: ${d.telefone || "N/A"}
+Email: ${d.email || "N/A"}
+Início Atividade: ${d.data_inicio_atividade}
+${extractHeadcount(input.content) ? `Funcionários informados: ${extractHeadcount(input.content)}` : "Número de funcionários: NÃO INFORMADO (perguntar ao usuário)"}`;
+        } else if (cnpjResult.message) {
+          cnpjContext = `\n\n[CNPJ LOOKUP RESULT]: ${cnpjResult.message}`;
+        }
+      }
+
       // Fetch recent conversation history (last 20 messages)
       const recentMessages = await db.select().from(agentMessages)
         .where(eq(agentMessages.conversationId, input.conversationId))
@@ -246,7 +379,7 @@ export const agentRouter = router({
 
       const llmMessages = [
         { role: "system" as const, content: systemPrompt },
-        { role: "system" as const, content: contextMessage },
+        { role: "system" as const, content: contextMessage + cnpjContext },
         ...recentMessages.reverse().map(m => ({
           role: m.role as "user" | "assistant",
           content: m.content,
@@ -268,12 +401,15 @@ export const agentRouter = router({
           actions = parseActions(rawContent);
           assistantContent = cleanContent(rawContent);
         } else {
-          assistantContent = "Desculpe, não consegui processar sua solicitação. Tente novamente.";
+          // LLM returned empty — use fallback
+          const fallback = await generateFallbackResponse(input.content, company, status);
+          assistantContent = fallback.content;
+          actions = fallback.actions;
         }
       } catch (error) {
-        log.error("Agent LLM error", { error: String(error) });
-        // Rule-based fallback when LLM is unavailable
-        const fallback = generateFallbackResponse(input.content, company, status);
+        log.error("Agent LLM error, using fallback", { error: String(error) });
+        // Rule-based fallback with CNPJ auto-lookup
+        const fallback = await generateFallbackResponse(input.content, company, status);
         assistantContent = fallback.content;
         actions = fallback.actions;
       }
