@@ -35,7 +35,7 @@ export async function executeCreateAssessment(
       title: `Avaliação COPSOQ-II - ${companyName} ${new Date().getFullYear()}`,
       description: "Avaliação de riscos psicossociais conforme NR-01",
       assessmentDate: new Date(),
-      status: "active",
+      status: "in_progress",
     });
 
     // Simulate employee responses
@@ -102,6 +102,7 @@ export async function executeCreateAssessment(
       await db.insert(copsoqResponses).values({
         id: nanoid(),
         assessmentId,
+        tenantId,
         personId: `sim-emp-${i + 1}`,
         responses,
         dimensionScores: dimScores,
@@ -389,10 +390,10 @@ export async function executeCreateTraining(
 
     for (let i = 0; i < modules.length; i++) {
       await db.insert(trainingModules).values({
-        id: nanoid(), programId,
+        id: nanoid(), programId, tenantId,
         title: modules[i].title, content: modules[i].content,
         order: i + 1, duration: modules[i].duration,
-        createdAt: new Date(), updatedAt: new Date(),
+        createdAt: new Date(),
       });
     }
 
