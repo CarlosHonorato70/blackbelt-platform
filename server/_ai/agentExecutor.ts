@@ -128,18 +128,50 @@ export async function executeCreateAssessment(
       .filter(([, score]) => score < 40)
       .map(([dim]) => dim);
 
+    // Count risk distribution
+    const riskDist = { low: 0, medium: 0, high: 0, critical: 0 };
+    // Calculate per-employee risk
+    for (let i = 0; i < actualCount; i++) {
+      const p = employees[i].profile;
+      const avg = Object.values(p).reduce((a, b) => a + b, 0) / Object.values(p).length;
+      const score = Math.round(((5 - avg) / 4) * 100);
+      if (score < 30) riskDist.critical++;
+      else if (score < 50) riskDist.high++;
+      else if (score < 70) riskDist.medium++;
+      else riskDist.low++;
+    }
+
     await db.insert(copsoqReports).values({
       id: nanoid(),
       assessmentId,
       tenantId,
-      totalResponses: actualCount,
-      dimensionScores: aggregatedScores,
-      overallRisk,
-      analysisJson: {
+      title: `Relatório COPSOQ-II - ${companyName}`,
+      description: "Relatório gerado automaticamente pelo Agente IA",
+      totalRespondents: actualCount,
+      responseRate: 100,
+      averageDemandScore: aggregatedScores.demanda || 0,
+      averageControlScore: aggregatedScores.controle || 0,
+      averageSupportScore: aggregatedScores.apoio || 0,
+      averageLeadershipScore: aggregatedScores.lideranca || 0,
+      averageCommunityScore: aggregatedScores.comunidade || 0,
+      averageMeaningScore: aggregatedScores.significado || 0,
+      averageTrustScore: aggregatedScores.confianca || 0,
+      averageJusticeScore: aggregatedScores.justica || 0,
+      averageInsecurityScore: aggregatedScores.inseguranca || 0,
+      averageMentalHealthScore: aggregatedScores.saudeMental || 0,
+      averageBurnoutScore: aggregatedScores.burnout || 0,
+      averageViolenceScore: aggregatedScores.violencia || 0,
+      lowRiskCount: riskDist.low,
+      mediumRiskCount: riskDist.medium,
+      highRiskCount: riskDist.high,
+      criticalRiskCount: riskDist.critical,
+      aiAnalysis: {
         criticalDimensions,
         recommendations: generateRecommendations(aggregatedScores),
-        riskDistribution: { low: 0, medium: 0, high: 0, critical: 0 },
+        overallRisk,
       },
+      aiGeneratedAt: new Date(),
+      aiModel: "agent-rule-based",
       generatedAt: new Date(),
       createdAt: new Date(),
     });
@@ -223,7 +255,20 @@ export async function executeGenerateInventoryAndPlan(
       .where(eq(copsoqReports.assessmentId, assessmentId)).limit(1);
     if (!report) return { success: false, message: "Relatório COPSOQ não encontrado. Execute a avaliação primeiro." };
 
-    const scores = report.dimensionScores as Record<string, number>;
+    const scores: Record<string, number> = {
+      demanda: report.averageDemandScore || 50,
+      controle: report.averageControlScore || 50,
+      apoio: report.averageSupportScore || 50,
+      lideranca: report.averageLeadershipScore || 50,
+      comunidade: report.averageCommunityScore || 50,
+      significado: report.averageMeaningScore || 50,
+      confianca: report.averageTrustScore || 50,
+      justica: report.averageJusticeScore || 50,
+      inseguranca: report.averageInsecurityScore || 50,
+      saudeMental: report.averageMentalHealthScore || 50,
+      burnout: report.averageBurnoutScore || 50,
+      violencia: report.averageViolenceScore || 50,
+    };
 
     // Create Risk Assessment
     const raId = nanoid();
