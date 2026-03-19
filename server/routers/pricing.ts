@@ -22,10 +22,10 @@ export const pricingRouter = router({
     list: tenantProcedure
       .input(
         z.object({
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
           limit: z.number().default(50),
           offset: z.number().default(0),
-        })
+        }).optional().default({})
       )
       .query(async ({ ctx, input }) => {
         const db = await getDb();
@@ -46,7 +46,7 @@ export const pricingRouter = router({
       .input(
         z.object({
           id: z.string(),
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         })
       )
       .query(async ({ ctx, input }) => {
@@ -77,7 +77,7 @@ export const pricingRouter = router({
     create: tenantProcedure
       .input(
         z.object({
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
           name: z.string(),
           cnpj: z.string().optional(),
           industry: z.string().optional(),
@@ -133,7 +133,7 @@ export const pricingRouter = router({
       .input(
         z.object({
           id: z.string(),
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         }).passthrough()
       )
       .mutation(async ({ ctx, input }) => {
@@ -161,7 +161,7 @@ export const pricingRouter = router({
       .input(
         z.object({
           id: z.string(),
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
@@ -190,7 +190,7 @@ export const pricingRouter = router({
     list: tenantProcedure
       .input(
         z.object({
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
           category: z.string().optional(),
           limit: z.number().default(50),
           offset: z.number().default(0),
@@ -221,7 +221,7 @@ export const pricingRouter = router({
       .input(
         z.object({
           id: z.string(),
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         })
       )
       .query(async ({ ctx, input }) => {
@@ -255,7 +255,7 @@ export const pricingRouter = router({
     create: tenantProcedure
       .input(
         z.object({
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
           name: z.string(),
           description: z.string().optional(),
           category: z.string(),
@@ -295,7 +295,7 @@ export const pricingRouter = router({
       .input(
         z.object({
           id: z.string(),
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         }).passthrough()
       )
       .mutation(async ({ ctx, input }) => {
@@ -323,7 +323,7 @@ export const pricingRouter = router({
       .input(
         z.object({
           id: z.string(),
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
@@ -355,7 +355,7 @@ export const pricingRouter = router({
     get: tenantProcedure
       .input(
         z.object({
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         })
       )
       .query(async ({ ctx, input }) => {
@@ -373,7 +373,7 @@ export const pricingRouter = router({
     upsert: tenantProcedure
       .input(
         z.object({
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
           monthlyFixedCost: z.number(),
           laborCost: z.number(),
           productiveHoursPerMonth: z.number(),
@@ -444,7 +444,7 @@ export const pricingRouter = router({
     list: tenantProcedure
       .input(
         z.object({
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
           clientId: z.string().optional(),
           status: z.string().optional(),
           limit: z.number().default(50),
@@ -480,7 +480,7 @@ export const pricingRouter = router({
       .input(
         z.object({
           id: z.string(),
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         })
       )
       .query(async ({ ctx, input }) => {
@@ -523,7 +523,7 @@ export const pricingRouter = router({
     create: tenantProcedure
       .input(
         z.object({
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
           clientId: z.string(),
           title: z.string(),
           description: z.string().optional(),
@@ -610,7 +610,7 @@ export const pricingRouter = router({
       .input(
         z.object({
           id: z.string(),
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         }).passthrough()
       )
       .mutation(async ({ ctx, input }) => {
@@ -638,7 +638,7 @@ export const pricingRouter = router({
       .input(
         z.object({
           id: z.string(),
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
@@ -676,7 +676,7 @@ export const pricingRouter = router({
     servicePrice: tenantProcedure
       .input(
         z.object({
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         }).passthrough()
       )
       .query(async ({ ctx, input }) => {

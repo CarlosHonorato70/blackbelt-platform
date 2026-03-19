@@ -22,6 +22,56 @@ import { nanoid } from "nanoid";
 import { ensureTenantForUser } from "../_core/tenantHelpers";
 
 export const subscriptionsRouter = router({
+  /**
+   * Get subscription status for the current tenant
+   * Returns plan name, status, and basic limits
+   */
+  getStatus: tenantProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+    const [result] = await db
+      .select({
+        subscription: subscriptions,
+        plan: plans,
+      })
+      .from(subscriptions)
+      .innerJoin(plans, eq(subscriptions.planId, plans.id))
+      .where(eq(subscriptions.tenantId, ctx.tenantId))
+      .limit(1);
+
+    if (!result) {
+      // Return a default active status when no subscription record exists
+      return {
+        status: "active" as const,
+        planName: "Padrão",
+        isActive: true,
+        trialEnd: null,
+        currentPeriodEnd: null,
+        cancelAtPeriodEnd: false,
+        limits: {
+          maxUsersPerTenant: 5,
+          maxStorageGB: 1,
+        },
+      };
+    }
+
+    const isActive = result.subscription.status === "active" || result.subscription.status === "trialing";
+
+    return {
+      status: result.subscription.status,
+      planName: result.plan.name,
+      isActive,
+      trialEnd: result.subscription.trialEnd,
+      currentPeriodEnd: result.subscription.currentPeriodEnd,
+      cancelAtPeriodEnd: result.subscription.cancelAtPeriodEnd,
+      limits: {
+        maxUsersPerTenant: result.plan.maxUsersPerTenant,
+        maxStorageGB: result.plan.maxStorageGB,
+      },
+    };
+  }),
+
   // ============================================================================
   // PLANOS PÚBLICOS
   // ============================================================================
