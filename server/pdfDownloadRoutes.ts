@@ -1,0 +1,527 @@
+/**
+ * PDF Download REST Routes
+ * Authenticated endpoints that generate and stream NR-01 PDFs.
+ * Used by the AI agent to provide direct download links in the chat.
+ */
+
+import type { Express, Request, Response } from "express";
+import { COOKIE_NAME } from "@shared/const";
+import { verifySessionToken } from "./_core/cookies";
+import { getUserById, getDb } from "./db";
+import { log } from "./_core/logger";
+import {
+  generateGenericReportPdf,
+  generateInventoryPdf,
+  generateActionPlanPdf,
+  type GenericReportData,
+  type PdfSection,
+  type PdfBranding,
+  type InventoryPdfData,
+  type ActionPlanPdfData,
+} from "./_core/pdfGenerator";
+import {
+  riskAssessmentItems,
+  riskAssessments,
+  copsoqReports,
+  complianceCertificates,
+  complianceChecklist,
+  actionPlans,
+  trainingModules,
+  trainingProgress,
+} from "../drizzle/schema_nr01";
+import { tenants, proposals } from "../drizzle/schema";
+import { eq, and, desc, sql } from "drizzle-orm";
+
+const branding: PdfBranding = { companyName: "Black Belt Platform", primaryColor: "#1a365d" };
+
+const SEVERITY_LABELS: Record<string, string> = { low: "Leve", medium: "Moderada", high: "Grave", critical: "Gravissima" };
+const PROBABILITY_LABELS: Record<string, string> = { rare: "Rara", unlikely: "Improvavel", possible: "Possivel", likely: "Provavel", certain: "Certa" };
+const RISK_LABELS: Record<string, string> = { low: "Baixo", medium: "Medio", high: "Alto", critical: "Critico" };
+const RISK_COLORS: Record<string, string> = { low: "#10b981", medium: "#f59e0b", high: "#f97316", critical: "#ef4444" };
+
+function fmtDate(d: Date | string | null | undefined): string {
+  if (!d) return "\u2014";
+  return new Date(d).toLocaleDateString("pt-BR");
+}
+
+// ============================================================================
+// Auth middleware for PDF routes
+// ============================================================================
+
+async function authenticateRequest(req: Request, res: Response): Promise<{ userId: string; tenantId: string } | null> {
+  const sessionToken = req.cookies?.[COOKIE_NAME];
+  if (!sessionToken) {
+    res.status(401).json({ error: "Autenticacao necessaria" });
+    return null;
+  }
+
+  const result = verifySessionToken(sessionToken);
+  if (!result) {
+    res.status(401).json({ error: "Sessao invalida ou expirada" });
+    return null;
+  }
+
+  const user = await getUserById(result.userId);
+  if (!user || !user.tenantId) {
+    res.status(403).json({ error: "Usuario nao encontrado" });
+    return null;
+  }
+
+  return { userId: user.id, tenantId: user.tenantId };
+}
+
+// Validate that the companyId belongs to this user's tenant (child company)
+async function validateCompanyAccess(tenantId: string, companyId: string, db: any): Promise<boolean> {
+  const [company] = await db.select({ id: tenants.id, parentTenantId: tenants.parentTenantId })
+    .from(tenants)
+    .where(eq(tenants.id, companyId))
+    .limit(1);
+
+  if (!company) return false;
+  // Allow if it's the user's own tenant or a child company
+  return company.id === tenantId || company.parentTenantId === tenantId;
+}
+
+// ============================================================================
+// PDF generators per document type
+// ============================================================================
+
+type PdfGenerator = (companyId: string, db: any) => Promise<{ buffer: Buffer; filename: string }>;
+
+const pdfGenerators: Record<string, PdfGenerator> = {
+
+  // Relatorio COPSOQ-II
+  async copsoq(companyId, db) {
+    const [report] = await db.select().from(copsoqReports)
+      .where(eq(copsoqReports.tenantId, companyId))
+      .orderBy(desc(copsoqReports.generatedAt)).limit(1);
+
+    const [tenant] = await db.select({ name: tenants.name }).from(tenants)
+      .where(eq(tenants.id, companyId)).limit(1);
+
+    const sections: PdfSection[] = [
+      { type: "title", content: "Relatorio de Avaliacao Psicossocial COPSOQ-II" },
+    ];
+
+    if (report) {
+      sections.push({
+        type: "kpis", kpis: [
+          { label: "Respondentes", value: String(report.totalRespondents || 0), color: "#1a365d" },
+          { label: "Taxa de Resposta", value: `${report.responseRate || 0}%`, color: "#10b981" },
+          { label: "Riscos Criticos", value: String(report.criticalRiskCount || 0), color: "#ef4444" },
+          { label: "Riscos Altos", value: String(report.highRiskCount || 0), color: "#f97316" },
+        ],
+      });
+
+      // Dimension columns from copsoqReports
+      const dimensionFields = [
+        "quantitativeDemands", "workPace", "cognitiveStress", "emotionalDemands",
+        "influence", "developmentPossibilities", "meaningOfWork", "commitment",
+        "predictability", "rewards", "roleClarity", "roleConflicts",
+        "socialSupportColleagues", "socialSupportSupervisors", "socialCommunity",
+        "qualityOfLeadership", "trustManagement", "justice",
+        "harassmentThreats", "workLifeConflict", "burnout", "stress", "selfRatedHealth",
+      ];
+
+      const dimensionLabels: Record<string, string> = {
+        quantitativeDemands: "Demandas Quantitativas",
+        workPace: "Ritmo de Trabalho",
+        cognitiveStress: "Estresse Cognitivo",
+        emotionalDemands: "Demandas Emocionais",
+        influence: "Influencia",
+        developmentPossibilities: "Possib. Desenvolvimento",
+        meaningOfWork: "Significado do Trabalho",
+        commitment: "Compromisso",
+        predictability: "Previsibilidade",
+        rewards: "Recompensas",
+        roleClarity: "Clareza de Papel",
+        roleConflicts: "Conflitos de Papel",
+        socialSupportColleagues: "Apoio Social (colegas)",
+        socialSupportSupervisors: "Apoio Social (chefia)",
+        socialCommunity: "Comunidade Social",
+        qualityOfLeadership: "Qualidade da Lideranca",
+        trustManagement: "Confianca na Gestao",
+        justice: "Justica",
+        harassmentThreats: "Assedio/Ameacas",
+        workLifeConflict: "Conflito Trabalho-Vida",
+        burnout: "Burnout",
+        stress: "Estresse",
+        selfRatedHealth: "Saude Autoavaliada",
+      };
+
+      const rows = dimensionFields
+        .filter((f) => (report as any)[f] != null)
+        .map((f) => {
+          const val = Number((report as any)[f]) || 0;
+          const level = val >= 66 ? "Critico" : val >= 50 ? "Alto" : val >= 33 ? "Medio" : "Favoravel";
+          const color = val >= 66 ? "#ef4444" : val >= 50 ? "#f97316" : val >= 33 ? "#f59e0b" : "#10b981";
+          return { cells: [dimensionLabels[f] || f, `${val.toFixed(1)}`, level], accentColor: color };
+        });
+
+      if (rows.length > 0) {
+        sections.push({ type: "divider" });
+        sections.push({ type: "title", content: "Resultados por Dimensao" });
+        sections.push({
+          type: "table",
+          columns: [
+            { header: "Dimensao", width: 200 },
+            { header: "Score", width: 80, align: "center" },
+            { header: "Nivel de Risco", width: 100, align: "center" },
+          ],
+          rows,
+        });
+      }
+
+      if (report.recommendations) {
+        sections.push({ type: "divider" });
+        sections.push({ type: "title", content: "Recomendacoes" });
+        sections.push({ type: "text", content: String(report.recommendations) });
+      }
+    } else {
+      sections.push({ type: "text", content: "Nenhuma avaliacao COPSOQ-II concluida para esta empresa." });
+    }
+
+    const buffer = await generateGenericReportPdf({
+      reportTitle: "Relatorio COPSOQ-II",
+      reportSubtitle: "Avaliacao Psicossocial — NR-01",
+      companyName: tenant?.name,
+      date: fmtDate(new Date()),
+      sections,
+    }, branding);
+    return { buffer, filename: "relatorio-copsoq-ii.pdf" };
+  },
+
+  // Inventario de Riscos Psicossociais
+  async inventario(companyId, db) {
+    const [tenant] = await db.select({ name: tenants.name }).from(tenants)
+      .where(eq(tenants.id, companyId)).limit(1);
+
+    const [assessment] = await db.select().from(riskAssessments)
+      .where(eq(riskAssessments.tenantId, companyId))
+      .orderBy(desc(riskAssessments.createdAt)).limit(1);
+
+    if (!assessment) {
+      const buffer = await generateGenericReportPdf({
+        reportTitle: "Inventario de Riscos Psicossociais",
+        companyName: tenant?.name,
+        date: fmtDate(new Date()),
+        sections: [{ type: "text", content: "Nenhum inventario de riscos gerado para esta empresa." }],
+      }, branding);
+      return { buffer, filename: "inventario-riscos.pdf" };
+    }
+
+    const items = await db.select().from(riskAssessmentItems)
+      .where(eq(riskAssessmentItems.assessmentId, assessment.id));
+
+    const pdfData: InventoryPdfData = {
+      companyName: tenant?.name || "Empresa",
+      sector: assessment.title || "Geral",
+      date: fmtDate(new Date()),
+      methodology: assessment.methodology || "COPSOQ-II + IA",
+      assessor: assessment.assessor || "Sistema IA",
+      items: items.map((i: any) => ({
+        hazardCode: i.hazardCode || "\u2014",
+        hazard: i.observations || "Risco psicossocial",
+        risk: i.observations || "\u2014",
+        healthDamage: "Estresse, ansiedade, burnout",
+        severity: i.severity || "medium",
+        probability: i.probability || "possible",
+        riskLevel: i.riskLevel || "medium",
+        currentControls: i.currentControls || "Nenhum identificado",
+        recommendedControls: i.observations || "Implementar medidas preventivas",
+      })),
+      totalWorkers: items[0]?.affectedPopulation ? Number(items[0].affectedPopulation) : undefined,
+    };
+
+    const buffer = await generateInventoryPdf(pdfData, branding, {
+      title: "Inventario de Riscos Ocupacionais \u2014 Psicossociais",
+    });
+    return { buffer, filename: "inventario-riscos-psicossociais.pdf" };
+  },
+
+  // Plano de Acao
+  async plano(companyId, db) {
+    const [tenant] = await db.select({ name: tenants.name }).from(tenants)
+      .where(eq(tenants.id, companyId)).limit(1);
+
+    const plans = await db.select().from(actionPlans)
+      .where(eq(actionPlans.tenantId, companyId))
+      .orderBy(desc(actionPlans.createdAt));
+
+    if (plans.length === 0) {
+      const buffer = await generateGenericReportPdf({
+        reportTitle: "Plano de Acao",
+        companyName: tenant?.name,
+        date: fmtDate(new Date()),
+        sections: [{ type: "text", content: "Nenhum plano de acao gerado para esta empresa." }],
+      }, branding);
+      return { buffer, filename: "plano-acao.pdf" };
+    }
+
+    const pdfData: ActionPlanPdfData = {
+      companyName: tenant?.name || "Empresa",
+      sector: "Geral",
+      date: fmtDate(new Date()),
+      planTitle: "Plano de Acao \u2014 Mitigacao de Riscos Psicossociais",
+      actions: plans.map((p: any) => ({
+        riskIdentified: p.title || "\u2014",
+        controlMeasure: p.description || "\u2014",
+        actionType: p.actionType || "administrative",
+        responsibleRole: "Gestao de RH",
+        deadline: p.deadline ? new Date(p.deadline).toLocaleDateString("pt-BR") : "\u2014",
+        priority: p.priority || "medium",
+        monthlySchedule: p.monthlySchedule || [],
+        expectedImpact: p.expectedImpact || "",
+        kpiIndicator: p.kpiIndicator || "",
+      })),
+      generalActions: [],
+      monitoringStrategy: "Acompanhamento mensal de indicadores COPSOQ-II com reavaliacao trimestral.",
+    };
+
+    const buffer = await generateActionPlanPdf(pdfData, branding, {
+      title: "Plano de Acao \u2014 Mitigacao de Riscos Psicossociais",
+    });
+    return { buffer, filename: "plano-acao-nr01.pdf" };
+  },
+
+  // Programa de Treinamento
+  async treinamento(companyId, db) {
+    const [tenant] = await db.select({ name: tenants.name }).from(tenants)
+      .where(eq(tenants.id, companyId)).limit(1);
+
+    const modules = await db.select().from(trainingModules)
+      .where(eq(trainingModules.tenantId, companyId))
+      .orderBy(desc(trainingModules.createdAt));
+
+    const sections: PdfSection[] = [
+      { type: "title", content: "Programa de Treinamento \u2014 NR-01" },
+    ];
+
+    if (modules.length > 0) {
+      sections.push({
+        type: "kpis", kpis: [
+          { label: "Total de Modulos", value: String(modules.length), color: "#1a365d" },
+          { label: "Carga Horaria Total", value: `${modules.reduce((s: number, m: any) => s + (m.durationHours || 0), 0)}h`, color: "#3b82f6" },
+        ],
+      });
+
+      sections.push({
+        type: "table",
+        columns: [
+          { header: "Modulo", width: 180 },
+          { header: "Descricao", width: 200 },
+          { header: "Duracao", width: 60, align: "center" },
+          { header: "Obrigatorio", width: 60, align: "center" },
+        ],
+        rows: modules.map((m: any) => ({
+          cells: [
+            m.title || "\u2014",
+            m.description || "\u2014",
+            `${m.durationHours || 0}h`,
+            m.mandatory ? "Sim" : "Nao",
+          ],
+        })),
+      });
+    } else {
+      sections.push({ type: "text", content: "Nenhum programa de treinamento gerado para esta empresa." });
+    }
+
+    const buffer = await generateGenericReportPdf({
+      reportTitle: "Programa de Treinamento",
+      reportSubtitle: "Capacitacao em Saude Mental e Riscos Psicossociais",
+      companyName: tenant?.name,
+      date: fmtDate(new Date()),
+      sections,
+    }, branding);
+    return { buffer, filename: "programa-treinamento.pdf" };
+  },
+
+  // Proposta Comercial (from proposals table)
+  async proposta(companyId, db) {
+    const [tenant] = await db.select({ name: tenants.name }).from(tenants)
+      .where(eq(tenants.id, companyId)).limit(1);
+
+    // Get latest proposal for this company
+    const [proposal] = await db.select().from(proposals)
+      .where(eq(proposals.clientId, companyId))
+      .orderBy(desc(proposals.createdAt)).limit(1);
+
+    const sections: PdfSection[] = [
+      { type: "title", content: "Proposta Comercial \u2014 Avaliacao Psicossocial NR-01" },
+    ];
+
+    if (proposal) {
+      sections.push({ type: "text", content: proposal.description || "Proposta sem descricao." });
+    } else {
+      sections.push({ type: "text", content: "Nenhuma proposta comercial gerada para esta empresa." });
+    }
+
+    const buffer = await generateGenericReportPdf({
+      reportTitle: "Proposta Comercial",
+      reportSubtitle: "Avaliacao Psicossocial NR-01",
+      companyName: tenant?.name,
+      date: fmtDate(new Date()),
+      sections,
+    }, branding);
+    return { buffer, filename: "proposta-comercial.pdf" };
+  },
+
+  // Certificado de Conformidade
+  async certificado(companyId, db) {
+    const [cert] = await db.select().from(complianceCertificates)
+      .where(eq(complianceCertificates.tenantId, companyId))
+      .orderBy(desc(complianceCertificates.issuedAt)).limit(1);
+
+    const sections: PdfSection[] = [];
+
+    if (cert) {
+      sections.push(
+        { type: "spacer" },
+        { type: "title", content: "CERTIFICADO DE CONFORMIDADE NR-01" },
+        { type: "spacer" },
+        { type: "text", content: "Certificamos que a organizacao atende aos requisitos da Norma Regulamentadora NR-01 para gestao de riscos psicossociais ocupacionais." },
+        {
+          type: "kpis", kpis: [
+            { label: "Numero do Certificado", value: cert.certificateNumber, color: "#1a365d" },
+            { label: "Score de Conformidade", value: `${cert.complianceScore}%`, color: cert.complianceScore >= 70 ? "#10b981" : "#ef4444" },
+            { label: "Status", value: cert.status === "active" ? "Ativo" : cert.status === "expired" ? "Expirado" : "Revogado", color: cert.status === "active" ? "#10b981" : "#ef4444" },
+          ],
+        },
+        { type: "divider" },
+        {
+          type: "table", columns: [
+            { header: "Campo", width: 180 },
+            { header: "Valor", width: 300 },
+          ], rows: [
+            { cells: ["Emitido em", fmtDate(cert.issuedAt)] },
+            { cells: ["Valido ate", fmtDate(cert.validUntil)] },
+            { cells: ["Emitido por", cert.issuedBy || "\u2014"] },
+          ],
+        },
+        { type: "spacer" },
+        { type: "signature", signatureName: cert.issuedBy || "Responsavel Tecnico", signatureRole: "Auditor de Conformidade NR-01" },
+      );
+    } else {
+      sections.push({ type: "text", content: "Nenhum certificado de conformidade emitido para esta empresa." });
+    }
+
+    const buffer = await generateGenericReportPdf({
+      reportTitle: "Certificado de Conformidade NR-01",
+      reportSubtitle: "Gestao de Riscos Psicossociais Ocupacionais",
+      date: fmtDate(cert?.issuedAt || new Date()),
+      sections,
+    }, branding);
+    return { buffer, filename: `certificado-conformidade-nr01.pdf` };
+  },
+
+  // Checklist de Conformidade
+  async checklist(companyId, db) {
+    const [tenant] = await db.select({ name: tenants.name }).from(tenants)
+      .where(eq(tenants.id, companyId)).limit(1);
+
+    const items = await db.select().from(complianceChecklist)
+      .where(eq(complianceChecklist.tenantId, companyId));
+
+    const statusLabels: Record<string, string> = {
+      compliant: "Conforme",
+      partial: "Parcial",
+      non_compliant: "Nao Conforme",
+    };
+    const statusColors: Record<string, string> = {
+      compliant: "#10b981",
+      partial: "#f59e0b",
+      non_compliant: "#ef4444",
+    };
+
+    const compliant = items.filter((i) => i.status === "compliant").length;
+    const partial = items.filter((i) => i.status === "partial").length;
+    const total = items.length;
+    const score = total > 0 ? Math.round(((compliant + partial * 0.5) / total) * 100) : 0;
+
+    const sections: PdfSection[] = [
+      { type: "title", content: "Checklist de Conformidade NR-01" },
+      {
+        type: "kpis", kpis: [
+          { label: "Score", value: `${score}%`, color: score >= 70 ? "#10b981" : "#ef4444" },
+          { label: "Conforme", value: String(compliant), color: "#10b981" },
+          { label: "Parcial", value: String(partial), color: "#f59e0b" },
+          { label: "Nao Conforme", value: String(total - compliant - partial), color: "#ef4444" },
+        ],
+      },
+      {
+        type: "table",
+        columns: [
+          { header: "Codigo", width: 90 },
+          { header: "Requisito", width: 280 },
+          { header: "Status", width: 80, align: "center" },
+        ],
+        rows: items.map((i) => ({
+          cells: [i.requirementCode, i.requirementText, statusLabels[i.status] || i.status],
+          accentColor: statusColors[i.status],
+        })),
+      },
+    ];
+
+    const buffer = await generateGenericReportPdf({
+      reportTitle: "Checklist de Conformidade",
+      reportSubtitle: "NR-01 \u2014 Riscos Psicossociais",
+      companyName: tenant?.name,
+      date: fmtDate(new Date()),
+      sections,
+    }, branding);
+    return { buffer, filename: "checklist-conformidade.pdf" };
+  },
+};
+
+// ============================================================================
+// Route registration
+// ============================================================================
+
+export function registerPdfDownloadRoutes(app: Express) {
+  /**
+   * GET /api/pdf/:type/:companyId
+   * Downloads a PDF document for the given company.
+   * Authenticated via session cookie.
+   *
+   * Types: copsoq, inventario, plano, treinamento, proposta, certificado, checklist
+   */
+  app.get("/api/pdf/:type/:companyId", async (req: Request, res: Response) => {
+    try {
+      const auth = await authenticateRequest(req, res);
+      if (!auth) return; // Response already sent
+
+      const { type, companyId } = req.params;
+
+      if (!type || !companyId) {
+        return res.status(400).json({ error: "Tipo e companyId sao obrigatorios" });
+      }
+
+      const generator = pdfGenerators[type];
+      if (!generator) {
+        return res.status(400).json({ error: `Tipo de PDF desconhecido: ${type}. Tipos validos: ${Object.keys(pdfGenerators).join(", ")}` });
+      }
+
+      const db = await getDb();
+      if (!db) {
+        return res.status(503).json({ error: "Banco de dados indisponivel" });
+      }
+
+      // Validate access
+      const hasAccess = await validateCompanyAccess(auth.tenantId, companyId, db);
+      if (!hasAccess) {
+        return res.status(403).json({ error: "Sem permissao para acessar esta empresa" });
+      }
+
+      const { buffer, filename } = await generator(companyId, db);
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("Content-Length", buffer.length);
+      res.send(buffer);
+
+    } catch (error: any) {
+      log.error("[PDF Download] Error", { error: error.message, type: req.params.type, companyId: req.params.companyId });
+      res.status(500).json({ error: "Erro ao gerar PDF" });
+    }
+  });
+}

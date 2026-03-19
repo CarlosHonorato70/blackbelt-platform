@@ -4,6 +4,7 @@ import { handleMercadoPagoWebhook } from "./routers/mercadopago";
 import crypto from "crypto";
 import { log } from "./_core/logger";
 import { checkDbHealth } from "./db";
+import { registerPdfDownloadRoutes } from "./pdfDownloadRoutes";
 
 /**
  * Rotas Express - apenas health check e webhooks de pagamento.
@@ -74,6 +75,11 @@ export function registerRoutes(app: Express) {
   // WEBHOOK: MERCADO PAGO
   // Valida assinatura HMAC-SHA256
   // ============================================
+
+  // ============================================
+  // PDF DOWNLOAD ROUTES (authenticated)
+  // ============================================
+  registerPdfDownloadRoutes(app);
 
   app.post("/api/webhooks/mercadopago", async (req: Request, res: Response) => {
     // Verificar assinatura do Mercado Pago (obrigatório em produção)

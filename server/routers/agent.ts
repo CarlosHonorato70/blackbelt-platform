@@ -158,6 +158,19 @@ function cleanContent(content: string): string {
   return content.replace(/```action\s*\n[\s\S]*?\n```/g, "").trim();
 }
 
+// Build PDF download links for completed NR-01 process
+function buildPdfDownloadLinks(companyId: string): string {
+  const base = `/api/pdf`;
+  return `\n\n---\n\n**Documentos Gerados \u2014 Download PDF:**\n` +
+    `- [Proposta Comercial](${base}/proposta/${companyId})\n` +
+    `- [Relatorio COPSOQ-II](${base}/copsoq/${companyId})\n` +
+    `- [Inventario de Riscos Psicossociais](${base}/inventario/${companyId})\n` +
+    `- [Plano de Acao](${base}/plano/${companyId})\n` +
+    `- [Programa de Treinamento](${base}/treinamento/${companyId})\n` +
+    `- [Checklist de Conformidade](${base}/checklist/${companyId})\n` +
+    `- [Certificado de Conformidade NR-01](${base}/certificado/${companyId})\n`;
+}
+
 // Extract CNPJ from text
 function extractCNPJ(text: string): string | null {
   const match = text.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
@@ -1043,14 +1056,14 @@ async function generateFallbackResponse(
       if (nextPhase === "complete_checklist") {
         const result = await executeCompleteChecklist(existingCompany.id);
         return {
-          content: result.message + `\n\n**Processo NR-01 concluido com sucesso!** Todas as fases foram finalizadas.`,
+          content: result.message + `\n\n**Processo NR-01 concluido com sucesso!** Todas as fases foram finalizadas.` + buildPdfDownloadLinks(existingCompany.id),
           actions: [],
         };
       }
 
       if (nextPhase === "completed") {
         return {
-          content: `O processo NR-01 desta empresa ja esta **100% concluido**! Todas as fases foram finalizadas com sucesso.\n\nDeseja iniciar o processo para outra empresa? Envie o CNPJ e numero de funcionarios.`,
+          content: `O processo NR-01 desta empresa ja esta **100% concluido**! Todas as fases foram finalizadas com sucesso.` + buildPdfDownloadLinks(existingCompany.id) + `\n\nDeseja iniciar o processo para outra empresa? Envie o CNPJ e numero de funcionarios.`,
           actions: [],
         };
       }
@@ -1284,7 +1297,7 @@ async function generateFallbackResponse(
       }
       if (wantsCertificate) {
         const result = await executeCompleteChecklist(existingCompany.id);
-        return { content: result.message, actions: [] };
+        return { content: result.message + buildPdfDownloadLinks(existingCompany.id), actions: [] };
       }
     }
   }
@@ -1361,7 +1374,7 @@ async function generateFallbackResponse(
       }
       if (nextPhase === "completed") {
         return {
-          content: `Processo NR-01 da empresa **${existingCompany.name}** ja esta **100% concluido**!\n\nDeseja iniciar o processo para outra empresa? Envie o CNPJ e numero de funcionarios.`,
+          content: `Processo NR-01 da empresa **${existingCompany.name}** ja esta **100% concluido**!` + buildPdfDownloadLinks(existingCompany.id) + `\n\nDeseja iniciar o processo para outra empresa? Envie o CNPJ e numero de funcionarios.`,
           actions: [],
         };
       }

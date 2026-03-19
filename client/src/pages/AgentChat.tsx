@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Bot, User, AlertTriangle, CheckCircle2, Clock, Brain, RefreshCw, MessageSquare, X, Plus, Trash2 } from "lucide-react";
+import { Send, Bot, User, AlertTriangle, CheckCircle2, Clock, Brain, RefreshCw, MessageSquare, X, Plus, Trash2, FileDown } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
 function AgentChatPage() {
@@ -213,7 +213,39 @@ function AgentChatPage() {
                         }`}
                       >
                         {msg.role === "user" ? msg.content : (
-                          <Markdown>{msg.content}</Markdown>
+                          <Markdown
+                            components={{
+                              a: ({ href, children, ...props }) => {
+                                const isPdfLink = href && href.startsWith("/api/pdf/");
+                                if (isPdfLink) {
+                                  return (
+                                    <a
+                                      href={href}
+                                      download
+                                      className="inline-flex items-center gap-1 text-primary underline hover:text-primary/80 font-medium"
+                                      {...props}
+                                    >
+                                      <FileDown className="h-3.5 w-3.5 inline flex-shrink-0" />
+                                      {children}
+                                    </a>
+                                  );
+                                }
+                                return (
+                                  <a
+                                    href={href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary underline hover:text-primary/80"
+                                    {...props}
+                                  >
+                                    {children}
+                                  </a>
+                                );
+                              },
+                            }}
+                          >
+                            {msg.content}
+                          </Markdown>
                         )}
                       </div>
                       {/* Action buttons */}
