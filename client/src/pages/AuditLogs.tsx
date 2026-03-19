@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTenant } from "@/contexts/TenantContext";
 import { trpc } from "@/lib/trpc";
 import {
@@ -24,6 +25,7 @@ import {
   Eye,
   Filter,
   Plus,
+  Shield,
   Trash2,
   User,
   X,
@@ -36,6 +38,7 @@ import {
   generateAuditReport,
   exportToPDF,
 } from "@/lib/exportUtils";
+import { SecurityDashboardContent } from "@/pages/SecurityDashboard";
 
 export default function AuditLogs() {
   const { selectedTenant } = useTenant();
@@ -161,268 +164,289 @@ export default function AuditLogs() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Auditoria</h1>
-            <p className="text-muted-foreground">
-              Logs de todas as ações na plataforma -{" "}
-              {typeof selectedTenant === "string"
-                ? selectedTenant
-                : selectedTenant?.name}
-            </p>
-          </div>
-
-          <Button
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <Filter className="h-4 w-4 mr-2" />
-            Filtros
-          </Button>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Auditoria e Segurança</h1>
+          <p className="text-muted-foreground">
+            Logs de auditoria e painel de segurança -{" "}
+            {typeof selectedTenant === "string"
+              ? selectedTenant
+              : selectedTenant?.name}
+          </p>
         </div>
 
-        {/* Filtros */}
-        {showFilters && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="grid md:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Ação</label>
-                  <Select
-                    value={filters.action}
-                    onValueChange={value => handleFilterChange("action", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todas as ações</SelectItem>
-                      <SelectItem value="criar">Criado</SelectItem>
-                      <SelectItem value="editar">Editado</SelectItem>
-                      <SelectItem value="deletar">Deletado</SelectItem>
-                      <SelectItem value="visualizar">Visualizado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+        <Tabs defaultValue="auditoria" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="auditoria">
+              <Filter className="h-4 w-4 mr-2" />
+              Auditoria
+            </TabsTrigger>
+            <TabsTrigger value="seguranca">
+              <Shield className="h-4 w-4 mr-2" />
+              Segurança
+            </TabsTrigger>
+          </TabsList>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Usuário</label>
-                  <Input
-                    placeholder="Filtrar por usuário..."
-                    value={filters.user}
-                    onChange={e => handleFilterChange("user", e.target.value)}
-                  />
-                </div>
+          {/* ── Tab: Auditoria ──────────────────────────────────────────── */}
+          <TabsContent value="auditoria" className="space-y-6">
+            <div className="flex items-center justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Filtros
+              </Button>
+            </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Data Inicial</label>
-                  <Input
-                    type="date"
-                    value={filters.dateFrom}
-                    onChange={e =>
-                      handleFilterChange("dateFrom", e.target.value)
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Data Final</label>
-                  <Input
-                    type="date"
-                    value={filters.dateTo}
-                    onChange={e => handleFilterChange("dateTo", e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2 justify-end mt-4">
-                <Button variant="outline" onClick={handleClearFilters}>
-                  <X className="h-4 w-4 mr-2" />
-                  Limpar Filtros
-                </Button>
-                <Button
-                  onClick={() => {
-                    const report = generateAuditReport(filteredLogs);
-                    exportToPDF(
-                      report,
-                      `auditoria_${new Date().toISOString().split("T")[0]}.txt`
-                    );
-                  }}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar Texto
-                </Button>
-                <Button
-                  onClick={() => {
-                    exportToJSON(
-                      filteredLogs,
-                      `auditoria_${new Date().toISOString().split("T")[0]}.json`
-                    );
-                  }}
-                  variant="outline"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar JSON
-                </Button>
-                <Button
-                  onClick={() => {
-                    exportToExcel(
-                      filteredLogs,
-                      `auditoria_${new Date().toISOString().split("T")[0]}.xlsx`,
-                      "Auditoria"
-                    );
-                  }}
-                  variant="outline"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar Excel
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Resumo */}
-        <div className="grid md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">
-                Total de Ações
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{auditLogs.length}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Criações</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-green-600">
-                {auditLogs.filter(l => l.action === "criar").length}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Edições</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-blue-600">
-                {auditLogs.filter(l => l.action === "editar").length}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Deleções</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-red-600">
-                {auditLogs.filter(l => l.action === "deletar").length}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Logs */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Histórico de Ações</CardTitle>
-            <CardDescription>
-              {filteredLogs.length} ação(ões) encontrada(s)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {filteredLogs.map(log => (
-                <div
-                  key={log.id}
-                  className="flex items-start gap-4 p-4 border rounded-lg hover:bg-gray-50"
-                >
-                  <div className="mt-1">{getActionIcon(log.action)}</div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="font-semibold">{log.description}</h4>
-                      <span
-                        className={`text-xs px-2 py-1 rounded ${getActionColor(
-                          log.action
-                        )}`}
+            {/* Filtros */}
+            {showFilters && (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="grid md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Ação</label>
+                      <Select
+                        value={filters.action}
+                        onValueChange={value => handleFilterChange("action", value)}
                       >
-                        {getActionLabel(log.action)}
-                      </span>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="todos">Todas as ações</SelectItem>
+                          <SelectItem value="criar">Criado</SelectItem>
+                          <SelectItem value="editar">Editado</SelectItem>
+                          <SelectItem value="deletar">Deletado</SelectItem>
+                          <SelectItem value="visualizar">Visualizado</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-4 mt-2 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        <span>{log.user}</span>
-                      </div>
-                      <div>
-                        <span>{log.timestamp}</span>
-                      </div>
-                      <div>
-                        <span className="text-xs">IP: {log.ipAddress}</span>
-                      </div>
-                      <div>
-                        <span className="text-xs truncate">
-                          {log.userAgent}
-                        </span>
-                      </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Usuário</label>
+                      <Input
+                        placeholder="Filtrar por usuário..."
+                        value={filters.user}
+                        onChange={e => handleFilterChange("user", e.target.value)}
+                      />
                     </div>
 
-                    {/* Detalhes da Mudança */}
-                    {log.details.oldValue && log.details.newValue && (
-                      <details className="mt-3 text-sm">
-                        <summary className="cursor-pointer font-medium text-blue-600 hover:text-blue-800">
-                          Ver detalhes da mudança
-                        </summary>
-                        <div className="mt-2 p-2 bg-gray-50 rounded space-y-2">
-                          <div>
-                            <p className="font-medium text-gray-700">Antes:</p>
-                            <pre className="text-xs bg-white p-2 rounded border mt-1 overflow-auto">
-                              {JSON.stringify(log.details.oldValue, null, 2)}
-                            </pre>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Data Inicial</label>
+                      <Input
+                        type="date"
+                        value={filters.dateFrom}
+                        onChange={e =>
+                          handleFilterChange("dateFrom", e.target.value)
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Data Final</label>
+                      <Input
+                        type="date"
+                        value={filters.dateTo}
+                        onChange={e => handleFilterChange("dateTo", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 justify-end mt-4">
+                    <Button variant="outline" onClick={handleClearFilters}>
+                      <X className="h-4 w-4 mr-2" />
+                      Limpar Filtros
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        const report = generateAuditReport(filteredLogs);
+                        exportToPDF(
+                          report,
+                          `auditoria_${new Date().toISOString().split("T")[0]}.txt`
+                        );
+                      }}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Exportar Texto
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        exportToJSON(
+                          filteredLogs,
+                          `auditoria_${new Date().toISOString().split("T")[0]}.json`
+                        );
+                      }}
+                      variant="outline"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Exportar JSON
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        exportToExcel(
+                          filteredLogs,
+                          `auditoria_${new Date().toISOString().split("T")[0]}.xlsx`,
+                          "Auditoria"
+                        );
+                      }}
+                      variant="outline"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Exportar Excel
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Resumo */}
+            <div className="grid md:grid-cols-4 gap-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium">
+                    Total de Ações
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold">{auditLogs.length}</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium">Criações</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold text-green-600">
+                    {auditLogs.filter(l => l.action === "criar").length}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium">Edições</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold text-blue-600">
+                    {auditLogs.filter(l => l.action === "editar").length}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium">Deleções</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold text-red-600">
+                    {auditLogs.filter(l => l.action === "deletar").length}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Logs */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Histórico de Ações</CardTitle>
+                <CardDescription>
+                  {filteredLogs.length} ação(ões) encontrada(s)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {filteredLogs.map(log => (
+                    <div
+                      key={log.id}
+                      className="flex items-start gap-4 p-4 border rounded-lg hover:bg-gray-50"
+                    >
+                      <div className="mt-1">{getActionIcon(log.action)}</div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-semibold">{log.description}</h4>
+                          <span
+                            className={`text-xs px-2 py-1 rounded ${getActionColor(
+                              log.action
+                            )}`}
+                          >
+                            {getActionLabel(log.action)}
+                          </span>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-4 mt-2 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4" />
+                            <span>{log.user}</span>
                           </div>
                           <div>
-                            <p className="font-medium text-gray-700">Depois:</p>
-                            <pre className="text-xs bg-white p-2 rounded border mt-1 overflow-auto">
-                              {JSON.stringify(log.details.newValue, null, 2)}
-                            </pre>
+                            <span>{log.timestamp}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs">IP: {log.ipAddress}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs truncate">
+                              {log.userAgent}
+                            </span>
                           </div>
                         </div>
-                      </details>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Informações sobre Auditoria */}
-        <Card className="border-blue-200 bg-blue-50">
-          <CardHeader>
-            <CardTitle className="text-blue-900">Sobre a Auditoria</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-blue-800 space-y-2">
-            <p>
-              • Todas as ações na plataforma são registradas automaticamente
-            </p>
-            <p>
-              • Os logs incluem informações do usuário, IP, navegador e
-              timestamp
-            </p>
-            <p>• Mudanças de dados mostram valores antes e depois</p>
-            <p>• Os logs são mantidos por 2 anos para conformidade legal</p>
-            <p>• Você pode filtrar e exportar logs para análise</p>
-          </CardContent>
-        </Card>
+                        {/* Detalhes da Mudança */}
+                        {log.details.oldValue && log.details.newValue && (
+                          <details className="mt-3 text-sm">
+                            <summary className="cursor-pointer font-medium text-blue-600 hover:text-blue-800">
+                              Ver detalhes da mudança
+                            </summary>
+                            <div className="mt-2 p-2 bg-gray-50 rounded space-y-2">
+                              <div>
+                                <p className="font-medium text-gray-700">Antes:</p>
+                                <pre className="text-xs bg-white p-2 rounded border mt-1 overflow-auto">
+                                  {JSON.stringify(log.details.oldValue, null, 2)}
+                                </pre>
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-700">Depois:</p>
+                                <pre className="text-xs bg-white p-2 rounded border mt-1 overflow-auto">
+                                  {JSON.stringify(log.details.newValue, null, 2)}
+                                </pre>
+                              </div>
+                            </div>
+                          </details>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Informações sobre Auditoria */}
+            <Card className="border-blue-200 bg-blue-50">
+              <CardHeader>
+                <CardTitle className="text-blue-900">Sobre a Auditoria</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-blue-800 space-y-2">
+                <p>
+                  • Todas as ações na plataforma são registradas automaticamente
+                </p>
+                <p>
+                  • Os logs incluem informações do usuário, IP, navegador e
+                  timestamp
+                </p>
+                <p>• Mudanças de dados mostram valores antes e depois</p>
+                <p>• Os logs são mantidos por 2 anos para conformidade legal</p>
+                <p>• Você pode filtrar e exportar logs para análise</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── Tab: Segurança ──────────────────────────────────────────── */}
+          <TabsContent value="seguranca">
+            <SecurityDashboardContent />
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardLayout>
   );
