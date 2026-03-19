@@ -34,12 +34,14 @@ import { useState } from "react";
 const plans = [
   {
     name: "Starter",
+    badge: "CPF",
     price: "R$ 297",
     period: "/mes",
-    description: "Para consultores iniciando na NR-01",
-    extra: "R$ 97/empresa adicional",
+    description: "Para psicologos e consultores autonomos (CPF)",
+    extra: "R$ 97/empresa adicional no mes",
     features: [
-      "Ate 3 empresas incluidas",
+      "Cadastro via CPF (pessoa fisica)",
+      "3 empresas/mes incluidas",
       "SamurAI basico (cadastro + COPSOQ)",
       "Relatorios padrao",
       "Exportacao PDF",
@@ -50,12 +52,14 @@ const plans = [
   },
   {
     name: "Professional",
+    badge: "CNPJ",
     price: "R$ 597",
     period: "/mes",
-    description: "Para consultorias em crescimento",
-    extra: "R$ 79/empresa adicional",
+    description: "Para consultorias em crescimento (CNPJ)",
+    extra: "R$ 79/empresa adicional no mes",
     features: [
-      "Ate 10 empresas incluidas",
+      "Cadastro via CNPJ (pessoa juridica)",
+      "10 empresas/mes incluidas",
       "SamurAI completo (10 fases)",
       "Propostas comerciais automaticas",
       "PDF export ilimitado",
@@ -67,12 +71,14 @@ const plans = [
   },
   {
     name: "Enterprise",
+    badge: "CNPJ",
     price: "R$ 997",
     period: "/mes",
-    description: "Para grandes consultorias",
-    extra: "R$ 59/empresa adicional",
+    description: "Para grandes consultorias e redes (CNPJ)",
+    extra: "R$ 59/empresa adicional no mes",
     features: [
-      "Ate 30 empresas incluidas",
+      "Cadastro via CNPJ (pessoa juridica)",
+      "30 empresas/mes incluidas",
       "Tudo do Professional",
       "White-label (sua marca)",
       "API access",
@@ -561,6 +567,14 @@ export default function Landing() {
                   }`}
                 >
                   {plan.name}
+                  {" "}
+                  <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${
+                    plan.badge === "CPF"
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-amber-100 text-amber-700"
+                  }`}>
+                    {plan.badge}
+                  </span>
                 </h3>
                 <p
                   className={`text-sm mb-5 ${
