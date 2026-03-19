@@ -150,8 +150,8 @@ export async function lookupCNPJ(cnpj: string): Promise<CNPJData | null> {
   const cleaned = cnpj.replace(/\D/g, "");
   if (cleaned.length !== 14) return null;
 
-  // Tentar ReceitaWS primeiro (funciona de datacenter)
-  const result = await lookupReceitaWS(cleaned) || await lookupBrasilAPI(cleaned);
+  // Try multiple APIs with fallback chain
+  const result = await lookupReceitaWS(cleaned) || await lookupBrasilAPI(cleaned) || await lookupPublicaCNPJ(cleaned);
   return result;
 }
 
@@ -248,6 +248,52 @@ async function lookupBrasilAPI(cleaned: string): Promise<CNPJData | null> {
     };
   } catch (error) {
     log.error(`[CNPJ BrasilAPI] Error fetching ${cleaned}`, { error: String(error) });
+    return null;
+  }
+}
+
+async function lookupPublicaCNPJ(cleaned: string): Promise<CNPJData | null> {
+  try {
+    const response = await fetch(`https://publica.cnpj.ws/cnpj/${cleaned}`, {
+      headers: { "Accept": "application/json" },
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!response.ok) {
+      log.warn(`[CNPJ publica.cnpj.ws] API returned ${response.status} for ${cleaned}`);
+      return null;
+    }
+
+    const data = await response.json() as any;
+    const estab = data.estabelecimento || {};
+    const atPrincipal = estab.atividade_principal || {};
+
+    return {
+      cnpj: cleaned,
+      razao_social: data.razao_social || "",
+      nome_fantasia: estab.nome_fantasia || "",
+      cnae_fiscal: parseInt(String(atPrincipal.id || "0")) || 0,
+      cnae_fiscal_descricao: atPrincipal.descricao || "",
+      natureza_juridica: data.natureza_juridica?.descricao || "",
+      porte: data.porte?.descricao || "",
+      situacao_cadastral: estab.situacao_cadastral || "",
+      logradouro: estab.logradouro || "",
+      numero: estab.numero || "",
+      complemento: estab.complemento || "",
+      bairro: estab.bairro || "",
+      municipio: estab.cidade?.nome || "",
+      uf: estab.estado?.sigla || "",
+      cep: estab.cep || "",
+      telefone: estab.ddd1 ? `(${estab.ddd1}) ${estab.telefone1}` : "",
+      email: estab.email || "",
+      data_inicio_atividade: estab.data_inicio_atividade || "",
+      cnaes_secundarios: (estab.atividades_secundarias || []).map((c: any) => ({
+        codigo: parseInt(String(c.id || "0")) || 0,
+        descricao: c.descricao || "",
+      })),
+    };
+  } catch (error) {
+    log.error(`[CNPJ publica.cnpj.ws] Error fetching ${cleaned}`, { error: String(error) });
     return null;
   }
 }

@@ -272,11 +272,45 @@ async function generateFallbackResponse(
   tenantId: string,
   userId: string
 ): Promise<{ content: string; actions: Array<{ type: string; label: string; params: Record<string, any> }> }> {
-  const msg = userMessage.toLowerCase();
+  const msg = userMessage.toLowerCase().trim();
   const actions: Array<{ type: string; label: string; params: Record<string, any> }> = [];
 
   // Build memory from conversation history
   const memory = extractContextFromHistory(conversationHistory);
+
+  // Helper: find company by CNPJ in memory
+  async function findCompanyByCNPJ(): Promise<any | null> {
+    if (!memory.cnpj) return null;
+    const formatted = memory.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+    return dbOps.getTenantByCNPJ(formatted);
+  }
+
+  // Helper: determine next phase based on DB state
+  async function getNextPhase(companyId: string): Promise<string> {
+    const db2 = await getDb();
+    if (!db2) return "unknown";
+    const { copsoqAssessments, copsoqReports, riskAssessments: riskAss, interventionPrograms: intProg, complianceCertificates: certs } = await import("../../drizzle/schema_nr01");
+
+    const [assessment] = await db2.select().from(copsoqAssessments).where(eq(copsoqAssessments.tenantId, companyId)).limit(1);
+    if (!assessment) return "create_assessment";
+
+    const [report] = await db2.select().from(copsoqReports).where(eq(copsoqReports.tenantId, companyId)).limit(1);
+    const [risk] = await db2.select().from(riskAss).where(eq(riskAss.tenantId, companyId)).limit(1);
+    if (!report || !risk) return "generate_inventory";
+
+    const [training] = await db2.select().from(intProg).where(eq(intProg.tenantId, companyId)).limit(1);
+    if (!training) return "create_training";
+
+    const [cert] = await db2.select().from(certs).where(eq(certs.tenantId, companyId)).limit(1);
+    if (!cert) return "complete_checklist";
+
+    return "completed";
+  }
+
+  // Detect execute commands and affirmatives (case-insensitive)
+  const isExecuteCommand = msg.startsWith("executar:");
+  const isAffirmative = /^(sim|ok|pode|prossegu|inici|vamos|confirm|faz|comec|start|go|yes|claro|certo|beleza|bora|continuar|próximo|proximo|avançar|avancar)/i.test(msg);
+  const isContinue = isExecuteCommand || isAffirmative;
 
   // ── 1. Current message has CNPJ: do fresh lookup ──
   const cnpj = extractCNPJ(userMessage);
@@ -292,57 +326,87 @@ async function generateFallbackResponse(
 
     let content = `Consultei a Receita Federal e encontrei os dados da empresa:
 
-**📋 Dados da Empresa:**
+**Dados da Empresa:**
 | Campo | Valor |
 |-------|-------|
-| **Razão Social** | ${data.razao_social} |
+| **Razao Social** | ${data.razao_social} |
 | **Nome Fantasia** | ${data.nome_fantasia || "—"} |
 | **CNPJ** | ${formattedCNPJ} |
-| **Situação** | ${data.situacao_cadastral} |
+| **Situacao** | ${data.situacao_cadastral} |
 | **CNAE Principal** | ${data.cnae_fiscal} — ${data.cnae_fiscal_descricao} |
 | **Porte** | ${data.porte} |
-| **Endereço** | ${result.address} |
+| **Endereco** | ${result.address} |
 | **CEP** | ${data.cep} |
 | **Telefone** | ${data.telefone || "—"} |
 | **Email** | ${data.email || "—"} |
-| **Início Atividade** | ${data.data_inicio_atividade} |
+| **Inicio Atividade** | ${data.data_inicio_atividade} |
 
-**🏭 Classificação NR-01:**
-- **Setor:** ${result.sectorName}${result.highRisk ? " ⚠️ **ALTO RISCO PSICOSSOCIAL**" : ""}
+**Classificacao NR-01:**
+- **Setor:** ${result.sectorName}${result.highRisk ? " - **ALTO RISCO PSICOSSOCIAL**" : ""}
 `;
 
     if (headcount) {
       content += "\n" + buildStrategyText(headcount, result.sector!, result.sectorName!, result.highRisk!);
-      content += `\n\n**Próximos passos automáticos após cadastro:**
-1. ✅ Cadastrar empresa na plataforma
-2. ✅ Popular checklist NR-01 (25 itens obrigatórios)
-3. ✅ Criar cronograma com milestones personalizados
-4. ✅ Criar avaliação COPSOQ-II
-5. 📧 Enviar convites para funcionários responderem
 
-Clique em **"Iniciar Processo NR-01"** para prosseguir automaticamente.`;
+      // AUTO-EXECUTE: Create company immediately when we have CNPJ + headcount
+      const execResult = await executeCreateCompany({
+        cnpj: data.cnpj,
+        name: data.nome_fantasia || data.razao_social,
+        sector: result.sector,
+        headcount,
+        street: data.logradouro, number: data.numero, complement: data.complemento,
+        neighborhood: data.bairro, city: data.municipio, state: data.uf,
+        zipCode: data.cep, contactPhone: data.telefone, contactEmail: data.email,
+      }, tenantId, userId);
 
-      actions.push({
-        type: "create_company",
-        label: "Iniciar Processo NR-01",
-        params: {
-          cnpj: data.cnpj,
-          name: data.nome_fantasia || data.razao_social,
-          sector: result.sector,
-          headcount,
-          street: data.logradouro,
-          number: data.numero,
-          complement: data.complemento,
-          neighborhood: data.bairro,
-          city: data.municipio,
-          state: data.uf,
-          zipCode: data.cep,
-          contactPhone: data.telefone,
-          contactEmail: data.email,
-        },
-      });
+      if (execResult.success) {
+        content += `\n\n**Processo NR-01 iniciado!**\n${execResult.message}`;
+        content += `\n\n**Proxima etapa:** Criar avaliacao COPSOQ-II para os ${headcount} funcionarios.`;
+        content += `\nClique em **"Criar Avaliacao COPSOQ-II"** ou diga **"sim"** para continuar.`;
+        return {
+          content,
+          actions: [
+            { type: "create_assessment", label: "Criar Avaliacao COPSOQ-II", params: { companyId: execResult.companyId, headcount } },
+          ],
+        };
+      } else {
+        content += `\n\n${execResult.message}`;
+        // Company already exists — check what's the next phase
+        const existing = await findCompanyByCNPJ();
+        if (existing) {
+          const nextPhase = await getNextPhase(existing.id);
+          if (nextPhase === "create_assessment") {
+            content += `\n\n**Proxima etapa:** Criar avaliacao COPSOQ-II.`;
+            return {
+              content,
+              actions: [{ type: "create_assessment", label: "Criar Avaliacao COPSOQ-II", params: { companyId: existing.id, headcount } }],
+            };
+          } else if (nextPhase === "generate_inventory") {
+            content += `\n\n**Proxima etapa:** Gerar inventario de riscos e plano de acao.`;
+            return {
+              content,
+              actions: [{ type: "generate_inventory", label: "Gerar Inventario e Plano de Acao", params: { companyId: existing.id } }],
+            };
+          } else if (nextPhase === "create_training") {
+            content += `\n\n**Proxima etapa:** Criar programa de treinamento.`;
+            return {
+              content,
+              actions: [{ type: "create_training", label: "Criar Programa de Treinamento", params: { companyId: existing.id } }],
+            };
+          } else if (nextPhase === "complete_checklist") {
+            content += `\n\n**Proxima etapa:** Finalizar checklist e emitir certificado.`;
+            return {
+              content,
+              actions: [{ type: "complete_checklist", label: "Finalizar e Emitir Certificado", params: { companyId: existing.id } }],
+            };
+          } else {
+            content += `\n\nProcesso NR-01 ja esta **100% concluido**!`;
+            return { content, actions: [] };
+          }
+        }
+      }
     } else {
-      content += "\nPara definir a estratégia, preciso saber o **número de funcionários** da empresa.";
+      content += "\nPara definir a estrategia, preciso saber o **numero de funcionarios** da empresa.";
     }
 
     return { content, actions };
@@ -351,267 +415,194 @@ Clique em **"Iniciar Processo NR-01"** para prosseguir automaticamente.`;
   // ── 2. User mentions headcount and we already have CNPJ from history ──
   const currentHeadcount = extractHeadcount(userMessage);
   if (currentHeadcount && memory.cnpj) {
-    // Re-lookup CNPJ to get fresh data
+    // Re-run with CNPJ + headcount — this will auto-create company
     const result = await processCNPJForAgent(memory.cnpj, currentHeadcount);
-    if (result.found && result.active) {
-      const data = result.data!;
-      const content = buildStrategyText(currentHeadcount, result.sector!, result.sectorName!, result.highRisk!) + `
-
-Empresa: **${data.nome_fantasia || data.razao_social}** (${formatCNPJ(memory.cnpj)})
-
-**Próximos passos automáticos após cadastro:**
-1. ✅ Cadastrar empresa na plataforma
-2. ✅ Popular checklist NR-01 (25 itens obrigatórios)
-3. ✅ Criar cronograma com milestones personalizados
-4. ✅ Criar avaliação COPSOQ-II
-5. 📧 Enviar convites para funcionários responderem
-
-Clique em **"Iniciar Processo NR-01"** para prosseguir automaticamente.`;
-
-      actions.push({
-        type: "create_company",
-        label: "Iniciar Processo NR-01",
-        params: {
-          cnpj: data.cnpj,
-          name: data.nome_fantasia || data.razao_social,
-          sector: result.sector,
-          headcount: currentHeadcount,
-          street: data.logradouro, number: data.numero,
-          city: data.municipio, state: data.uf, zipCode: data.cep,
-        },
-      });
-      return { content, actions };
-    }
-  }
-
-  // ── 3. Execute action: "Executar:" command OR affirmative with data ready ──
-  const isExecuteCommand = msg.startsWith("executar:");
-  const isAffirmative = /^(sim|ok|pode|prossegu|inici|vamos|confirm|faz|comec|start|go|yes|claro|certo|beleza|bora)/i.test(msg.trim());
-  const wantsCopsoq = msg.includes("copsoq") || msg.includes("avaliação") || msg.includes("avaliacao") || msg.includes("criar avaliação") || msg.includes("criar avaliacao") || (isExecuteCommand && msg.includes("copsoq"));
-
-  // Handle COPSOQ / assessment creation — AUTO-EXECUTE
-  if ((wantsCopsoq || ((isExecuteCommand || isAffirmative) && memory.lastAction === "create_assessment")) && memory.cnpj) {
-    const formattedCnpj = memory.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
-    const existingCompany = await dbOps.getTenantByCNPJ(formattedCnpj);
-    if (existingCompany) {
-      const result = await executeCreateAssessment(existingCompany.id, existingCompany.name, memory.headcount || 5);
-      if (result.success) {
-        return {
-          content: result.message + `\n\n**Próxima etapa:** Gerar inventário de riscos e plano de ação com base nos resultados.`,
-          actions: [
-            { type: "generate_inventory", label: "Gerar Inventário e Plano de Ação", params: { assessmentId: result.assessmentId, companyId: existingCompany.id } },
-          ],
-        };
-      }
-      return { content: result.message, actions: [] };
-    }
-  }
-
-  // Handle Risk Inventory + Action Plan generation
-  const wantsInventory = msg.includes("inventário") || msg.includes("inventario") || msg.includes("plano de ação") || msg.includes("plano de acao") || msg.includes("risco");
-  if ((wantsInventory || ((isExecuteCommand || isAffirmative) && memory.lastAction === "generate_inventory")) && memory.cnpj) {
-    const formattedCnpj = memory.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
-    const existingCompany = await dbOps.getTenantByCNPJ(formattedCnpj);
-    if (existingCompany) {
-      // Find latest assessment
-      const db2 = await getDb();
-      if (db2) {
-        const { copsoqAssessments } = await import("../../drizzle/schema_nr01");
-        const [latestAssessment] = await db2.select().from(copsoqAssessments)
-          .where(eq(copsoqAssessments.tenantId, existingCompany.id))
-          .orderBy(desc(copsoqAssessments.createdAt)).limit(1);
-        if (latestAssessment) {
-          const result = await executeGenerateInventoryAndPlan(existingCompany.id, latestAssessment.id, existingCompany.name, memory.headcount || 5);
-          if (result.success) {
-            return {
-              content: result.message + `\n\n**Próxima etapa:** Criar programa de treinamento sobre riscos psicossociais.`,
-              actions: [
-                { type: "create_training", label: "Criar Programa de Treinamento", params: { companyId: existingCompany.id } },
-              ],
-            };
-          }
-          return { content: result.message, actions: [] };
-        }
-      }
-    }
-  }
-
-  // Handle Checklist completion + Certificate issuance (BEFORE training to avoid false match)
-  const wantsCertificate = msg.includes("certificado") || msg.includes("certificação") || msg.includes("certificacao") || msg.includes("checklist") || msg.includes("finalizar") || msg.includes("documentação") || msg.includes("documentacao") || msg.includes("pgr") || msg.includes("pcmso");
-  if ((wantsCertificate || ((isExecuteCommand || isAffirmative) && (memory.lastAction === "complete_checklist"))) && memory.cnpj) {
-    const formattedCnpj2 = memory.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
-    const existingCompany2 = await dbOps.getTenantByCNPJ(formattedCnpj2);
-    if (existingCompany2) {
-      const result2 = await executeCompleteChecklist(existingCompany2.id);
-      return { content: result2.message, actions: [] };
-    }
-  }
-
-  // Handle Training Program creation
-  const wantsTraining = msg.includes("treinamento") || msg.includes("capacitação") || msg.includes("capacitacao") || msg.includes("training");
-  if ((wantsTraining || ((isExecuteCommand || isAffirmative) && memory.lastAction === "create_training")) && memory.cnpj) {
-    const formattedCnpj = memory.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
-    const existingCompany = await dbOps.getTenantByCNPJ(formattedCnpj);
-    if (existingCompany) {
-      const result = await executeCreateTraining(existingCompany.id, existingCompany.name);
-      if (result.success) {
-        return {
-          content: result.message + `\n\n**Próxima etapa:** Finalizar checklist e emitir certificado de conformidade.`,
-          actions: [
-            { type: "complete_checklist", label: "Finalizar e Emitir Certificado", params: { companyId: existingCompany.id } },
-          ],
-        };
-      }
-      return { content: result.message, actions: [] };
-    }
-  }
-
-  // (certificate handler moved above training to avoid false match)
-
-  if ((isExecuteCommand || isAffirmative) && memory.cnpj && memory.headcount && memory.lastAction === "create_company") {
-    // EXECUTE: Actually create the company
-    const result = await processCNPJForAgent(memory.cnpj, memory.headcount);
-    if (result.found && result.active) {
-      const data = result.data!;
-      const execResult = await executeCreateCompany({
-        cnpj: data.cnpj,
-        name: data.nome_fantasia || data.razao_social,
-        sector: result.sector,
-        headcount: memory.headcount,
-        street: data.logradouro, number: data.numero, complement: data.complemento,
-        neighborhood: data.bairro, city: data.municipio, state: data.uf,
-        zipCode: data.cep, contactPhone: data.telefone, contactEmail: data.email,
-      }, tenantId, userId);
-
-      if (execResult.success) {
-        return {
-          content: `**Processo NR-01 iniciado com sucesso!**
-
-${execResult.message}
-
-**O que foi configurado automaticamente:**
-- Empresa cadastrada na plataforma
-- Checklist de conformidade NR-01 populado
-- Cronograma com 11 milestones e prazos
-- Prazo final: **26/05/2026**
-
-**Próxima etapa: Diagnóstico Inicial**
-Agora precisamos criar a avaliação COPSOQ-II e enviar para os ${memory.headcount} funcionários responderem. Deseja que eu crie a avaliação agora?`,
-          actions: [
-            { type: "create_assessment", label: "Criar Avaliação COPSOQ-II", params: { companyId: execResult.companyId } },
-            { type: "view_checklist", label: "Ver Checklist NR-01", params: { companyId: execResult.companyId } },
-          ],
-        };
-      } else {
-        return { content: execResult.message, actions: [] };
-      }
-    }
-  }
-
-  // Affirmative but no lastAction — just show summary with action button
-  if (isAffirmative && memory.cnpj && memory.headcount && !memory.lastAction) {
-    const result = await processCNPJForAgent(memory.cnpj, memory.headcount);
-    if (result.found && result.active) {
-      const data = result.data!;
-      const content = `Perfeito! Vou iniciar o processo NR-01 para **${data.nome_fantasia || data.razao_social}**.
-
-**Resumo:**
-- CNPJ: ${formatCNPJ(memory.cnpj)}
-- Funcionários: ${memory.headcount}
-- Setor: ${result.sectorName}
-- Estratégia: ${memory.headcount < 20 ? "Simplificada (120 dias)" : memory.headcount <= 100 ? "COPSOQ-II Completo (180 dias)" : "COPSOQ-II por Setor (210 dias)"}
-
-Clique em **"Iniciar Processo NR-01"** para cadastrar a empresa e configurar tudo automaticamente.`;
-
-      actions.push({
-        type: "create_company",
-        label: "Iniciar Processo NR-01",
-        params: {
-          cnpj: data.cnpj, name: data.nome_fantasia || data.razao_social,
-          sector: result.sector, headcount: memory.headcount,
-          street: data.logradouro, number: data.numero,
-          city: data.municipio, state: data.uf, zipCode: data.cep,
-        },
-      });
-      return { content, actions };
-    }
-  }
-
-  // ── 4. We have CNPJ in memory but no headcount yet ──
-  if (memory.cnpj && !memory.headcount) {
-    // Check if user just sent a number
-    const numberMatch = userMessage.match(/^(\d+)$/);
-    if (numberMatch) {
-      const hc = parseInt(numberMatch[1]);
-      if (hc > 0 && hc < 100000) {
-        // Treat bare number as headcount
-        const result = await processCNPJForAgent(memory.cnpj, hc);
-        if (result.found && result.active) {
-          const data = result.data!;
-          const content = `Entendido: **${hc} funcionários**.
-
-` + buildStrategyText(hc, result.sector!, result.sectorName!, result.highRisk!) + `
-
-Empresa: **${data.nome_fantasia || data.razao_social}** (${formatCNPJ(memory.cnpj)})
-
-Clique em **"Iniciar Processo NR-01"** para prosseguir.`;
-
-          actions.push({
-            type: "create_company",
-            label: "Iniciar Processo NR-01",
-            params: {
-              cnpj: data.cnpj,
-              name: data.nome_fantasia || data.razao_social,
-              sector: result.sector,
-              headcount: hc,
-              street: data.logradouro, number: data.numero,
-              city: data.municipio, state: data.uf, zipCode: data.cep,
-            },
-          });
-          return { content, actions };
-        }
-      }
-    }
-
-    return {
-      content: `Já tenho o CNPJ **${formatCNPJ(memory.cnpj)}**${memory.companyName ? ` (${memory.companyName})` : ""}. Para definir a estratégia NR-01, preciso saber: **quantos funcionários** a empresa possui?`,
-      actions: [],
-    };
-  }
-
-  // ── 5. We have all data from memory — execute directly ──
-  if (memory.cnpj && memory.headcount) {
-    // Auto-execute: create the company
-    const result = await processCNPJForAgent(memory.cnpj, memory.headcount);
     if (result.found && result.active) {
       const data = result.data!;
       const execResult = await executeCreateCompany({
         cnpj: data.cnpj, name: data.nome_fantasia || data.razao_social,
-        sector: result.sector, headcount: memory.headcount,
+        sector: result.sector, headcount: currentHeadcount,
         street: data.logradouro, number: data.numero, complement: data.complemento,
         neighborhood: data.bairro, city: data.municipio, state: data.uf,
         zipCode: data.cep, contactPhone: data.telefone, contactEmail: data.email,
       }, tenantId, userId);
 
-      if (execResult.success) {
+      const content = buildStrategyText(currentHeadcount, result.sector!, result.sectorName!, result.highRisk!) +
+        `\n\nEmpresa: **${data.nome_fantasia || data.razao_social}** (${formatCNPJ(memory.cnpj)})` +
+        `\n\n${execResult.message}` +
+        `\n\n**Proxima etapa:** Criar avaliacao COPSOQ-II para os ${currentHeadcount} funcionarios.`;
+
+      return {
+        content,
+        actions: [
+          { type: "create_assessment", label: "Criar Avaliacao COPSOQ-II", params: { companyId: execResult.companyId || (await findCompanyByCNPJ())?.id, headcount: currentHeadcount } },
+        ],
+      };
+    }
+  }
+
+  // ── 3. Execute/Continue: auto-detect next phase and execute ──
+  if (isContinue && memory.cnpj) {
+    const existingCompany = await findCompanyByCNPJ();
+    if (existingCompany) {
+      const nextPhase = await getNextPhase(existingCompany.id);
+      log.info(`[Agent] Auto-continue: nextPhase=${nextPhase}, company=${existingCompany.id}`);
+
+      if (nextPhase === "create_assessment") {
+        const result = await executeCreateAssessment(existingCompany.id, existingCompany.name, memory.headcount || 5);
+        if (result.success) {
+          return {
+            content: result.message + `\n\n**Proxima etapa:** Gerar inventario de riscos e plano de acao com base nos resultados.\nClique no botao abaixo ou diga **"sim"** para continuar.`,
+            actions: [{ type: "generate_inventory", label: "Gerar Inventario e Plano de Acao", params: { companyId: existingCompany.id } }],
+          };
+        }
+        return { content: result.message, actions: [] };
+      }
+
+      if (nextPhase === "generate_inventory") {
+        const db2 = await getDb();
+        if (db2) {
+          const { copsoqAssessments: cAssessments } = await import("../../drizzle/schema_nr01");
+          const [latestAssessment] = await db2.select().from(cAssessments)
+            .where(eq(cAssessments.tenantId, existingCompany.id))
+            .orderBy(desc(cAssessments.createdAt)).limit(1);
+          if (latestAssessment) {
+            const result = await executeGenerateInventoryAndPlan(existingCompany.id, latestAssessment.id, existingCompany.name, memory.headcount || 5);
+            if (result.success) {
+              return {
+                content: result.message + `\n\n**Proxima etapa:** Criar programa de treinamento sobre riscos psicossociais.\nClique no botao abaixo ou diga **"sim"** para continuar.`,
+                actions: [{ type: "create_training", label: "Criar Programa de Treinamento", params: { companyId: existingCompany.id } }],
+              };
+            }
+            return { content: result.message, actions: [] };
+          }
+        }
+      }
+
+      if (nextPhase === "create_training") {
+        const result = await executeCreateTraining(existingCompany.id, existingCompany.name);
+        if (result.success) {
+          return {
+            content: result.message + `\n\n**Proxima etapa:** Finalizar checklist e emitir certificado de conformidade.\nClique no botao abaixo ou diga **"sim"** para continuar.`,
+            actions: [{ type: "complete_checklist", label: "Finalizar e Emitir Certificado", params: { companyId: existingCompany.id } }],
+          };
+        }
+        return { content: result.message, actions: [] };
+      }
+
+      if (nextPhase === "complete_checklist") {
+        const result = await executeCompleteChecklist(existingCompany.id);
         return {
-          content: `**Processo NR-01 iniciado com sucesso!**
-
-${execResult.message}
-
-**Próxima etapa: Diagnóstico Inicial**
-Deseja que eu crie a avaliação COPSOQ-II para os ${memory.headcount} funcionários?`,
-          actions: [
-            { type: "create_assessment", label: "Criar Avaliação COPSOQ-II", params: { companyId: execResult.companyId } },
-          ],
+          content: result.message + `\n\n**Processo NR-01 concluido com sucesso!** Todas as fases foram finalizadas.`,
+          actions: [],
         };
-      } else {
-        return { content: execResult.message, actions: [] };
+      }
+
+      if (nextPhase === "completed") {
+        return {
+          content: `O processo NR-01 desta empresa ja esta **100% concluido**! Todas as fases foram finalizadas com sucesso.\n\nDeseja iniciar o processo para outra empresa? Envie o CNPJ e numero de funcionarios.`,
+          actions: [],
+        };
+      }
+    }
+
+    // Company not found but we have CNPJ — try to create it
+    if (memory.headcount) {
+      const result = await processCNPJForAgent(memory.cnpj, memory.headcount);
+      if (result.found && result.active) {
+        const data = result.data!;
+        const execResult = await executeCreateCompany({
+          cnpj: data.cnpj, name: data.nome_fantasia || data.razao_social,
+          sector: result.sector, headcount: memory.headcount,
+          street: data.logradouro, number: data.numero, complement: data.complemento,
+          neighborhood: data.bairro, city: data.municipio, state: data.uf,
+          zipCode: data.cep, contactPhone: data.telefone, contactEmail: data.email,
+        }, tenantId, userId);
+        if (execResult.success) {
+          return {
+            content: `**Processo NR-01 iniciado!**\n${execResult.message}\n\n**Proxima etapa:** Criar avaliacao COPSOQ-II.`,
+            actions: [{ type: "create_assessment", label: "Criar Avaliacao COPSOQ-II", params: { companyId: execResult.companyId } }],
+          };
+        }
+      }
+    }
+  }
+
+  // ── 4. Explicit keyword-based actions (copsoq, inventário, treinamento, etc.) ──
+  const wantsCopsoq = msg.includes("copsoq") || msg.includes("avaliação") || msg.includes("avaliacao");
+  const wantsInventory = msg.includes("inventário") || msg.includes("inventario") || msg.includes("plano de ação") || msg.includes("plano de acao");
+  const wantsTraining = msg.includes("treinamento") || msg.includes("capacitação") || msg.includes("capacitacao");
+  const wantsCertificate = msg.includes("certificado") || msg.includes("certificação") || msg.includes("certificacao") || msg.includes("checklist") || msg.includes("finalizar");
+
+  if ((wantsCopsoq || wantsInventory || wantsTraining || wantsCertificate) && memory.cnpj) {
+    const existingCompany = await findCompanyByCNPJ();
+    if (existingCompany) {
+      if (wantsCopsoq) {
+        const result = await executeCreateAssessment(existingCompany.id, existingCompany.name, memory.headcount || 5);
+        return {
+          content: result.message + (result.success ? `\n\n**Proxima etapa:** Gerar inventario de riscos.` : ""),
+          actions: result.success ? [{ type: "generate_inventory", label: "Gerar Inventario e Plano de Acao", params: { companyId: existingCompany.id } }] : [],
+        };
+      }
+      if (wantsInventory) {
+        const db2 = await getDb();
+        if (db2) {
+          const { copsoqAssessments: cAssessments } = await import("../../drizzle/schema_nr01");
+          const [la] = await db2.select().from(cAssessments).where(eq(cAssessments.tenantId, existingCompany.id)).orderBy(desc(cAssessments.createdAt)).limit(1);
+          if (la) {
+            const result = await executeGenerateInventoryAndPlan(existingCompany.id, la.id, existingCompany.name, memory.headcount || 5);
+            return {
+              content: result.message + (result.success ? `\n\n**Proxima etapa:** Criar programa de treinamento.` : ""),
+              actions: result.success ? [{ type: "create_training", label: "Criar Programa de Treinamento", params: { companyId: existingCompany.id } }] : [],
+            };
+          }
+        }
+      }
+      if (wantsTraining) {
+        const result = await executeCreateTraining(existingCompany.id, existingCompany.name);
+        return {
+          content: result.message + (result.success ? `\n\n**Proxima etapa:** Finalizar e emitir certificado.` : ""),
+          actions: result.success ? [{ type: "complete_checklist", label: "Finalizar e Emitir Certificado", params: { companyId: existingCompany.id } }] : [],
+        };
+      }
+      if (wantsCertificate) {
+        const result = await executeCompleteChecklist(existingCompany.id);
+        return { content: result.message, actions: [] };
+      }
+    }
+  }
+
+  // ── 5. We have CNPJ in memory but no headcount yet ──
+  if (memory.cnpj && !memory.headcount) {
+    const numberMatch = userMessage.match(/^(\d+)$/);
+    if (numberMatch) {
+      const hc = parseInt(numberMatch[1]);
+      if (hc > 0 && hc < 100000) {
+        const result = await processCNPJForAgent(memory.cnpj, hc);
+        if (result.found && result.active) {
+          const data = result.data!;
+          // Auto-create company with the headcount
+          const execResult = await executeCreateCompany({
+            cnpj: data.cnpj, name: data.nome_fantasia || data.razao_social,
+            sector: result.sector, headcount: hc,
+            street: data.logradouro, number: data.numero,
+            city: data.municipio, state: data.uf, zipCode: data.cep,
+          }, tenantId, userId);
+          const content = `Entendido: **${hc} funcionarios**.\n\n` +
+            buildStrategyText(hc, result.sector!, result.sectorName!, result.highRisk!) +
+            `\n\nEmpresa: **${data.nome_fantasia || data.razao_social}** (${formatCNPJ(memory.cnpj)})` +
+            `\n\n${execResult.message}` +
+            `\n\n**Proxima etapa:** Criar avaliacao COPSOQ-II.`;
+          return {
+            content,
+            actions: [{ type: "create_assessment", label: "Criar Avaliacao COPSOQ-II", params: { companyId: execResult.companyId || (await findCompanyByCNPJ())?.id, headcount: hc } }],
+          };
+        }
       }
     }
 
     return {
-      content: `Tenho os dados mas não consegui consultar o CNPJ. Diga **"iniciar"** para tentar novamente.`,
+      content: `Ja tenho o CNPJ **${formatCNPJ(memory.cnpj)}**${memory.companyName ? ` (${memory.companyName})` : ""}. Para definir a estrategia NR-01, preciso saber: **quantos funcionarios** a empresa possui?`,
       actions: [],
     };
   }
@@ -620,13 +611,7 @@ Deseja que eu crie a avaliação COPSOQ-II para os ${memory.headcount} funcioná
   if (msg.includes("status") || msg.includes("progresso") || msg.includes("andamento")) {
     if (status) {
       const completedPhases = status.phases.filter((p: any) => p.status === "completed").length;
-      const content = `Progresso atual: **${status.overallProgress}%** (${completedPhases}/10 fases concluídas).
-
-Fase atual: **${status.currentPhase}**
-
-${status.nextActions.length > 0 ? "Próximas ações recomendadas:\n" + status.nextActions.map((a: any) => `- **${a.label}**: ${a.description}`).join("\n") : "Nenhuma ação pendente."}
-
-${status.alerts.length > 0 ? "\nAlertas:\n" + status.alerts.map((a: string) => `⚠️ ${a}`).join("\n") : ""}`;
+      const content = `Progresso atual: **${status.overallProgress}%** (${completedPhases}/10 fases concluidas).\n\nFase atual: **${status.currentPhase}**\n\n${status.nextActions.length > 0 ? "Proximas acoes recomendadas:\n" + status.nextActions.map((a: any) => `- **${a.label}**: ${a.description}`).join("\n") : "Nenhuma acao pendente."}`;
       return { content, actions: status.nextActions.map((a: any) => ({ type: a.actionType, label: a.label, params: a.params || {} })) };
     }
     return { content: "Nenhuma empresa selecionada. Me informe o CNPJ da empresa para verificar o status.", actions: [] };
@@ -635,35 +620,40 @@ ${status.alerts.length > 0 ? "\nAlertas:\n" + status.alerts.map((a: string) => `
   // ── 7. Help/capabilities ──
   if (msg.includes("ajuda") || msg.includes("help") || msg.includes("pode fazer") || msg.includes("capaz")) {
     return {
-      content: `Sou o **Assistente IA NR-01** da BlackBelt. Posso conduzir **todo o processo de conformidade** automaticamente:
-
-1. **Consulta de CNPJ** — Busco automaticamente os dados na Receita Federal
-2. **Cadastro e Diagnóstico** — Classifico o setor e defino a estratégia ideal
-3. **Checklist + Cronograma** — 25 itens obrigatórios + milestones personalizados
-4. **Avaliação COPSOQ-II** — Crio e envio para os funcionários responderem
-5. **Análise com IA** — Relatório com dimensões críticas identificadas
-6. **Inventário de Riscos** — Classificação completa dos perigos psicossociais
-7. **Plano de Ação** — Medidas preventivas com cronograma e responsáveis
-8. **Treinamentos** — Programas de capacitação obrigatórios
-9. **Documentação PGR/PCMSO** — Geração automática em PDF
-10. **Certificação** — Emissão quando compliance ≥ 80%
-11. **Monitoramento** — Alertas automáticos de prazos, riscos e falhas
-
-**Para começar, me envie o CNPJ da empresa e o número de funcionários.**`,
+      content: `Sou o **Assistente IA NR-01** da BlackBelt. Posso conduzir **todo o processo de conformidade** automaticamente:\n\n1. **Consulta de CNPJ** — Busco automaticamente os dados na Receita Federal\n2. **Cadastro e Diagnostico** — Classifico o setor e defino a estrategia ideal\n3. **Checklist + Cronograma** — 25 itens obrigatorios + milestones personalizados\n4. **Avaliacao COPSOQ-II** — Crio e envio para os funcionarios responderem\n5. **Analise com IA** — Relatorio com dimensoes criticas identificadas\n6. **Inventario de Riscos** — Classificacao completa dos perigos psicossociais\n7. **Plano de Acao** — Medidas preventivas com cronograma e responsaveis\n8. **Treinamentos** — Programas de capacitacao obrigatorios\n9. **Documentacao PGR/PCMSO** — Geracao automatica\n10. **Certificacao** — Emissao quando compliance >= 80%\n11. **Monitoramento** — Alertas automaticos de prazos, riscos e falhas\n\n**Para comecar, me envie o CNPJ da empresa e o numero de funcionarios.**`,
       actions: [],
     };
   }
 
-  // ── 8. Default response ──
+  // ── 8. If we have company in memory, show status with next action ──
+  if (memory.cnpj) {
+    const existingCompany = await findCompanyByCNPJ();
+    if (existingCompany) {
+      const nextPhase = await getNextPhase(existingCompany.id);
+      if (nextPhase !== "completed" && nextPhase !== "unknown") {
+        const phaseLabels: Record<string, string> = {
+          create_assessment: "Criar Avaliacao COPSOQ-II",
+          generate_inventory: "Gerar Inventario e Plano de Acao",
+          create_training: "Criar Programa de Treinamento",
+          complete_checklist: "Finalizar e Emitir Certificado",
+        };
+        return {
+          content: `Empresa **${existingCompany.name}** encontrada. A proxima etapa e: **${phaseLabels[nextPhase] || nextPhase}**.\n\nClique no botao abaixo ou diga **"sim"** para continuar o processo.`,
+          actions: [{ type: nextPhase, label: phaseLabels[nextPhase] || "Continuar", params: { companyId: existingCompany.id } }],
+        };
+      }
+      if (nextPhase === "completed") {
+        return {
+          content: `Processo NR-01 da empresa **${existingCompany.name}** ja esta **100% concluido**!\n\nDeseja iniciar o processo para outra empresa? Envie o CNPJ e numero de funcionarios.`,
+          actions: [],
+        };
+      }
+    }
+  }
+
+  // ── 9. Default response ──
   return {
-    content: `Para iniciar o processo de conformidade NR-01, me envie:
-
-- **CNPJ** da empresa (vou consultar automaticamente na Receita Federal)
-- **Número de funcionários** (para definir a estratégia de avaliação)
-
-Exemplo: *"CNPJ 30.428.133/0001-24, 5 funcionários"*
-
-Ou pergunte sobre o **status** de uma empresa já cadastrada, ou peça **ajuda** para ver todas as funcionalidades.`,
+    content: `Para iniciar o processo de conformidade NR-01, me envie:\n\n- **CNPJ** da empresa (vou consultar automaticamente na Receita Federal)\n- **Numero de funcionarios** (para definir a estrategia de avaliacao)\n\nExemplo: *"CNPJ 30.428.133/0001-24, 5 funcionarios"*\n\nOu pergunte sobre o **status** de uma empresa ja cadastrada, ou peca **ajuda** para ver todas as funcionalidades.`,
     actions: [],
   };
 }
