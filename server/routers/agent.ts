@@ -10,7 +10,7 @@ import { getNR01Status, getCompanyStrategy } from "../_ai/agentOrchestrator";
 import { scanTenantAlerts } from "../_ai/agentAlerts";
 import { buildAgentSystemPrompt, buildContextMessage } from "../_ai/prompts/agent-system";
 import { processCNPJForAgent, formatCNPJ, sectorLabel, isHighRiskSector } from "../_core/cnpjLookup";
-import { tenants } from "../../drizzle/schema";
+import { tenants, proposals } from "../../drizzle/schema";
 import { complianceChecklist, complianceMilestones } from "../../drizzle/schema_nr01";
 import { executeCreateAssessment, executeGenerateInventoryAndPlan, executeCreateTraining, executeCompleteChecklist } from "../_ai/agentExecutor";
 import { log } from "../_core/logger";
@@ -990,7 +990,32 @@ async function generateFallbackResponse(
                     name: existingCompany.name, cnpj: memory.cnpj ? formatCNPJ(memory.cnpj) : undefined,
                     headcount: hc, sector: memory.sector, sectorName: memory.sectorName, riskLevel,
                   });
-                  finalProposalContent = "\n\n" + generateFinalProposal(fpData, initialProposal);
+                  const finalProposalMarkdown = generateFinalProposal(fpData, initialProposal);
+                  finalProposalContent = "\n\n" + finalProposalMarkdown;
+
+                  // Save final proposal to DB
+                  try {
+                    const finalProposalId = nanoid();
+                    await db2.insert(proposals).values({
+                      id: finalProposalId,
+                      tenantId,
+                      clientId: existingCompany.id,
+                      title: `Proposta Final - ${existingCompany.name}`,
+                      description: finalProposalMarkdown,
+                      status: 'sent',
+                      subtotal: initialProposal.totalEstimate.min * 100,
+                      discount: Math.round(initialProposal.totalEstimate.min * (initialProposal.volumeDiscount.percentage / 100) * 100),
+                      discountPercent: Math.round(initialProposal.volumeDiscount.percentage),
+                      taxes: 0,
+                      totalValue: initialProposal.totalEstimate.max * 100,
+                      taxRegime: 'simples_nacional',
+                      validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                      sentAt: new Date(),
+                    });
+                    finalProposalContent += `\n\n✅ Proposta salva! Acesse em **Precificação > Propostas** para visualizar e exportar em PDF.`;
+                  } catch (err: any) {
+                    log.error("Failed to save final proposal to DB (auto-continue)", { error: err.message });
+                  }
                 }
               } catch { /* final proposal generation failed, continue without it */ }
 
@@ -1071,8 +1096,35 @@ async function generateFallbackResponse(
           headcount: hc, sector: memory.sector, sectorName: memory.sectorName, riskLevel,
         });
         const content = generateFinalProposal(fpData, initialProposal);
+
+        // Save final proposal to DB
+        try {
+          const db2 = await getDb();
+          if (db2) {
+            const finalProposalId = nanoid();
+            await db2.insert(proposals).values({
+              id: finalProposalId,
+              tenantId,
+              clientId: existingCompany.id,
+              title: `Proposta Final - ${existingCompany.name}`,
+              description: content,
+              status: 'sent',
+              subtotal: initialProposal.totalEstimate.min * 100,
+              discount: Math.round(initialProposal.totalEstimate.min * (initialProposal.volumeDiscount.percentage / 100) * 100),
+              discountPercent: Math.round(initialProposal.volumeDiscount.percentage),
+              taxes: 0,
+              totalValue: initialProposal.totalEstimate.max * 100,
+              taxRegime: 'simples_nacional',
+              validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              sentAt: new Date(),
+            });
+          }
+        } catch (err: any) {
+          log.error("Failed to save final proposal to DB", { error: err.message });
+        }
+
         return {
-          content,
+          content: content + `\n\n✅ Proposta salva! Acesse em **Precificação > Propostas** para visualizar e exportar em PDF.`,
           actions: [{ type: "create_training", label: "Criar Programa de Treinamento", params: { companyId: existingCompany.id } }],
         };
       }
@@ -1100,8 +1152,34 @@ async function generateFallbackResponse(
         sectorName: memory.sectorName,
         riskLevel,
       });
+
+      // Save initial proposal to DB
+      try {
+        const db2 = await getDb();
+        if (db2) {
+          const proposalId = nanoid();
+          await db2.insert(proposals).values({
+            id: proposalId,
+            tenantId,
+            clientId: existingCompany.id,
+            title: `Proposta Inicial - ${existingCompany.name}`,
+            description: proposal.formatted,
+            status: 'draft',
+            subtotal: proposal.totalEstimate.min * 100,
+            discount: Math.round(proposal.totalEstimate.min * (proposal.volumeDiscount.percentage / 100) * 100),
+            discountPercent: Math.round(proposal.volumeDiscount.percentage),
+            taxes: 0,
+            totalValue: proposal.totalEstimate.max * 100,
+            taxRegime: 'simples_nacional',
+            validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          });
+        }
+      } catch (err: any) {
+        log.error("Failed to save initial proposal to DB", { error: err.message });
+      }
+
       return {
-        content: proposal.formatted,
+        content: proposal.formatted + `\n\n✅ Proposta salva! Acesse em **Precificação > Propostas** para visualizar e exportar em PDF.`,
         actions: [
           { type: "create_assessment", label: "Aprovar e Iniciar Avaliacao", params: { companyId: existingCompany.id, headcount: hc } },
         ],
@@ -1160,7 +1238,32 @@ async function generateFallbackResponse(
                     name: existingCompany.name, cnpj: memory.cnpj ? formatCNPJ(memory.cnpj) : undefined,
                     headcount: hc, sector: memory.sector, sectorName: memory.sectorName, riskLevel,
                   });
-                  fpContent = "\n\n" + generateFinalProposal(fpData, ip);
+                  const fpMarkdown = generateFinalProposal(fpData, ip);
+                  fpContent = "\n\n" + fpMarkdown;
+
+                  // Save final proposal to DB
+                  try {
+                    const finalProposalId = nanoid();
+                    await db2.insert(proposals).values({
+                      id: finalProposalId,
+                      tenantId,
+                      clientId: existingCompany.id,
+                      title: `Proposta Final - ${existingCompany.name}`,
+                      description: fpMarkdown,
+                      status: 'sent',
+                      subtotal: ip.totalEstimate.min * 100,
+                      discount: Math.round(ip.totalEstimate.min * (ip.volumeDiscount.percentage / 100) * 100),
+                      discountPercent: Math.round(ip.volumeDiscount.percentage),
+                      taxes: 0,
+                      totalValue: ip.totalEstimate.max * 100,
+                      taxRegime: 'simples_nacional',
+                      validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                      sentAt: new Date(),
+                    });
+                    fpContent += `\n\n✅ Proposta salva! Acesse em **Precificação > Propostas** para visualizar e exportar em PDF.`;
+                  } catch (err: any) {
+                    log.error("Failed to save final proposal to DB (inventory keyword)", { error: err.message });
+                  }
                 }
               } catch { /* continue without final proposal */ }
               return {
