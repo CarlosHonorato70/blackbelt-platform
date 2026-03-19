@@ -279,6 +279,132 @@ export const riskAssessmentsRouter = router({
       return { id, riskLevel };
     }),
 
+  // Atualizar item de risco (com verificação de tenant via assessment)
+  updateItem: tenantProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        assessmentId: z.string(),
+        riskFactorId: z.string().optional(),
+        severity: z.enum(["low", "medium", "high", "critical"]).optional(),
+        probability: z.enum(["rare", "unlikely", "possible", "likely", "certain"]).optional(),
+        affectedPopulation: z.number().optional(),
+        currentControls: z.string().optional(),
+        observations: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
+
+      // Verificar que a avaliação pertence ao tenant
+      const [assessment] = await db
+        .select()
+        .from(riskAssessments)
+        .where(
+          and(
+            eq(riskAssessments.id, input.assessmentId),
+            eq(riskAssessments.tenantId, ctx.tenantId!)
+          )
+        );
+
+      if (!assessment) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Assessment not found or access denied" });
+      }
+
+      const updateData: any = {};
+      if (input.riskFactorId !== undefined) updateData.riskFactorId = input.riskFactorId;
+      if (input.severity !== undefined) updateData.severity = input.severity;
+      if (input.probability !== undefined) updateData.probability = input.probability;
+      if (input.affectedPopulation !== undefined) updateData.affectedPopulation = input.affectedPopulation;
+      if (input.currentControls !== undefined) updateData.currentControls = input.currentControls;
+      if (input.observations !== undefined) updateData.observations = input.observations;
+
+      // Recalcular nível de risco se severity ou probability mudaram
+      if (input.severity || input.probability) {
+        // Buscar item atual para pegar valores existentes
+        const [currentItem] = await db
+          .select()
+          .from(riskAssessmentItems)
+          .where(eq(riskAssessmentItems.id, input.id));
+
+        if (currentItem) {
+          const sev = input.severity || currentItem.severity;
+          const prob = input.probability || currentItem.probability;
+          const severityScore = { low: 1, medium: 2, high: 3, critical: 4 }[sev];
+          const probabilityScore = { rare: 1, unlikely: 2, possible: 3, likely: 4, certain: 5 }[prob];
+          const riskScore = severityScore * probabilityScore;
+
+          let riskLevel: "low" | "medium" | "high" | "critical";
+          if (riskScore <= 4) riskLevel = "low";
+          else if (riskScore <= 8) riskLevel = "medium";
+          else if (riskScore <= 12) riskLevel = "high";
+          else riskLevel = "critical";
+
+          updateData.riskLevel = riskLevel;
+        }
+      }
+
+      await db
+        .update(riskAssessmentItems)
+        .set(updateData)
+        .where(
+          and(
+            eq(riskAssessmentItems.id, input.id),
+            eq(riskAssessmentItems.assessmentId, input.assessmentId)
+          )
+        );
+
+      return { success: true };
+    }),
+
+  // Deletar item de risco (com verificação de tenant via assessment)
+  deleteItem: tenantProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        assessmentId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
+
+      // Verificar que a avaliação pertence ao tenant
+      const [assessment] = await db
+        .select()
+        .from(riskAssessments)
+        .where(
+          and(
+            eq(riskAssessments.id, input.assessmentId),
+            eq(riskAssessments.tenantId, ctx.tenantId!)
+          )
+        );
+
+      if (!assessment) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Assessment not found or access denied" });
+      }
+
+      await db
+        .delete(riskAssessmentItems)
+        .where(
+          and(
+            eq(riskAssessmentItems.id, input.id),
+            eq(riskAssessmentItems.assessmentId, input.assessmentId)
+          )
+        );
+
+      return { success: true };
+    }),
+
   // Listar categorias de risco (dados de referência - apenas autenticado)
   listCategories: protectedProcedure
     .input(z.object({}))
