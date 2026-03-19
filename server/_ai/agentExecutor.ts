@@ -16,8 +16,54 @@ import { agentActions } from "../../drizzle/schema_agent";
 import { log } from "../_core/logger";
 
 // ============================================================================
-// STEP 2: Create COPSOQ-II Assessment + Simulate 5 Employee Responses
+// STEP 2: Create COPSOQ-II Assessment + Simulate Employee Responses (actual headcount)
 // ============================================================================
+
+// Base employee archetypes used to generate realistic variation
+const BASE_PROFILES = [
+  { name: "Maria Silva", position: "Atendente", gender: "female", age: "26-35", years: "1-3", profile: { stress: 3, autonomy: 3, support: 4, leadership: 3, community: 4, meaning: 4, trust: 3, justice: 3, insecurity: 2, mental: 3, burnout: 3, violence: 1 } },
+  { name: "João Santos", position: "Caixa", gender: "male", age: "36-45", years: "3-5", profile: { stress: 4, autonomy: 2, support: 3, leadership: 2, community: 3, meaning: 3, trust: 2, justice: 2, insecurity: 4, mental: 4, burnout: 4, violence: 2 } },
+  { name: "Ana Oliveira", position: "Repositora", gender: "female", age: "18-25", years: "<1", profile: { stress: 2, autonomy: 4, support: 4, leadership: 4, community: 4, meaning: 4, trust: 4, justice: 4, insecurity: 1, mental: 2, burnout: 2, violence: 1 } },
+  { name: "Carlos Souza", position: "Gerente", gender: "male", age: "46-55", years: "5-10", profile: { stress: 4, autonomy: 4, support: 3, leadership: 3, community: 3, meaning: 4, trust: 3, justice: 3, insecurity: 2, mental: 3, burnout: 3, violence: 1 } },
+  { name: "Fernanda Lima", position: "Auxiliar", gender: "female", age: "26-35", years: "1-3", profile: { stress: 4, autonomy: 2, support: 2, leadership: 2, community: 3, meaning: 3, trust: 2, justice: 2, insecurity: 4, mental: 4, burnout: 4, violence: 3 } },
+  { name: "Roberto Almeida", position: "Supervisor", gender: "male", age: "36-45", years: "5-10", profile: { stress: 3, autonomy: 3, support: 3, leadership: 3, community: 3, meaning: 3, trust: 3, justice: 3, insecurity: 3, mental: 3, burnout: 3, violence: 1 } },
+  { name: "Lucia Costa", position: "Recepcionista", gender: "female", age: "26-35", years: "1-3", profile: { stress: 3, autonomy: 2, support: 3, leadership: 3, community: 4, meaning: 3, trust: 3, justice: 3, insecurity: 3, mental: 3, burnout: 3, violence: 1 } },
+  { name: "Pedro Martins", position: "Operador", gender: "male", age: "18-25", years: "<1", profile: { stress: 3, autonomy: 2, support: 3, leadership: 2, community: 3, meaning: 3, trust: 2, justice: 2, insecurity: 4, mental: 3, burnout: 3, violence: 2 } },
+];
+
+const FIRST_NAMES_M = ["André", "Bruno", "Diego", "Eduardo", "Felipe", "Gabriel", "Henrique", "Igor", "Lucas", "Marcos", "Nelson", "Paulo", "Rafael", "Thiago", "Victor"];
+const FIRST_NAMES_F = ["Amanda", "Bruna", "Camila", "Daniela", "Elaine", "Fabiana", "Giovana", "Helena", "Isabela", "Juliana", "Karen", "Larissa", "Mariana", "Natalia", "Patricia"];
+const LAST_NAMES = ["Silva", "Santos", "Oliveira", "Souza", "Lima", "Pereira", "Costa", "Ferreira", "Rodrigues", "Almeida", "Nascimento", "Carvalho", "Araújo", "Gomes", "Ribeiro"];
+const POSITIONS = ["Atendente", "Auxiliar", "Operador", "Assistente", "Analista", "Técnico", "Vendedor", "Caixa", "Estoquista", "Recepcionista"];
+const AGE_GROUPS = ["18-25", "26-35", "36-45", "46-55"];
+const YEAR_GROUPS = ["<1", "1-3", "3-5", "5-10"];
+
+function generateSimulatedEmployee(index: number): typeof BASE_PROFILES[0] {
+  if (index < BASE_PROFILES.length) return BASE_PROFILES[index];
+
+  // Generate a new varied employee based on archetypes
+  const base = BASE_PROFILES[index % BASE_PROFILES.length];
+  const isFemale = Math.random() > 0.5;
+  const names = isFemale ? FIRST_NAMES_F : FIRST_NAMES_M;
+  const firstName = names[index % names.length];
+  const lastName = LAST_NAMES[index % LAST_NAMES.length];
+
+  // Add controlled random variation to profile (-1 to +1 per dimension)
+  const variedProfile: Record<string, number> = {};
+  for (const [key, val] of Object.entries(base.profile)) {
+    const variation = Math.floor(Math.random() * 3) - 1; // -1, 0, or +1
+    variedProfile[key] = Math.max(1, Math.min(5, val + variation));
+  }
+
+  return {
+    name: `${firstName} ${lastName}`,
+    position: POSITIONS[index % POSITIONS.length],
+    gender: isFemale ? "female" : "male",
+    age: AGE_GROUPS[index % AGE_GROUPS.length],
+    years: YEAR_GROUPS[index % YEAR_GROUPS.length],
+    profile: variedProfile as typeof base.profile,
+  };
+}
 
 export async function executeCreateAssessment(
   tenantId: string,
@@ -38,20 +84,14 @@ export async function executeCreateAssessment(
       status: "in_progress",
     });
 
-    // Simulate employee responses
-    const employees = [
-      { name: "Maria Silva", position: "Atendente", gender: "female", age: "26-35", years: "1-3", profile: { stress: 3, autonomy: 3, support: 4, leadership: 3, community: 4, meaning: 4, trust: 3, justice: 3, insecurity: 2, mental: 3, burnout: 3, violence: 1 } },
-      { name: "João Santos", position: "Caixa", gender: "male", age: "36-45", years: "3-5", profile: { stress: 4, autonomy: 2, support: 3, leadership: 2, community: 3, meaning: 3, trust: 2, justice: 2, insecurity: 4, mental: 4, burnout: 4, violence: 2 } },
-      { name: "Ana Oliveira", position: "Repositora", gender: "female", age: "18-25", years: "<1", profile: { stress: 2, autonomy: 4, support: 4, leadership: 4, community: 4, meaning: 4, trust: 4, justice: 4, insecurity: 1, mental: 2, burnout: 2, violence: 1 } },
-      { name: "Carlos Souza", position: "Gerente", gender: "male", age: "46-55", years: "5-10", profile: { stress: 4, autonomy: 4, support: 3, leadership: 3, community: 3, meaning: 4, trust: 3, justice: 3, insecurity: 2, mental: 3, burnout: 3, violence: 1 } },
-      { name: "Fernanda Lima", position: "Auxiliar", gender: "female", age: "26-35", years: "1-3", profile: { stress: 4, autonomy: 2, support: 2, leadership: 2, community: 3, meaning: 3, trust: 2, justice: 2, insecurity: 4, mental: 4, burnout: 4, violence: 3 } },
-    ];
-
-    const actualCount = Math.min(headcount, employees.length);
+    // Simulate responses for the actual headcount (not just 5)
+    const actualCount = Math.max(1, headcount);
     const dimensionTotals: Record<string, number[]> = {};
+    const employeeProfiles: Array<{ profile: Record<string, number> }> = [];
 
     for (let i = 0; i < actualCount; i++) {
-      const emp = employees[i];
+      const emp = generateSimulatedEmployee(i);
+      employeeProfiles.push({ profile: emp.profile });
       const p = emp.profile;
 
       // Generate responses object (76 questions)
@@ -132,7 +172,7 @@ export async function executeCreateAssessment(
     const riskDist = { low: 0, medium: 0, high: 0, critical: 0 };
     // Calculate per-employee risk
     for (let i = 0; i < actualCount; i++) {
-      const p = employees[i].profile;
+      const p = employeeProfiles[i].profile;
       const avg = Object.values(p).reduce((a, b) => a + b, 0) / Object.values(p).length;
       const score = Math.round(((5 - avg) / 4) * 100);
       if (score < 30) riskDist.critical++;

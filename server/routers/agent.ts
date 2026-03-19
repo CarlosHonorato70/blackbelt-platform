@@ -347,7 +347,7 @@ function generatePricingProposal(companyData: CompanyPricingData): PricingPropos
   const formatDate = (d: Date) => d.toLocaleDateString("pt-BR");
   const formatCurrency = (v: number) => `R$ ${v.toLocaleString("pt-BR")}`;
 
-  let formatted = `---\n\n## PROPOSTA COMERCIAL — Avaliacao de Riscos Psicossociais (NR-01)\n\n`;
+  let formatted = `---\n\n## PROPOSTA INICIAL — Estimativa de Investimento (NR-01)\n\n`;
   formatted += `**Data:** ${formatDate(today)}\n`;
   formatted += `**Validade:** ${formatDate(validUntil)} (30 dias)\n\n`;
   formatted += `---\n\n### 1. DADOS DA EMPRESA\n\n`;
@@ -405,7 +405,7 @@ function generatePricingProposal(companyData: CompanyPricingData): PricingPropos
   formatted += `2. Assinatura do contrato de prestacao de servicos\n`;
   formatted += `3. Agendamento do kickoff e cronograma\n`;
   formatted += `4. Inicio da avaliacao COPSOQ-II\n\n`;
-  formatted += `---\n\n*Proposta gerada automaticamente pela plataforma BlackBelt.*\n*Para duvidas: contato@blackbeltconsultoria.com*`;
+  formatted += `---\n\n*Esta e uma estimativa inicial baseada no porte e setor da empresa. A proposta final detalhada sera gerada apos a conclusao da avaliacao COPSOQ-II e elaboracao do plano de acao.*\n\n*Proposta gerada automaticamente pela plataforma BlackBelt.*\n*Para duvidas: contato@blackbeltconsultoria.com*`;
 
   return {
     companyName: name,
@@ -424,6 +424,262 @@ function generatePricingProposal(companyData: CompanyPricingData): PricingPropos
       : "40% contrato, 30% inicio, 30% conclusao",
     validity: formatDate(validUntil),
     formatted,
+  };
+}
+
+// ============================================================================
+// FINAL PROPOSAL: Detailed commercial proposal after COPSOQ + Action Plan
+// ============================================================================
+
+interface FinalProposalData {
+  companyName: string;
+  cnpj?: string;
+  headcount: number;
+  sectorName?: string;
+  riskLevel?: string;
+  // COPSOQ results
+  copsoqScores: Record<string, number>;
+  overallRisk: string;
+  criticalDimensions: string[];
+  totalRespondents: number;
+  // Risk inventory
+  riskItemsCount: number;
+  riskBreakdown: { critical: number; high: number; medium: number };
+  // Action plans
+  actionPlansCount: number;
+  actionPlanPriorities: { urgent: number; high: number; medium: number };
+  // Milestones
+  milestones: Array<{ title: string; targetDate: Date; status: string }>;
+}
+
+function generateFinalProposal(data: FinalProposalData, initialProposal: PricingProposal): string {
+  const today = new Date();
+  const validUntil = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const formatDate = (d: Date) => d.toLocaleDateString("pt-BR");
+  const formatCurrency = (v: number) => `R$ ${v.toLocaleString("pt-BR")}`;
+
+  const dimLabels: Record<string, string> = {
+    demanda: "Exigencias Quantitativas", controle: "Influencia no Trabalho", apoio: "Apoio Social",
+    lideranca: "Qualidade da Lideranca", comunidade: "Comunidade Social", significado: "Significado do Trabalho",
+    confianca: "Confianca Horizontal", justica: "Justica e Respeito", inseguranca: "Inseguranca no Trabalho",
+    saudeMental: "Saude Mental Geral", burnout: "Burnout", violencia: "Violencia/Assedio",
+  };
+
+  const riskLabel: Record<string, string> = { low: "BAIXO", medium: "MODERADO", high: "ALTO", critical: "CRITICO" };
+  const riskEmoji: Record<string, string> = { low: "🟢", medium: "🟡", high: "🟠", critical: "🔴" };
+
+  let f = `---\n\n## PROPOSTA COMERCIAL FINAL — Gestao de Riscos Psicossociais (NR-01)\n\n`;
+  f += `**Data:** ${formatDate(today)}\n`;
+  f += `**Validade:** ${formatDate(validUntil)} (30 dias)\n\n`;
+
+  // Section 1: Company data
+  f += `---\n\n### 1. DADOS DA EMPRESA\n\n`;
+  f += `| Campo | Valor |\n|-------|-------|\n`;
+  f += `| **Empresa** | ${data.companyName} |\n`;
+  if (data.cnpj) f += `| **CNPJ** | ${data.cnpj} |\n`;
+  f += `| **Colaboradores** | ${data.headcount} |\n`;
+  if (data.sectorName) f += `| **Setor** | ${data.sectorName} |\n`;
+  f += `\n`;
+
+  // Section 2: COPSOQ Results Summary
+  f += `### 2. RESULTADOS DA AVALIACAO COPSOQ-II\n\n`;
+  f += `- **Respondentes:** ${data.totalRespondents} funcionarios\n`;
+  f += `- **Risco Geral:** ${riskEmoji[data.overallRisk] || "🟡"} **${riskLabel[data.overallRisk] || data.overallRisk}**\n`;
+  if (data.criticalDimensions.length > 0) {
+    f += `- **Dimensoes Criticas:** ${data.criticalDimensions.map(d => dimLabels[d] || d).join(", ")}\n`;
+  }
+  f += `\n`;
+  f += `| Dimensao | Score | Nivel |\n|----------|-------|-------|\n`;
+  for (const [dim, score] of Object.entries(data.copsoqScores)) {
+    const level = score < 30 ? "🔴 Critico" : score < 50 ? "🟠 Alto" : score < 70 ? "🟡 Moderado" : "🟢 Baixo";
+    f += `| ${dimLabels[dim] || dim} | ${score}/100 | ${level} |\n`;
+  }
+  f += `\n`;
+
+  // Section 3: Risks Identified
+  f += `### 3. RISCOS IDENTIFICADOS\n\n`;
+  f += `- **Total de fatores de risco:** ${data.riskItemsCount}\n`;
+  if (data.riskBreakdown.critical > 0) f += `  - 🔴 Criticos: ${data.riskBreakdown.critical}\n`;
+  if (data.riskBreakdown.high > 0) f += `  - 🟠 Altos: ${data.riskBreakdown.high}\n`;
+  if (data.riskBreakdown.medium > 0) f += `  - 🟡 Moderados: ${data.riskBreakdown.medium}\n`;
+  f += `\n`;
+
+  // Section 4: Action Plans
+  f += `### 4. PLANOS DE ACAO DEFINIDOS\n\n`;
+  f += `- **Total de acoes:** ${data.actionPlansCount}\n`;
+  if (data.actionPlanPriorities.urgent > 0) f += `  - Urgentes: ${data.actionPlanPriorities.urgent}\n`;
+  if (data.actionPlanPriorities.high > 0) f += `  - Alta prioridade: ${data.actionPlanPriorities.high}\n`;
+  if (data.actionPlanPriorities.medium > 0) f += `  - Media prioridade: ${data.actionPlanPriorities.medium}\n`;
+  f += `\n`;
+
+  // Section 5: Recommended Services (based on actual findings)
+  f += `### 5. SERVICOS RECOMENDADOS\n\n`;
+
+  const isHighCritical = data.overallRisk === "high" || data.overallRisk === "critical";
+  const hasLeadershipIssue = data.copsoqScores.lideranca !== undefined && data.copsoqScores.lideranca < 50;
+  const manyActionPlans = data.actionPlansCount >= 6;
+
+  // Determine recommended package
+  let recommendedPkg = initialProposal.recommendedPackage;
+  if (isHighCritical) recommendedPkg = "Pacote Premium";
+
+  f += `| Servico | Descricao | Investimento |\n|---------|-----------|-------------|\n`;
+
+  // Core package
+  const pkgMin = isHighCritical ? Math.max(initialProposal.totalEstimate.min, 5500) : initialProposal.totalEstimate.min;
+  const pkgMax = isHighCritical ? Math.max(initialProposal.totalEstimate.max, 8500) : initialProposal.totalEstimate.max;
+  f += `| **${recommendedPkg}** | Avaliacao completa + inventario + plano de acao | ${formatCurrency(pkgMin)} - ${formatCurrency(pkgMax)} |\n`;
+  f += `| **Palestra de Sensibilizacao** | Palestra presencial sobre riscos psicossociais (2h) | R$ 800 - R$ 1.500 |\n`;
+  f += `| **Workshop Pratico** | Oficina pratica para equipes (4h) | R$ 1.200 - R$ 2.800 |\n`;
+
+  if (hasLeadershipIssue) {
+    f += `| **Treinamento de Liderancas** | Capacitacao em gestao humanizada e CNV (16h) | R$ 2.500 - R$ 4.500 |\n`;
+  }
+  if (manyActionPlans) {
+    f += `| **Consultoria Mensal** | Acompanhamento e implementacao das acoes | R$ 1.500 - R$ 4.000/mes |\n`;
+  }
+
+  // Calculate total investment
+  let totalMin = pkgMin + 800 + 1200; // package + palestra + workshop
+  let totalMax = pkgMax + 1500 + 2800;
+  if (hasLeadershipIssue) { totalMin += 2500; totalMax += 4500; }
+  if (manyActionPlans) { totalMin += 1500; totalMax += 4000; }
+
+  f += `| | | |\n`;
+  f += `| **INVESTIMENTO TOTAL** | | **${formatCurrency(totalMin)} - ${formatCurrency(totalMax)}** |\n`;
+  f += `\n`;
+
+  // Section 6: ROI Estimate
+  f += `### 6. ESTIMATIVA DE RETORNO (ROI)\n\n`;
+  const absenteeismCostPerDay = 400;
+  const estimatedDaysSaved = isHighCritical ? Math.round(data.headcount * 3.5) : Math.round(data.headcount * 2);
+  const absenteeismSaving = absenteeismCostPerDay * estimatedDaysSaved;
+  const turnoverCostPerEmployee = 3000;
+  const turnoverReduction = isHighCritical ? Math.round(data.headcount * 0.08) : Math.round(data.headcount * 0.04);
+  const turnoverSaving = turnoverCostPerEmployee * turnoverReduction;
+  const totalROI = absenteeismSaving + turnoverSaving;
+
+  f += `| Indicador | Estimativa |\n|-----------|------------|\n`;
+  f += `| **Custo medio absenteismo** | R$ ${absenteeismCostPerDay}/dia por funcionario |\n`;
+  f += `| **Dias de absenteismo evitados (ano)** | ~${estimatedDaysSaved} dias |\n`;
+  f += `| **Economia com absenteismo** | ${formatCurrency(absenteeismSaving)}/ano |\n`;
+  f += `| **Reducao estimada de turnover** | ~${turnoverReduction} desligamentos evitados |\n`;
+  f += `| **Economia com turnover** | ${formatCurrency(turnoverSaving)}/ano |\n`;
+  f += `| **ROI estimado total** | **${formatCurrency(totalROI)}/ano** |\n`;
+  f += `\n`;
+
+  // Section 7: Timeline
+  f += `### 7. CRONOGRAMA\n\n`;
+  if (data.milestones.length > 0) {
+    f += `| Etapa | Prazo | Status |\n|-------|-------|--------|\n`;
+    for (const m of data.milestones) {
+      const statusIcon = m.status === "completed" ? "✅" : m.status === "in_progress" ? "🔄" : "⏳";
+      f += `| ${m.title} | ${formatDate(m.targetDate)} | ${statusIcon} |\n`;
+    }
+  } else {
+    f += `*Cronograma sera definido apos aprovacao.*\n`;
+  }
+  f += `\n`;
+
+  // Section 8: Payment conditions
+  f += `### 8. CONDICOES DE PAGAMENTO\n\n`;
+  f += `- **40%** na assinatura do contrato\n`;
+  f += `- **30%** no inicio dos trabalhos\n`;
+  f += `- **30%** na entrega final\n\n`;
+
+  // Section 9: Next steps
+  f += `### 9. PROXIMOS PASSOS\n\n`;
+  f += `1. Aprovacao desta proposta\n`;
+  f += `2. Assinatura do contrato de prestacao de servicos\n`;
+  f += `3. Inicio imediato da implementacao conforme cronograma\n\n`;
+
+  f += `---\n\n*Proposta gerada com base nos resultados reais da avaliacao COPSOQ-II e plano de acao elaborado.*\n*BlackBelt Consultoria SST — contato@blackbeltconsultoria.com*`;
+
+  return f;
+}
+
+// Helper: fetch data needed for final proposal from DB
+async function buildFinalProposalData(
+  companyId: string,
+  companyName: string,
+  cnpj: string | undefined,
+  headcount: number,
+  sectorName?: string,
+): Promise<FinalProposalData | null> {
+  const db2 = await getDb();
+  if (!db2) return null;
+
+  const {
+    copsoqReports: cReports, copsoqAssessments: cAssessments,
+    riskAssessmentItems: raItems, riskAssessments: riskAss,
+    actionPlans: aPlans, complianceMilestones: cMilestones,
+  } = await import("../../drizzle/schema_nr01");
+
+  // Get COPSOQ report
+  const [report] = await db2.select().from(cReports).where(eq(cReports.tenantId, companyId)).limit(1);
+  if (!report) return null;
+
+  const copsoqScores: Record<string, number> = {
+    demanda: report.averageDemandScore || 50,
+    controle: report.averageControlScore || 50,
+    apoio: report.averageSupportScore || 50,
+    lideranca: report.averageLeadershipScore || 50,
+    comunidade: report.averageCommunityScore || 50,
+    significado: report.averageMeaningScore || 50,
+    confianca: report.averageTrustScore || 50,
+    justica: report.averageJusticeScore || 50,
+    inseguranca: report.averageInsecurityScore || 50,
+    saudeMental: report.averageMentalHealthScore || 50,
+    burnout: report.averageBurnoutScore || 50,
+    violencia: report.averageViolenceScore || 50,
+  };
+  const avgOverall = Object.values(copsoqScores).reduce((a, b) => a + b, 0) / Object.keys(copsoqScores).length;
+  const overallRisk = avgOverall < 30 ? "critical" : avgOverall < 50 ? "high" : avgOverall < 70 ? "medium" : "low";
+  const criticalDimensions = Object.entries(copsoqScores).filter(([, s]) => s < 40).map(([d]) => d);
+
+  // Get risk items
+  const [ra] = await db2.select().from(riskAss).where(eq(riskAss.tenantId, companyId)).limit(1);
+  let riskItemsCount = 0;
+  const riskBreakdown = { critical: 0, high: 0, medium: 0 };
+  if (ra) {
+    const items = await db2.select().from(raItems).where(eq(raItems.assessmentId, ra.id));
+    riskItemsCount = items.length;
+    for (const it of items) {
+      if (it.severity === "critical") riskBreakdown.critical++;
+      else if (it.severity === "high") riskBreakdown.high++;
+      else riskBreakdown.medium++;
+    }
+  }
+
+  // Get action plans
+  const plans = await db2.select().from(aPlans).where(eq(aPlans.tenantId, companyId));
+  const actionPlansCount = plans.length;
+  const actionPlanPriorities = { urgent: 0, high: 0, medium: 0 };
+  for (const p of plans) {
+    if (p.priority === "urgent") actionPlanPriorities.urgent++;
+    else if (p.priority === "high") actionPlanPriorities.high++;
+    else actionPlanPriorities.medium++;
+  }
+
+  // Get milestones
+  const milestones = await db2.select().from(cMilestones)
+    .where(eq(cMilestones.tenantId, companyId));
+
+  return {
+    companyName,
+    cnpj,
+    headcount,
+    sectorName,
+    riskLevel: overallRisk,
+    copsoqScores,
+    overallRisk,
+    criticalDimensions,
+    totalRespondents: report.totalRespondents || headcount,
+    riskItemsCount,
+    riskBreakdown,
+    actionPlansCount,
+    actionPlanPriorities,
+    milestones: milestones.map(m => ({ title: m.title, targetDate: m.targetDate, status: m.status })),
   };
 }
 
@@ -719,8 +975,27 @@ async function generateFallbackResponse(
           if (latestAssessment) {
             const result = await executeGenerateInventoryAndPlan(existingCompany.id, latestAssessment.id, existingCompany.name, memory.headcount || 5);
             if (result.success) {
+              // Auto-generate final proposal after action plan
+              let finalProposalContent = "";
+              try {
+                const hc = memory.headcount || 5;
+                const fpData = await buildFinalProposalData(
+                  existingCompany.id, existingCompany.name,
+                  memory.cnpj ? formatCNPJ(memory.cnpj) : undefined,
+                  hc, memory.sectorName,
+                );
+                if (fpData) {
+                  const riskLevel = memory.highRisk ? "high" as const : "low" as const;
+                  const initialProposal = generatePricingProposal({
+                    name: existingCompany.name, cnpj: memory.cnpj ? formatCNPJ(memory.cnpj) : undefined,
+                    headcount: hc, sector: memory.sector, sectorName: memory.sectorName, riskLevel,
+                  });
+                  finalProposalContent = "\n\n" + generateFinalProposal(fpData, initialProposal);
+                }
+              } catch { /* final proposal generation failed, continue without it */ }
+
               return {
-                content: result.message + `\n\n**Proxima etapa:** Criar programa de treinamento sobre riscos psicossociais.\nClique no botao abaixo ou diga **"sim"** para continuar.`,
+                content: result.message + finalProposalContent + `\n\n**Proxima etapa:** Criar programa de treinamento sobre riscos psicossociais.\nClique no botao abaixo ou diga **"sim"** para continuar.`,
                 actions: [{ type: "create_training", label: "Criar Programa de Treinamento", params: { companyId: existingCompany.id } }],
               };
             }
@@ -778,10 +1053,41 @@ async function generateFallbackResponse(
     }
   }
 
-  // ── 3b. Pricing proposal request ──
+  // ── 3b-1. Final proposal request ──
+  const wantsFinalProposal = msg.includes("proposta final") || msg.includes("proposta detalhada") || msg.includes("proposta completa");
+
+  if (wantsFinalProposal && memory.cnpj) {
+    const existingCompany = await findCompanyByCNPJ();
+    if (existingCompany) {
+      const hc = memory.headcount || 10;
+      const riskLevel = memory.highRisk ? "high" as const : "low" as const;
+      const fpData = await buildFinalProposalData(
+        existingCompany.id, existingCompany.name,
+        formatCNPJ(memory.cnpj), hc, memory.sectorName,
+      );
+      if (fpData) {
+        const initialProposal = generatePricingProposal({
+          name: existingCompany.name, cnpj: formatCNPJ(memory.cnpj),
+          headcount: hc, sector: memory.sector, sectorName: memory.sectorName, riskLevel,
+        });
+        const content = generateFinalProposal(fpData, initialProposal);
+        return {
+          content,
+          actions: [{ type: "create_training", label: "Criar Programa de Treinamento", params: { companyId: existingCompany.id } }],
+        };
+      }
+      // No COPSOQ data yet — tell user to complete assessment first
+      return {
+        content: `A **Proposta Comercial Final** so pode ser gerada apos a conclusao da avaliacao COPSOQ-II e elaboracao do plano de acao.\n\nDiga **"sim"** para iniciar o processo, ou **"proposta"** para ver a estimativa inicial.`,
+        actions: [],
+      };
+    }
+  }
+
+  // ── 3b-2. Initial pricing proposal request ──
   const wantsPricing = msg.includes("proposta") || msg.includes("preco") || msg.includes("preço") || msg.includes("orcamento") || msg.includes("orçamento") || msg.includes("valor") || msg.includes("quanto custa") || msg.includes("pricing") || msg.includes("custo") || msg.includes("investimento") || msg.includes("pacote");
 
-  if (wantsPricing && memory.cnpj) {
+  if (wantsPricing && !wantsFinalProposal && memory.cnpj) {
     const existingCompany = await findCompanyByCNPJ();
     if (existingCompany) {
       const hc = memory.headcount || 10;
@@ -839,10 +1145,30 @@ async function generateFallbackResponse(
           const [la] = await db2.select().from(cAssessments).where(eq(cAssessments.tenantId, existingCompany.id)).orderBy(desc(cAssessments.createdAt)).limit(1);
           if (la) {
             const result = await executeGenerateInventoryAndPlan(existingCompany.id, la.id, existingCompany.name, memory.headcount || 5);
-            return {
-              content: result.message + (result.success ? `\n\n**Proxima etapa:** Criar programa de treinamento.` : ""),
-              actions: result.success ? [{ type: "create_training", label: "Criar Programa de Treinamento", params: { companyId: existingCompany.id } }] : [],
-            };
+            if (result.success) {
+              // Auto-generate final proposal
+              let fpContent = "";
+              try {
+                const hc = memory.headcount || 5;
+                const fpData = await buildFinalProposalData(
+                  existingCompany.id, existingCompany.name,
+                  memory.cnpj ? formatCNPJ(memory.cnpj) : undefined, hc, memory.sectorName,
+                );
+                if (fpData) {
+                  const riskLevel = memory.highRisk ? "high" as const : "low" as const;
+                  const ip = generatePricingProposal({
+                    name: existingCompany.name, cnpj: memory.cnpj ? formatCNPJ(memory.cnpj) : undefined,
+                    headcount: hc, sector: memory.sector, sectorName: memory.sectorName, riskLevel,
+                  });
+                  fpContent = "\n\n" + generateFinalProposal(fpData, ip);
+                }
+              } catch { /* continue without final proposal */ }
+              return {
+                content: result.message + fpContent + `\n\n**Proxima etapa:** Criar programa de treinamento.`,
+                actions: [{ type: "create_training", label: "Criar Programa de Treinamento", params: { companyId: existingCompany.id } }],
+              };
+            }
+            return { content: result.message, actions: [] };
           }
         }
       }
