@@ -10,7 +10,7 @@ import { getNR01Status, getCompanyStrategy } from "../_ai/agentOrchestrator";
 import { scanTenantAlerts } from "../_ai/agentAlerts";
 import { buildAgentSystemPrompt, buildContextMessage } from "../_ai/prompts/agent-system";
 import { processCNPJForAgent, formatCNPJ, sectorLabel, isHighRiskSector } from "../_core/cnpjLookup";
-import { tenants, proposals } from "../../drizzle/schema";
+import { tenants, proposals, proposalItems } from "../../drizzle/schema";
 import { complianceChecklist, complianceMilestones } from "../../drizzle/schema_nr01";
 import { executeCreateAssessment, executeGenerateInventoryAndPlan, executeCreateTraining, executeCompleteChecklist } from "../_ai/agentExecutor";
 import { log } from "../_core/logger";
@@ -697,6 +697,199 @@ async function buildFinalProposalData(
 }
 
 // ============================================================================
+// PROPOSAL PERSISTENCE HELPERS: Save proposals + items to DB
+// ============================================================================
+
+async function saveInitialProposal(
+  db2: any,
+  tenantId: string,
+  clientId: string,
+  companyName: string,
+  proposal: PricingProposal,
+  headcount: number,
+): Promise<string | null> {
+  try {
+    const proposalId = nanoid();
+    const perEmployeeRate = Math.round((proposal.pricePerEmployee.min + proposal.pricePerEmployee.max) / 2);
+    const diagnosticCost = perEmployeeRate * headcount;
+    const relatorioCost = Math.round(diagnosticCost * 0.15);
+    const planoCost = Math.round(diagnosticCost * 0.10);
+    const subtotalCalc = diagnosticCost + relatorioCost + planoCost;
+
+    await db2.insert(proposals).values({
+      id: proposalId,
+      tenantId,
+      clientId,
+      title: `Proposta Inicial NR-01 — ${companyName}`,
+      description: proposal.formatted,
+      status: 'draft',
+      subtotal: subtotalCalc * 100,
+      discount: Math.round(subtotalCalc * (proposal.volumeDiscount.percentage / 100) * 100),
+      discountPercent: Math.round(proposal.volumeDiscount.percentage),
+      taxes: 0,
+      totalValue: proposal.totalEstimate.max * 100,
+      taxRegime: 'simples_nacional',
+      validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+
+    // Insert initial proposal items
+    const initialItems = [
+      {
+        id: nanoid(), proposalId, serviceId: 'SVC-COPSOQ-DIAG',
+        serviceName: 'Diagnóstico Psicossocial COPSOQ-II',
+        quantity: headcount, unitPrice: perEmployeeRate * 100,
+        subtotal: diagnosticCost * 100, technicalHours: Math.max(8, Math.round(headcount * 0.5)),
+      },
+      {
+        id: nanoid(), proposalId, serviceId: 'SVC-RELATORIO',
+        serviceName: 'Relatório de Análise e Recomendações',
+        quantity: 1, unitPrice: relatorioCost * 100,
+        subtotal: relatorioCost * 100, technicalHours: 16,
+      },
+      {
+        id: nanoid(), proposalId, serviceId: 'SVC-PLANO-PRELIM',
+        serviceName: 'Plano de Ação Preliminar',
+        quantity: 1, unitPrice: planoCost * 100,
+        subtotal: planoCost * 100, technicalHours: 8,
+      },
+    ];
+
+    for (const item of initialItems) {
+      await db2.insert(proposalItems).values(item);
+    }
+
+    return proposalId;
+  } catch (err: any) {
+    log.error("Failed to save initial proposal to DB", { error: err.message });
+    return null;
+  }
+}
+
+async function saveFinalProposal(
+  db2: any,
+  tenantId: string,
+  clientId: string,
+  companyName: string,
+  fpMarkdown: string,
+  initialProposal: PricingProposal,
+  fpData: FinalProposalData,
+  headcount: number,
+): Promise<string | null> {
+  try {
+    const finalProposalId = nanoid();
+    const isHighCritical = fpData.overallRisk === "high" || fpData.overallRisk === "critical";
+    const hasLeadershipIssue = fpData.copsoqScores.lideranca !== undefined && fpData.copsoqScores.lideranca < 50;
+
+    // Calculate per-employee rate
+    const perEmployeeRate = Math.round((initialProposal.pricePerEmployee.min + initialProposal.pricePerEmployee.max) / 2);
+    const copsoqCost = perEmployeeRate * headcount;
+    const inventarioCost = Math.round(copsoqCost * 0.20);
+    const planoCost = Math.round(fpData.actionPlansCount * 350);
+    const treinamentoCost = Math.round(headcount * 120); // 8h training for all
+    const pgrPcmsoCost = 2500;
+    let totalCalc = copsoqCost + inventarioCost + planoCost + treinamentoCost + pgrPcmsoCost;
+
+    // Build items list
+    const items: Array<{
+      id: string; proposalId: string; serviceId: string; serviceName: string;
+      quantity: number; unitPrice: number; subtotal: number; technicalHours: number | null;
+    }> = [
+      {
+        id: nanoid(), proposalId: finalProposalId, serviceId: 'SVC-COPSOQ-FULL',
+        serviceName: 'Avaliação COPSOQ-II Completa',
+        quantity: headcount, unitPrice: perEmployeeRate * 100,
+        subtotal: copsoqCost * 100, technicalHours: Math.max(16, Math.round(headcount * 0.8)),
+      },
+      {
+        id: nanoid(), proposalId: finalProposalId, serviceId: 'SVC-INVENTARIO',
+        serviceName: 'Inventário de Riscos Psicossociais',
+        quantity: 1, unitPrice: inventarioCost * 100,
+        subtotal: inventarioCost * 100, technicalHours: 24,
+      },
+      {
+        id: nanoid(), proposalId: finalProposalId, serviceId: 'SVC-PLANO-DET',
+        serviceName: 'Plano de Ação Detalhado',
+        quantity: fpData.actionPlansCount, unitPrice: 350 * 100,
+        subtotal: planoCost * 100, technicalHours: Math.round(fpData.actionPlansCount * 4),
+      },
+      {
+        id: nanoid(), proposalId: finalProposalId, serviceId: 'SVC-TREINAMENTO',
+        serviceName: 'Programa de Treinamento (8h)',
+        quantity: headcount, unitPrice: 120 * 100,
+        subtotal: treinamentoCost * 100, technicalHours: 8,
+      },
+      {
+        id: nanoid(), proposalId: finalProposalId, serviceId: 'SVC-PGR-PCMSO',
+        serviceName: 'Integração PGR/PCMSO',
+        quantity: 1, unitPrice: pgrPcmsoCost * 100,
+        subtotal: pgrPcmsoCost * 100, technicalHours: 16,
+      },
+    ];
+
+    // Conditional items based on risk
+    if (isHighCritical) {
+      const acompCost = 1800;
+      totalCalc += acompCost * 4; // 4 quarters
+      items.push({
+        id: nanoid(), proposalId: finalProposalId, serviceId: 'SVC-ACOMPANHAMENTO',
+        serviceName: 'Acompanhamento Trimestral',
+        quantity: 4, unitPrice: acompCost * 100,
+        subtotal: (acompCost * 4) * 100, technicalHours: 32,
+      });
+    }
+
+    if (hasLeadershipIssue) {
+      const liderancaCost = 3500;
+      totalCalc += liderancaCost;
+      items.push({
+        id: nanoid(), proposalId: finalProposalId, serviceId: 'SVC-LIDERANCA',
+        serviceName: 'Treinamento de Lideranças',
+        quantity: 1, unitPrice: liderancaCost * 100,
+        subtotal: liderancaCost * 100, technicalHours: 16,
+      });
+    }
+
+    // Certification always included in final
+    const certCost = 1200;
+    totalCalc += certCost;
+    items.push({
+      id: nanoid(), proposalId: finalProposalId, serviceId: 'SVC-CERTIFICACAO',
+      serviceName: 'Certificação NR-01',
+      quantity: 1, unitPrice: certCost * 100,
+      subtotal: certCost * 100, technicalHours: 8,
+    });
+
+    const finalTotalValue = Math.max(totalCalc, initialProposal.totalEstimate.max * 1.3);
+
+    await db2.insert(proposals).values({
+      id: finalProposalId,
+      tenantId,
+      clientId,
+      title: `Proposta Final NR-01 — ${companyName}`,
+      description: fpMarkdown,
+      status: 'sent',
+      subtotal: Math.round(totalCalc * 100),
+      discount: Math.round(totalCalc * (initialProposal.volumeDiscount.percentage / 100) * 100),
+      discountPercent: Math.round(initialProposal.volumeDiscount.percentage),
+      taxes: 0,
+      totalValue: Math.round(finalTotalValue * 100),
+      taxRegime: 'simples_nacional',
+      validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      sentAt: new Date(),
+    });
+
+    for (const item of items) {
+      await db2.insert(proposalItems).values(item);
+    }
+
+    return finalProposalId;
+  } catch (err: any) {
+    log.error("Failed to save final proposal to DB", { error: err.message });
+    return null;
+  }
+}
+
+// ============================================================================
 // CONVERSATION MEMORY: Extract context from previous messages
 // ============================================================================
 
@@ -1006,28 +1199,10 @@ async function generateFallbackResponse(
                   const finalProposalMarkdown = generateFinalProposal(fpData, initialProposal);
                   finalProposalContent = "\n\n" + finalProposalMarkdown;
 
-                  // Save final proposal to DB
-                  try {
-                    const finalProposalId = nanoid();
-                    await db2.insert(proposals).values({
-                      id: finalProposalId,
-                      tenantId,
-                      clientId: existingCompany.id,
-                      title: `Proposta Final - ${existingCompany.name}`,
-                      description: finalProposalMarkdown,
-                      status: 'sent',
-                      subtotal: initialProposal.totalEstimate.min * 100,
-                      discount: Math.round(initialProposal.totalEstimate.min * (initialProposal.volumeDiscount.percentage / 100) * 100),
-                      discountPercent: Math.round(initialProposal.volumeDiscount.percentage),
-                      taxes: 0,
-                      totalValue: initialProposal.totalEstimate.max * 100,
-                      taxRegime: 'simples_nacional',
-                      validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-                      sentAt: new Date(),
-                    });
+                  // Save final proposal to DB with itemized services
+                  const savedId = await saveFinalProposal(db2, tenantId, existingCompany.id, existingCompany.name, finalProposalMarkdown, initialProposal, fpData, hc);
+                  if (savedId) {
                     finalProposalContent += `\n\n✅ Proposta salva! Acesse em **Precificação > Propostas** para visualizar e exportar em PDF.`;
-                  } catch (err: any) {
-                    log.error("Failed to save final proposal to DB (auto-continue)", { error: err.message });
                   }
                 }
               } catch { /* final proposal generation failed, continue without it */ }
@@ -1110,27 +1285,11 @@ async function generateFallbackResponse(
         });
         const content = generateFinalProposal(fpData, initialProposal);
 
-        // Save final proposal to DB
+        // Save final proposal to DB with itemized services
         try {
           const db2 = await getDb();
           if (db2) {
-            const finalProposalId = nanoid();
-            await db2.insert(proposals).values({
-              id: finalProposalId,
-              tenantId,
-              clientId: existingCompany.id,
-              title: `Proposta Final - ${existingCompany.name}`,
-              description: content,
-              status: 'sent',
-              subtotal: initialProposal.totalEstimate.min * 100,
-              discount: Math.round(initialProposal.totalEstimate.min * (initialProposal.volumeDiscount.percentage / 100) * 100),
-              discountPercent: Math.round(initialProposal.volumeDiscount.percentage),
-              taxes: 0,
-              totalValue: initialProposal.totalEstimate.max * 100,
-              taxRegime: 'simples_nacional',
-              validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-              sentAt: new Date(),
-            });
+            await saveFinalProposal(db2, tenantId, existingCompany.id, existingCompany.name, content, initialProposal, fpData, hc);
           }
         } catch (err: any) {
           log.error("Failed to save final proposal to DB", { error: err.message });
@@ -1166,26 +1325,11 @@ async function generateFallbackResponse(
         riskLevel,
       });
 
-      // Save initial proposal to DB
+      // Save initial proposal to DB with itemized services
       try {
         const db2 = await getDb();
         if (db2) {
-          const proposalId = nanoid();
-          await db2.insert(proposals).values({
-            id: proposalId,
-            tenantId,
-            clientId: existingCompany.id,
-            title: `Proposta Inicial - ${existingCompany.name}`,
-            description: proposal.formatted,
-            status: 'draft',
-            subtotal: proposal.totalEstimate.min * 100,
-            discount: Math.round(proposal.totalEstimate.min * (proposal.volumeDiscount.percentage / 100) * 100),
-            discountPercent: Math.round(proposal.volumeDiscount.percentage),
-            taxes: 0,
-            totalValue: proposal.totalEstimate.max * 100,
-            taxRegime: 'simples_nacional',
-            validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          });
+          await saveInitialProposal(db2, tenantId, existingCompany.id, existingCompany.name, proposal, hc);
         }
       } catch (err: any) {
         log.error("Failed to save initial proposal to DB", { error: err.message });
@@ -1254,28 +1398,10 @@ async function generateFallbackResponse(
                   const fpMarkdown = generateFinalProposal(fpData, ip);
                   fpContent = "\n\n" + fpMarkdown;
 
-                  // Save final proposal to DB
-                  try {
-                    const finalProposalId = nanoid();
-                    await db2.insert(proposals).values({
-                      id: finalProposalId,
-                      tenantId,
-                      clientId: existingCompany.id,
-                      title: `Proposta Final - ${existingCompany.name}`,
-                      description: fpMarkdown,
-                      status: 'sent',
-                      subtotal: ip.totalEstimate.min * 100,
-                      discount: Math.round(ip.totalEstimate.min * (ip.volumeDiscount.percentage / 100) * 100),
-                      discountPercent: Math.round(ip.volumeDiscount.percentage),
-                      taxes: 0,
-                      totalValue: ip.totalEstimate.max * 100,
-                      taxRegime: 'simples_nacional',
-                      validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-                      sentAt: new Date(),
-                    });
+                  // Save final proposal to DB with itemized services
+                  const savedFpId = await saveFinalProposal(db2, tenantId, existingCompany.id, existingCompany.name, fpMarkdown, ip, fpData, hc);
+                  if (savedFpId) {
                     fpContent += `\n\n✅ Proposta salva! Acesse em **Precificação > Propostas** para visualizar e exportar em PDF.`;
-                  } catch (err: any) {
-                    log.error("Failed to save final proposal to DB (inventory keyword)", { error: err.message });
                   }
                 }
               } catch { /* continue without final proposal */ }
