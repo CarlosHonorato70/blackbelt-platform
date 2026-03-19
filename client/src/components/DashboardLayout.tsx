@@ -74,7 +74,7 @@ type MenuItem = {
 const menuItems: MenuItem[] = [
   // --- Principal ---
   { icon: LayoutDashboard, label: "Dashboard", path: "/home", group: "Principal", companyVisible: true },
-  { icon: Brain, label: "Assistente IA", path: "/agent", group: "Principal", companyVisible: true },
+  { icon: Brain, label: "SamurAI", path: "/agent", group: "Principal", companyVisible: true },
   { icon: Building2, label: "Minhas Empresas", path: "/companies", consultantOnly: true, group: "Principal" },
   { icon: Users, label: "Colaboradores", path: "/people", group: "Principal", companyVisible: true },
   { icon: TrendingUp, label: "Dashboard Executivo", path: "/executive-dashboard", group: "Principal", companyVisible: true },

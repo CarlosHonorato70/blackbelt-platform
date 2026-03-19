@@ -11,7 +11,7 @@ import { Send, Bot, User, AlertTriangle, CheckCircle2, Clock, Brain, RefreshCw, 
 import { usePageMeta } from "@/hooks/usePageMeta";
 
 function AgentChatPage() {
-  usePageMeta({ title: "Assistente IA NR-01" });
+  usePageMeta({ title: "SamurAI — Assistente NR-01" });
 
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState("");
@@ -156,7 +156,7 @@ function AgentChatPage() {
           {/* Chat Header — fixed outside scroll */}
           <div className="flex items-center gap-2 bg-card border rounded-t-lg py-3 px-4 z-10 flex-shrink-0">
             <Brain className="h-5 w-5 text-primary" />
-            <h3 className="text-lg font-semibold">Assistente IA NR-01</h3>
+            <h3 className="text-lg font-semibold">SamurAI</h3>
             <div className="ml-auto flex items-center gap-2">
               <Button
                 variant="outline"
