@@ -104,9 +104,6 @@ function PageLoader() {
 }
 
 function SmartLanding() {
-  const { user, loading } = useAuth();
-  if (loading) return <PageLoader />;
-  if (user) return <Navigate to="/home" replace />;
   return <Landing />;
 }
 
