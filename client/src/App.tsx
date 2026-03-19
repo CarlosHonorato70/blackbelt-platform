@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { TRPCProvider } from "./lib/trpc-provider";
-import { AuthProvider } from "./_core/hooks/useAuth";
+import { AuthProvider, useAuth } from "./_core/hooks/useAuth";
 import { TenantProvider } from "./contexts/TenantContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ImpersonationProvider } from "./contexts/ImpersonationContext";
@@ -103,6 +103,13 @@ function PageLoader() {
   );
 }
 
+function SmartLanding() {
+  const { user, loading } = useAuth();
+  if (loading) return <PageLoader />;
+  if (user) return <Navigate to="/home" replace />;
+  return <Landing />;
+}
+
 function ProtectedPage({ children }: { children: React.ReactNode }) {
   return (
     <ProtectedRoute>
@@ -121,8 +128,8 @@ export default function App() {
             <ImpersonationBanner />
             <TenantProvider>
               <Routes>
-                {/* Landing page publica */}
-                <Route path="/" element={<Suspense fallback={<PageLoader />}><Landing /></Suspense>} />
+                {/* Landing page publica — redireciona para /home se logado */}
+                <Route path="/" element={<Suspense fallback={<PageLoader />}><SmartLanding /></Suspense>} />
 
                 {/* Rotas publicas */}
                 <Route path="/login" element={<Login />} />

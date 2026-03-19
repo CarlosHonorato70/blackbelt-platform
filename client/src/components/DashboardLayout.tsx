@@ -87,7 +87,7 @@ type MenuItem = {
 
 const menuItems: MenuItem[] = [
   // --- Geral ---
-  { icon: LayoutDashboard, label: "Dashboard", path: "/", group: "Geral", companyVisible: true },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/home", group: "Geral", companyVisible: true },
   { icon: Brain, label: "Assistente IA", path: "/agent", group: "Geral", companyVisible: true },
   { icon: ListChecks, label: "Fluxo Guiado", path: "/guided-workflow", group: "Geral", consultantOnly: true },
   { icon: Building2, label: "Todas as Empresas", path: "/tenants", adminOnly: true, group: "Geral" },
