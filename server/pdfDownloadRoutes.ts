@@ -22,14 +22,17 @@ import {
 import {
   riskAssessmentItems,
   riskAssessments,
+  riskFactors,
   copsoqReports,
+  copsoqResponses,
+  copsoqAssessments,
   complianceCertificates,
   complianceChecklist,
   actionPlans,
   trainingModules,
   trainingProgress,
 } from "../drizzle/schema_nr01";
-import { tenants, proposals } from "../drizzle/schema";
+import { tenants, proposals, proposalItems } from "../drizzle/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 
 const branding: PdfBranding = { companyName: "Black Belt Platform", primaryColor: "#1a365d" };
@@ -113,40 +116,27 @@ const pdfGenerators: Record<string, PdfGenerator> = {
         ],
       });
 
-      // Dimension columns from copsoqReports
+      // Dimension columns matching copsoq_reports schema (schema_nr01.ts)
       const dimensionFields = [
-        "quantitativeDemands", "workPace", "cognitiveStress", "emotionalDemands",
-        "influence", "developmentPossibilities", "meaningOfWork", "commitment",
-        "predictability", "rewards", "roleClarity", "roleConflicts",
-        "socialSupportColleagues", "socialSupportSupervisors", "socialCommunity",
-        "qualityOfLeadership", "trustManagement", "justice",
-        "harassmentThreats", "workLifeConflict", "burnout", "stress", "selfRatedHealth",
+        "averageDemandScore", "averageControlScore", "averageSupportScore",
+        "averageLeadershipScore", "averageCommunityScore", "averageMeaningScore",
+        "averageTrustScore", "averageJusticeScore", "averageInsecurityScore",
+        "averageMentalHealthScore", "averageBurnoutScore", "averageViolenceScore",
       ];
 
       const dimensionLabels: Record<string, string> = {
-        quantitativeDemands: "Demandas Quantitativas",
-        workPace: "Ritmo de Trabalho",
-        cognitiveStress: "Estresse Cognitivo",
-        emotionalDemands: "Demandas Emocionais",
-        influence: "Influencia",
-        developmentPossibilities: "Possib. Desenvolvimento",
-        meaningOfWork: "Significado do Trabalho",
-        commitment: "Compromisso",
-        predictability: "Previsibilidade",
-        rewards: "Recompensas",
-        roleClarity: "Clareza de Papel",
-        roleConflicts: "Conflitos de Papel",
-        socialSupportColleagues: "Apoio Social (colegas)",
-        socialSupportSupervisors: "Apoio Social (chefia)",
-        socialCommunity: "Comunidade Social",
-        qualityOfLeadership: "Qualidade da Lideranca",
-        trustManagement: "Confianca na Gestao",
-        justice: "Justica",
-        harassmentThreats: "Assedio/Ameacas",
-        workLifeConflict: "Conflito Trabalho-Vida",
-        burnout: "Burnout",
-        stress: "Estresse",
-        selfRatedHealth: "Saude Autoavaliada",
+        averageDemandScore: "Exigencias Quantitativas",
+        averageControlScore: "Influencia no Trabalho",
+        averageSupportScore: "Apoio Social",
+        averageLeadershipScore: "Qualidade da Lideranca",
+        averageCommunityScore: "Comunidade Social",
+        averageMeaningScore: "Significado do Trabalho",
+        averageTrustScore: "Confianca Horizontal",
+        averageJusticeScore: "Justica e Respeito",
+        averageInsecurityScore: "Inseguranca no Trabalho",
+        averageMentalHealthScore: "Saude Mental",
+        averageBurnoutScore: "Burnout",
+        averageViolenceScore: "Violencia e Assedio",
       };
 
       const rows = dimensionFields
@@ -210,7 +200,21 @@ const pdfGenerators: Record<string, PdfGenerator> = {
       return { buffer, filename: "inventario-riscos.pdf" };
     }
 
-    const items = await db.select().from(riskAssessmentItems)
+    // JOIN with riskFactors to get the actual risk name
+    const items = await db.select({
+      id: riskAssessmentItems.id,
+      hazardCode: riskAssessmentItems.hazardCode,
+      severity: riskAssessmentItems.severity,
+      probability: riskAssessmentItems.probability,
+      riskLevel: riskAssessmentItems.riskLevel,
+      affectedPopulation: riskAssessmentItems.affectedPopulation,
+      currentControls: riskAssessmentItems.currentControls,
+      observations: riskAssessmentItems.observations,
+      riskFactorName: riskFactors.name,
+      riskFactorDesc: riskFactors.description,
+    })
+      .from(riskAssessmentItems)
+      .leftJoin(riskFactors, eq(riskAssessmentItems.riskFactorId, riskFactors.id))
       .where(eq(riskAssessmentItems.assessmentId, assessment.id));
 
     const pdfData: InventoryPdfData = {
@@ -221,8 +225,8 @@ const pdfGenerators: Record<string, PdfGenerator> = {
       assessor: assessment.assessor || "Sistema IA",
       items: items.map((i: any) => ({
         hazardCode: i.hazardCode || "\u2014",
-        hazard: i.observations || "Risco psicossocial",
-        risk: i.observations || "\u2014",
+        hazard: i.riskFactorName || "Risco psicossocial",
+        risk: i.riskFactorDesc || i.observations || "\u2014",
         healthDamage: "Estresse, ansiedade, burnout",
         severity: i.severity || "medium",
         probability: i.probability || "possible",
@@ -336,38 +340,79 @@ const pdfGenerators: Record<string, PdfGenerator> = {
     return { buffer, filename: "programa-treinamento.pdf" };
   },
 
-  // Proposta Comercial (from proposals table)
+  // Proposta Comercial (from proposals table — shows BOTH initial and final)
   async proposta(companyId, db) {
-    const [tenant] = await db.select({ name: tenants.name }).from(tenants)
+    const [tenant] = await db.select({ name: tenants.name, cnpj: tenants.cnpj }).from(tenants)
       .where(eq(tenants.id, companyId)).limit(1);
 
-    // Get latest proposal for this company
-    const [proposal] = await db.select().from(proposals)
+    // Get ALL proposals for this company (initial + final)
+    const allProposals = await db.select().from(proposals)
       .where(eq(proposals.clientId, companyId))
-      .orderBy(desc(proposals.createdAt)).limit(1);
+      .orderBy(desc(proposals.createdAt));
 
-    const sections: PdfSection[] = [
-      { type: "title", content: "Proposta Comercial \u2014 Avaliacao Psicossocial NR-01" },
-    ];
+    const sections: PdfSection[] = [];
 
-    if (proposal) {
-      sections.push({ type: "text", content: proposal.description || "Proposta sem descricao." });
-    } else {
+    if (allProposals.length === 0) {
       sections.push({ type: "text", content: "Nenhuma proposta comercial gerada para esta empresa." });
     }
 
+    for (const proposal of allProposals) {
+      // Fetch line items for this proposal
+      const items = await db.select().from(proposalItems)
+        .where(eq(proposalItems.proposalId, proposal.id));
+
+      const isInitial = proposal.title?.includes("Inicial");
+      sections.push({ type: "divider" });
+      sections.push({ type: "title", content: proposal.title || "Proposta Comercial" });
+      sections.push({
+        type: "kpis", kpis: [
+          { label: "Status", value: proposal.status === "sent" ? "Enviada" : "Rascunho", color: proposal.status === "sent" ? "#10b981" : "#f59e0b" },
+          { label: "Valor Total", value: `R$ ${((proposal.totalValue || 0) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, color: "#1a365d" },
+          { label: "Desconto", value: `${proposal.discountPercent || 0}%`, color: "#3b82f6" },
+          { label: "Validade", value: fmtDate(proposal.validUntil), color: "#6b7280" },
+        ],
+      });
+
+      if (items.length > 0) {
+        sections.push({
+          type: "table",
+          columns: [
+            { header: "Servico", width: 250 },
+            { header: "Qtd", width: 40, align: "center" },
+            { header: "Valor Unit.", width: 90, align: "right" },
+            { header: "Subtotal", width: 90, align: "right" },
+          ],
+          rows: items.map((it: any) => ({
+            cells: [
+              it.serviceName,
+              String(it.quantity || 1),
+              `R$ ${((it.unitPrice || 0) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+              `R$ ${((it.subtotal || 0) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+            ],
+          })),
+        });
+      }
+
+      if (proposal.description) {
+        sections.push({ type: "text", content: proposal.description });
+      }
+    }
+
     const buffer = await generateGenericReportPdf({
-      reportTitle: "Proposta Comercial",
-      reportSubtitle: "Avaliacao Psicossocial NR-01",
+      reportTitle: "Propostas Comerciais NR-01",
+      reportSubtitle: `${tenant?.name || "Empresa"} — CNPJ: ${tenant?.cnpj || ""}`,
       companyName: tenant?.name,
       date: fmtDate(new Date()),
       sections,
     }, branding);
-    return { buffer, filename: "proposta-comercial.pdf" };
+    return { buffer, filename: "propostas-comerciais-nr01.pdf" };
   },
 
   // Certificado de Conformidade
   async certificado(companyId, db) {
+    const [tenant] = await db.select({ name: tenants.name, cnpj: tenants.cnpj }).from(tenants)
+      .where(eq(tenants.id, companyId)).limit(1);
+
     const [cert] = await db.select().from(complianceCertificates)
       .where(eq(complianceCertificates.tenantId, companyId))
       .orderBy(desc(complianceCertificates.issuedAt)).limit(1);
@@ -379,7 +424,7 @@ const pdfGenerators: Record<string, PdfGenerator> = {
         { type: "spacer" },
         { type: "title", content: "CERTIFICADO DE CONFORMIDADE NR-01" },
         { type: "spacer" },
-        { type: "text", content: "Certificamos que a organizacao atende aos requisitos da Norma Regulamentadora NR-01 para gestao de riscos psicossociais ocupacionais." },
+        { type: "text", content: `Certificamos que a empresa ${tenant?.name || "organizacao"} (CNPJ: ${tenant?.cnpj || ""}) atende aos requisitos da Norma Regulamentadora NR-01 para gestao de riscos psicossociais ocupacionais.` },
         {
           type: "kpis", kpis: [
             { label: "Numero do Certificado", value: cert.certificateNumber, color: "#1a365d" },
@@ -407,7 +452,8 @@ const pdfGenerators: Record<string, PdfGenerator> = {
 
     const buffer = await generateGenericReportPdf({
       reportTitle: "Certificado de Conformidade NR-01",
-      reportSubtitle: "Gestao de Riscos Psicossociais Ocupacionais",
+      reportSubtitle: `${tenant?.name || "Empresa"} — CNPJ: ${tenant?.cnpj || ""}`,
+      companyName: tenant?.name,
       date: fmtDate(cert?.issuedAt || new Date()),
       sections,
     }, branding);

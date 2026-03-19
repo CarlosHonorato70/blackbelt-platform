@@ -139,8 +139,10 @@ export async function executeCreateAssessment(
       const avgScore = Object.values(dimScores).reduce((a, b) => a + b, 0) / Object.keys(dimScores).length;
       const overallRisk = avgScore < 30 ? "critical" : avgScore < 50 ? "high" : avgScore < 70 ? "medium" : "low";
 
+      const responseId = nanoid();
+      log.info(`[Agent COPSOQ] Inserting response ${i + 1}/${actualCount} for assessment ${assessmentId}`);
       await db.insert(copsoqResponses).values({
-        id: nanoid(),
+        id: responseId,
         assessmentId,
         tenantId,
         personId: `sim-emp-${i + 1}`,
@@ -165,6 +167,8 @@ export async function executeCreateAssessment(
         createdAt: new Date(),
       });
     }
+
+    log.info(`[Agent COPSOQ] Successfully inserted ${actualCount} responses for assessment ${assessmentId}`);
 
     // Generate aggregated report
     const aggregatedScores: Record<string, number> = {};

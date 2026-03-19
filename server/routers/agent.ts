@@ -758,9 +758,10 @@ async function saveInitialProposal(
       await db2.insert(proposalItems).values(item);
     }
 
+    log.info(`[Agent] Initial proposal saved: ${proposalId}, tenantId=${tenantId}, clientId=${clientId}, total=${subtotalCalc}`);
     return proposalId;
   } catch (err: any) {
-    log.error("Failed to save initial proposal to DB", { error: err.message });
+    log.error("Failed to save initial proposal to DB", { error: err.message, stack: err.stack });
     return null;
   }
 }
@@ -882,9 +883,10 @@ async function saveFinalProposal(
       await db2.insert(proposalItems).values(item);
     }
 
+    log.info(`[Agent] Final proposal saved: ${finalProposalId}, tenantId=${tenantId}, clientId=${clientId}, items=${items.length}, total=${Math.round(finalTotalValue)}`);
     return finalProposalId;
   } catch (err: any) {
-    log.error("Failed to save final proposal to DB", { error: err.message });
+    log.error("Failed to save final proposal to DB", { error: err.message, stack: err.stack });
     return null;
   }
 }
