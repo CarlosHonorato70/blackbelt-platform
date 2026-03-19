@@ -49,15 +49,15 @@ async function executeCreateCompany(
       id: companyId,
       name: params.name || "Empresa",
       cnpj: formattedCnpj,
-      street: params.street || null,
-      number: params.number || null,
-      complement: params.complement || null,
-      neighborhood: params.neighborhood || null,
-      city: params.city || null,
-      state: params.state || null,
-      zipCode: params.zipCode || null,
-      contactEmail: params.contactEmail || null,
-      contactPhone: params.contactPhone || null,
+      street: (params.street || "").substring(0, 255) || null,
+      number: (params.number || "").substring(0, 20) || null,
+      complement: (params.complement || "").substring(0, 100) || null,
+      neighborhood: (params.neighborhood || "").substring(0, 100) || null,
+      city: (params.city || "").substring(0, 100) || null,
+      state: (params.state || "").substring(0, 2) || null,
+      zipCode: (params.zipCode || "").replace(/\D/g, "").substring(0, 10) || null,
+      contactEmail: (params.contactEmail || "").substring(0, 320) || null,
+      contactPhone: (params.contactPhone || "").substring(0, 20) || null,
       status: "active",
       strategy: "shared_rls",
       tenantType: "company",
@@ -130,8 +130,12 @@ async function executeCreateCompany(
       message: `Empresa **${params.name}** cadastrada com sucesso! Checklist NR-01 (${nr01Requirements.length} itens) e cronograma (${milestones.length} milestones) configurados automaticamente.`,
     };
   } catch (error: any) {
-    log.error("Agent create_company failed", { error: error.message });
-    return { success: false, message: `Erro ao cadastrar empresa: ${error.message}` };
+    log.error("Agent create_company failed", { error: error.message, cnpj: formattedCnpj });
+    // Never expose raw SQL errors to the user
+    const userMessage = error.message?.includes("Duplicate entry")
+      ? "Esta empresa já está cadastrada na plataforma."
+      : "Erro ao cadastrar empresa. Tente novamente ou entre em contato com o suporte.";
+    return { success: false, message: userMessage };
   }
 }
 
