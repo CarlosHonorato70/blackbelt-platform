@@ -197,6 +197,237 @@ function buildStrategyText(headcount: number, sector: string, sectorName: string
 }
 
 // ============================================================================
+// PRICING POLICY: Reference values for psychosocial assessment proposals
+// ============================================================================
+
+interface CompanyPricingData {
+  name: string;
+  cnpj?: string;
+  headcount: number;
+  sector?: string;
+  sectorName?: string;
+  riskLevel?: "low" | "medium" | "high";
+  urgency?: boolean;
+  complexity?: "normal" | "high";
+  travelRequired?: boolean;
+  customization?: "none" | "basic" | "full";
+}
+
+interface PricingProposal {
+  companyName: string;
+  cnpj?: string;
+  headcount: number;
+  sizeCategory: string;
+  recommendedPackage: string;
+  packageDescription: string;
+  pricePerEmployee: { min: number; max: number };
+  totalEstimate: { min: number; max: number };
+  volumeDiscount: { percentage: number; label: string };
+  adjustmentFactors: Array<{ label: string; percentage: string }>;
+  complementaryServices: Array<{ name: string; priceRange: string }>;
+  paymentConditions: string;
+  validity: string;
+  formatted: string;
+}
+
+function getSizeCategory(headcount: number): { category: string; label: string; priceRange: { min: number; max: number } } {
+  if (headcount <= 19) return { category: "micro", label: "Microempresa (ate 19 funcionarios)", priceRange: { min: 250, max: 350 } };
+  if (headcount <= 99) return { category: "small", label: "Pequena empresa (20-99 funcionarios)", priceRange: { min: 350, max: 450 } };
+  if (headcount <= 499) return { category: "medium", label: "Media empresa (100-499 funcionarios)", priceRange: { min: 450, max: 650 } };
+  return { category: "large", label: "Grande empresa (500+ funcionarios)", priceRange: { min: 600, max: 900 } };
+}
+
+function getVolumeDiscount(headcount: number): { percentage: number; label: string; pricePerEmployee: number } {
+  if (headcount <= 5) return { percentage: 0, label: "Sem desconto (1-5 funcionarios)", pricePerEmployee: 400 };
+  if (headcount <= 15) return { percentage: 12.5, label: "12,5% de desconto (6-15 funcionarios)", pricePerEmployee: 350 };
+  if (headcount <= 30) return { percentage: 25, label: "25% de desconto (16-30 funcionarios)", pricePerEmployee: 300 };
+  return { percentage: 37.5, label: "37,5% de desconto (30+ funcionarios)", pricePerEmployee: 250 };
+}
+
+function getRecommendedPackage(headcount: number, riskLevel?: string): {
+  name: string;
+  description: string;
+  priceRange: { min: number; max: number };
+  items: string[];
+} {
+  if (headcount <= 19 && riskLevel !== "high") {
+    return {
+      name: "Pacote Essencial",
+      description: "Essencial para Pequenos Negocios",
+      priceRange: { min: 300, max: 400 },
+      items: [
+        "Entrevista individual com colaboradores",
+        "Teste psicossocial basico (COPSOQ-II adaptado)",
+        "Relatorio simplificado com principais riscos",
+        "Devolutiva para gestores",
+      ],
+    };
+  }
+  if (headcount <= 99 || (headcount <= 19 && riskLevel === "high")) {
+    return {
+      name: "Pacote Intermediario",
+      description: "Programa Integrado de Saude Mental",
+      priceRange: { min: 450, max: 600 },
+      items: [
+        "Entrevista aprofundada com colaboradores",
+        "Bateria completa de testes psicossociais",
+        "Relatorio detalhado por dimensao",
+        "Relatorio setorial comparativo",
+        "Devolutiva para gestores e RH",
+      ],
+    };
+  }
+  return {
+    name: "Pacote Premium",
+    description: "Programa Corporativo Abrangente",
+    priceRange: { min: 600, max: 900 },
+    items: [
+      "Tudo do Pacote Intermediario",
+      "Analise de clima organizacional",
+      "Mapeamento completo de riscos psicossociais",
+      "Plano de acao personalizado",
+      "Palestra de sensibilizacao",
+      "Devolutiva individual para cada colaborador",
+    ],
+  };
+}
+
+function getCompanySizePackage(headcount: number): { name: string; priceRange: { min: number; max: number } } {
+  if (headcount <= 19) return { name: "Essencial para Pequenos Negocios", priceRange: { min: 1800, max: 2800 } };
+  if (headcount <= 99) return { name: "Programa Integrado de Saude Mental", priceRange: { min: 5500, max: 8500 } };
+  return { name: "Programa Corporativo Abrangente", priceRange: { min: 15000, max: 50000 } };
+}
+
+function generatePricingProposal(companyData: CompanyPricingData): PricingProposal {
+  const { name, cnpj, headcount, sectorName, riskLevel, urgency, complexity, travelRequired, customization } = companyData;
+
+  const sizeInfo = getSizeCategory(headcount);
+  const volumeDiscount = getVolumeDiscount(headcount);
+  const recommendedPkg = getRecommendedPackage(headcount, riskLevel);
+  const companySizePkg = getCompanySizePackage(headcount);
+
+  // Calculate adjustment factors
+  const adjustments: Array<{ label: string; percentage: string; multiplier: number }> = [];
+  if (urgency) adjustments.push({ label: "Urgencia", percentage: "+15-50%", multiplier: 1.30 });
+  if (complexity === "high") adjustments.push({ label: "Complexidade (conflitos/M&A)", percentage: "+20-40%", multiplier: 1.30 });
+  if (travelRequired) adjustments.push({ label: "Deslocamento/logistica", percentage: "+10-25%", multiplier: 1.15 });
+  if (headcount >= 500) adjustments.push({ label: "Grande corporacao", percentage: "+15-30%", multiplier: 1.20 });
+  if (riskLevel === "high") adjustments.push({ label: "Setor de alto risco", percentage: "+15-25%", multiplier: 1.20 });
+  if (customization === "basic") adjustments.push({ label: "Personalizacao basica", percentage: "+10-25%", multiplier: 1.15 });
+  if (customization === "full") adjustments.push({ label: "Personalizacao completa", percentage: "+30-60%", multiplier: 1.40 });
+
+  const totalMultiplier = adjustments.reduce((acc, a) => acc * a.multiplier, 1);
+
+  // Base per-employee price from the recommended package
+  const baseMin = recommendedPkg.priceRange.min;
+  const baseMax = recommendedPkg.priceRange.max;
+  const adjustedMin = Math.round(baseMin * totalMultiplier);
+  const adjustedMax = Math.round(baseMax * totalMultiplier);
+
+  // Total estimate
+  const totalMin = adjustedMin * headcount;
+  const totalMax = adjustedMax * headcount;
+
+  // Use company-size package if total is lower than minimum
+  const finalTotalMin = Math.max(totalMin, companySizePkg.priceRange.min);
+  const finalTotalMax = Math.max(totalMax, companySizePkg.priceRange.max);
+
+  // Complementary services
+  const complementary = [
+    { name: "Palestra Presencial", priceRange: "R$ 800 - R$ 1.500" },
+    { name: "Palestra Online", priceRange: "R$ 500 - R$ 900" },
+    { name: "Workshop Pratico (4h)", priceRange: "R$ 1.200 - R$ 2.800" },
+    { name: "Plano de Acao Corporativo", priceRange: "R$ 1.000 - R$ 2.500" },
+    { name: "Consultoria Mensal", priceRange: "R$ 1.500 - R$ 4.000/mes" },
+  ];
+
+  // Format the proposal
+  const today = new Date();
+  const validUntil = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const formatDate = (d: Date) => d.toLocaleDateString("pt-BR");
+  const formatCurrency = (v: number) => `R$ ${v.toLocaleString("pt-BR")}`;
+
+  let formatted = `---\n\n## PROPOSTA COMERCIAL — Avaliacao de Riscos Psicossociais (NR-01)\n\n`;
+  formatted += `**Data:** ${formatDate(today)}\n`;
+  formatted += `**Validade:** ${formatDate(validUntil)} (30 dias)\n\n`;
+  formatted += `---\n\n### 1. DADOS DA EMPRESA\n\n`;
+  formatted += `| Campo | Valor |\n|-------|-------|\n`;
+  formatted += `| **Empresa** | ${name} |\n`;
+  if (cnpj) formatted += `| **CNPJ** | ${cnpj} |\n`;
+  formatted += `| **Porte** | ${sizeInfo.label} |\n`;
+  formatted += `| **Colaboradores** | ${headcount} |\n`;
+  if (sectorName) formatted += `| **Setor** | ${sectorName}${riskLevel === "high" ? " (ALTO RISCO)" : ""} |\n`;
+  formatted += `\n`;
+
+  formatted += `### 2. PACOTE RECOMENDADO: **${recommendedPkg.name}**\n\n`;
+  formatted += `*${recommendedPkg.description}*\n\n`;
+  formatted += `**Servicos inclusos:**\n`;
+  for (const item of recommendedPkg.items) {
+    formatted += `- ${item}\n`;
+  }
+  formatted += `\n`;
+
+  formatted += `### 3. INVESTIMENTO\n\n`;
+  formatted += `| Item | Valor |\n|------|-------|\n`;
+  formatted += `| **Valor por colaborador** | ${formatCurrency(adjustedMin)} - ${formatCurrency(adjustedMax)} |\n`;
+  formatted += `| **Quantidade de colaboradores** | ${headcount} |\n`;
+  if (volumeDiscount.percentage > 0) {
+    formatted += `| **Desconto por volume** | ${volumeDiscount.label} |\n`;
+  }
+  if (adjustments.length > 0) {
+    for (const adj of adjustments) {
+      formatted += `| **Ajuste: ${adj.label}** | ${adj.percentage} |\n`;
+    }
+  }
+  formatted += `| **TOTAL ESTIMADO** | **${formatCurrency(finalTotalMin)} - ${formatCurrency(finalTotalMax)}** |\n`;
+  formatted += `\n`;
+
+  formatted += `### 4. SERVICOS COMPLEMENTARES (opcionais)\n\n`;
+  formatted += `| Servico | Investimento |\n|---------|-------------|\n`;
+  for (const svc of complementary) {
+    formatted += `| ${svc.name} | ${svc.priceRange} |\n`;
+  }
+  if (headcount <= 10) {
+    formatted += `| **Pacote Avaliacao + Palestra (${headcount} colabs)** | **R$ 2.500 - R$ 3.500** |\n`;
+  }
+  formatted += `\n`;
+
+  formatted += `### 5. CONDICOES DE PAGAMENTO\n\n`;
+  if (headcount <= 19) {
+    formatted += `- **50%** no agendamento\n- **50%** na entrega dos relatorios\n`;
+  } else {
+    formatted += `- **40%** na assinatura do contrato\n- **30%** no inicio dos trabalhos\n- **30%** na conclusao e entrega\n`;
+  }
+  formatted += `\n`;
+
+  formatted += `### 6. PROXIMOS PASSOS\n\n`;
+  formatted += `1. Aprovacao desta proposta\n`;
+  formatted += `2. Assinatura do contrato de prestacao de servicos\n`;
+  formatted += `3. Agendamento do kickoff e cronograma\n`;
+  formatted += `4. Inicio da avaliacao COPSOQ-II\n\n`;
+  formatted += `---\n\n*Proposta gerada automaticamente pela plataforma BlackBelt.*\n*Para duvidas: contato@blackbeltconsultoria.com*`;
+
+  return {
+    companyName: name,
+    cnpj,
+    headcount,
+    sizeCategory: sizeInfo.category,
+    recommendedPackage: recommendedPkg.name,
+    packageDescription: recommendedPkg.description,
+    pricePerEmployee: { min: adjustedMin, max: adjustedMax },
+    totalEstimate: { min: finalTotalMin, max: finalTotalMax },
+    volumeDiscount: { percentage: volumeDiscount.percentage, label: volumeDiscount.label },
+    adjustmentFactors: adjustments.map(a => ({ label: a.label, percentage: a.percentage })),
+    complementaryServices: complementary,
+    paymentConditions: headcount <= 19
+      ? "50% agendamento, 50% entrega"
+      : "40% contrato, 30% inicio, 30% conclusao",
+    validity: formatDate(validUntil),
+    formatted,
+  };
+}
+
+// ============================================================================
 // CONVERSATION MEMORY: Extract context from previous messages
 // ============================================================================
 
@@ -365,8 +596,23 @@ async function generateFallbackResponse(
 
       if (execResult.success) {
         content += `\n\n**Processo NR-01 iniciado!**\n${execResult.message}`;
-        content += `\n\n**Proxima etapa:** Criar avaliacao COPSOQ-II para os ${headcount} funcionarios.`;
-        content += `\nClique em **"Criar Avaliacao COPSOQ-II"** ou diga **"sim"** para continuar.`;
+
+        // Generate pricing summary
+        const riskLevel = result.highRisk ? "high" as const : "low" as const;
+        const pricingSummary = generatePricingProposal({
+          name: data.nome_fantasia || data.razao_social,
+          cnpj: formattedCNPJ,
+          headcount,
+          sector: result.sector,
+          sectorName: result.sectorName,
+          riskLevel,
+        });
+        content += `\n\n**Investimento estimado:** ${pricingSummary.recommendedPackage} — **R$ ${pricingSummary.totalEstimate.min.toLocaleString("pt-BR")} a R$ ${pricingSummary.totalEstimate.max.toLocaleString("pt-BR")}**`;
+        content += `\n(${pricingSummary.pricePerEmployee.min}-${pricingSummary.pricePerEmployee.max}/colaborador${pricingSummary.volumeDiscount.percentage > 0 ? `, desconto de ${pricingSummary.volumeDiscount.percentage}%` : ""})`;
+
+        content += `\n\n**Proximas opcoes:**`;
+        content += `\n- Diga **"proposta"** para gerar a proposta comercial completa`;
+        content += `\n- Clique em **"Criar Avaliacao COPSOQ-II"** ou diga **"sim"** para iniciar o processo`;
         return {
           content,
           actions: [
@@ -532,6 +778,44 @@ async function generateFallbackResponse(
     }
   }
 
+  // ── 3b. Pricing proposal request ──
+  const wantsPricing = msg.includes("proposta") || msg.includes("preco") || msg.includes("preço") || msg.includes("orcamento") || msg.includes("orçamento") || msg.includes("valor") || msg.includes("quanto custa") || msg.includes("pricing") || msg.includes("custo") || msg.includes("investimento") || msg.includes("pacote");
+
+  if (wantsPricing && memory.cnpj) {
+    const existingCompany = await findCompanyByCNPJ();
+    if (existingCompany) {
+      const hc = memory.headcount || 10;
+      const riskLevel = memory.highRisk ? "high" as const : "low" as const;
+      const proposal = generatePricingProposal({
+        name: existingCompany.name,
+        cnpj: formatCNPJ(memory.cnpj),
+        headcount: hc,
+        sector: memory.sector,
+        sectorName: memory.sectorName,
+        riskLevel,
+      });
+      return {
+        content: proposal.formatted,
+        actions: [
+          { type: "create_assessment", label: "Aprovar e Iniciar Avaliacao", params: { companyId: existingCompany.id, headcount: hc } },
+        ],
+      };
+    }
+    // No company yet but we have CNPJ — try to generate with available data
+    if (memory.headcount) {
+      const riskLevel = memory.highRisk ? "high" as const : "low" as const;
+      const proposal = generatePricingProposal({
+        name: memory.companyName || "Empresa",
+        cnpj: formatCNPJ(memory.cnpj),
+        headcount: memory.headcount,
+        sector: memory.sector,
+        sectorName: memory.sectorName,
+        riskLevel,
+      });
+      return { content: proposal.formatted, actions: [] };
+    }
+  }
+
   // ── 4. Explicit keyword-based actions (copsoq, inventário, treinamento, etc.) ──
   const wantsCopsoq = msg.includes("copsoq") || msg.includes("avaliação") || msg.includes("avaliacao");
   const wantsInventory = msg.includes("inventário") || msg.includes("inventario") || msg.includes("plano de ação") || msg.includes("plano de acao");
@@ -624,7 +908,7 @@ async function generateFallbackResponse(
   // ── 7. Help/capabilities ──
   if (msg.includes("ajuda") || msg.includes("help") || msg.includes("pode fazer") || msg.includes("capaz")) {
     return {
-      content: `Sou o **Assistente IA NR-01** da BlackBelt. Posso conduzir **todo o processo de conformidade** automaticamente:\n\n1. **Consulta de CNPJ** — Busco automaticamente os dados na Receita Federal\n2. **Cadastro e Diagnostico** — Classifico o setor e defino a estrategia ideal\n3. **Checklist + Cronograma** — 25 itens obrigatorios + milestones personalizados\n4. **Avaliacao COPSOQ-II** — Crio e envio para os funcionarios responderem\n5. **Analise com IA** — Relatorio com dimensoes criticas identificadas\n6. **Inventario de Riscos** — Classificacao completa dos perigos psicossociais\n7. **Plano de Acao** — Medidas preventivas com cronograma e responsaveis\n8. **Treinamentos** — Programas de capacitacao obrigatorios\n9. **Documentacao PGR/PCMSO** — Geracao automatica\n10. **Certificacao** — Emissao quando compliance >= 80%\n11. **Monitoramento** — Alertas automaticos de prazos, riscos e falhas\n\n**Para comecar, me envie o CNPJ da empresa e o numero de funcionarios.**`,
+      content: `Sou o **Assistente IA NR-01** da BlackBelt. Posso conduzir **todo o processo de conformidade** automaticamente:\n\n1. **Consulta de CNPJ** — Busco automaticamente os dados na Receita Federal\n2. **Cadastro e Diagnostico** — Classifico o setor e defino a estrategia ideal\n3. **Proposta Comercial** — Gero proposta com precos por porte, pacotes e descontos\n4. **Checklist + Cronograma** — 25 itens obrigatorios + milestones personalizados\n5. **Avaliacao COPSOQ-II** — Crio e envio para os funcionarios responderem\n6. **Analise com IA** — Relatorio com dimensoes criticas identificadas\n7. **Inventario de Riscos** — Classificacao completa dos perigos psicossociais\n8. **Plano de Acao** — Medidas preventivas com cronograma e responsaveis\n9. **Treinamentos** — Programas de capacitacao obrigatorios\n10. **Documentacao PGR/PCMSO** — Geracao automatica\n11. **Certificacao** — Emissao quando compliance >= 80%\n12. **Monitoramento** — Alertas automaticos de prazos, riscos e falhas\n\n**Para comecar, me envie o CNPJ da empresa e o numero de funcionarios.**\nApos cadastrar, diga **"proposta"** para receber a proposta comercial detalhada.`,
       actions: [],
     };
   }
