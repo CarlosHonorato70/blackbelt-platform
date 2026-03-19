@@ -290,7 +290,7 @@ export default function Landing() {
                 className="text-lg px-10 h-14 font-bold shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 transition-all hover:scale-[1.02]"
                 style={{ backgroundColor: "#c8a55a", color: "#1a1a2e" }}
               >
-                Comecar Agora
+                Cadastre uma Empresa Gratuitamente
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>
@@ -306,7 +306,7 @@ export default function Landing() {
             </a>
           </div>
           <p className="text-gray-500 text-sm mt-6">
-            14 dias gratis. Sem cartao de credito. Cancele quando quiser.
+            1 empresa gratis. Sem cartao de credito. Sem limite de tempo.
           </p>
         </div>
       </section>
@@ -534,7 +534,7 @@ export default function Landing() {
               Planos que cabem no seu negocio
             </h2>
             <p className="text-gray-500 text-lg">
-              14 dias gratis em todos os planos. Sem compromisso.
+              Teste com 1 empresa gratis. Sem compromisso. Para mais empresas, escolha um plano.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
@@ -694,8 +694,8 @@ export default function Landing() {
             <span style={{ color: "#c8a55a" }}>NR-01</span>?
           </h2>
           <p className="text-gray-400 mb-8 text-lg">
-            Junte-se a consultores que ja usam o SamurAI para entregar
-            conformidade em minutos. Comece gratis hoje.
+            Cadastre sua primeira empresa gratuitamente e veja o SamurAI em acao.
+            Para adicionar mais empresas, escolha um plano.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/register">
@@ -704,13 +704,13 @@ export default function Landing() {
                 className="text-lg px-10 h-14 font-bold shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 transition-all hover:scale-[1.02]"
                 style={{ backgroundColor: "#c8a55a", color: "#1a1a2e" }}
               >
-                Comecar Avaliacao Gratuita
+                Cadastre uma Empresa Gratuitamente
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>
           </div>
           <p className="text-gray-500 text-sm mt-6">
-            14 dias gratis | Sem cartao de credito | Suporte incluso
+            Sem cartao de credito. Sem limite de tempo. Suporte incluso.
           </p>
         </div>
       </section>

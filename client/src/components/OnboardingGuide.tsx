@@ -62,7 +62,7 @@ const onboardingSteps: OnboardingStep[] = [
       "Verifique seus dados de login e perfil",
       "Escolha o plano adequado (Starter, Pro ou Enterprise)",
       "O plano define a quantidade de empresas clientes e recursos disponíveis",
-      "Ative o período de teste gratuito de 14 dias",
+      "Comece com 1 empresa gratis — sem limite de tempo",
     ],
     actionText: "Ver Meu Plano",
     actionUrl: "/subscription/pricing",

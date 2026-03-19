@@ -47,7 +47,7 @@ export default function Pricing() {
       "Avaliações de risco ilimitadas",
       "Relatórios básicos",
       "Suporte por email",
-      "14 dias de teste grátis",
+      "1 empresa grátis para testar",
     ],
     pro: [
       "Até 10 empresas",
@@ -58,7 +58,7 @@ export default function Pricing() {
       "API de integração",
       "Exportação de dados",
       "Suporte prioritário por email e chat",
-      "14 dias de teste grátis",
+      "1 empresa grátis para testar",
     ],
     enterprise: [
       "Empresas ilimitadas",
