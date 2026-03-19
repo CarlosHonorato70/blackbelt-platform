@@ -3,7 +3,7 @@ import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { eq, and } from "drizzle-orm";
-import { protectedProcedure, router, tenantProcedure, subscribedProcedure } from "../_core/trpc";
+import { protectedProcedure, router, tenantProcedure, subscribedProcedure, consultantProcedure } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   copsoqAssessments,
@@ -14,8 +14,8 @@ import {
 import { sendBulkCopsoqInvites } from "../_core/email";
 
 export const assessmentsRouter = router({
-  // Criar nova avaliacao
-  create: subscribedProcedure
+  // Criar nova avaliacao (somente consultor/admin)
+  create: consultantProcedure
     .input(
       z.object({
         
@@ -299,8 +299,8 @@ export const assessmentsRouter = router({
         .where(eq(copsoqInvites.tenantId, ctx.tenantId!));
     }),
 
-  // Enviar convites em lote
-  sendInvites: subscribedProcedure
+  // Enviar convites em lote (somente consultor/admin)
+  sendInvites: consultantProcedure
     .input(
       z.object({
         

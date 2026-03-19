@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { publicProcedure, tenantProcedure, router } from "../_core/trpc";
+import { publicProcedure, tenantProcedure, consultantProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   psychosocialSurveys,
@@ -164,8 +164,8 @@ export const climateSurveysRouter = router({
       return { success: true };
     }),
 
-  // Enviar convites para pesquisa
-  sendInvites: tenantProcedure
+  // Enviar convites para pesquisa (somente consultor/admin)
+  sendInvites: consultantProcedure
     .input(
       z.object({
         surveyId: z.string(),
