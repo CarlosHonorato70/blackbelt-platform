@@ -627,7 +627,7 @@ const pdfGenerators: Record<string, PdfGenerator> = {
 
     const buffer = await generateGenericReportPdf({
       reportTitle: "Propostas Comerciais NR-01",
-      reportSubtitle: `${tenant?.name || "Empresa"} -- CNPJ: ${tenant?.cnpj || ""}`,
+      reportSubtitle: `${tenant?.name || "Empresa"} \u2014 CNPJ: ${tenant?.cnpj || ""}`,
       companyName: tenant?.name,
       date: fmtDate(new Date()),
       sections,
