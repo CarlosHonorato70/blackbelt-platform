@@ -35,6 +35,7 @@ export async function createContext({ req, res }: { req: Request; res: Response 
   // Impersonacao: admin pode impersonar qualquer tenant,
   // consultor pode impersonar suas próprias empresas
   let isImpersonating = false;
+  let originalTenantId: string | null = user?.tenantId ?? null;
   if (user) {
     const impersonateTenantId = req.headers["x-impersonate-tenant"] as string | undefined;
     if (impersonateTenantId) {
@@ -51,6 +52,7 @@ export async function createContext({ req, res }: { req: Request; res: Response 
         }
 
         if (allowed) {
+          originalTenantId = user.tenantId ?? null; // preservar tenant original antes de sobrescrever
           user = { ...user, tenantId: impersonateTenantId };
           isImpersonating = true;
 
@@ -90,6 +92,7 @@ export async function createContext({ req, res }: { req: Request; res: Response 
     res,
     user,
     isImpersonating,
+    originalTenantId,
   };
 }
 

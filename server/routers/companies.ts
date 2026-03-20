@@ -57,7 +57,8 @@ const companyInput = z.object({
 
 export const companiesRouter = router({
   // Listar empresas do consultor
-  list: consultantProcedure
+  // Usa tenantProcedure (não consultantProcedure) para funcionar durante impersonação
+  list: tenantProcedure
     .input(
       z.object({
         search: z.string().optional(),
@@ -70,7 +71,20 @@ export const companiesRouter = router({
       const database = await db.getDb();
       if (!database) throw new Error("Database not available");
 
-      const consultantTenantId = ctx.tenantId;
+      // Usar tenant original (antes de impersonação) para buscar empresas filhas
+      const consultantTenantId = (ctx as any).originalTenantId || ctx.tenantId;
+
+      // Verificar que o tenant original é do tipo consultant (admin bypassa)
+      if (ctx.user.role !== "admin") {
+        const consultantTenant = await db.getTenant(consultantTenantId);
+        if (!consultantTenant || consultantTenant.tenantType !== "consultant") {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Esta ação é permitida apenas para consultores/consultorias",
+          });
+        }
+      }
+
       const filters: any[] = [
         eq(tenants.parentTenantId, consultantTenantId),
         eq(tenants.tenantType, "company"),
@@ -412,8 +426,10 @@ export const companiesRouter = router({
     }),
 
   // Consultor obtém informações do próprio tenant (para saber tipo)
+  // Usa originalTenantId para não retornar dados do tenant impersonado
   getMyTenantInfo: tenantProcedure.query(async ({ ctx }) => {
-    const tenant = await db.getTenant(ctx.tenantId);
+    const realTenantId = (ctx as any).originalTenantId || ctx.tenantId;
+    const tenant = await db.getTenant(realTenantId);
     if (!tenant) throw new Error("Tenant não encontrado");
     return {
       id: tenant.id,
