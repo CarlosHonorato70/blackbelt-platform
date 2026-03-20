@@ -24,12 +24,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,12 +38,14 @@ import {
   ClipboardList,
   Plus,
   Loader2,
-  MoreHorizontal,
   Calendar,
   Trash2,
-  ArrowRightCircle,
   FileDown,
   Pencil,
+  Play,
+  CheckCircle,
+  RotateCcw,
+  XCircle,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useTenant } from "@/contexts/TenantContext";
@@ -300,7 +296,7 @@ export default function ActionPlans() {
                   <TableHead>Status</TableHead>
                   <TableHead>Prazo</TableHead>
                   <TableHead>Orçamento</TableHead>
-                  <TableHead className="w-[80px]">Ações</TableHead>
+                  <TableHead className="w-[180px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -353,46 +349,31 @@ export default function ActionPlans() {
                         )}
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="w-4 h-4" />
+                        <div className="flex justify-end gap-1">
+                          {plan.status !== "in_progress" && (
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleStatusChange(plan.id, "in_progress")} title="Iniciar">
+                              <Play className="w-4 h-4 text-blue-600" />
                             </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {plan.status !== "in_progress" && (
-                              <DropdownMenuItem onClick={() => handleStatusChange(plan.id, "in_progress")}>
-                                <ArrowRightCircle className="w-4 h-4 mr-2 text-blue-600" />
-                                Iniciar
-                              </DropdownMenuItem>
-                            )}
-                            {plan.status !== "completed" && (
-                              <DropdownMenuItem onClick={() => handleStatusChange(plan.id, "completed")}>
-                                <ArrowRightCircle className="w-4 h-4 mr-2 text-green-600" />
-                                Concluir
-                              </DropdownMenuItem>
-                            )}
-                            {plan.status !== "pending" && plan.status !== "cancelled" && (
-                              <DropdownMenuItem onClick={() => handleStatusChange(plan.id, "pending")}>
-                                <ArrowRightCircle className="w-4 h-4 mr-2 text-yellow-600" />
-                                Voltar a Pendente
-                              </DropdownMenuItem>
-                            )}
-                            {plan.status !== "cancelled" && (
-                              <DropdownMenuItem onClick={() => handleStatusChange(plan.id, "cancelled")}>
-                                <ArrowRightCircle className="w-4 h-4 mr-2 text-gray-500" />
-                                Cancelar
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem
-                              className="text-red-600"
-                              onClick={() => handleDelete(plan.id)}
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                          )}
+                          {plan.status !== "completed" && (
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleStatusChange(plan.id, "completed")} title="Concluir">
+                              <CheckCircle className="w-4 h-4 text-green-600" />
+                            </Button>
+                          )}
+                          {plan.status !== "pending" && plan.status !== "cancelled" && (
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleStatusChange(plan.id, "pending")} title="Voltar a Pendente">
+                              <RotateCcw className="w-4 h-4 text-yellow-600" />
+                            </Button>
+                          )}
+                          {plan.status !== "cancelled" && (
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleStatusChange(plan.id, "cancelled")} title="Cancelar">
+                              <XCircle className="w-4 h-4 text-gray-500" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(plan.id)} title="Excluir">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

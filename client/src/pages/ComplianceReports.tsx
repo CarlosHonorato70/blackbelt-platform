@@ -15,12 +15,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useTenant } from "@/contexts/TenantContext";
 import { trpc } from "@/lib/trpc";
 import {
@@ -29,7 +23,6 @@ import {
   Download,
   Eye,
   FileText,
-  MoreVertical,
   Plus,
   AlertTriangle,
 } from "lucide-react";
@@ -284,58 +277,17 @@ export default function ComplianceReports() {
                         {report.status}
                       </span>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => setSelectedReport(report.id)}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          Visualizar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            const reportText = generateComplianceReport([
-                              report,
-                            ]);
-                            exportToPDF(
-                              reportText,
-                              `compliance_${report.id}_${new Date().toISOString().split("T")[0]}.txt`
-                            );
-                          }}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Exportar Texto
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            exportToJSON(
-                              [report],
-                              `compliance_${report.id}_${new Date().toISOString().split("T")[0]}.json`
-                            );
-                          }}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Exportar JSON
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            exportToExcel(
-                              [report],
-                              `compliance_${report.id}_${new Date().toISOString().split("T")[0]}.xlsx`,
-                              "Compliance"
-                            );
-                          }}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Exportar Excel
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedReport(report.id)} title="Visualizar">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                        const reportText = generateComplianceReport([report]);
+                        exportToPDF(reportText, `compliance_${report.id}_${new Date().toISOString().split("T")[0]}.txt`);
+                      }} title="Exportar Texto">
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}

@@ -15,12 +15,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
@@ -31,7 +25,6 @@ import {
   Edit2,
   Loader2,
   Lock,
-  MoreVertical,
   Plus,
   Trash2,
   XCircle,
@@ -265,33 +258,19 @@ export default function RolesPermissions() {
                     </div>
 
                     {role.scope !== "global" && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => setSelectedRole(role.id)}
-                          >
-                            <Edit2 className="h-4 w-4 mr-2" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => {
-                              if (window.confirm(`Tem certeza que deseja deletar o perfil "${role.displayName}"? Usuários com este perfil perderão suas permissões.`)) {
-                                deleteRoleMutation.mutate({ id: role.id });
-                                if (selectedRole === role.id) setSelectedRole(null);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Deletar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedRole(role.id)} title="Editar">
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => {
+                          if (window.confirm(`Tem certeza que deseja deletar o perfil "${role.displayName}"? Usuários com este perfil perderão suas permissões.`)) {
+                            deleteRoleMutation.mutate({ id: role.id });
+                            if (selectedRole === role.id) setSelectedRole(null);
+                          }
+                        }} title="Deletar">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </CardHeader>

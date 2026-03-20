@@ -35,12 +35,6 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -63,7 +57,6 @@ import {
   Eye,
   FileText,
   Loader2,
-  MoreVertical,
   Pencil,
   Plus,
   Save,
@@ -634,83 +627,32 @@ export default function RiskAssessments() {
                           {getRiskLevelBadge(assessment.methodology === "critical" ? "critical" : "medium")}
                         </TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => navigate("/copsoq/analytics")}
-                              >
-                                <Eye className="h-4 w-4 mr-2" />
-                                Visualizar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => navigate(`/risk-assessments/${assessment.id}`)}
-                              >
-                                <Edit2 className="h-4 w-4 mr-2" />
-                                Editar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  const report = generateAssessmentReport([
-                                    assessment,
-                                  ]);
-                                  exportToPDF(
-                                    report,
-                                    `avaliacao_${assessment.id}_${new Date().toISOString().split("T")[0]}.txt`
-                                  );
-                                }}
-                              >
-                                <Download className="h-4 w-4 mr-2" />
-                                Exportar Texto
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  exportToJSON(
-                                    [assessment],
-                                    `avaliacao_${assessment.id}_${new Date().toISOString().split("T")[0]}.json`
-                                  );
-                                }}
-                              >
-                                <Download className="h-4 w-4 mr-2" />
-                                Exportar JSON
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  exportToExcel(
-                                    [assessment],
-                                    `avaliacao_${assessment.id}_${new Date().toISOString().split("T")[0]}.xlsx`,
-                                    "Avaliacao"
-                                  );
-                                }}
-                              >
-                                <Download className="h-4 w-4 mr-2" />
-                                Exportar Excel
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedAssessmentId(assessment.id);
-                                  setProposalDialogOpen(true);
-                                }}
-                              >
-                                <FileText className="h-4 w-4 mr-2" />
-                                Gerar Proposta
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-red-600"
-                                onClick={() => {
-                                  setAssessmentToDelete(assessment.id);
-                                  setDeleteDialogOpen(true);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Excluir
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <div className="flex justify-end gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/copsoq/analytics")} title="Visualizar">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/risk-assessments/${assessment.id}`)} title="Editar">
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                              const report = generateAssessmentReport([assessment]);
+                              exportToPDF(report, `avaliacao_${assessment.id}_${new Date().toISOString().split("T")[0]}.txt`);
+                            }} title="Exportar Texto">
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                              setSelectedAssessmentId(assessment.id);
+                              setProposalDialogOpen(true);
+                            }} title="Gerar Proposta">
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => {
+                              setAssessmentToDelete(assessment.id);
+                              setDeleteDialogOpen(true);
+                            }} title="Excluir">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
 

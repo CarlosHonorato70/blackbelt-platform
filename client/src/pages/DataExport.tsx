@@ -16,12 +16,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -42,7 +36,6 @@ import {
   FileSpreadsheet,
   FileText,
   Loader2,
-  MoreVertical,
   Plus,
   Shield,
   Trash2,
@@ -416,67 +409,38 @@ export default function DataExport() {
                         )}
                       </div>
 
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="h-4 w-4" />
+                      <div className="flex gap-1">
+                        {request.status === "completo" && (
+                          <>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                              toast.success("Download iniciado!", {
+                                description: `Arquivo ${request.format} (${request.fileSize}) será baixado.`,
+                              });
+                            }} title="Baixar Dados">
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                              setSelectedRequest(request);
+                              setReportDialogOpen(true);
+                            }} title="Ver Relatório">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                        {request.status === "pendente" && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleCancel(request.id, request.email)} title="Cancelar Solicitação">
+                            <Trash2 className="h-4 w-4" />
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {request.status === "completo" && (
-                            <>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  toast.success("Download iniciado!", {
-                                    description: `Arquivo ${request.format} (${request.fileSize}) será baixado.`,
-                                  });
-                                }}
-                              >
-                                <Download className="h-4 w-4 mr-2" />
-                                Baixar Dados
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedRequest(request);
-                                  setReportDialogOpen(true);
-                                }}
-                              >
-                                <Eye className="h-4 w-4 mr-2" />
-                                Ver Relatório
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          {request.status !== "completo" &&
-                            request.status !== "pendente" && (
-                              <DropdownMenuItem disabled>
-                                <Clock className="h-4 w-4 mr-2" />
-                                Processando...
-                              </DropdownMenuItem>
-                            )}
-                          {request.status === "pendente" && (
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() =>
-                                handleCancel(request.id, request.email)
-                              }
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Cancelar Solicitação
-                            </DropdownMenuItem>
-                          )}
-                          {request.status !== "pendente" && (
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedRequest(request);
-                                setReportDialogOpen(true);
-                              }}
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              Ver Detalhes
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                        )}
+                        {request.status !== "pendente" && request.status !== "completo" && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                            setSelectedRequest(request);
+                            setReportDialogOpen(true);
+                          }} title="Ver Detalhes">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
