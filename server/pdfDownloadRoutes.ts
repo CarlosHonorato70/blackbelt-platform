@@ -32,7 +32,7 @@ import {
   trainingModules,
   trainingProgress,
 } from "../drizzle/schema_nr01";
-import { tenants, proposals, proposalItems } from "../drizzle/schema";
+import { tenants, proposals, proposalItems, people } from "../drizzle/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 
 const branding: PdfBranding = { companyName: "Black Belt Platform", primaryColor: "#1a365d" };
@@ -361,7 +361,7 @@ const pdfGenerators: Record<string, PdfGenerator> = {
       const items = await db.select().from(proposalItems)
         .where(eq(proposalItems.proposalId, proposal.id));
 
-      const isInitial = proposal.title?.includes("Inicial");
+      const isFinal = proposal.title?.toLowerCase().includes("final");
       sections.push({ type: "divider" });
       sections.push({ type: "title", content: proposal.title || "Proposta Comercial" });
       sections.push({
@@ -393,14 +393,241 @@ const pdfGenerators: Record<string, PdfGenerator> = {
         });
       }
 
-      if (proposal.description) {
-        sections.push({ type: "text", content: proposal.description });
+      // --- Structured sections instead of raw markdown dump ---
+
+      if (isFinal) {
+        // === COPSOQ Results ===
+        const copsoqReport = await db.select().from(copsoqReports)
+          .where(eq(copsoqReports.tenantId, companyId))
+          .orderBy(desc(copsoqReports.createdAt))
+          .limit(1);
+
+        if (copsoqReport.length > 0) {
+          const r = copsoqReport[0];
+          sections.push({ type: "spacer" });
+          sections.push({ type: "subtitle", content: "Resultados COPSOQ-II" });
+          sections.push({ type: "text", content: `Respondentes: ${r.totalRespondents || 0} | Taxa de resposta: ${r.responseRate || 0}%` });
+          sections.push({
+            type: "table",
+            columns: [
+              { header: "Dimensao", width: 280 },
+              { header: "Score", width: 80, align: "center" },
+              { header: "Nivel", width: 100, align: "center" },
+            ],
+            rows: [
+              { label: "Exigencias Quantitativas", score: r.averageDemandScore },
+              { label: "Influencia no Trabalho", score: r.averageControlScore },
+              { label: "Apoio Social", score: r.averageSupportScore },
+              { label: "Lideranca", score: r.averageLeadershipScore },
+              { label: "Comunidade no Trabalho", score: r.averageCommunityScore },
+              { label: "Significado do Trabalho", score: r.averageMeaningScore },
+              { label: "Confianca", score: r.averageTrustScore },
+              { label: "Justica", score: r.averageJusticeScore },
+              { label: "Inseguranca no Trabalho", score: r.averageInsecurityScore },
+              { label: "Saude Mental", score: r.averageMentalHealthScore },
+              { label: "Burnout", score: r.averageBurnoutScore },
+              { label: "Violencia e Assedio", score: r.averageViolenceScore },
+            ]
+              .filter((d) => d.score != null)
+              .map((d) => ({
+                cells: [
+                  d.label,
+                  String(d.score),
+                  (d.score ?? 0) >= 75 ? "Critico" : (d.score ?? 0) >= 50 ? "Alto" : (d.score ?? 0) >= 25 ? "Medio" : "Baixo",
+                ],
+              })),
+          });
+
+          // Risk distribution from COPSOQ report
+          if (r.lowRiskCount != null || r.mediumRiskCount != null || r.highRiskCount != null || r.criticalRiskCount != null) {
+            sections.push({
+              type: "kpis", kpis: [
+                { label: "Risco Baixo", value: String(r.lowRiskCount || 0), color: "#10b981" },
+                { label: "Risco Medio", value: String(r.mediumRiskCount || 0), color: "#f59e0b" },
+                { label: "Risco Alto", value: String(r.highRiskCount || 0), color: "#f97316" },
+                { label: "Risco Critico", value: String(r.criticalRiskCount || 0), color: "#ef4444" },
+              ],
+            });
+          }
+        }
+
+        // === Risks Summary ===
+        const assessments = await db.select({ id: riskAssessments.id }).from(riskAssessments)
+          .where(eq(riskAssessments.tenantId, companyId));
+
+        if (assessments.length > 0) {
+          const assessmentIds = assessments.map((a: any) => a.id);
+          const riskItems = await db.select({
+            riskLevel: riskAssessmentItems.riskLevel,
+            count: sql<number>`COUNT(*)`,
+          }).from(riskAssessmentItems)
+            .where(sql`${riskAssessmentItems.assessmentId} IN (${sql.join(assessmentIds.map((id: any) => sql`${id}`), sql`, `)})`)
+            .groupBy(riskAssessmentItems.riskLevel);
+
+          if (riskItems.length > 0) {
+            sections.push({ type: "spacer" });
+            sections.push({ type: "subtitle", content: "Resumo de Riscos Identificados" });
+            sections.push({
+              type: "table",
+              columns: [
+                { header: "Nivel de Risco", width: 200 },
+                { header: "Quantidade", width: 100, align: "center" },
+              ],
+              rows: riskItems.map((ri: any) => ({
+                cells: [
+                  RISK_LABELS[ri.riskLevel] || ri.riskLevel,
+                  String(ri.count),
+                ],
+              })),
+            });
+          }
+        }
+
+        // === Action Plans Summary ===
+        const plans = await db.select({
+          status: actionPlans.status,
+          count: sql<number>`COUNT(*)`,
+        }).from(actionPlans)
+          .where(eq(actionPlans.tenantId, companyId))
+          .groupBy(actionPlans.status);
+
+        if (plans.length > 0) {
+          const statusLabels: Record<string, string> = {
+            pending: "Pendente",
+            in_progress: "Em Andamento",
+            completed: "Concluido",
+            cancelled: "Cancelado",
+          };
+          sections.push({ type: "spacer" });
+          sections.push({ type: "subtitle", content: "Planos de Acao" });
+          sections.push({
+            type: "table",
+            columns: [
+              { header: "Status", width: 200 },
+              { header: "Quantidade", width: 100, align: "center" },
+            ],
+            rows: plans.map((p: any) => ({
+              cells: [statusLabels[p.status] || p.status, String(p.count)],
+            })),
+          });
+        }
+
+        // === Recommended Services ===
+        sections.push({ type: "spacer" });
+        sections.push({ type: "subtitle", content: "Servicos Recomendados" });
+        sections.push({
+          type: "list", items: [
+            "Diagnostico Psicossocial Completo (COPSOQ-II + entrevistas)",
+            "Inventario de Riscos Psicossociais conforme NR-01",
+            "Plano de Acao com cronograma e responsaveis",
+            "Treinamento de Gestores em Saude Mental Ocupacional",
+            "Programa de Acompanhamento e Monitoramento Continuo",
+            "Certificacao de Conformidade NR-01",
+          ],
+        });
+
+        // === ROI Estimate ===
+        const [empCount] = await db.select({
+          total: sql<number>`COUNT(*)`,
+        }).from(people)
+          .where(eq(people.tenantId, companyId));
+
+        const employeeCount = empCount?.total || 50;
+        const dailyAbsentCost = 400; // R$400/day average cost
+        const estimatedDaysAvoided = Math.round(employeeCount * 0.36); // ~18 days per 50 employees
+        const annualSavings = dailyAbsentCost * estimatedDaysAvoided;
+
+        sections.push({ type: "spacer" });
+        sections.push({ type: "subtitle", content: "Estimativa de ROI" });
+        sections.push({ type: "text", content: `Base de calculo: ${employeeCount} colaboradores cadastrados` });
+        sections.push({
+          type: "table",
+          columns: [
+            { header: "Indicador", width: 280 },
+            { header: "Valor", width: 180, align: "right" },
+          ],
+          rows: [
+            { cells: ["Custo medio de absenteismo/dia", `R$ ${dailyAbsentCost.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`] },
+            { cells: ["Dias de ausencia evitados (estimativa/ano)", String(estimatedDaysAvoided)] },
+            { cells: ["Economia anual estimada", `R$ ${annualSavings.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`] },
+            { cells: ["Reducao estimada de turnover", "15% a 25%"] },
+            { cells: ["Melhoria de produtividade estimada", "10% a 20%"] },
+          ],
+        });
+
+        // === Cronograma ===
+        const planDeadlines = await db.select({
+          title: actionPlans.title,
+          deadline: actionPlans.deadline,
+          status: actionPlans.status,
+        }).from(actionPlans)
+          .where(eq(actionPlans.tenantId, companyId))
+          .orderBy(actionPlans.deadline)
+          .limit(10);
+
+        if (planDeadlines.length > 0) {
+          const statusLabels2: Record<string, string> = {
+            pending: "Pendente",
+            in_progress: "Em Andamento",
+            completed: "Concluido",
+            cancelled: "Cancelado",
+          };
+          sections.push({ type: "spacer" });
+          sections.push({ type: "subtitle", content: "Cronograma de Implementacao" });
+          sections.push({
+            type: "table",
+            columns: [
+              { header: "Acao", width: 230 },
+              { header: "Prazo", width: 100, align: "center" },
+              { header: "Status", width: 100, align: "center" },
+            ],
+            rows: planDeadlines.map((p: any) => ({
+              cells: [
+                p.title,
+                fmtDate(p.deadline),
+                statusLabels2[p.status] || p.status,
+              ],
+            })),
+          });
+        }
+
+        // === Payment Terms ===
+        sections.push({ type: "spacer" });
+        sections.push({ type: "subtitle", content: "Condicoes de Pagamento" });
+        sections.push({
+          type: "table",
+          columns: [
+            { header: "Etapa", width: 280 },
+            { header: "Percentual", width: 100, align: "center" },
+          ],
+          rows: [
+            { cells: ["Assinatura do contrato", "40%"] },
+            { cells: ["Inicio dos trabalhos", "30%"] },
+            { cells: ["Entrega final", "30%"] },
+          ],
+        });
+
+        // === Next Steps ===
+        sections.push({ type: "spacer" });
+        sections.push({ type: "subtitle", content: "Proximos Passos" });
+        sections.push({
+          type: "list", items: [
+            "1. Aprovacao da proposta pelo cliente",
+            "2. Assinatura do contrato de prestacao de servicos",
+            "3. Inicio do diagnostico e implementacao conforme cronograma",
+          ],
+        });
+
+      } else {
+        // Initial proposal — brief text only
+        sections.push({ type: "spacer" });
+        sections.push({ type: "text", content: "Esta e uma proposta inicial de estimativa de custos para servicos de gestao de riscos psicossociais conforme NR-01. Os valores apresentados sao baseados no escopo preliminar e podem ser ajustados apos o diagnostico completo." });
       }
     }
 
     const buffer = await generateGenericReportPdf({
       reportTitle: "Propostas Comerciais NR-01",
-      reportSubtitle: `${tenant?.name || "Empresa"} — CNPJ: ${tenant?.cnpj || ""}`,
+      reportSubtitle: `${tenant?.name || "Empresa"} -- CNPJ: ${tenant?.cnpj || ""}`,
       companyName: tenant?.name,
       date: fmtDate(new Date()),
       sections,
