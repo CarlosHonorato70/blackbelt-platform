@@ -39,7 +39,7 @@ export function withPermission(resource: string, action: string) {
     }
 
     // Get user's roles for this tenant
-    const userRoleRecords = await db
+    let userRoleRecords = await db
       .select()
       .from(userRoles)
       .where(
@@ -48,6 +48,21 @@ export function withPermission(resource: string, action: string) {
           eq(userRoles.tenantId, tenantId)
         )
       );
+
+    // If impersonating and no roles found in target tenant,
+    // check roles in the original (parent) tenant.
+    // This allows consultants to edit data in their child companies.
+    if (userRoleRecords.length === 0 && ctx.isImpersonating && ctx.originalTenantId) {
+      userRoleRecords = await db
+        .select()
+        .from(userRoles)
+        .where(
+          and(
+            eq(userRoles.userId, ctx.user.id),
+            eq(userRoles.tenantId, ctx.originalTenantId)
+          )
+        );
+    }
 
     if (userRoleRecords.length === 0) {
       throw new TRPCError({
