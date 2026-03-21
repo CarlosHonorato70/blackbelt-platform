@@ -5,7 +5,8 @@
  */
 import { nanoid } from "nanoid";
 import { getDb } from "../db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
+import { people } from "../../drizzle/schema";
 import {
   copsoqAssessments, copsoqResponses, copsoqReports,
   complianceChecklist, complianceMilestones, complianceCertificates,
@@ -74,18 +75,31 @@ export async function executeCreateAssessment(
   if (!db) return { success: false, message: "Database not available" };
 
   try {
+    // ALWAYS use actual people count from database, never trust headcount parameter
+    const [peopleCount] = await db.select({ count: sql<number>`COUNT(*)` })
+      .from(people)
+      .where(eq(people.tenantId, tenantId));
+    const realPeopleCount = peopleCount?.count || 0;
+
+    if (realPeopleCount === 0) {
+      return {
+        success: false,
+        message: "Nenhum colaborador cadastrado nesta empresa. Cadastre os colaboradores antes de criar a avaliação COPSOQ-II.",
+      };
+    }
+
     const assessmentId = `copsoq_${Date.now()}_${nanoid(8)}`;
     await db.insert(copsoqAssessments).values({
       id: assessmentId,
       tenantId,
       title: `Avaliação COPSOQ-II - ${companyName} ${new Date().getFullYear()}`,
-      description: "Avaliação de riscos psicossociais conforme NR-01",
+      description: `Avaliação de riscos psicossociais conforme NR-01 — ${realPeopleCount} colaboradores`,
       assessmentDate: new Date(),
       status: "in_progress",
     });
 
-    // Simulate responses for the actual headcount (not just 5)
-    const actualCount = Math.max(1, headcount);
+    // Use REAL people count from database (not the headcount parameter)
+    const actualCount = realPeopleCount;
     const dimensionTotals: Record<string, number[]> = {};
     const employeeProfiles: Array<{ profile: Record<string, number> }> = [];
 
