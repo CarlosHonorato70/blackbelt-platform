@@ -45,8 +45,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTenant } from "@/contexts/TenantContext";
 import { trpc } from "@/lib/trpc";
-import { AlertCircle, Edit2, Plus, Trash2, Users, UserSquare2 } from "lucide-react";
-import { useState } from "react";
+import { AlertCircle, Download, Edit2, Plus, Trash2, Upload, Users, UserSquare2 } from "lucide-react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 type DialogMode = "closed" | "create" | "edit" | "delete";
@@ -146,6 +146,76 @@ export default function People() {
     },
   });
 
+  // --- Import/Export ---
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{
+    summary: { sectorsCreated: number; sectorsSkipped: number; peopleCreated: number; peopleSkipped: number };
+    errors: string[];
+  } | null>(null);
+
+  const handleDownloadTemplate = async () => {
+    if (!selectedTenant) return;
+    try {
+      const response = await fetch(`/api/template/people/${selectedTenant.id}`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Erro ao baixar modelo");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "modelo_colaboradores.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Modelo baixado com sucesso!");
+    } catch {
+      toast.error("Erro ao baixar o modelo da planilha");
+    }
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedTenant) return;
+
+    setImporting(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(`/api/import/people/${selectedTenant.id}`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao importar planilha");
+      }
+
+      setImportResult({ summary: data.summary, errors: data.errors });
+      utils.people.list.invalidate();
+      utils.sectors.list.invalidate();
+
+      const msg = [
+        data.summary.sectorsCreated > 0 ? `${data.summary.sectorsCreated} setor(es) criado(s)` : null,
+        data.summary.peopleCreated > 0 ? `${data.summary.peopleCreated} colaborador(es) criado(s)` : null,
+      ].filter(Boolean).join(", ");
+
+      toast.success(msg || "Importacao concluida (nenhum registro novo)");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao importar planilha");
+    } finally {
+      setImporting(false);
+      // Reset file input so same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   // --- People handlers ---
   const handlePersonSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -229,12 +299,35 @@ export default function People() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Colaboradores e Setores</h1>
-          <p className="text-muted-foreground">
-            Gerencie os colaboradores e setores de{" "}
-            <span className="font-semibold">{selectedTenant.name}</span>
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Colaboradores e Setores</h1>
+            <p className="text-muted-foreground">
+              Gerencie os colaboradores e setores de{" "}
+              <span className="font-semibold">{selectedTenant.name}</span>
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleDownloadTemplate}>
+              <Download className="mr-2 h-4 w-4" />
+              Baixar Modelo
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importing}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              {importing ? "Importando..." : "Importar Planilha"}
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv,.ods,.tsv"
+              className="hidden"
+              onChange={handleImportFile}
+            />
+          </div>
         </div>
 
         <Tabs defaultValue="colaboradores" className="w-full">
@@ -733,6 +826,66 @@ export default function People() {
             </div>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* ====== Import Result Dialog ====== */}
+        <Dialog
+          open={importResult !== null}
+          onOpenChange={open => {
+            if (!open) setImportResult(null);
+          }}
+        >
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Resultado da Importação</DialogTitle>
+              <DialogDescription>
+                Resumo dos registros processados
+              </DialogDescription>
+            </DialogHeader>
+            {importResult && (
+              <div className="space-y-4 py-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border p-3 text-center">
+                    <p className="text-2xl font-bold text-primary">
+                      {importResult.summary.sectorsCreated}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Setores criados</p>
+                  </div>
+                  <div className="rounded-lg border p-3 text-center">
+                    <p className="text-2xl font-bold text-primary">
+                      {importResult.summary.peopleCreated}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Colaboradores criados</p>
+                  </div>
+                </div>
+                {importResult.summary.sectorsSkipped > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    {importResult.summary.sectorsSkipped} setor(es) já existente(s) ignorado(s)
+                  </p>
+                )}
+                {importResult.summary.peopleSkipped > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    {importResult.summary.peopleSkipped} linha(s) de colaborador ignorada(s)
+                  </p>
+                )}
+                {importResult.errors.length > 0 && (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                    <p className="text-sm font-medium text-destructive mb-2">
+                      Avisos ({importResult.errors.length}):
+                    </p>
+                    <ul className="text-xs text-muted-foreground space-y-1 max-h-32 overflow-y-auto">
+                      {importResult.errors.map((err, idx) => (
+                        <li key={idx}>• {err}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+            <DialogFooter>
+              <Button onClick={() => setImportResult(null)}>Fechar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

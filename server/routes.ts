@@ -5,6 +5,7 @@ import crypto from "crypto";
 import { log } from "./_core/logger";
 import { checkDbHealth } from "./db";
 import { registerPdfDownloadRoutes } from "./pdfDownloadRoutes";
+import { registerImportExportRoutes } from "./importExportRoutes";
 
 /**
  * Rotas Express - apenas health check e webhooks de pagamento.
@@ -80,6 +81,11 @@ export function registerRoutes(app: Express) {
   // PDF DOWNLOAD ROUTES (authenticated)
   // ============================================
   registerPdfDownloadRoutes(app);
+
+  // ============================================
+  // IMPORT/EXPORT ROUTES (people & sectors)
+  // ============================================
+  registerImportExportRoutes(app);
 
   app.post("/api/webhooks/mercadopago", async (req: Request, res: Response) => {
     // Verificar assinatura do Mercado Pago (obrigatório em produção)
