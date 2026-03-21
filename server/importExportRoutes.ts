@@ -321,7 +321,7 @@ export function registerImportExportRoutes(app: Express) {
       if (!auth) return;
 
       const { companyId } = req.params;
-      const db = getDb();
+      const db = await getDb();
 
       // Validate access
       const hasAccess = await validateCompanyAccess(auth.tenantId, companyId, db);
@@ -350,7 +350,7 @@ export function registerImportExportRoutes(app: Express) {
         if (!auth) return;
 
         const { companyId } = req.params;
-        const db = getDb();
+        const db = await getDb();
 
         // Validate access
         const hasAccess = await validateCompanyAccess(auth.tenantId, companyId, db);
