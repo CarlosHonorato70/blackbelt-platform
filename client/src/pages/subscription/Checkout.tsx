@@ -1,9 +1,8 @@
 /**
  * CHECKOUT PAGE
  *
- * Página de checkout para iniciar assinatura.
- * Se o plano tem trial, inicia direto sem pagamento.
- * Se não tem trial, redireciona para gateway de pagamento.
+ * Página de checkout para assinar um plano.
+ * Modelo: 1 empresa grátis para sempre. Para mais empresas, assinar plano.
  */
 
 import { useState, useEffect } from "react";
@@ -13,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Loader2, CreditCard, Smartphone, Gift, CheckCircle2, Shield } from "lucide-react";
+import { Loader2, CreditCard, Smartphone, CheckCircle2, Shield, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Checkout() {
@@ -30,7 +29,6 @@ export default function Checkout() {
   useEffect(() => {
     const plan = searchParams.get("plan");
     const cycle = searchParams.get("cycle");
-
     if (plan) setPlanId(plan);
     if (cycle === "yearly") setBillingCycle("yearly");
   }, [searchParams]);
@@ -57,43 +55,10 @@ export default function Checkout() {
   // Mutations
   const createStripeCheckout = trpc.stripe.createCheckoutSession.useMutation();
   const createMercadoPagoPreference = trpc.mercadoPago.createPreference.useMutation();
-  const createTrialSubscription = trpc.subscriptions.createTrialSubscription.useMutation();
-
-  const hasTrial = plan && plan.trialDays > 0;
-
-  // Handler para iniciar trial gratuito (sem pagamento)
-  const handleStartTrial = async () => {
-    if (!planId) return;
-
-    setIsProcessing(true);
-
-    try {
-      await createTrialSubscription.mutateAsync({
-        planId,
-        billingCycle,
-      });
-
-      toast({
-        title: "Trial ativado com sucesso!",
-        description: `Você tem ${plan?.trialDays} dias grátis para explorar a plataforma.`,
-      });
-
-      // Redirecionar para o dashboard
-      window.location.href = "/dashboard";
-    } catch (error) {
-      toast({
-        title: "Erro ao iniciar período de teste",
-        description: error instanceof Error ? error.message : "Tente novamente",
-        variant: "destructive",
-      });
-      setIsProcessing(false);
-    }
-  };
 
   // Handler para checkout com pagamento
   const handleCheckout = async () => {
     if (!planId) return;
-
     setIsProcessing(true);
 
     try {
@@ -107,10 +72,7 @@ export default function Checkout() {
           successUrl,
           cancelUrl,
         });
-
-        if (result.url) {
-          window.location.href = result.url;
-        }
+        if (result.url) window.location.href = result.url;
       } else {
         const result = await createMercadoPagoPreference.mutateAsync({
           planId,
@@ -119,10 +81,7 @@ export default function Checkout() {
           failureUrl: `${window.location.origin}/subscription/failure`,
           pendingUrl: `${window.location.origin}/subscription/pending`,
         });
-
-        if (result.initPoint) {
-          window.location.href = result.initPoint;
-        }
+        if (result.initPoint) window.location.href = result.initPoint;
       }
     } catch (error) {
       toast({
@@ -147,15 +106,11 @@ export default function Checkout() {
       <div className="container mx-auto py-12 px-4">
         <Card>
           <CardHeader>
-            <CardTitle>Plano não encontrado</CardTitle>
-            <CardDescription>
-              O plano selecionado não existe ou não está disponível.
-            </CardDescription>
+            <CardTitle>Plano nao encontrado</CardTitle>
+            <CardDescription>O plano selecionado nao existe ou nao esta disponivel.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => navigate("/subscription/pricing")}>
-              Voltar para Planos
-            </Button>
+            <Button onClick={() => navigate("/subscription/pricing")}>Voltar para Planos</Button>
           </CardContent>
         </Card>
       </div>
@@ -168,18 +123,12 @@ export default function Checkout() {
     currency: "BRL",
   });
 
-  const trialEndDate = new Date(Date.now() + (plan.trialDays || 0) * 24 * 60 * 60 * 1000);
-
   return (
     <div className="container mx-auto py-12 px-4 max-w-4xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">
-          {hasTrial ? "Iniciar Período de Teste" : "Finalizar Assinatura"}
-        </h1>
+        <h1 className="text-3xl font-bold mb-2">Assinar Plano</h1>
         <p className="text-muted-foreground">
-          {hasTrial
-            ? `Teste grátis por ${plan.trialDays} dias — sem cartão de crédito`
-            : "Complete os detalhes para ativar seu plano"}
+          Complete os detalhes para ativar seu plano
         </p>
       </div>
 
@@ -199,108 +148,94 @@ export default function Checkout() {
                 <div className="text-right">
                   <p className="text-2xl font-bold">{priceFormatted}</p>
                   <p className="text-sm text-muted-foreground">
-                    /{billingCycle === "monthly" ? "mês" : "ano"}
+                    /{billingCycle === "monthly" ? "mes" : "ano"}
                   </p>
                 </div>
               </div>
 
-              {hasTrial && (
-                <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Gift className="h-5 w-5 text-green-600" />
-                    <p className="font-semibold text-green-800">
-                      {plan.trialDays} dias de teste grátis
-                    </p>
-                  </div>
-                  <p className="text-sm text-green-700">
-                    Acesso completo a todas as funcionalidades até {trialEndDate.toLocaleDateString("pt-BR")}.
-                    Nenhum pagamento será cobrado durante o período de teste.
+              <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="h-5 w-5 text-amber-600" />
+                  <p className="font-semibold text-amber-800">
+                    1 empresa gratis incluida
                   </p>
                 </div>
-              )}
+                <p className="text-sm text-amber-700">
+                  Voce ja pode usar a plataforma com 1 empresa gratuitamente, sem limite de tempo.
+                  Assine um plano para atender mais empresas e acessar recursos avancados.
+                </p>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Benefícios do Trial */}
-          {hasTrial && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-primary" />
-                  O que está incluído no teste
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-3">
-                  {[
-                    "Acesso completo a todas as funcionalidades do plano",
-                    "Cadastro de setores e colaboradores",
-                    "Aplicação do questionário COPSOQ II",
-                    "Relatórios de risco psicossocial",
-                    "Planos de ação e compliance NR-01",
-                    "Suporte técnico completo",
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                      <span className="text-sm">{item}</span>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground mt-4">
-                  Sem necessidade de cartão de crédito. Cancele a qualquer momento.
-                </p>
-              </CardContent>
-            </Card>
-          )}
+          {/* O que está incluído */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                O que esta incluido no plano {plan.displayName}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3">
+                {[
+                  "SamurAI — Agente de IA para conformidade NR-01",
+                  "Cadastro de setores e colaboradores",
+                  "Questionario COPSOQ-II com envio por email",
+                  "Inventario de riscos psicossociais",
+                  "Planos de acao e compliance NR-01",
+                  "Exportacao de documentos em PDF",
+                  "Suporte tecnico",
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                    <span className="text-sm">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Gateway de Pagamento — só mostra se NÃO tem trial */}
-          {!hasTrial && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Método de Pagamento</CardTitle>
-                <CardDescription>
-                  Selecione como deseja pagar
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <RadioGroup value={gateway} onValueChange={(v) => setGateway(v as "stripe" | "mercadopago")}>
-                  {stripeConfig?.enabled && (
-                    <div className="flex items-center space-x-2 border rounded-lg p-4">
-                      <RadioGroupItem value="stripe" id="stripe" />
-                      <Label htmlFor="stripe" className="flex-1 cursor-pointer">
-                        <div className="flex items-center gap-3">
-                          <CreditCard className="h-5 w-5" />
-                          <div>
-                            <p className="font-medium">Cartão de Crédito (Stripe)</p>
-                            <p className="text-xs text-muted-foreground">
-                              Pagamento internacional seguro
-                            </p>
-                          </div>
+          {/* Gateway de Pagamento */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Metodo de Pagamento</CardTitle>
+              <CardDescription>Selecione como deseja pagar</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup value={gateway} onValueChange={(v) => setGateway(v as "stripe" | "mercadopago")}>
+                {stripeConfig?.enabled && (
+                  <div className="flex items-center space-x-2 border rounded-lg p-4">
+                    <RadioGroupItem value="stripe" id="stripe" />
+                    <Label htmlFor="stripe" className="flex-1 cursor-pointer">
+                      <div className="flex items-center gap-3">
+                        <CreditCard className="h-5 w-5" />
+                        <div>
+                          <p className="font-medium">Cartao de Credito (Stripe)</p>
+                          <p className="text-xs text-muted-foreground">Pagamento internacional seguro</p>
                         </div>
-                      </Label>
-                    </div>
-                  )}
+                      </div>
+                    </Label>
+                  </div>
+                )}
 
-                  {mercadoPagoConfig?.enabled && (
-                    <div className="flex items-center space-x-2 border rounded-lg p-4">
-                      <RadioGroupItem value="mercadopago" id="mercadopago" />
-                      <Label htmlFor="mercadopago" className="flex-1 cursor-pointer">
-                        <div className="flex items-center gap-3">
-                          <Smartphone className="h-5 w-5" />
-                          <div>
-                            <p className="font-medium">Mercado Pago</p>
-                            <p className="text-xs text-muted-foreground">
-                              Cartão, Pix, boleto e mais
-                            </p>
-                          </div>
+                {mercadoPagoConfig?.enabled && (
+                  <div className="flex items-center space-x-2 border rounded-lg p-4">
+                    <RadioGroupItem value="mercadopago" id="mercadopago" />
+                    <Label htmlFor="mercadopago" className="flex-1 cursor-pointer">
+                      <div className="flex items-center gap-3">
+                        <Smartphone className="h-5 w-5" />
+                        <div>
+                          <p className="font-medium">Mercado Pago</p>
+                          <p className="text-xs text-muted-foreground">Cartao, Pix, boleto e mais</p>
                         </div>
-                      </Label>
-                    </div>
-                  )}
-                </RadioGroup>
-              </CardContent>
-            </Card>
-          )}
+                      </div>
+                    </Label>
+                  </div>
+                )}
+              </RadioGroup>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Sidebar com Resumo */}
@@ -328,28 +263,16 @@ export default function Checkout() {
                   </div>
                 )}
 
-                {hasTrial ? (
-                  <>
-                    <div className="border-t pt-2 flex justify-between font-semibold">
-                      <span>Hoje</span>
-                      <span className="text-green-600">R$ 0,00</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Após o teste: {priceFormatted}/{billingCycle === "monthly" ? "mês" : "ano"}
-                    </div>
-                  </>
-                ) : (
-                  <div className="border-t pt-2 flex justify-between font-semibold">
-                    <span>Total</span>
-                    <span>{priceFormatted}</span>
-                  </div>
-                )}
+                <div className="border-t pt-2 flex justify-between font-semibold">
+                  <span>Total</span>
+                  <span>{priceFormatted}/{billingCycle === "monthly" ? "mes" : "ano"}</span>
+                </div>
               </div>
 
               <Button
                 className="w-full"
                 size="lg"
-                onClick={hasTrial ? handleStartTrial : handleCheckout}
+                onClick={handleCheckout}
                 disabled={isProcessing}
               >
                 {isProcessing ? (
@@ -357,20 +280,14 @@ export default function Checkout() {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Processando...
                   </>
-                ) : hasTrial ? (
-                  <>
-                    <Gift className="mr-2 h-4 w-4" />
-                    Iniciar {plan.trialDays} Dias Grátis
-                  </>
                 ) : (
                   "Assinar Agora"
                 )}
               </Button>
 
               <div className="text-xs text-center text-muted-foreground">
-                {hasTrial
-                  ? "Sem cartão de crédito. Cancele quando quiser."
-                  : "Você será redirecionado para completar o pagamento de forma segura"}
+                Voce sera redirecionado para completar o pagamento de forma segura.
+                Cancele a qualquer momento.
               </div>
             </CardContent>
           </Card>
