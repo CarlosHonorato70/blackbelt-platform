@@ -4,11 +4,12 @@
  * Called by the agent fallback when LLM is unavailable.
  */
 import { nanoid } from "nanoid";
+import crypto from "crypto";
 import { getDb } from "../db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, isNotNull } from "drizzle-orm";
 import { people } from "../../drizzle/schema";
 import {
-  copsoqAssessments, copsoqResponses, copsoqReports,
+  copsoqAssessments, copsoqResponses, copsoqReports, copsoqInvites,
   complianceChecklist, complianceMilestones, complianceCertificates,
   riskAssessments, riskAssessmentItems, actionPlans,
   interventionPrograms, trainingModules, pcmsoRecommendations,
@@ -75,193 +76,286 @@ export async function executeCreateAssessment(
   if (!db) return { success: false, message: "Database not available" };
 
   try {
-    // ALWAYS use actual people count from database, never trust headcount parameter
-    const [peopleCount] = await db.select({ count: sql<number>`COUNT(*)` })
+    // Check for people with emails — if found, send real COPSOQ invites
+    const peopleWithEmail = await db.select()
       .from(people)
-      .where(eq(people.tenantId, tenantId));
-    const realPeopleCount = peopleCount?.count || 0;
+      .where(and(eq(people.tenantId, tenantId), isNotNull(people.email)));
 
-    if (realPeopleCount === 0) {
-      return {
-        success: false,
-        message: "Nenhum colaborador cadastrado nesta empresa. Cadastre os colaboradores antes de criar a avaliação COPSOQ-II.",
-      };
+    const validPeople = peopleWithEmail.filter((p: any) => p.email && p.email.trim());
+
+    if (validPeople.length > 0) {
+      // REAL MODE: Send actual COPSOQ invite emails to employees
+      return await executeCreateAssessmentWithInvites(tenantId, companyName, validPeople, db);
     }
 
-    const assessmentId = `copsoq_${Date.now()}_${nanoid(8)}`;
-    await db.insert(copsoqAssessments).values({
-      id: assessmentId,
-      tenantId,
-      title: `Avaliação COPSOQ-II - ${companyName} ${new Date().getFullYear()}`,
-      description: `Avaliação de riscos psicossociais conforme NR-01 — ${realPeopleCount} colaboradores`,
-      assessmentDate: new Date(),
-      status: "in_progress",
-    });
-
-    // Use REAL people count from database (not the headcount parameter)
-    const actualCount = realPeopleCount;
-    const dimensionTotals: Record<string, number[]> = {};
-    const employeeProfiles: Array<{ profile: Record<string, number> }> = [];
-
-    for (let i = 0; i < actualCount; i++) {
-      const emp = generateSimulatedEmployee(i);
-      employeeProfiles.push({ profile: emp.profile });
-      const p = emp.profile;
-
-      // Generate responses object (76 questions)
-      const responses: Record<string, number> = {};
-      const dimMap = [
-        { key: "demanda", base: p.stress, qs: 6 },
-        { key: "controle", base: p.autonomy, qs: 6 },
-        { key: "apoio", base: p.support, qs: 6 },
-        { key: "lideranca", base: p.leadership, qs: 6 },
-        { key: "comunidade", base: p.community, qs: 6 },
-        { key: "significado", base: p.meaning, qs: 7 },
-        { key: "confianca", base: p.trust, qs: 6 },
-        { key: "justica", base: p.justice, qs: 6 },
-        { key: "inseguranca", base: p.insecurity, qs: 6 },
-        { key: "saudeMental", base: p.mental, qs: 7 },
-        { key: "burnout", base: p.burnout, qs: 7 },
-        { key: "violencia", base: p.violence, qs: 7 },
-      ];
-
-      let qNum = 1;
-      const dimScores: Record<string, number> = {};
-
-      for (const dim of dimMap) {
-        let total = 0;
-        for (let q = 0; q < dim.qs; q++) {
-          const variation = Math.floor(Math.random() * 2) - 1;
-          const val = Math.max(1, Math.min(5, dim.base + variation));
-          responses[`q${qNum}`] = val;
-          total += val;
-          qNum++;
-        }
-        // Convert to 0-100 scale (inverted for negative dimensions)
-        const avgRaw = total / dim.qs;
-        const isNegative = ["demanda", "inseguranca", "burnout", "violencia"].includes(dim.key);
-        const score = isNegative
-          ? Math.round(((5 - avgRaw) / 4) * 100)
-          : Math.round(((avgRaw - 1) / 4) * 100);
-        dimScores[dim.key] = score;
-
-        if (!dimensionTotals[dim.key]) dimensionTotals[dim.key] = [];
-        dimensionTotals[dim.key].push(score);
-      }
-
-      // Calculate overall risk
-      const avgScore = Object.values(dimScores).reduce((a, b) => a + b, 0) / Object.keys(dimScores).length;
-      const overallRisk = avgScore < 30 ? "critical" : avgScore < 50 ? "high" : avgScore < 70 ? "medium" : "low";
-
-      const responseId = nanoid();
-      log.info(`[Agent COPSOQ] Inserting response ${i + 1}/${actualCount} for assessment ${assessmentId}`);
-      await db.insert(copsoqResponses).values({
-        id: responseId,
-        assessmentId,
-        tenantId,
-        personId: `sim-emp-${i + 1}`,
-        responses,
-        demandScore: dimScores.demanda ?? 0,
-        controlScore: dimScores.controle ?? 0,
-        supportScore: dimScores.apoio ?? 0,
-        leadershipScore: dimScores.lideranca ?? 0,
-        communityScore: dimScores.comunidade ?? 0,
-        meaningScore: dimScores.significado ?? 0,
-        trustScore: dimScores.confianca ?? 0,
-        justiceScore: dimScores.justica ?? 0,
-        insecurityScore: dimScores.inseguranca ?? 0,
-        mentalHealthScore: dimScores.saudeMental ?? 0,
-        burnoutScore: dimScores.burnout ?? 0,
-        violenceScore: dimScores.violencia ?? 0,
-        overallRiskLevel: overallRisk as "low" | "medium" | "high" | "critical",
-        ageGroup: emp.age,
-        gender: emp.gender,
-        yearsInCompany: emp.years,
-        completedAt: new Date(),
-        createdAt: new Date(),
-      });
-    }
-
-    log.info(`[Agent COPSOQ] Successfully inserted ${actualCount} responses for assessment ${assessmentId}`);
-
-    // Generate aggregated report
-    const aggregatedScores: Record<string, number> = {};
-    for (const [dim, scores] of Object.entries(dimensionTotals)) {
-      aggregatedScores[dim] = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-    }
-
-    const avgOverall = Object.values(aggregatedScores).reduce((a, b) => a + b, 0) / Object.keys(aggregatedScores).length;
-    const overallRisk = avgOverall < 30 ? "critical" : avgOverall < 50 ? "high" : avgOverall < 70 ? "medium" : "low";
-
-    const criticalDimensions = Object.entries(aggregatedScores)
-      .filter(([, score]) => score < 40)
-      .map(([dim]) => dim);
-
-    // Count risk distribution
-    const riskDist = { low: 0, medium: 0, high: 0, critical: 0 };
-    // Calculate per-employee risk
-    for (let i = 0; i < actualCount; i++) {
-      const p = employeeProfiles[i].profile;
-      const avg = Object.values(p).reduce((a, b) => a + b, 0) / Object.values(p).length;
-      const score = Math.round(((5 - avg) / 4) * 100);
-      if (score < 30) riskDist.critical++;
-      else if (score < 50) riskDist.high++;
-      else if (score < 70) riskDist.medium++;
-      else riskDist.low++;
-    }
-
-    await db.insert(copsoqReports).values({
-      id: nanoid(),
-      assessmentId,
-      tenantId,
-      title: `Relatório COPSOQ-II - ${companyName}`,
-      description: "Relatório gerado automaticamente pelo Agente IA",
-      totalRespondents: actualCount,
-      responseRate: 100,
-      averageDemandScore: aggregatedScores.demanda || 0,
-      averageControlScore: aggregatedScores.controle || 0,
-      averageSupportScore: aggregatedScores.apoio || 0,
-      averageLeadershipScore: aggregatedScores.lideranca || 0,
-      averageCommunityScore: aggregatedScores.comunidade || 0,
-      averageMeaningScore: aggregatedScores.significado || 0,
-      averageTrustScore: aggregatedScores.confianca || 0,
-      averageJusticeScore: aggregatedScores.justica || 0,
-      averageInsecurityScore: aggregatedScores.inseguranca || 0,
-      averageMentalHealthScore: aggregatedScores.saudeMental || 0,
-      averageBurnoutScore: aggregatedScores.burnout || 0,
-      averageViolenceScore: aggregatedScores.violencia || 0,
-      lowRiskCount: riskDist.low,
-      mediumRiskCount: riskDist.medium,
-      highRiskCount: riskDist.high,
-      criticalRiskCount: riskDist.critical,
-      aiAnalysis: {
-        criticalDimensions,
-        recommendations: generateRecommendations(aggregatedScores),
-        overallRisk,
-      },
-      aiGeneratedAt: new Date(),
-      aiModel: "agent-rule-based",
-      generatedAt: new Date(),
-      createdAt: new Date(),
-    });
-
-    // Record action
-    await db.insert(agentActions).values({
-      id: nanoid(), tenantId, actionType: "create_assessment",
-      status: "completed", input: { companyName, headcount },
-      output: { assessmentId, responses: actualCount, overallRisk, aggregatedScores },
-      startedAt: new Date(), completedAt: new Date(),
-    });
-
-    return {
-      success: true,
-      assessmentId,
-      message: formatAssessmentResult(actualCount, aggregatedScores, overallRisk, criticalDimensions),
-    };
+    // FALLBACK: Simulate responses when no employees have emails
+    return await executeCreateAssessmentSimulated(tenantId, companyName, headcount, db);
   } catch (error: any) {
     log.error("Agent create_assessment failed", { error: error.message });
     return { success: false, message: `Erro ao criar avaliação: ${error.message}` };
   }
+}
+
+// ============================================================================
+// REAL MODE: Send COPSOQ invites via email to registered employees
+// ============================================================================
+
+async function executeCreateAssessmentWithInvites(
+  tenantId: string,
+  companyName: string,
+  peopleList: any[],
+  db: any
+): Promise<{ success: boolean; assessmentId?: string; message: string }> {
+  const assessmentId = `copsoq_${Date.now()}_${nanoid(8)}`;
+  const assessmentTitle = `Avaliação COPSOQ-II - ${companyName} ${new Date().getFullYear()}`;
+
+  // 1. Create COPSOQ assessment
+  await db.insert(copsoqAssessments).values({
+    id: assessmentId,
+    tenantId,
+    title: assessmentTitle,
+    description: `Avaliação de riscos psicossociais conforme NR-01 — ${peopleList.length} colaboradores`,
+    assessmentDate: new Date(),
+    status: "in_progress",
+  });
+
+  // 2. Create invites with tokens
+  const expiresIn = 7; // days
+  const expiresAt = new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000);
+  const invitesToSend: Array<{
+    respondentEmail: string;
+    respondentName: string;
+    assessmentTitle: string;
+    inviteToken: string;
+    expiresIn: number;
+  }> = [];
+
+  for (const person of peopleList) {
+    const inviteToken = crypto.randomBytes(32).toString("hex");
+    const inviteId = nanoid();
+    await db.insert(copsoqInvites).values({
+      id: inviteId,
+      assessmentId,
+      tenantId,
+      respondentEmail: person.email,
+      respondentName: person.name,
+      respondentPosition: person.position || null,
+      inviteToken,
+      status: "pending",
+      expiresAt,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    invitesToSend.push({
+      respondentEmail: person.email!,
+      respondentName: person.name,
+      assessmentTitle,
+      inviteToken,
+      expiresIn,
+    });
+  }
+
+  // 3. Send emails in bulk (reuses existing email system)
+  let emailResult = { success: 0, failed: 0 };
+  try {
+    const { sendBulkCopsoqInvites } = await import("../_core/email");
+    emailResult = await sendBulkCopsoqInvites(invitesToSend);
+    log.info(`[Agent COPSOQ] Emails sent: ${emailResult.success} success, ${emailResult.failed} failed`);
+  } catch (emailError: any) {
+    log.error("[Agent COPSOQ] Email sending failed:", emailError.message);
+    emailResult = { success: 0, failed: invitesToSend.length };
+  }
+
+  // 4. Update invite status to "sent"
+  if (emailResult.success > 0) {
+    await db.update(copsoqInvites)
+      .set({ status: "sent", sentAt: new Date(), updatedAt: new Date() })
+      .where(eq(copsoqInvites.assessmentId, assessmentId));
+  }
+
+  // 5. Record agent action
+  await db.insert(agentActions).values({
+    id: nanoid(),
+    tenantId,
+    actionType: "send_copsoq_invites",
+    status: "completed",
+    input: { assessmentId, inviteCount: peopleList.length },
+    output: { success: emailResult.success, failed: emailResult.failed },
+    startedAt: new Date(),
+    completedAt: new Date(),
+  });
+
+  // 6. Return formatted message
+  const emailList = peopleList.map((p: any) => `- ${p.name} (${p.email})`).join("\n");
+  return {
+    success: true,
+    assessmentId,
+    message:
+      `✅ **Convites COPSOQ-II enviados com sucesso!**\n\n` +
+      `📧 **${emailResult.success} email(s) enviado(s)** para os colaboradores:\n${emailList}\n\n` +
+      `⏰ Os colaboradores tem **${expiresIn} dias** para responder o questionario.\n` +
+      `📊 Quando todos responderem, diga "**gerar relatorio**" para continuar o processo NR-01.\n\n` +
+      (emailResult.failed > 0 ? `⚠️ ${emailResult.failed} email(s) falharam no envio.\n\n` : "") +
+      `**Proxima etapa:** Aguardar respostas dos colaboradores.`,
+  };
+}
+
+// ============================================================================
+// SIMULATED MODE: Generate fake COPSOQ responses (fallback when no emails)
+// ============================================================================
+
+async function executeCreateAssessmentSimulated(
+  tenantId: string,
+  companyName: string,
+  headcount: number,
+  db: any
+): Promise<{ success: boolean; assessmentId?: string; message: string }> {
+  // ALWAYS use actual people count from database, never trust headcount parameter
+  const [peopleCount] = await db.select({ count: sql<number>`COUNT(*)` })
+    .from(people)
+    .where(eq(people.tenantId, tenantId));
+  const realPeopleCount = peopleCount?.count || 0;
+
+  if (realPeopleCount === 0) {
+    return {
+      success: false,
+      message: "Nenhum colaborador cadastrado nesta empresa. Cadastre os colaboradores antes de criar a avaliação COPSOQ-II.",
+    };
+  }
+
+  const assessmentId = `copsoq_${Date.now()}_${nanoid(8)}`;
+  await db.insert(copsoqAssessments).values({
+    id: assessmentId,
+    tenantId,
+    title: `Avaliação COPSOQ-II - ${companyName} ${new Date().getFullYear()}`,
+    description: `Avaliação de riscos psicossociais conforme NR-01 — ${realPeopleCount} colaboradores`,
+    assessmentDate: new Date(),
+    status: "in_progress",
+  });
+
+  const actualCount = realPeopleCount;
+  const dimensionTotals: Record<string, number[]> = {};
+  const employeeProfiles: Array<{ profile: Record<string, number> }> = [];
+
+  for (let i = 0; i < actualCount; i++) {
+    const emp = generateSimulatedEmployee(i);
+    employeeProfiles.push({ profile: emp.profile });
+    const p = emp.profile;
+
+    const responses: Record<string, number> = {};
+    const dimMap = [
+      { key: "demanda", base: p.stress, qs: 6 },
+      { key: "controle", base: p.autonomy, qs: 6 },
+      { key: "apoio", base: p.support, qs: 6 },
+      { key: "lideranca", base: p.leadership, qs: 6 },
+      { key: "comunidade", base: p.community, qs: 6 },
+      { key: "significado", base: p.meaning, qs: 7 },
+      { key: "confianca", base: p.trust, qs: 6 },
+      { key: "justica", base: p.justice, qs: 6 },
+      { key: "inseguranca", base: p.insecurity, qs: 6 },
+      { key: "saudeMental", base: p.mental, qs: 7 },
+      { key: "burnout", base: p.burnout, qs: 7 },
+      { key: "violencia", base: p.violence, qs: 7 },
+    ];
+
+    let qNum = 1;
+    const dimScores: Record<string, number> = {};
+
+    for (const dim of dimMap) {
+      let total = 0;
+      for (let q = 0; q < dim.qs; q++) {
+        const variation = Math.floor(Math.random() * 2) - 1;
+        const val = Math.max(1, Math.min(5, dim.base + variation));
+        responses[`q${qNum}`] = val;
+        total += val;
+        qNum++;
+      }
+      const avgRaw = total / dim.qs;
+      const isNegative = ["demanda", "inseguranca", "burnout", "violencia"].includes(dim.key);
+      const score = isNegative
+        ? Math.round(((5 - avgRaw) / 4) * 100)
+        : Math.round(((avgRaw - 1) / 4) * 100);
+      dimScores[dim.key] = score;
+
+      if (!dimensionTotals[dim.key]) dimensionTotals[dim.key] = [];
+      dimensionTotals[dim.key].push(score);
+    }
+
+    const avgScore = Object.values(dimScores).reduce((a, b) => a + b, 0) / Object.keys(dimScores).length;
+    const overallRisk = avgScore < 30 ? "critical" : avgScore < 50 ? "high" : avgScore < 70 ? "medium" : "low";
+
+    const responseId = nanoid();
+    log.info(`[Agent COPSOQ] Inserting response ${i + 1}/${actualCount} for assessment ${assessmentId}`);
+    await db.insert(copsoqResponses).values({
+      id: responseId, assessmentId, tenantId,
+      personId: `sim-emp-${i + 1}`, responses,
+      demandScore: dimScores.demanda ?? 0, controlScore: dimScores.controle ?? 0,
+      supportScore: dimScores.apoio ?? 0, leadershipScore: dimScores.lideranca ?? 0,
+      communityScore: dimScores.comunidade ?? 0, meaningScore: dimScores.significado ?? 0,
+      trustScore: dimScores.confianca ?? 0, justiceScore: dimScores.justica ?? 0,
+      insecurityScore: dimScores.inseguranca ?? 0, mentalHealthScore: dimScores.saudeMental ?? 0,
+      burnoutScore: dimScores.burnout ?? 0, violenceScore: dimScores.violencia ?? 0,
+      overallRiskLevel: overallRisk as "low" | "medium" | "high" | "critical",
+      ageGroup: emp.age, gender: emp.gender, yearsInCompany: emp.years,
+      completedAt: new Date(), createdAt: new Date(),
+    });
+  }
+
+  log.info(`[Agent COPSOQ] Successfully inserted ${actualCount} responses for assessment ${assessmentId}`);
+
+  const aggregatedScores: Record<string, number> = {};
+  for (const [dim, scores] of Object.entries(dimensionTotals)) {
+    aggregatedScores[dim] = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  }
+
+  const avgOverall = Object.values(aggregatedScores).reduce((a, b) => a + b, 0) / Object.keys(aggregatedScores).length;
+  const overallRisk = avgOverall < 30 ? "critical" : avgOverall < 50 ? "high" : avgOverall < 70 ? "medium" : "low";
+
+  const criticalDimensions = Object.entries(aggregatedScores)
+    .filter(([, score]) => score < 40)
+    .map(([dim]) => dim);
+
+  const riskDist = { low: 0, medium: 0, high: 0, critical: 0 };
+  for (let i = 0; i < actualCount; i++) {
+    const p = employeeProfiles[i].profile;
+    const avg = Object.values(p).reduce((a, b) => a + b, 0) / Object.values(p).length;
+    const score = Math.round(((5 - avg) / 4) * 100);
+    if (score < 30) riskDist.critical++;
+    else if (score < 50) riskDist.high++;
+    else if (score < 70) riskDist.medium++;
+    else riskDist.low++;
+  }
+
+  await db.insert(copsoqReports).values({
+    id: nanoid(), assessmentId, tenantId,
+    title: `Relatório COPSOQ-II - ${companyName}`,
+    description: "Relatório gerado automaticamente pelo Agente IA",
+    totalRespondents: actualCount, responseRate: 100,
+    averageDemandScore: aggregatedScores.demanda || 0, averageControlScore: aggregatedScores.controle || 0,
+    averageSupportScore: aggregatedScores.apoio || 0, averageLeadershipScore: aggregatedScores.lideranca || 0,
+    averageCommunityScore: aggregatedScores.comunidade || 0, averageMeaningScore: aggregatedScores.significado || 0,
+    averageTrustScore: aggregatedScores.confianca || 0, averageJusticeScore: aggregatedScores.justica || 0,
+    averageInsecurityScore: aggregatedScores.inseguranca || 0, averageMentalHealthScore: aggregatedScores.saudeMental || 0,
+    averageBurnoutScore: aggregatedScores.burnout || 0, averageViolenceScore: aggregatedScores.violencia || 0,
+    lowRiskCount: riskDist.low, mediumRiskCount: riskDist.medium,
+    highRiskCount: riskDist.high, criticalRiskCount: riskDist.critical,
+    aiAnalysis: { criticalDimensions, recommendations: generateRecommendations(aggregatedScores), overallRisk },
+    aiGeneratedAt: new Date(), aiModel: "agent-rule-based",
+    generatedAt: new Date(), createdAt: new Date(),
+  });
+
+  await db.insert(agentActions).values({
+    id: nanoid(), tenantId, actionType: "create_assessment",
+    status: "completed", input: { companyName, headcount },
+    output: { assessmentId, responses: actualCount, overallRisk, aggregatedScores },
+    startedAt: new Date(), completedAt: new Date(),
+  });
+
+  return {
+    success: true,
+    assessmentId,
+    message: formatAssessmentResult(actualCount, aggregatedScores, overallRisk, criticalDimensions),
+  };
 }
 
 function generateRecommendations(scores: Record<string, number>): string[] {
