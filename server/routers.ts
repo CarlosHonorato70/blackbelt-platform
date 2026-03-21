@@ -55,6 +55,7 @@ import { esocialExportRouter } from "./routers/esocialExport";
 import { nr01PdfExportRouter } from "./routers/nr01PdfExport";
 import { companiesRouter } from "./routers/companies";
 import { agentRouter } from "./routers/agent";
+import { supportAgentRouter } from "./routers/supportAgent";
 
 
 export const appRouter = router({
@@ -147,6 +148,9 @@ export const appRouter = router({
 
   // Agente IA NR-01
   agent: agentRouter,
+
+  // Agente de Suporte IA
+  supportAgent: supportAgentRouter,
 });
 
 export type AppRouter = typeof appRouter;

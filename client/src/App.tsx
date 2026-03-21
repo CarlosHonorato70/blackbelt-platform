@@ -84,6 +84,7 @@ const EsocialExport = lazy(() => import("./pages/EsocialExport"));
 const Companies = lazy(() => import("./pages/Companies"));
 const GuidedWorkflow = lazy(() => import("./pages/GuidedWorkflow"));
 const AgentChat = lazy(() => import("./pages/AgentChat"));
+const SupportChat = lazy(() => import("./pages/SupportChat"));
 
 // Subscription pages
 const Pricing = lazy(() => import("./pages/subscription/Pricing"));
@@ -211,6 +212,7 @@ export default function App() {
                 <Route path="/branding-settings" element={<ProtectedPage><BrandingSettings /></ProtectedPage>} />
                 <Route path="/test-dashboard" element={<ProtectedPage><TestDashboard /></ProtectedPage>} />
                 <Route path="/help" element={<ProtectedPage><Help /></ProtectedPage>} />
+                <Route path="/support-chat" element={<ProtectedPage><SupportChat /></ProtectedPage>} />
 
                 {/* Subscription */}
                 <Route path="/subscription" element={<ProtectedPage><SubscriptionDashboard /></ProtectedPage>} />

@@ -51,6 +51,7 @@ import {
   Upload,
   HeartPulse,
   MessageSquareWarning,
+  Headphones,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { CSSProperties, Fragment, useEffect, useState } from "react";
@@ -113,6 +114,7 @@ const menuItems: MenuItem[] = [
   { icon: Palette, label: "Identidade Visual", path: "/branding-settings", adminOnly: true, group: "Administração" },
 
   // --- Suporte ---
+  { icon: Headphones, label: "Suporte IA", path: "/support-chat", group: "Suporte", companyVisible: true },
   { icon: HelpCircle, label: "Ajuda", path: "/help", group: "Suporte", companyVisible: true },
 ];
 
