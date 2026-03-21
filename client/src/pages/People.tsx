@@ -71,12 +71,12 @@ export default function People() {
   // --- People queries/mutations ---
   const { data: people, isLoading: peopleLoading } = trpc.people.list.useQuery(
     undefined,
-    { enabled: !!selectedTenant }
+    { enabled: !!effectiveCompanyId }
   );
 
   const { data: sectors, isLoading: sectorsLoading } = trpc.sectors.list.useQuery(
     undefined,
-    { enabled: !!selectedTenant }
+    { enabled: !!effectiveCompanyId }
   );
 
   const createPersonMutation = trpc.people.create.useMutation({
@@ -229,7 +229,7 @@ export default function People() {
   // --- People handlers ---
   const handlePersonSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedTenant) {
+    if (!effectiveCompanyId) {
       toast.error("Selecione uma empresa primeiro");
       return;
     }
@@ -246,7 +246,7 @@ export default function People() {
 
   const handlePersonEditSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedTenant || !selectedPersonId) return;
+    if (!effectiveCompanyId || !selectedPersonId) return;
 
     const formData = new FormData(e.currentTarget);
     updatePersonMutation.mutate({
@@ -262,7 +262,7 @@ export default function People() {
   // --- Sectors handlers ---
   const handleSectorSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedTenant) {
+    if (!effectiveCompanyId) {
       toast.error("Selecione uma empresa primeiro");
       return;
     }
@@ -277,7 +277,7 @@ export default function People() {
 
   const handleSectorEditSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedTenant || !selectedSectorId) return;
+    if (!effectiveCompanyId || !selectedSectorId) return;
 
     const formData = new FormData(e.currentTarget);
     updateSectorMutation.mutate({
@@ -291,7 +291,7 @@ export default function People() {
   const selectedPerson = people?.find(p => p.id === selectedPersonId);
   const selectedSector = sectors?.find(s => s.id === selectedSectorId);
 
-  if (!selectedTenant) {
+  if (!effectiveCompanyId) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-12">
