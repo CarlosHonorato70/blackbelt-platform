@@ -108,13 +108,6 @@ async function generateTemplate(companyId: string, db: any): Promise<Buffer> {
   // Column width
   sectorSheet["!cols"] = [{ wch: 40 }];
 
-  // Style header (bold via comment since xlsx doesn't support styles in community edition)
-  if (!sectorSheet.A1.c) sectorSheet.A1.c = [];
-  sectorSheet.A1.c.push({
-    a: "BlackBelt Platform",
-    t: "Preencha os nomes dos setores da empresa. Setores existentes ja estao listados.",
-  });
-
   XLSX.utils.book_append_sheet(wb, sectorSheet, "Setores");
 
   // --- Sheet 2: Colaboradores ---
@@ -136,31 +129,6 @@ async function generateTemplate(companyId: string, db: any): Promise<Buffer> {
     { wch: 25 }, // Cargo
     { wch: 25 }, // Setor
     { wch: 20 }, // Tipo de Vinculo
-  ];
-
-  // Add notes/comments to header cells
-  if (!peopleSheet.E1.c) peopleSheet.E1.c = [];
-  peopleSheet.E1.c.push({
-    a: "BlackBelt Platform",
-    t: "Use os mesmos nomes de setor cadastrados na aba 'Setores'.",
-  });
-
-  if (!peopleSheet.F1.c) peopleSheet.F1.c = [];
-  peopleSheet.F1.c.push({
-    a: "BlackBelt Platform",
-    t: "Opcoes: CLT, PJ, Estagiario, Terceirizado, Socio",
-  });
-
-  // Add data validation for Tipo de Vinculo column (F2:F1000)
-  peopleSheet["!dataValidation"] = [
-    {
-      sqref: "F2:F1000",
-      type: "list",
-      formula1: '"CLT,PJ,Estagiario,Terceirizado,Socio"',
-      showErrorMessage: true,
-      errorTitle: "Valor invalido",
-      error: "Selecione: CLT, PJ, Estagiario, Terceirizado ou Socio",
-    },
   ];
 
   XLSX.utils.book_append_sheet(wb, peopleSheet, "Colaboradores");
@@ -366,9 +334,9 @@ export function registerImportExportRoutes(app: Express) {
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.setHeader("Content-Disposition", "attachment; filename=modelo_colaboradores.xlsx");
       res.send(buffer);
-    } catch (error) {
-      log.error("[Template Download] Error:", error as any);
-      res.status(500).json({ error: "Erro ao gerar modelo" });
+    } catch (error: any) {
+      console.error("[Template Download] Error:", error?.message, error?.stack);
+      res.status(500).json({ error: "Erro ao gerar modelo: " + (error?.message || "desconhecido") });
     }
   });
 
