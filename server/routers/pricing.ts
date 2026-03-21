@@ -10,8 +10,10 @@ import {
   pricingParameters,
   proposals,
   proposalItems,
+  tenants,
 } from "../../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
+import { log } from "../_core/logger";
 
 export const pricingRouter = router({
   // ============================================================================
@@ -200,7 +202,45 @@ export const pricingRouter = router({
         const db = await getDb();
         if (!db) return [];
 
-        const conditions = [eq(services.tenantId, ctx.tenantId!)];
+        const tenantId = ctx.tenantId!;
+
+        // Auto-seed: if consultant has no services, copy from admin as starting template
+        if (!input.category && input.offset === 0) {
+          const [countResult] = await db.select({ count: services.id }).from(services)
+            .where(eq(services.tenantId, tenantId)).limit(1);
+          if (!countResult) {
+            try {
+              const [adminTenant] = await db.select({ id: tenants.id }).from(tenants)
+                .where(eq(tenants.tenantType, "admin")).limit(1);
+              if (adminTenant) {
+                const adminServices = await db.select().from(services)
+                  .where(eq(services.tenantId, adminTenant.id));
+                if (adminServices.length > 0) {
+                  for (const svc of adminServices) {
+                    await db.insert(services).values({
+                      id: nanoid(),
+                      tenantId,
+                      name: svc.name,
+                      description: svc.description,
+                      category: svc.category,
+                      unit: svc.unit,
+                      minPrice: svc.minPrice,
+                      maxPrice: svc.maxPrice,
+                      isActive: svc.isActive,
+                      createdAt: new Date(),
+                      updatedAt: new Date(),
+                    });
+                  }
+                  log.info(`[Pricing] Auto-seeded ${adminServices.length} services from admin to tenant ${tenantId}`);
+                }
+              }
+            } catch (e: any) {
+              log.warn(`[Pricing] Auto-seed failed: ${e.message}`);
+            }
+          }
+        }
+
+        const conditions = [eq(services.tenantId, tenantId)];
 
         if (input.category) {
           conditions.push(eq(services.category, input.category));
@@ -362,12 +402,49 @@ export const pricingRouter = router({
         const db = await getDb();
         if (!db) return null;
 
+        const tenantId = ctx.tenantId!;
+
         const [params] = await db
           .select()
           .from(pricingParameters)
-          .where(eq(pricingParameters.tenantId, ctx.tenantId!));
+          .where(eq(pricingParameters.tenantId, tenantId));
 
-        return params || null;
+        if (params) return params;
+
+        // Auto-seed: copy pricing parameters from admin as starting template
+        try {
+          const [adminTenant] = await db.select({ id: tenants.id }).from(tenants)
+            .where(eq(tenants.tenantType, "admin")).limit(1);
+          if (adminTenant) {
+            const [adminParams] = await db.select().from(pricingParameters)
+              .where(eq(pricingParameters.tenantId, adminTenant.id));
+            if (adminParams) {
+              const newId = nanoid();
+              await db.insert(pricingParameters).values({
+                id: newId,
+                tenantId,
+                monthlyFixedCost: adminParams.monthlyFixedCost,
+                laborCost: adminParams.laborCost,
+                productiveHoursPerMonth: adminParams.productiveHoursPerMonth,
+                defaultTaxRegime: adminParams.defaultTaxRegime,
+                volumeDiscounts: adminParams.volumeDiscounts,
+                riskAdjustment: adminParams.riskAdjustment,
+                seniorityAdjustment: adminParams.seniorityAdjustment,
+                taxRates: adminParams.taxRates,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              });
+              log.info(`[Pricing] Auto-seeded pricing parameters from admin to tenant ${tenantId}`);
+              const [newParams] = await db.select().from(pricingParameters)
+                .where(eq(pricingParameters.tenantId, tenantId));
+              return newParams || null;
+            }
+          }
+        } catch (e: any) {
+          log.warn(`[Pricing] Auto-seed parameters failed: ${e.message}`);
+        }
+
+        return null;
       }),
 
     upsert: tenantProcedure
