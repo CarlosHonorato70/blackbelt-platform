@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTenant } from "@/contexts/TenantContext";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { AlertCircle, Download, Edit2, Plus, Trash2, Upload, Users, UserSquare2 } from "lucide-react";
 import { useRef, useState } from "react";
@@ -53,6 +54,9 @@ type DialogMode = "closed" | "create" | "edit" | "delete";
 
 export default function People() {
   const { selectedTenant } = useTenant();
+  const { user } = useAuth();
+  // For company users, selectedTenant may be null — use user's own tenantId
+  const effectiveCompanyId = selectedTenant?.id || user?.tenantId;
 
   // --- People state ---
   const [peopleDialogMode, setPeopleDialogMode] = useState<DialogMode>("closed");
@@ -155,9 +159,12 @@ export default function People() {
   } | null>(null);
 
   const handleDownloadTemplate = async () => {
-    if (!selectedTenant) return;
+    if (!effectiveCompanyId) {
+      toast.error("Nenhuma empresa selecionada");
+      return;
+    }
     try {
-      const response = await fetch(`/api/template/people/${selectedTenant.id}`, {
+      const response = await fetch(`/api/template/people/${effectiveCompanyId}`, {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Erro ao baixar modelo");
@@ -178,14 +185,17 @@ export default function People() {
 
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !selectedTenant) return;
+    if (!file || !effectiveCompanyId) {
+      if (!effectiveCompanyId) toast.error("Nenhuma empresa selecionada");
+      return;
+    }
 
     setImporting(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch(`/api/import/people/${selectedTenant.id}`, {
+      const response = await fetch(`/api/import/people/${effectiveCompanyId}`, {
         method: "POST",
         credentials: "include",
         body: formData,
