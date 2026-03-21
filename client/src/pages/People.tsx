@@ -57,6 +57,7 @@ export default function People() {
   const { user } = useAuth();
   // For company users, selectedTenant may be null — use user's own tenantId
   const effectiveCompanyId = selectedTenant?.id || user?.tenantId;
+  const effectiveCompanyName = selectedTenant?.name || user?.name || "Empresa";
 
   // --- People state ---
   const [peopleDialogMode, setPeopleDialogMode] = useState<DialogMode>("closed");
@@ -314,7 +315,7 @@ export default function People() {
             <h1 className="text-3xl font-bold tracking-tight">Colaboradores e Setores</h1>
             <p className="text-muted-foreground">
               Gerencie os colaboradores e setores de{" "}
-              <span className="font-semibold">{selectedTenant.name}</span>
+              <span className="font-semibold">{effectiveCompanyName}</span>
             </p>
           </div>
           <div className="flex gap-2">
@@ -425,7 +426,7 @@ export default function People() {
                     </h3>
                     <p className="text-sm text-muted-foreground mt-2">
                       Comece criando o primeiro colaborador para{" "}
-                      {selectedTenant.name}
+                      {effectiveCompanyName}
                     </p>
                   </div>
                 )}
@@ -517,7 +518,7 @@ export default function People() {
                       Nenhum setor cadastrado
                     </h3>
                     <p className="text-sm text-muted-foreground mt-2">
-                      Comece criando o primeiro setor para {selectedTenant.name}
+                      Comece criando o primeiro setor para {effectiveCompanyName}
                     </p>
                   </div>
                 )}
@@ -547,7 +548,7 @@ export default function People() {
                 </DialogTitle>
                 <DialogDescription>
                   {peopleDialogMode === "create"
-                    ? `Cadastre um novo colaborador para ${selectedTenant.name}`
+                    ? `Cadastre um novo colaborador para ${effectiveCompanyName}`
                     : `Atualize os dados do colaborador ${selectedPerson?.name}`}
                 </DialogDescription>
               </DialogHeader>
@@ -721,7 +722,7 @@ export default function People() {
                 </DialogTitle>
                 <DialogDescription>
                   {sectorDialogMode === "create"
-                    ? `Cadastre um novo setor para ${selectedTenant.name}`
+                    ? `Cadastre um novo setor para ${effectiveCompanyName}`
                     : `Atualize os dados do setor ${selectedSector?.name}`}
                 </DialogDescription>
               </DialogHeader>
