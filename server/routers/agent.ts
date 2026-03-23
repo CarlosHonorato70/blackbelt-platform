@@ -1130,7 +1130,6 @@ async function generateFallbackResponse(
   // ── 0. Handle edit_proposal action ──
   if (msg.startsWith("executar:edit_proposal") || msg.includes("editar proposta")) {
     const db2 = await getDb();
-    // Buscar proposta mais recente de QUALQUER status (não só pending)
     const [latestProposal] = await db2.select().from(proposals)
       .where(eq(proposals.tenantId, tenantId))
       .orderBy(desc(proposals.createdAt))
@@ -1138,17 +1137,68 @@ async function generateFallbackResponse(
 
     if (latestProposal) {
       const totalFormatted = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(latestProposal.totalValue / 100);
-      const statusMap: Record<string, string> = { pending: "Pendente", approved: "Aprovada", rejected: "Recusada", sent: "Enviada", draft: "Rascunho" };
+      const statusMap: Record<string, string> = { pending: "Pendente", pending_approval: "Aguardando Aprovação", approved: "Aprovada", rejected: "Recusada", sent: "Enviada", draft: "Rascunho" };
       const statusLabel = statusMap[latestProposal.status] || latestProposal.status;
-      const actions: any[] = [];
-      // Sempre permitir enviar por email
-      actions.push({ type: "send_proposal_email", label: "Enviar Proposta por Email", params: { proposalId: latestProposal.id, email: latestProposal.contactEmail } });
       return {
-        content: `**Proposta disponivel para edicao:**\n\n| Campo | Valor |\n|-------|-------|\n| **Titulo** | ${latestProposal.title} |\n| **Valor Total** | ${totalFormatted} |\n| **Email** | ${latestProposal.contactEmail || "\u2014"} |\n| **Validade** | ${latestProposal.validUntil ? new Date(latestProposal.validUntil).toLocaleDateString("pt-BR") : "30 dias"} |\n| **Status** | ${statusLabel} |\n\nVoce pode editar a proposta na pagina **Propostas** do menu lateral.\n\nQuando estiver satisfeito, diga **"enviar proposta"** para enviar por email ao cliente.`,
-        actions,
+        content: `**Proposta disponivel para edicao:**\n\n| Campo | Valor |\n|-------|-------|\n| **Titulo** | ${latestProposal.title} |\n| **Valor Total** | ${totalFormatted} |\n| **Email** | ${latestProposal.contactEmail || "—"} |\n| **Validade** | ${latestProposal.validUntil ? new Date(latestProposal.validUntil).toLocaleDateString("pt-BR") : "30 dias"} |\n| **Status** | ${statusLabel} |\n\n**Para editar, digite o que deseja alterar.** Exemplos:\n- "alterar valor para 3500"\n- "alterar email para empresa@email.com"\n- "alterar titulo para Proposta Premium NR-01"\n\nQuando estiver satisfeito, clique em **"Enviar Proposta por Email"**.`,
+        actions: [
+          { type: "send_proposal_email", label: "Enviar Proposta por Email", params: { proposalId: latestProposal.id, email: latestProposal.contactEmail } },
+        ],
       };
     }
     return { content: "Nenhuma proposta encontrada para esta empresa. Informe o CNPJ da empresa para gerar uma nova.", actions: [] };
+  }
+
+  // ── 0x. Handle inline proposal edits (alterar valor/email/titulo) ──
+  const editMatch = msg.match(/alterar\s+(valor|email|titulo|título)\s+(?:para\s+)?(.+)/i);
+  if (editMatch) {
+    const field = editMatch[1].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const newValue = editMatch[2].trim();
+    const db2 = await getDb();
+    const [latestProposal] = await db2.select().from(proposals)
+      .where(eq(proposals.tenantId, tenantId))
+      .orderBy(desc(proposals.createdAt))
+      .limit(1);
+
+    if (!latestProposal) {
+      return { content: "Nenhuma proposta encontrada para editar.", actions: [] };
+    }
+
+    const updates: any = { updatedAt: new Date() };
+    let fieldLabel = "";
+
+    if (field === "valor") {
+      const numericValue = parseFloat(newValue.replace(/[^\d.,]/g, "").replace(",", "."));
+      if (isNaN(numericValue) || numericValue <= 0) {
+        return { content: "Valor inválido. Informe um número positivo, ex: 'alterar valor para 3500'", actions: [] };
+      }
+      updates.totalValue = Math.round(numericValue * 100);
+      updates.subtotal = updates.totalValue;
+      fieldLabel = `Valor Total → **R$ ${numericValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}**`;
+    } else if (field === "email") {
+      if (!newValue.includes("@")) {
+        return { content: "Email inválido. Informe um email válido, ex: 'alterar email para empresa@email.com'", actions: [] };
+      }
+      updates.contactEmail = newValue.toLowerCase();
+      fieldLabel = `Email → **${newValue.toLowerCase()}**`;
+    } else if (field === "titulo") {
+      updates.title = newValue;
+      fieldLabel = `Título → **${newValue}**`;
+    }
+
+    await db2.update(proposals).set(updates).where(eq(proposals.id, latestProposal.id));
+
+    const updatedTotal = updates.totalValue ? updates.totalValue : latestProposal.totalValue;
+    const updatedEmail = updates.contactEmail || latestProposal.contactEmail;
+    const totalFormatted = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(updatedTotal / 100);
+
+    return {
+      content: `✅ **Proposta atualizada!** ${fieldLabel}\n\n| Campo | Valor |\n|-------|-------|\n| **Titulo** | ${updates.title || latestProposal.title} |\n| **Valor Total** | ${totalFormatted} |\n| **Email** | ${updatedEmail || "—"} |\n\nDeseja fazer mais alguma alteração ou enviar a proposta?`,
+      actions: [
+        { type: "send_proposal_email", label: "Enviar Proposta por Email", params: { proposalId: latestProposal.id, email: updatedEmail } },
+        { type: "edit_proposal", label: "Editar Proposta", params: { proposalId: latestProposal.id } },
+      ],
+    };
   }
 
   // ── 0a. Handle send_proposal_email action ──

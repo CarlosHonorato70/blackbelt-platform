@@ -429,8 +429,8 @@ export async function sendProposalEmail(params: {
 
   const baseUrl = process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:3000";
   const proposalUrl = `${baseUrl}/proposals/${proposalId}`;
-  const approveUrl = approvalToken ? `${baseUrl}/proposal/approve/${approvalToken}` : null;
-  const rejectUrl = approvalToken ? `${baseUrl}/proposal/reject/${approvalToken}` : null;
+  const approveUrl = approvalToken ? `${baseUrl}/api/proposal/approve/${approvalToken}` : null;
+  const rejectUrl = approvalToken ? `${baseUrl}/api/proposal/reject/${approvalToken}` : null;
   
   const riskLevelColors = {
     low: { bg: "#dcfce7", border: "#10b981", text: "#166534", label: "Baixo" },
