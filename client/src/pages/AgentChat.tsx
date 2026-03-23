@@ -55,9 +55,9 @@ function AgentChatPage() {
     onSuccess: () => {
       toast({ title: "Proposta atualizada!", description: "As alterações foram salvas com sucesso." });
       setEditModalOpen(false);
-      // Send confirmation message to chat
+      // Trigger send proposal email via agent
       if (conversationId) {
-        sendMessage.mutate({ conversationId, content: "Proposta editada e salva. Quero enviar agora." });
+        sendMessage.mutate({ conversationId, content: "Executar: Enviar Proposta por Email" });
       }
     },
     onError: (err: any) => {

@@ -4,7 +4,7 @@ import { nanoid } from "nanoid";
 import { tenantProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { agentConversations, agentMessages, agentActions, agentAlerts } from "../../drizzle/schema_agent";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { invokeLLM } from "../_core/llm";
 import { getNR01Status, getCompanyStrategy } from "../_ai/agentOrchestrator";
 import { scanTenantAlerts } from "../_ai/agentAlerts";
@@ -1213,12 +1213,14 @@ async function generateFallbackResponse(
     if (latestProposal?.id) {
       const emailResult = await sendPreProposalByEmail(latestProposal.id);
       if (emailResult.success) {
-        const existingCompany = await findCompanyByCNPJ();
+        // Update proposal status to pending_approval
+        await db2.update(proposals)
+          .set({ status: "pending_approval", sentAt: new Date(), updatedAt: new Date() })
+          .where(eq(proposals.id, latestProposal.id));
+
         return {
-          content: `**Proposta enviada com sucesso!**\n\n${emailResult.message}\n\nA empresa recebera um email com a proposta e botoes para **aprovar** ou **recusar**.\n\nAguardando aprovacao para prosseguir com o processo NR-01.`,
-          actions: existingCompany ? [
-            { type: "create_assessment", label: "Iniciar COPSOQ-II (sem aguardar)", params: { companyId: existingCompany.id, headcount: memory.headcount } },
-          ] : [],
+          content: `✅ **Proposta enviada com sucesso!**\n\n${emailResult.message}\n\nA empresa receberá um email com a proposta e botões para **aprovar** ou **recusar**.\n\n**Próximos passos (automáticos após aprovação):**\n1. Empresa aprova a proposta pelo email\n2. Sistema cria conta de acesso e envia credenciais\n3. Empresa cadastra setores e colaboradores\n4. Consultoria envia questionário COPSOQ-II para os colaboradores\n5. Após respostas, o processo NR-01 continua automaticamente\n\n⏳ **Aguardando aprovação da empresa...**\n\nQuando a empresa aprovar, diga **"continuar"** para verificar o status e prosseguir.`,
+          actions: [],
         };
       }
       return { content: `Erro ao enviar proposta: ${emailResult.message}`, actions: [] };
@@ -1226,30 +1228,53 @@ async function generateFallbackResponse(
     return { content: "Nenhuma proposta pendente encontrada. Informe o CNPJ da empresa para gerar uma nova proposta.", actions: [] };
   }
 
-  // ── 0b. Check if proposal was approved and auto-continue ──
+  // ── 0b. Check proposal status and guide next steps ──
   if (isContinue && memory.cnpj) {
     const db2 = await getDb();
+
+    // Check if there's a pending_approval proposal
+    const [pendingProposal] = await db2.select().from(proposals)
+      .where(and(eq(proposals.tenantId, tenantId), inArray(proposals.status, ["pending", "pending_approval"])))
+      .orderBy(desc(proposals.createdAt))
+      .limit(1);
+
+    if (pendingProposal && pendingProposal.sentAt) {
+      return {
+        content: `⏳ **Aguardando aprovação da empresa.**\n\nA proposta foi enviada para **${pendingProposal.contactEmail}** em ${new Date(pendingProposal.sentAt).toLocaleDateString("pt-BR")}.\n\nAssim que a empresa aprovar:\n1. Uma conta será criada automaticamente\n2. A empresa receberá um email com credenciais de acesso\n3. A empresa cadastrará setores e colaboradores\n4. Você poderá enviar o COPSOQ-II\n\nDiga **"continuar"** novamente após a aprovação.`,
+        actions: [],
+      };
+    }
+
+    // Check if proposal was approved
     const [approvedProposal] = await db2.select().from(proposals)
       .where(and(eq(proposals.tenantId, tenantId), eq(proposals.status, "approved")))
       .orderBy(desc(proposals.createdAt))
       .limit(1);
 
     if (approvedProposal) {
-      // Proposal approved — continue with the flow
-      log.info(`[Agent] Proposal approved, continuing NR-01 flow`);
-    }
+      log.info(`[Agent] Proposal approved, checking employees`);
 
-    // Check if there's a pending proposal
-    const [pendingProposal] = await db2.select().from(proposals)
-      .where(and(eq(proposals.tenantId, tenantId), eq(proposals.status, "pending")))
-      .orderBy(desc(proposals.createdAt))
-      .limit(1);
+      // Check if company has employees registered
+      const existingCompany = await findCompanyByCNPJ();
+      if (existingCompany) {
+        const [peopleCount] = await db2.select({ count: sql<number>`COUNT(*)` })
+          .from(people)
+          .where(eq(people.tenantId, existingCompany.id));
+        const employeeCount = peopleCount?.count || 0;
 
-    if (pendingProposal && !approvedProposal) {
-      if (pendingProposal.sentAt) {
+        if (employeeCount === 0) {
+          return {
+            content: `✅ **Proposta aprovada!** A empresa já recebeu as credenciais de acesso.\n\n⚠️ **Aguardando cadastro de colaboradores.** A empresa precisa cadastrar os setores e colaboradores na plataforma antes de prosseguir.\n\n**Orientações para a empresa:**\n1. Acessar a plataforma com as credenciais recebidas por email\n2. No menu lateral, ir em **Colaboradores e Setores**\n3. Cadastrar setores e colaboradores (manualmente ou via planilha)\n\nQuando os colaboradores estiverem cadastrados, diga **"continuar"** para enviar o questionário COPSOQ-II.`,
+            actions: [],
+          };
+        }
+
+        // Employees exist — offer to send COPSOQ
         return {
-          content: `**Aguardando aprovacao da empresa.**\n\nA proposta foi enviada para **${pendingProposal.contactEmail}** em ${new Date(pendingProposal.sentAt).toLocaleDateString("pt-BR")}.\n\nAssim que a empresa aprovar, o processo NR-01 continuara automaticamente.\n\nSe preferir, pode iniciar o COPSOQ-II sem aguardar a aprovacao.`,
-          actions: [],
+          content: `✅ **Proposta aprovada!** A empresa cadastrou **${employeeCount} colaborador(es)**.\n\n**Próximo passo:** Enviar o questionário COPSOQ-II para todos os colaboradores por email.\n\nClique em **"Enviar COPSOQ-II"** para disparar os convites.`,
+          actions: [
+            { type: "create_assessment", label: "Enviar COPSOQ-II", params: { companyId: existingCompany.id, headcount: employeeCount } },
+          ],
         };
       }
     }
@@ -1358,15 +1383,60 @@ async function generateFallbackResponse(
         return { content, actions: [] };
       } else {
         content += `\n\n${execResult.message}`;
-        // Company already exists — check what's the next phase
+        // Company already exists — check proposal status first
         const existing = await findCompanyByCNPJ();
         if (existing) {
-          const nextPhase = await getNextPhase(existing.id);
-          if (nextPhase === "create_assessment") {
-            content += `\n\n**Proxima etapa:** Criar avaliacao COPSOQ-II.`;
+          // Check if there's a proposal pending approval
+          const db3 = await getDb();
+          const [existingProposal] = await db3.select().from(proposals)
+            .where(eq(proposals.tenantId, tenantId))
+            .orderBy(desc(proposals.createdAt))
+            .limit(1);
+
+          if (existingProposal && ["pending", "pending_approval"].includes(existingProposal.status)) {
+            if (existingProposal.sentAt) {
+              content += `\n\n⏳ **Proposta já enviada para ${existingProposal.contactEmail}.** Aguardando aprovação da empresa.`;
+              return { content, actions: [] };
+            }
+            content += `\n\n**Proposta gerada mas ainda não enviada.** Envie para o email da empresa.`;
             return {
               content,
-              actions: [{ type: "create_assessment", label: "Criar Avaliacao COPSOQ-II", params: { companyId: existing.id, headcount } }],
+              actions: [
+                { type: "send_proposal_email", label: "Enviar Proposta por Email", params: { proposalId: existingProposal.id, email: existingProposal.contactEmail } },
+                { type: "edit_proposal", label: "Editar Proposta", params: { proposalId: existingProposal.id } },
+              ],
+            };
+          }
+
+          if (!existingProposal || existingProposal.status === "rejected") {
+            // No proposal or rejected — generate new one
+            const contactEmail2 = (memory as any).contactEmail || "";
+            if (contactEmail2) {
+              content += `\n\nGerando nova proposta...`;
+              // Will be handled by the main flow
+            } else {
+              content += `\n\n**Informe o email da empresa** para gerar e enviar a proposta comercial.`;
+              return { content, actions: [] };
+            }
+          }
+
+          const nextPhase = await getNextPhase(existing.id);
+          if (nextPhase === "create_assessment") {
+            // Check if company has employees
+            const [pCount] = await db3.select({ count: sql<number>`COUNT(*)` })
+              .from(people)
+              .where(eq(people.tenantId, existing.id));
+            const empCount = pCount?.count || 0;
+
+            if (empCount === 0) {
+              content += `\n\n⚠️ **Aguardando cadastro de colaboradores.** A empresa precisa cadastrar setores e colaboradores antes de prosseguir com o COPSOQ-II.`;
+              return { content, actions: [] };
+            }
+
+            content += `\n\n**Proxima etapa:** Enviar questionário COPSOQ-II para **${empCount} colaborador(es)**.`;
+            return {
+              content,
+              actions: [{ type: "create_assessment", label: "Enviar COPSOQ-II", params: { companyId: existing.id, headcount: empCount } }],
             };
           } else if (nextPhase === "generate_inventory") {
             content += `\n\n**Proxima etapa:** Gerar inventario de riscos e plano de acao.`;
