@@ -101,7 +101,8 @@ export function registerRoutes(app: Express) {
       if (proposal.contactEmail) {
         try {
           const { nanoid } = await import("nanoid");
-          const bcrypt = await import("bcrypt");
+          let bcrypt: any;
+          try { bcrypt = await import("bcrypt"); } catch { bcrypt = await import("bcryptjs"); }
           const { sendWelcomeCompanyEmail } = await import("./_core/email");
           const { clients } = await import("../drizzle/schema");
 
