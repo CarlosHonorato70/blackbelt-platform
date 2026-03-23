@@ -7,8 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Bot, User, AlertTriangle, CheckCircle2, Clock, Brain, RefreshCw, MessageSquare, X, Plus, Trash2, FileDown } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Send, Bot, User, AlertTriangle, CheckCircle2, Clock, Brain, RefreshCw, MessageSquare, X, Plus, Trash2, FileDown, Save, Pencil } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { toast } from "@/hooks/use-toast";
 
 function AgentChatPage() {
   usePageMeta({ title: "SamurAI — Assistente NR-01" });
@@ -25,6 +28,120 @@ function AgentChatPage() {
   }>>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Edit proposal modal state
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editProposalId, setEditProposalId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editTotalValue, setEditTotalValue] = useState(0);
+  const [editDiscount, setEditDiscount] = useState(0);
+  const [editValidUntil, setEditValidUntil] = useState("");
+  const [editContactEmail, setEditContactEmail] = useState("");
+  const [editItems, setEditItems] = useState<Array<{ id?: string; serviceName: string; quantity: number; unitPrice: number }>>([]);
+  const [editNewServiceName, setEditNewServiceName] = useState("");
+  const [editNewQuantity, setEditNewQuantity] = useState(1);
+  const [editNewUnitPrice, setEditNewUnitPrice] = useState(0);
+
+  // Fetch proposal for editing
+  const { data: editProposalData, refetch: refetchProposal } = trpc.proposals.getById.useQuery(
+    { id: editProposalId! },
+    { enabled: !!editProposalId }
+  );
+
+  // Update proposal mutation
+  const updateProposal = trpc.proposals.update.useMutation({
+    onSuccess: () => {
+      toast({ title: "Proposta atualizada!", description: "As alterações foram salvas com sucesso." });
+      setEditModalOpen(false);
+      // Send confirmation message to chat
+      if (conversationId) {
+        sendMessage.mutate({ conversationId, content: "Proposta editada e salva. Quero enviar agora." });
+      }
+    },
+    onError: (err: any) => {
+      toast({ title: "Erro ao salvar", description: err.message || "Tente novamente", variant: "destructive" });
+    },
+  });
+
+  const addItemMutation = trpc.proposals.addItem.useMutation();
+  const removeItemMutation = trpc.proposals.removeItem.useMutation();
+
+  // Populate edit form when proposal data loads
+  useEffect(() => {
+    if (editProposalData && editModalOpen) {
+      setEditTitle(editProposalData.title || "");
+      setEditDescription(editProposalData.description || "");
+      setEditTotalValue(editProposalData.totalValue / 100);
+      setEditDiscount(editProposalData.discountPercent || 0);
+      setEditValidUntil(editProposalData.validUntil ? new Date(editProposalData.validUntil).toISOString().split("T")[0] : "");
+      setEditContactEmail(editProposalData.contactEmail || "");
+      setEditItems((editProposalData.items || []).map((it: any) => ({
+        id: it.id,
+        serviceName: it.serviceName,
+        quantity: it.quantity,
+        unitPrice: it.unitPrice / 100,
+      })));
+    }
+  }, [editProposalData, editModalOpen]);
+
+  // Open edit modal
+  const openEditModal = (proposalId: string) => {
+    setEditProposalId(proposalId);
+    setEditModalOpen(true);
+    refetchProposal();
+  };
+
+  // Save proposal edits
+  const handleEditSave = async () => {
+    if (!editProposalId || !editProposalData) return;
+
+    try {
+      // Handle items: remove deleted, add new
+      const originalIds = new Set((editProposalData.items || []).map((it: any) => it.id));
+      const currentIds = new Set(editItems.filter(it => it.id).map(it => it.id));
+
+      // Remove deleted items
+      for (const origId of originalIds) {
+        if (!currentIds.has(origId)) {
+          await removeItemMutation.mutateAsync({ itemId: origId });
+        }
+      }
+
+      // Add new items (no id)
+      for (const item of editItems) {
+        if (!item.id && item.serviceName.trim()) {
+          await addItemMutation.mutateAsync({
+            proposalId: editProposalId,
+            serviceName: item.serviceName,
+            quantity: item.quantity,
+            unitPrice: Math.round(item.unitPrice * 100),
+            subtotal: Math.round(item.unitPrice * item.quantity * 100),
+            technicalHours: 0,
+          });
+        }
+      }
+
+      // Calculate totals
+      const subtotal = Math.round(editItems.reduce((sum, it) => sum + it.unitPrice * it.quantity, 0) * 100);
+      const discountAmount = Math.round(subtotal * editDiscount / 100);
+      const totalValue = subtotal - discountAmount;
+
+      await updateProposal.mutateAsync({
+        id: editProposalId,
+        title: editTitle,
+        description: editDescription,
+        subtotal,
+        discount: discountAmount,
+        discountPercent: editDiscount,
+        taxes: 0,
+        totalValue: totalValue > 0 ? totalValue : Math.round(editTotalValue * 100),
+        validUntil: editValidUntil ? new Date(editValidUntil) : undefined,
+      });
+    } catch (err) {
+      // Error handled by mutation
+    }
+  };
 
   // Create/get conversation
   const createConversation = trpc.agent.getOrCreateConversation.useMutation({
@@ -258,6 +375,11 @@ function AgentChatPage() {
                               variant="outline"
                               className="text-xs"
                               onClick={() => {
+                                // Edit proposal opens modal instead of sending message
+                                if (action.type === "edit_proposal" && action.params?.proposalId) {
+                                  openEditModal(action.params.proposalId);
+                                  return;
+                                }
                                 if (conversationId) {
                                   sendMessage.mutate({
                                     conversationId,
@@ -266,6 +388,7 @@ function AgentChatPage() {
                                 }
                               }}
                             >
+                              {action.type === "edit_proposal" && <Pencil className="h-3 w-3 mr-1" />}
                               {action.label}
                             </Button>
                           ))}
@@ -400,6 +523,130 @@ function AgentChatPage() {
           </Card>
         </div>
       </div>
+      {/* Edit Proposal Modal */}
+      {editModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setEditModalOpen(false)}>
+          <div className="bg-background rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b">
+              <div>
+                <h2 className="text-lg font-bold flex items-center gap-2"><Pencil className="h-5 w-5" /> Editar Proposta</h2>
+                <p className="text-sm text-muted-foreground">Edite os campos abaixo e clique em Salvar</p>
+              </div>
+              <button onClick={() => setEditModalOpen(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <h3 className="text-sm font-bold text-primary uppercase tracking-wide">Dados da Proposta</h3>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-title">Título *</Label>
+                <Input id="edit-title" value={editTitle} onChange={e => setEditTitle(e.target.value)} />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-desc">Descrição</Label>
+                <Textarea id="edit-desc" value={editDescription} onChange={e => setEditDescription(e.target.value)} rows={2} />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email do Cliente</Label>
+                <Input id="edit-email" type="email" value={editContactEmail} onChange={e => setEditContactEmail(e.target.value)} />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label>Valor Total (R$)</Label>
+                  <Input type="number" step="0.01" value={editTotalValue} onChange={e => setEditTotalValue(parseFloat(e.target.value) || 0)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Desconto (%)</Label>
+                  <Input type="number" value={editDiscount} onChange={e => setEditDiscount(parseFloat(e.target.value) || 0)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Validade</Label>
+                  <Input type="date" value={editValidUntil} onChange={e => setEditValidUntil(e.target.value)} />
+                </div>
+              </div>
+
+              <h3 className="text-sm font-bold text-primary uppercase tracking-wide pt-2">Itens da Proposta</h3>
+
+              <div className="space-y-2">
+                <button
+                  className="text-sm text-primary hover:underline font-medium"
+                  onClick={() => setEditItems(prev => [...prev, { serviceName: "", quantity: 1, unitPrice: 0 }])}
+                >
+                  + Adicionar novo item
+                </button>
+
+                <div className="grid grid-cols-[1fr_60px_100px_32px] gap-2 text-xs font-medium text-muted-foreground">
+                  <span>Nome do Serviço</span>
+                  <span>Qtd</span>
+                  <span>Preço Unit. (R$)</span>
+                  <span></span>
+                </div>
+
+                {editItems.map((item, idx) => (
+                  <div key={idx} className="grid grid-cols-[1fr_60px_100px_32px] gap-2 items-center">
+                    <Input
+                      value={item.serviceName}
+                      onChange={e => {
+                        const updated = [...editItems];
+                        updated[idx].serviceName = e.target.value;
+                        setEditItems(updated);
+                      }}
+                      placeholder="Nome do serviço..."
+                      className="text-sm"
+                    />
+                    <Input
+                      type="number"
+                      value={item.quantity}
+                      onChange={e => {
+                        const updated = [...editItems];
+                        updated[idx].quantity = parseInt(e.target.value) || 1;
+                        setEditItems(updated);
+                      }}
+                      className="text-sm"
+                    />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={item.unitPrice}
+                      onChange={e => {
+                        const updated = [...editItems];
+                        updated[idx].unitPrice = parseFloat(e.target.value) || 0;
+                        setEditItems(updated);
+                      }}
+                      className="text-sm"
+                    />
+                    <button
+                      onClick={() => setEditItems(prev => prev.filter((_, i) => i !== idx))}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {editItems.length > 0 && (
+                <div className="text-right text-sm font-medium text-muted-foreground">
+                  Subtotal: R$ {editItems.reduce((sum, it) => sum + it.unitPrice * it.quantity, 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 p-5 border-t">
+              <Button variant="outline" onClick={() => setEditModalOpen(false)}>Cancelar</Button>
+              <Button onClick={handleEditSave} disabled={updateProposal.isPending}>
+                <Save className="h-4 w-4 mr-2" />
+                {updateProposal.isPending ? "Salvando..." : "Salvar e Enviar"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }
