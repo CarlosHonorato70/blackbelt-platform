@@ -24,8 +24,7 @@ import { authLocalRouter } from "./routers/auth-local";
 import { assessmentsRouter } from "./routers/assessments";
 import { webhookRouter } from "./routers/webhook";
 import { subscriptionsRouter } from "./routers/subscriptions";
-import { stripeRouter } from "./routers/stripe";
-import { mercadoPagoRouter } from "./routers/mercadopago";
+import { asaasRouter } from "./routers/asaas";
 import { pdfExportsRouter } from "./routers/pdfExports";
 import { brandingRouter } from "./routers/branding";
 import { webhooksRouter } from "./routers/webhooksManagement";
@@ -93,8 +92,7 @@ export const appRouter = router({
 
   // Routers de monetização
   subscriptions: subscriptionsRouter,
-  stripe: stripeRouter,
-  mercadoPago: mercadoPagoRouter,
+  asaas: asaasRouter,
   pdfExports: pdfExportsRouter,
 
   // Phase 5: White-Label (Enterprise)

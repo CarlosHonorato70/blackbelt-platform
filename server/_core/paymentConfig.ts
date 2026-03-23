@@ -1,41 +1,28 @@
 /**
  * PAYMENT GATEWAY CONFIGURATION
- * 
- * Configuração para integração com gateways de pagamento
- * Suporta: Stripe (internacional) e Mercado Pago (Brasil)
+ *
+ * Configuração para integração com gateway de pagamento Asaas
  */
 
 export interface PaymentGatewayConfig {
-  stripe: {
+  asaas: {
     enabled: boolean;
-    publicKey: string;
-    secretKey: string;
-    webhookSecret: string;
-  };
-  mercadoPago: {
-    enabled: boolean;
-    publicKey: string;
-    accessToken: string;
-    webhookSecret: string;
+    apiKey: string;
+    webhookToken: string;
+    sandbox: boolean;
   };
 }
 
 /**
- * Carregar configuração dos gateways de pagamento
+ * Carregar configuração do gateway de pagamento
  */
 export function getPaymentGatewayConfig(): PaymentGatewayConfig {
   return {
-    stripe: {
-      enabled: process.env.STRIPE_ENABLED === "true",
-      publicKey: process.env.STRIPE_PUBLIC_KEY || process.env.STRIPE_PUBLISHABLE_KEY || "",
-      secretKey: process.env.STRIPE_SECRET_KEY || "",
-      webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
-    },
-    mercadoPago: {
-      enabled: process.env.MERCADO_PAGO_ENABLED === "true",
-      publicKey: process.env.MERCADO_PAGO_PUBLIC_KEY || "",
-      accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN || "",
-      webhookSecret: process.env.MERCADO_PAGO_WEBHOOK_SECRET || "",
+    asaas: {
+      enabled: !!process.env.ASAAS_API_KEY,
+      apiKey: process.env.ASAAS_API_KEY || "",
+      webhookToken: process.env.ASAAS_WEBHOOK_TOKEN || "",
+      sandbox: process.env.ASAAS_SANDBOX === "true",
     },
   };
 }
@@ -44,29 +31,26 @@ export function getPaymentGatewayConfig(): PaymentGatewayConfig {
  * Tipo de evento de webhook
  */
 export type WebhookEvent =
-  | "subscription.created"
-  | "subscription.updated"
-  | "subscription.deleted"
-  | "invoice.created"
-  | "invoice.paid"
-  | "invoice.payment_failed"
-  | "customer.created"
-  | "customer.updated"
-  | "payment_method.attached"
-  | "payment_method.detached";
+  | "PAYMENT_CREATED"
+  | "PAYMENT_CONFIRMED"
+  | "PAYMENT_RECEIVED"
+  | "PAYMENT_OVERDUE"
+  | "PAYMENT_DELETED"
+  | "PAYMENT_REFUNDED"
+  | "PAYMENT_UPDATED";
 
 /**
  * Interface para eventos de webhook
  */
 export interface WebhookPayload {
   event: WebhookEvent;
-  provider: "stripe" | "mercado_pago";
+  provider: "asaas";
   data: any;
   timestamp: Date;
 }
 
 /**
- * Validar se os gateways estão configurados
+ * Validar se o gateway está configurado
  */
 export function validatePaymentConfig(): {
   isValid: boolean;
@@ -75,72 +59,14 @@ export function validatePaymentConfig(): {
   const config = getPaymentGatewayConfig();
   const errors: string[] = [];
 
-  if (!config.stripe.enabled && !config.mercadoPago.enabled) {
-    errors.push("Nenhum gateway de pagamento está habilitado");
-  }
-
-  if (config.stripe.enabled) {
-    if (!config.stripe.secretKey) {
-      errors.push("Stripe: STRIPE_SECRET_KEY não configurada");
-    }
-    if (!config.stripe.publicKey) {
-      errors.push("Stripe: STRIPE_PUBLIC_KEY não configurada");
-    }
-  }
-
-  if (config.mercadoPago.enabled) {
-    if (!config.mercadoPago.accessToken) {
-      errors.push("Mercado Pago: MERCADO_PAGO_ACCESS_TOKEN não configurado");
-    }
-    if (!config.mercadoPago.publicKey) {
-      errors.push("Mercado Pago: MERCADO_PAGO_PUBLIC_KEY não configurada");
-    }
+  if (!config.asaas.enabled) {
+    errors.push("Asaas: ASAAS_API_KEY não configurada");
   }
 
   return {
     isValid: errors.length === 0,
     errors,
   };
-}
-
-/**
- * Obter gateway preferencial baseado no país/região
- */
-export function getPreferredGateway(
-  country?: string
-): "stripe" | "mercado_pago" | null {
-  const config = getPaymentGatewayConfig();
-
-  // Se apenas um gateway estiver habilitado, retornar ele
-  if (config.stripe.enabled && !config.mercadoPago.enabled) {
-    return "stripe";
-  }
-  if (config.mercadoPago.enabled && !config.stripe.enabled) {
-    return "mercado_pago";
-  }
-
-  // Se ambos estiverem habilitados, escolher baseado no país
-  if (config.stripe.enabled && config.mercadoPago.enabled) {
-    // Mercado Pago para países da América Latina
-    const mercadoPagoCountries = [
-      "BR",
-      "AR",
-      "CL",
-      "CO",
-      "MX",
-      "PE",
-      "UY",
-      "VE",
-    ];
-    if (country && mercadoPagoCountries.includes(country.toUpperCase())) {
-      return "mercado_pago";
-    }
-
-    // Stripe para demais países
-    return "stripe";
-  }
-
-  return null;
 }
 
 /**

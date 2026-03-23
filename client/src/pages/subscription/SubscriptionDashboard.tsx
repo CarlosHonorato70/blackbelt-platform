@@ -1,6 +1,6 @@
 /**
  * SUBSCRIPTION DASHBOARD
- * 
+ *
  * Dashboard para gerenciar assinatura, ver uso e faturas
  */
 
@@ -12,16 +12,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Loader2, 
-  CreditCard, 
-  Users, 
-  HardDrive, 
-  Activity, 
+import {
+  Loader2,
+  Users,
+  HardDrive,
+  Activity,
   Calendar,
   Download,
-  ExternalLink,
-  AlertTriangle
+  AlertTriangle,
+  QrCode,
+  FileText,
+  CreditCard,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -44,18 +45,21 @@ export default function SubscriptionDashboard() {
   const { data: subscription, isLoading } = trpc.subscriptions.getCurrentSubscription.useQuery();
   const { data: limits } = trpc.subscriptions.checkLimits.useQuery();
   const { data: invoices } = trpc.subscriptions.listInvoices.useQuery({ limit: 10 });
-  
+  const { data: asaasDetails } = trpc.asaas.getSubscriptionDetails.useQuery();
+
   // Mutations
   const cancelSubscription = trpc.subscriptions.cancelSubscription.useMutation();
   const reactivateSubscription = trpc.subscriptions.reactivateSubscription.useMutation();
-  const createPortal = trpc.stripe.createCustomerPortal.useMutation();
+  const cancelAsaas = trpc.asaas.cancelSubscription.useMutation();
 
   const handleCancelSubscription = async () => {
     try {
+      // Cancelar no Asaas + local
+      try { await cancelAsaas.mutateAsync(); } catch {}
       await cancelSubscription.mutateAsync();
       toast({
         title: "Assinatura cancelada",
-        description: "Você continuará tendo acesso até o final do período pago.",
+        description: "Voce continuara tendo acesso ate o final do periodo pago.",
       });
       setShowCancelDialog(false);
     } catch (error) {
@@ -83,23 +87,6 @@ export default function SubscriptionDashboard() {
     }
   };
 
-  const handleManagePayment = async () => {
-    try {
-      const result = await createPortal.mutateAsync({
-        returnUrl: window.location.href,
-      });
-      if (result.url) {
-        window.location.href = result.url;
-      }
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível abrir o portal de pagamento",
-        variant: "destructive",
-      });
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -115,7 +102,7 @@ export default function SubscriptionDashboard() {
           <CardHeader>
             <CardTitle>Nenhuma Assinatura Ativa</CardTitle>
             <CardDescription>
-              Você precisa de uma assinatura para acessar a plataforma
+              Voce precisa de uma assinatura para acessar a plataforma
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -128,15 +115,24 @@ export default function SubscriptionDashboard() {
     );
   }
 
-  const statusMap = {
-    trialing: { label: "Em Trial", color: "bg-blue-500" },
+  const statusMap: Record<string, { label: string; color: string }> = {
+    pending: { label: "Aguardando Pagamento", color: "bg-amber-500" },
     active: { label: "Ativa", color: "bg-green-500" },
     past_due: { label: "Pagamento Pendente", color: "bg-yellow-500" },
     canceled: { label: "Cancelada", color: "bg-red-500" },
-    unpaid: { label: "Não Paga", color: "bg-red-500" },
+    unpaid: { label: "Nao Paga", color: "bg-red-500" },
   };
 
   const status = statusMap[subscription.status] || { label: subscription.status, color: "bg-gray-500" };
+
+  const billingTypeIcon = (type?: string) => {
+    switch (type) {
+      case "PIX": return <QrCode className="h-4 w-4 text-green-600" />;
+      case "BOLETO": return <FileText className="h-4 w-4 text-blue-600" />;
+      case "CREDIT_CARD": return <CreditCard className="h-4 w-4 text-purple-600" />;
+      default: return <CreditCard className="h-4 w-4" />;
+    }
+  };
 
   return (
     <div className="container mx-auto py-12 px-4">
@@ -149,7 +145,7 @@ export default function SubscriptionDashboard() {
 
       <Tabs defaultValue="overview" className="space-y-8">
         <TabsList>
-          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+          <TabsTrigger value="overview">Visao Geral</TabsTrigger>
           <TabsTrigger value="usage">Uso</TabsTrigger>
           <TabsTrigger value="invoices">Faturas</TabsTrigger>
         </TabsList>
@@ -170,35 +166,45 @@ export default function SubscriptionDashboard() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid md:grid-cols-3 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Próxima Cobrança</p>
+                  <p className="text-sm text-muted-foreground">Proxima Cobranca</p>
                   <p className="text-lg font-semibold">
-                    {subscription.currentPeriodEnd 
-                      ? new Date(subscription.currentPeriodEnd).toLocaleDateString("pt-BR")
-                      : "-"}
+                    {asaasDetails?.nextDueDate
+                      ? new Date(asaasDetails.nextDueDate).toLocaleDateString("pt-BR")
+                      : subscription.currentPeriodEnd
+                        ? new Date(subscription.currentPeriodEnd).toLocaleDateString("pt-BR")
+                        : "-"}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Valor</p>
                   <p className="text-lg font-semibold">
-                    {((subscription.billingCycle === "monthly" 
-                      ? subscription.plan?.monthlyPrice 
+                    {((subscription.billingCycle === "monthly"
+                      ? subscription.plan?.monthlyPrice
                       : subscription.plan?.yearlyPrice) / 100 || 0).toLocaleString("pt-BR", {
                       style: "currency",
                       currency: "BRL",
                     })}
                   </p>
                 </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Forma de Pagamento</p>
+                  <div className="flex items-center gap-2">
+                    {billingTypeIcon(asaasDetails?.billingType)}
+                    <p className="text-lg font-semibold">
+                      {asaasDetails?.billingType === "PIX" ? "PIX" :
+                       asaasDetails?.billingType === "BOLETO" ? "Boleto" :
+                       asaasDetails?.billingType === "CREDIT_CARD" ? "Cartao" : "-"}
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              {subscription.status === "trialing" && subscription.trialEnd && (
-                <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
-                  <p className="text-sm font-medium">
-                    🎁 Trial expira em {new Date(subscription.trialEnd).toLocaleDateString("pt-BR")}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Adicione um método de pagamento antes do fim do trial
+              {subscription.status === "pending" && (
+                <div className="bg-amber-50 dark:bg-amber-950 p-4 rounded-lg">
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                    Aguardando confirmacao do pagamento. Sua assinatura sera ativada automaticamente.
                   </p>
                 </div>
               )}
@@ -209,28 +215,26 @@ export default function SubscriptionDashboard() {
                     <AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
-                        Assinatura será cancelada
+                        Assinatura sera cancelada
                       </p>
                       <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
-                        Você terá acesso até {new Date(subscription.currentPeriodEnd!).toLocaleDateString("pt-BR")}
+                        Voce tera acesso ate {subscription.currentPeriodEnd
+                          ? new Date(subscription.currentPeriodEnd).toLocaleDateString("pt-BR")
+                          : "-"}
                       </p>
                     </div>
                   </div>
                 </div>
               )}
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 {!subscription.cancelAtPeriodEnd ? (
                   <>
-                    <Button variant="outline" onClick={handleManagePayment}>
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      Gerenciar Pagamento
-                    </Button>
                     <Button variant="outline" onClick={() => navigate("/pricing")}>
                       Mudar Plano
                     </Button>
-                    <Button 
-                      variant="destructive" 
+                    <Button
+                      variant="destructive"
                       onClick={() => setShowCancelDialog(true)}
                     >
                       Cancelar Assinatura
@@ -249,15 +253,15 @@ export default function SubscriptionDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Recursos do Plano</CardTitle>
-              <CardDescription>O que está incluído no seu plano</CardDescription>
+              <CardDescription>O que esta incluido no seu plano</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid md:grid-cols-2 gap-4">
                 {[
-                  { icon: Users, label: "Usuários", value: subscription.plan?.maxUsersPerTenant === -1 ? "Ilimitados" : subscription.plan?.maxUsersPerTenant },
+                  { icon: Users, label: "Usuarios", value: subscription.plan?.maxUsersPerTenant === -1 ? "Ilimitados" : subscription.plan?.maxUsersPerTenant },
                   { icon: HardDrive, label: "Armazenamento", value: subscription.plan?.maxStorageGB === -1 ? "Ilimitado" : `${subscription.plan?.maxStorageGB} GB` },
-                  { icon: Activity, label: "API", value: subscription.plan?.hasApiAccess ? "Incluída" : "Não incluída" },
-                  { icon: Calendar, label: "Relatórios Avançados", value: subscription.plan?.hasAdvancedReports ? "Sim" : "Básicos" },
+                  { icon: Activity, label: "API", value: subscription.plan?.hasApiAccess ? "Incluida" : "Nao incluida" },
+                  { icon: Calendar, label: "Relatorios Avancados", value: subscription.plan?.hasAdvancedReports ? "Sim" : "Basicos" },
                 ].map((item, index) => (
                   <div key={index} className="flex items-center gap-3">
                     <item.icon className="h-5 w-5 text-muted-foreground" />
@@ -282,48 +286,45 @@ export default function SubscriptionDashboard() {
             <CardContent className="space-y-6">
               {limits && (
                 <>
-                  {/* Users */}
                   <div>
                     <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium">Usuários</span>
+                      <span className="text-sm font-medium">Usuarios</span>
                       <span className="text-sm text-muted-foreground">
-                        {limits.currentUsage.activeUsers} / {limits.plan.maxUsersPerTenant === -1 ? "∞" : limits.plan.maxUsersPerTenant}
+                        {limits.currentUsage.activeUsers} / {limits.plan.maxUsersPerTenant === -1 ? "\u221e" : limits.plan.maxUsersPerTenant}
                       </span>
                     </div>
                     {limits.plan.maxUsersPerTenant !== -1 && (
-                      <Progress 
-                        value={(limits.currentUsage.activeUsers / limits.plan.maxUsersPerTenant) * 100} 
+                      <Progress
+                        value={(limits.currentUsage.activeUsers / limits.plan.maxUsersPerTenant) * 100}
                       />
                     )}
                   </div>
 
-                  {/* Storage */}
                   <div>
                     <div className="flex justify-between mb-2">
                       <span className="text-sm font-medium">Armazenamento</span>
                       <span className="text-sm text-muted-foreground">
-                        {(limits.currentUsage.storageUsedGB / 100).toFixed(2)} GB / {limits.plan.maxStorageGB === -1 ? "∞" : `${limits.plan.maxStorageGB} GB`}
+                        {(limits.currentUsage.storageUsedGB / 100).toFixed(2)} GB / {limits.plan.maxStorageGB === -1 ? "\u221e" : `${limits.plan.maxStorageGB} GB`}
                       </span>
                     </div>
                     {limits.plan.maxStorageGB !== -1 && (
-                      <Progress 
-                        value={((limits.currentUsage.storageUsedGB / 100) / limits.plan.maxStorageGB) * 100} 
+                      <Progress
+                        value={((limits.currentUsage.storageUsedGB / 100) / limits.plan.maxStorageGB) * 100}
                       />
                     )}
                   </div>
 
-                  {/* API Requests */}
                   {limits.plan.hasApiAccess && (
                     <div>
                       <div className="flex justify-between mb-2">
-                        <span className="text-sm font-medium">Requisições API (hoje)</span>
+                        <span className="text-sm font-medium">Requisicoes API (hoje)</span>
                         <span className="text-sm text-muted-foreground">
-                          {limits.currentUsage.apiRequests} / {limits.plan.maxApiRequestsPerDay === -1 ? "∞" : limits.plan.maxApiRequestsPerDay}
+                          {limits.currentUsage.apiRequests} / {limits.plan.maxApiRequestsPerDay === -1 ? "\u221e" : limits.plan.maxApiRequestsPerDay}
                         </span>
                       </div>
                       {limits.plan.maxApiRequestsPerDay !== -1 && (
-                        <Progress 
-                          value={(limits.currentUsage.apiRequests / limits.plan.maxApiRequestsPerDay) * 100} 
+                        <Progress
+                          value={(limits.currentUsage.apiRequests / limits.plan.maxApiRequestsPerDay) * 100}
                         />
                       )}
                     </div>
@@ -338,13 +339,13 @@ export default function SubscriptionDashboard() {
         <TabsContent value="invoices" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Histórico de Faturas</CardTitle>
+              <CardTitle>Historico de Faturas</CardTitle>
               <CardDescription>Todas as suas faturas e pagamentos</CardDescription>
             </CardHeader>
             <CardContent>
               {invoices && invoices.length > 0 ? (
                 <div className="space-y-4">
-                  {invoices.map((invoice) => (
+                  {invoices.map((invoice: any) => (
                     <div key={invoice.id} className="flex items-center justify-between border-b pb-4">
                       <div>
                         <p className="font-medium">
@@ -353,6 +354,12 @@ export default function SubscriptionDashboard() {
                         <p className="text-sm text-muted-foreground">
                           {invoice.description || "Assinatura"}
                         </p>
+                        {invoice.paymentMethod && (
+                          <div className="flex items-center gap-1 mt-1">
+                            {billingTypeIcon(invoice.paymentMethod)}
+                            <span className="text-xs text-muted-foreground">{invoice.paymentMethod}</span>
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
@@ -363,7 +370,9 @@ export default function SubscriptionDashboard() {
                             })}
                           </p>
                           <Badge variant={invoice.status === "paid" ? "default" : "secondary"}>
-                            {invoice.status === "paid" ? "Pago" : invoice.status}
+                            {invoice.status === "paid" ? "Pago" :
+                             invoice.status === "void" ? "Reembolsado" :
+                             invoice.status}
                           </Badge>
                         </div>
                         {invoice.invoiceUrl && (
@@ -393,12 +402,12 @@ export default function SubscriptionDashboard() {
           <AlertDialogHeader>
             <AlertDialogTitle>Cancelar Assinatura?</AlertDialogTitle>
             <AlertDialogDescription>
-              Você continuará tendo acesso até o final do período pago. 
-              Após isso, sua conta será desativada.
+              Voce continuara tendo acesso ate o final do periodo pago.
+              Apos isso, sua conta sera desativada.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Não, manter assinatura</AlertDialogCancel>
+            <AlertDialogCancel>Nao, manter assinatura</AlertDialogCancel>
             <AlertDialogAction onClick={handleCancelSubscription} className="bg-destructive text-destructive-foreground">
               Sim, cancelar
             </AlertDialogAction>
