@@ -466,6 +466,10 @@ export const proposals = mysqlTable(
     generatedAt: timestamp("generatedAt").defaultNow().notNull(),
     sentAt: timestamp("sentAt"),
     respondedAt: timestamp("respondedAt"),
+    approvalToken: varchar("approvalToken", { length: 255 }),
+    contactEmail: varchar("contactEmail", { length: 320 }),
+    approvedAt: timestamp("approvedAt"),
+    rejectedAt: timestamp("rejectedAt"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
@@ -473,6 +477,7 @@ export const proposals = mysqlTable(
     tenantClientIdx: index("idx_proposal_tenant_client").on(table.tenantId, table.clientId),
     statusIdx: index("idx_proposal_status").on(table.status),
     dateIdx: index("idx_proposal_date").on(table.generatedAt),
+    tokenIdx: index("idx_proposal_token").on(table.approvalToken),
   })
 );
 

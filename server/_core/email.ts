@@ -359,6 +359,7 @@ export async function sendProposalEmail(params: {
   riskLevel: "low" | "medium" | "high" | "critical";
   services: Array<{ name: string; quantity: number; unitPrice: number }>;
   validUntil?: Date;
+  approvalToken?: string;
 }): Promise<boolean> {
   const {
     clientEmail,
@@ -369,9 +370,13 @@ export async function sendProposalEmail(params: {
     riskLevel,
     services,
     validUntil,
+    approvalToken,
   } = params;
 
-  const proposalUrl = `${process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:3000"}/proposals/${proposalId}`;
+  const baseUrl = process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:3000";
+  const proposalUrl = `${baseUrl}/proposals/${proposalId}`;
+  const approveUrl = approvalToken ? `${baseUrl}/proposal/approve/${approvalToken}` : null;
+  const rejectUrl = approvalToken ? `${baseUrl}/proposal/reject/${approvalToken}` : null;
   
   const riskLevelColors = {
     low: { bg: "#dcfce7", border: "#10b981", text: "#166534", label: "Baixo" },
@@ -463,11 +468,27 @@ export async function sendProposalEmail(params: {
           </p>
         </div>
 
+        ${approveUrl ? `
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${approveUrl}" style="background: #10b981; color: white; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px; margin: 5px 10px;">
+            Aprovar Proposta
+          </a>
+          <a href="${rejectUrl}" style="background: #ef4444; color: white; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 14px; margin: 5px 10px;">
+            Recusar
+          </a>
+        </div>
+        <div style="text-align: center; margin: 10px 0;">
+          <a href="${proposalUrl}" style="color: #667eea; font-size: 14px; text-decoration: underline;">
+            Ver proposta completa
+          </a>
+        </div>
+        ` : `
         <div style="text-align: center; margin: 30px 0;">
           <a href="${proposalUrl}" style="background: #667eea; color: white; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
             Ver Proposta Completa
           </a>
         </div>
+        `}
 
         <p style="margin: 20px 0 0 0; font-size: 12px; color: #999; text-align: center;">
           ${validityText}

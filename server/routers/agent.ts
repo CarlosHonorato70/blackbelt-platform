@@ -908,6 +908,116 @@ interface ConversationContext {
   phase?: string;
 }
 
+// ============================================================================
+// PRE-PROPOSAL: Generate, save to DB, and optionally send by email
+// ============================================================================
+
+async function generateAndSavePreProposal(params: {
+  companyId: string;
+  companyName: string;
+  cnpj: string;
+  headcount: number;
+  riskLevel: "low" | "high";
+  pricingSummary: any;
+  contactEmail: string;
+  tenantId: string;
+}): Promise<{ success: boolean; proposalId?: string; message?: string }> {
+  try {
+    const db = await getDb();
+    const crypto = await import("crypto");
+    const proposalId = nanoid();
+    const approvalToken = crypto.randomBytes(32).toString("hex");
+
+    // Find or create client
+    const { clients } = await import("../../drizzle/schema");
+    let [client] = await db.select().from(clients).where(eq(clients.cnpj, params.cnpj.replace(/\D/g, ""))).limit(1);
+    if (!client) {
+      const clientId = nanoid();
+      await db.insert(clients).values({
+        id: clientId,
+        tenantId: params.tenantId,
+        name: params.companyName,
+        cnpj: params.cnpj.replace(/\D/g, ""),
+        contactEmail: params.contactEmail,
+        status: "active",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      client = { id: clientId } as any;
+    }
+
+    const totalValue = Math.round(((params.pricingSummary.totalEstimate.min + params.pricingSummary.totalEstimate.max) / 2) * 100);
+
+    await db.insert(proposals).values({
+      id: proposalId,
+      tenantId: params.tenantId,
+      clientId: client.id,
+      title: `Proposta NR-01 — ${params.companyName}`,
+      description: `Pre-proposta para ${params.headcount} colaboradores. Pacote ${params.pricingSummary.recommendedPackage}.`,
+      status: "pending",
+      subtotal: totalValue,
+      discount: 0,
+      discountPercent: 0,
+      taxes: 0,
+      totalValue,
+      taxRegime: "simples_nacional",
+      validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      approvalToken,
+      contactEmail: params.contactEmail,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    log.info(`[Agent] Pre-proposal saved: ${proposalId} for ${params.companyName} (${params.contactEmail})`);
+    return { success: true, proposalId };
+  } catch (error) {
+    log.error("[Agent] Failed to generate pre-proposal:", error);
+    return { success: false, message: "Erro ao gerar pre-proposta" };
+  }
+}
+
+async function sendPreProposalByEmail(proposalId: string): Promise<{ success: boolean; message: string }> {
+  try {
+    const db = await getDb();
+    const [proposal] = await db.select().from(proposals).where(eq(proposals.id, proposalId));
+    if (!proposal) return { success: false, message: "Proposta nao encontrada" };
+    if (!proposal.contactEmail) return { success: false, message: "Email de contato nao informado" };
+
+    const { clients } = await import("../../drizzle/schema");
+    const [client] = await db.select().from(clients).where(eq(clients.id, proposal.clientId));
+
+    const { sendProposalEmail } = await import("../_core/email");
+
+    const totalFormatted = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(proposal.totalValue / 100);
+
+    const sent = await sendProposalEmail({
+      clientEmail: proposal.contactEmail,
+      clientName: client?.name || "Prezado(a)",
+      proposalId: proposal.id,
+      proposalTitle: proposal.title,
+      totalValue: proposal.totalValue,
+      riskLevel: "medium",
+      services: [
+        { name: "Conformidade NR-01 Completa", quantity: 1, unitPrice: proposal.totalValue },
+      ],
+      validUntil: proposal.validUntil || undefined,
+      approvalToken: proposal.approvalToken || undefined,
+    });
+
+    if (sent) {
+      await db.update(proposals)
+        .set({ sentAt: new Date(), updatedAt: new Date() })
+        .where(eq(proposals.id, proposalId));
+      log.info(`[Agent] Proposal email sent: ${proposalId} to ${proposal.contactEmail}`);
+      return { success: true, message: `Proposta enviada para ${proposal.contactEmail}` };
+    }
+    return { success: false, message: "Falha ao enviar email" };
+  } catch (error) {
+    log.error("[Agent] Failed to send proposal email:", error);
+    return { success: false, message: "Erro ao enviar email da proposta" };
+  }
+}
+
 function extractContextFromHistory(messages: Array<{ role: string; content: string; metadata?: any; actionPayload?: any }>): ConversationContext {
   const ctx: ConversationContext = {};
 
@@ -919,6 +1029,12 @@ function extractContextFromHistory(messages: Array<{ role: string; content: stri
     // Extract headcount from any message
     const hc = extractHeadcount(msg.content);
     if (hc) ctx.headcount = hc;
+
+    // Extract email from user messages
+    if (msg.role === "user") {
+      const emailMatch = msg.content.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+      if (emailMatch) (ctx as any).contactEmail = emailMatch[0];
+    }
 
     // Extract company data from assistant responses
     if (msg.role === "assistant") {
@@ -1008,8 +1124,62 @@ async function generateFallbackResponse(
 
   // Detect execute commands and affirmatives (case-insensitive)
   const isExecuteCommand = msg.startsWith("executar:");
-  const isAffirmative = /^(sim|ok|pode|prossegu|inici|vamos|confirm|faz|comec|start|go|yes|claro|certo|beleza|bora|continuar|próximo|proximo|avançar|avancar)/i.test(msg);
+  const isAffirmative = /^(sim|ok|pode|prossegu|inici|vamos|confirm|faz|comec|start|go|yes|claro|certo|beleza|bora|continuar|próximo|proximo|avançar|avancar|enviar)/i.test(msg);
   const isContinue = isExecuteCommand || isAffirmative;
+
+  // ── 0. Handle send_proposal_email action ──
+  if (msg.startsWith("executar:send_proposal_email") || msg.includes("enviar proposta")) {
+    // Find the latest pending proposal for this tenant
+    const db2 = await getDb();
+    const [latestProposal] = await db2.select().from(proposals)
+      .where(and(eq(proposals.tenantId, tenantId), eq(proposals.status, "pending")))
+      .orderBy(desc(proposals.createdAt))
+      .limit(1);
+
+    if (latestProposal?.id) {
+      const emailResult = await sendPreProposalByEmail(latestProposal.id);
+      if (emailResult.success) {
+        const existingCompany = await findCompanyByCNPJ();
+        return {
+          content: `**Proposta enviada com sucesso!**\n\n${emailResult.message}\n\nA empresa recebera um email com a proposta e botoes para **aprovar** ou **recusar**.\n\nAguardando aprovacao para prosseguir com o processo NR-01.`,
+          actions: existingCompany ? [
+            { type: "create_assessment", label: "Iniciar COPSOQ-II (sem aguardar)", params: { companyId: existingCompany.id, headcount: memory.headcount } },
+          ] : [],
+        };
+      }
+      return { content: `Erro ao enviar proposta: ${emailResult.message}`, actions: [] };
+    }
+    return { content: "Nenhuma proposta pendente encontrada. Informe o CNPJ da empresa para gerar uma nova proposta.", actions: [] };
+  }
+
+  // ── 0b. Check if proposal was approved and auto-continue ──
+  if (isContinue && memory.cnpj) {
+    const db2 = await getDb();
+    const [approvedProposal] = await db2.select().from(proposals)
+      .where(and(eq(proposals.tenantId, tenantId), eq(proposals.status, "approved")))
+      .orderBy(desc(proposals.createdAt))
+      .limit(1);
+
+    if (approvedProposal) {
+      // Proposal approved — continue with the flow
+      log.info(`[Agent] Proposal approved, continuing NR-01 flow`);
+    }
+
+    // Check if there's a pending proposal
+    const [pendingProposal] = await db2.select().from(proposals)
+      .where(and(eq(proposals.tenantId, tenantId), eq(proposals.status, "pending")))
+      .orderBy(desc(proposals.createdAt))
+      .limit(1);
+
+    if (pendingProposal && !approvedProposal) {
+      if (pendingProposal.sentAt) {
+        return {
+          content: `**Aguardando aprovacao da empresa.**\n\nA proposta foi enviada para **${pendingProposal.contactEmail}** em ${new Date(pendingProposal.sentAt).toLocaleDateString("pt-BR")}.\n\nAssim que a empresa aprovar, o processo NR-01 continuara automaticamente.\n\nSe preferir, pode iniciar o COPSOQ-II sem aguardar a aprovacao.`,
+          actions: [],
+        };
+      }
+    }
+  }
 
   // ── 1. Current message has CNPJ: do fresh lookup ──
   const cnpj = extractCNPJ(userMessage);
@@ -1059,7 +1229,7 @@ async function generateFallbackResponse(
       }, tenantId, userId);
 
       if (execResult.success) {
-        content += `\n\n**Processo NR-01 iniciado!**\n${execResult.message}`;
+        content += `\n\n**Empresa cadastrada com sucesso!**\n${execResult.message}`;
 
         // Generate pricing summary
         const riskLevel = result.highRisk ? "high" as const : "low" as const;
@@ -1074,15 +1244,42 @@ async function generateFallbackResponse(
         content += `\n\n**Investimento estimado:** ${pricingSummary.recommendedPackage} — **R$ ${pricingSummary.totalEstimate.min.toLocaleString("pt-BR")} a R$ ${pricingSummary.totalEstimate.max.toLocaleString("pt-BR")}**`;
         content += `\n(${pricingSummary.pricePerEmployee.min}-${pricingSummary.pricePerEmployee.max}/colaborador${pricingSummary.volumeDiscount.percentage > 0 ? `, desconto de ${pricingSummary.volumeDiscount.percentage}%` : ""})`;
 
-        content += `\n\n**Proximas opcoes:**`;
-        content += `\n- Diga **"proposta"** para gerar a proposta comercial completa`;
-        content += `\n- Clique em **"Criar Avaliacao COPSOQ-II"** ou diga **"sim"** para iniciar o processo`;
-        return {
-          content,
-          actions: [
-            { type: "create_assessment", label: "Criar Avaliacao COPSOQ-II", params: { companyId: execResult.companyId, headcount } },
-          ],
-        };
+        // Check if we have an email to send the proposal
+        const contactEmail = (memory as any).contactEmail || data.email;
+
+        if (contactEmail) {
+          // Generate and save pre-proposal in DB
+          const proposalResult = await generateAndSavePreProposal({
+            companyId: execResult.companyId!,
+            companyName: data.nome_fantasia || data.razao_social,
+            cnpj: formattedCNPJ,
+            headcount,
+            riskLevel,
+            pricingSummary,
+            contactEmail,
+            tenantId,
+          });
+
+          if (proposalResult.success) {
+            content += `\n\n**Pre-proposta gerada!** Revise e edite antes de enviar.`;
+            content += `\n\n**Proximas opcoes:**`;
+            content += `\n- Clique em **"Enviar Proposta por Email"** para enviar a pre-proposta para **${contactEmail}**`;
+            content += `\n- Clique em **"Editar Proposta"** para ajustar valores antes do envio`;
+            content += `\n- Ou diga **"sim"** para enviar e prosseguir`;
+            return {
+              content,
+              actions: [
+                { type: "send_proposal_email", label: "Enviar Proposta por Email", params: { proposalId: proposalResult.proposalId, email: contactEmail, companyId: execResult.companyId } },
+                { type: "edit_proposal", label: "Editar Proposta", params: { proposalId: proposalResult.proposalId } },
+              ],
+            };
+          }
+        }
+
+        // No email — ask for it
+        content += `\n\n**Para prosseguir, preciso do email da empresa** para envio da pre-proposta comercial.`;
+        content += `\nInforme o email e a proposta sera gerada para sua revisao antes do envio.`;
+        return { content, actions: [] };
       } else {
         content += `\n\n${execResult.message}`;
         // Company already exists — check what's the next phase

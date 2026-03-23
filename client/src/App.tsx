@@ -52,6 +52,7 @@ const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const ProposalResult = lazy(() => import("./pages/ProposalResult"));
 const Landing = lazy(() => import("./pages/Landing"));
 const LGPD = lazy(() => import("./pages/LGPD"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
@@ -140,6 +141,9 @@ export default function App() {
                 <Route path="/terms" element={<Suspense fallback={<PageLoader />}><TermsOfService /></Suspense>} />
                 <Route path="/privacy" element={<Suspense fallback={<PageLoader />}><PrivacyPolicy /></Suspense>} />
                 <Route path="/lgpd" element={<Suspense fallback={<PageLoader />}><LGPD /></Suspense>} />
+                <Route path="/proposal/result" element={<Suspense fallback={<PageLoader />}><ProposalResult /></Suspense>} />
+                <Route path="/proposal/approve/:token" element={<Suspense fallback={<PageLoader />}><ProposalResult /></Suspense>} />
+                <Route path="/proposal/reject/:token" element={<Suspense fallback={<PageLoader />}><ProposalResult /></Suspense>} />
 
                 {/* Dashboard principal */}
                 <Route path="/home" element={<ProtectedPage><Home /></ProtectedPage>} />

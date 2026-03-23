@@ -68,6 +68,62 @@ export function registerRoutes(app: Express) {
   });
 
   // ============================================
+  // PROPOSAL APPROVAL (public, token-based)
+  // ============================================
+
+  app.get("/api/proposal/approve/:token", async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      const db = await (await import("./db")).getDb();
+      const { proposals } = await import("../drizzle/schema");
+      const { eq } = await import("drizzle-orm");
+
+      const [proposal] = await db.select().from(proposals).where(eq(proposals.approvalToken, token));
+      if (!proposal) {
+        return res.redirect(`${process.env.FRONTEND_URL || ""}/proposal/result?status=invalid`);
+      }
+
+      if (proposal.status === "approved") {
+        return res.redirect(`${process.env.FRONTEND_URL || ""}/proposal/result?status=already_approved`);
+      }
+
+      await db.update(proposals)
+        .set({ status: "approved", approvedAt: new Date(), respondedAt: new Date(), updatedAt: new Date() })
+        .where(eq(proposals.id, proposal.id));
+
+      log.info(`[Proposal] Approved: ${proposal.id} by ${proposal.contactEmail}`);
+      res.redirect(`${process.env.FRONTEND_URL || ""}/proposal/result?status=approved&id=${proposal.id}`);
+    } catch (error) {
+      log.error("[Proposal Approve] Error:", error);
+      res.redirect(`${process.env.FRONTEND_URL || ""}/proposal/result?status=error`);
+    }
+  });
+
+  app.get("/api/proposal/reject/:token", async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      const db = await (await import("./db")).getDb();
+      const { proposals } = await import("../drizzle/schema");
+      const { eq } = await import("drizzle-orm");
+
+      const [proposal] = await db.select().from(proposals).where(eq(proposals.approvalToken, token));
+      if (!proposal) {
+        return res.redirect(`${process.env.FRONTEND_URL || ""}/proposal/result?status=invalid`);
+      }
+
+      await db.update(proposals)
+        .set({ status: "rejected", rejectedAt: new Date(), respondedAt: new Date(), updatedAt: new Date() })
+        .where(eq(proposals.id, proposal.id));
+
+      log.info(`[Proposal] Rejected: ${proposal.id} by ${proposal.contactEmail}`);
+      res.redirect(`${process.env.FRONTEND_URL || ""}/proposal/result?status=rejected&id=${proposal.id}`);
+    } catch (error) {
+      log.error("[Proposal Reject] Error:", error);
+      res.redirect(`${process.env.FRONTEND_URL || ""}/proposal/result?status=error`);
+    }
+  });
+
+  // ============================================
   // PDF DOWNLOAD ROUTES (authenticated)
   // ============================================
   registerPdfDownloadRoutes(app);
