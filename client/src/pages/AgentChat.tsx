@@ -11,10 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, Bot, User, AlertTriangle, CheckCircle2, Clock, Brain, RefreshCw, MessageSquare, X, Plus, Trash2, FileDown, Save, Pencil } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 function AgentChatPage() {
   usePageMeta({ title: "SamurAI — Assistente NR-01" });
+  const { toast } = useToast();
 
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState("");
