@@ -1127,7 +1127,27 @@ async function generateFallbackResponse(
   const isAffirmative = /^(sim|ok|pode|prossegu|inici|vamos|confirm|faz|comec|start|go|yes|claro|certo|beleza|bora|continuar|próximo|proximo|avançar|avancar|enviar)/i.test(msg);
   const isContinue = isExecuteCommand || isAffirmative;
 
-  // ── 0. Handle send_proposal_email action ──
+  // ── 0. Handle edit_proposal action ──
+  if (msg.startsWith("executar:edit_proposal") || msg.includes("editar proposta")) {
+    const db2 = await getDb();
+    const [latestProposal] = await db2.select().from(proposals)
+      .where(and(eq(proposals.tenantId, tenantId), eq(proposals.status, "pending")))
+      .orderBy(desc(proposals.createdAt))
+      .limit(1);
+
+    if (latestProposal) {
+      const totalFormatted = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(latestProposal.totalValue / 100);
+      return {
+        content: `**Pre-proposta disponivel para edicao:**\n\n| Campo | Valor |\n|-------|-------|\n| **Titulo** | ${latestProposal.title} |\n| **Valor Total** | ${totalFormatted} |\n| **Email** | ${latestProposal.contactEmail || "—"} |\n| **Validade** | ${latestProposal.validUntil ? new Date(latestProposal.validUntil).toLocaleDateString("pt-BR") : "30 dias"} |\n| **Status** | Pendente |\n\nVoce pode editar a proposta na pagina **Propostas** do menu lateral.\n\nQuando estiver satisfeito, diga **"enviar proposta"** para enviar por email ao cliente.`,
+        actions: [
+          { type: "send_proposal_email", label: "Enviar Proposta por Email", params: { proposalId: latestProposal.id, email: latestProposal.contactEmail } },
+        ],
+      };
+    }
+    return { content: "Nenhuma proposta pendente encontrada. Informe o CNPJ da empresa para gerar uma nova.", actions: [] };
+  }
+
+  // ── 0a. Handle send_proposal_email action ──
   if (msg.startsWith("executar:send_proposal_email") || msg.includes("enviar proposta")) {
     // Find the latest pending proposal for this tenant
     const db2 = await getDb();
@@ -1317,7 +1337,7 @@ async function generateFallbackResponse(
         }
       }
     } else {
-      content += "\nPara definir a estrategia, preciso saber o **numero de funcionarios** da empresa.";
+      content += "\nPara definir a estrategia, preciso saber o **numero de funcionarios** e o **email** da empresa.";
     }
 
     return { content, actions };
@@ -1437,7 +1457,7 @@ async function generateFallbackResponse(
 
       if (nextPhase === "completed") {
         return {
-          content: `O processo NR-01 desta empresa ja esta **100% concluido**! Todas as fases foram finalizadas com sucesso.` + buildPdfDownloadLinks(existingCompany.id) + `\n\nDeseja iniciar o processo para outra empresa? Envie o CNPJ e numero de funcionarios.`,
+          content: `O processo NR-01 desta empresa ja esta **100% concluido**! Todas as fases foram finalizadas com sucesso.` + buildPdfDownloadLinks(existingCompany.id) + `\n\nDeseja iniciar o processo para outra empresa? Envie o CNPJ, numero de funcionarios e email da empresa.`,
           actions: [],
         };
       }
@@ -1699,7 +1719,7 @@ async function generateFallbackResponse(
       }
       if (nextPhase === "completed") {
         return {
-          content: `Processo NR-01 da empresa **${existingCompany.name}** ja esta **100% concluido**!` + buildPdfDownloadLinks(existingCompany.id) + `\n\nDeseja iniciar o processo para outra empresa? Envie o CNPJ e numero de funcionarios.`,
+          content: `Processo NR-01 da empresa **${existingCompany.name}** ja esta **100% concluido**!` + buildPdfDownloadLinks(existingCompany.id) + `\n\nDeseja iniciar o processo para outra empresa? Envie o CNPJ, numero de funcionarios e email da empresa.`,
           actions: [],
         };
       }
@@ -1708,7 +1728,7 @@ async function generateFallbackResponse(
 
   // ── 9. Default response ──
   return {
-    content: `Para iniciar o processo de conformidade NR-01, me envie:\n\n- **CNPJ** da empresa (vou consultar automaticamente na Receita Federal)\n- **Numero de funcionarios** (para definir a estrategia de avaliacao)\n\nExemplo: *"CNPJ 30.428.133/0001-24, 5 funcionarios"*\n\nOu pergunte sobre o **status** de uma empresa ja cadastrada, ou peca **ajuda** para ver todas as funcionalidades.`,
+    content: `Para iniciar o processo de conformidade NR-01, me envie:\n\n- **CNPJ** da empresa (vou consultar automaticamente na Receita Federal)\n- **Numero de funcionarios** (para definir a estrategia de avaliacao)\n- **Email da empresa** (para envio da pre-proposta comercial)\n\nExemplo: *"CNPJ 30.428.133/0001-24, 50 funcionarios, email rh@empresa.com"*\n\nOu pergunte sobre o **status** de uma empresa ja cadastrada, ou peca **ajuda** para ver todas as funcionalidades.`,
     actions: [],
   };
 }
