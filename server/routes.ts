@@ -131,6 +131,7 @@ export function registerRoutes(app: Express) {
             companyName = tenant?.name || "Empresa";
           }
 
+          console.log(`[Proposal] Company tenant resolved: ${companyTenantId} (${companyName})`);
           log.info(`[Proposal] Company tenant: ${companyTenantId} (${companyName})`);
 
           // Check if user already exists for this company tenant
@@ -138,7 +139,10 @@ export function registerRoutes(app: Express) {
             .where(eq(users.tenantId, companyTenantId))
             .limit(1);
 
+          console.log(`[Proposal] Tenant user check: ${tenantUser ? tenantUser.email : 'NONE'}`);
+
           if (tenantUser) {
+            console.log(`[Proposal] User already exists for tenant ${companyTenantId}, skipping`);
             log.info(`[Proposal] User already exists for tenant ${companyTenantId}, skipping creation`);
           } else {
             // Check if email already exists (maybe from another tenant or with null tenantId)
@@ -194,6 +198,7 @@ export function registerRoutes(app: Express) {
           }
         } catch (userErr: any) {
           // Don't fail the approval if user creation fails
+          console.error("[Proposal] User creation failed (approval still OK):", userErr?.message, userErr?.stack);
           log.error("[Proposal] User creation failed (approval still OK):", userErr?.message);
         }
       }
