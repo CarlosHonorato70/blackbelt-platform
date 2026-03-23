@@ -143,7 +143,7 @@ function AgentChatPage() {
     {
       id: "welcome",
       role: "assistant",
-      content: "Olá! Sou o Assistente BlackBelt, seu especialista em conformidade NR-01 para riscos psicossociais.\n\nPosso ajudá-lo a:\n- Cadastrar uma nova empresa e iniciar o processo NR-01\n- Acompanhar o progresso de conformidade\n- Gerar avaliações, inventários e planos de ação\n- Responder dúvidas sobre a legislação\n\nPara começar, me informe o **CNPJ** da empresa ou escolha uma empresa já cadastrada.",
+      content: "Olá! Sou o **SamurAI**, seu especialista em conformidade NR-01 para riscos psicossociais.\n\nPosso ajudá-lo a:\n- Cadastrar uma nova empresa e iniciar o processo NR-01\n- Acompanhar o progresso de conformidade\n- Gerar avaliações, inventários e planos de ação\n- Responder dúvidas sobre a legislação\n\nPara começar, me informe:\n1. **CNPJ** da empresa\n2. **Número de funcionários**\n3. **Email** para envio da documentação\n\nOu escolha uma empresa já cadastrada.",
       actions: [],
     },
   ];

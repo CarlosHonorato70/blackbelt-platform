@@ -1130,29 +1130,33 @@ async function generateFallbackResponse(
   // ── 0. Handle edit_proposal action ──
   if (msg.startsWith("executar:edit_proposal") || msg.includes("editar proposta")) {
     const db2 = await getDb();
+    // Buscar proposta mais recente de QUALQUER status (não só pending)
     const [latestProposal] = await db2.select().from(proposals)
-      .where(and(eq(proposals.tenantId, tenantId), eq(proposals.status, "pending")))
+      .where(eq(proposals.tenantId, tenantId))
       .orderBy(desc(proposals.createdAt))
       .limit(1);
 
     if (latestProposal) {
       const totalFormatted = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(latestProposal.totalValue / 100);
+      const statusMap: Record<string, string> = { pending: "Pendente", approved: "Aprovada", rejected: "Recusada", sent: "Enviada", draft: "Rascunho" };
+      const statusLabel = statusMap[latestProposal.status] || latestProposal.status;
+      const actions: any[] = [];
+      // Sempre permitir enviar por email
+      actions.push({ type: "send_proposal_email", label: "Enviar Proposta por Email", params: { proposalId: latestProposal.id, email: latestProposal.contactEmail } });
       return {
-        content: `**Pre-proposta disponivel para edicao:**\n\n| Campo | Valor |\n|-------|-------|\n| **Titulo** | ${latestProposal.title} |\n| **Valor Total** | ${totalFormatted} |\n| **Email** | ${latestProposal.contactEmail || "—"} |\n| **Validade** | ${latestProposal.validUntil ? new Date(latestProposal.validUntil).toLocaleDateString("pt-BR") : "30 dias"} |\n| **Status** | Pendente |\n\nVoce pode editar a proposta na pagina **Propostas** do menu lateral.\n\nQuando estiver satisfeito, diga **"enviar proposta"** para enviar por email ao cliente.`,
-        actions: [
-          { type: "send_proposal_email", label: "Enviar Proposta por Email", params: { proposalId: latestProposal.id, email: latestProposal.contactEmail } },
-        ],
+        content: `**Proposta disponivel para edicao:**\n\n| Campo | Valor |\n|-------|-------|\n| **Titulo** | ${latestProposal.title} |\n| **Valor Total** | ${totalFormatted} |\n| **Email** | ${latestProposal.contactEmail || "\u2014"} |\n| **Validade** | ${latestProposal.validUntil ? new Date(latestProposal.validUntil).toLocaleDateString("pt-BR") : "30 dias"} |\n| **Status** | ${statusLabel} |\n\nVoce pode editar a proposta na pagina **Propostas** do menu lateral.\n\nQuando estiver satisfeito, diga **"enviar proposta"** para enviar por email ao cliente.`,
+        actions,
       };
     }
-    return { content: "Nenhuma proposta pendente encontrada. Informe o CNPJ da empresa para gerar uma nova.", actions: [] };
+    return { content: "Nenhuma proposta encontrada para esta empresa. Informe o CNPJ da empresa para gerar uma nova.", actions: [] };
   }
 
   // ── 0a. Handle send_proposal_email action ──
   if (msg.startsWith("executar:send_proposal_email") || msg.includes("enviar proposta")) {
-    // Find the latest pending proposal for this tenant
+    // Find the latest proposal for this tenant (any status)
     const db2 = await getDb();
     const [latestProposal] = await db2.select().from(proposals)
-      .where(and(eq(proposals.tenantId, tenantId), eq(proposals.status, "pending")))
+      .where(eq(proposals.tenantId, tenantId))
       .orderBy(desc(proposals.createdAt))
       .limit(1);
 
