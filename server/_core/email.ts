@@ -597,3 +597,88 @@ contato@blackbeltconsultoria.com
     text: textContent,
   });
 }
+
+/**
+ * Envia email de boas-vindas para empresa com credenciais de acesso
+ * e orientações sobre cadastro de setores/colaboradores.
+ */
+export async function sendWelcomeCompanyEmail(params: {
+  companyEmail: string;
+  companyName: string;
+  tempPassword: string;
+  loginUrl: string;
+}): Promise<boolean> {
+  const { companyEmail, companyName, tempPassword, loginUrl } = params;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #1a365d 0%, #2d3748 100%); color: white; padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 24px;">Bem-vindo(a) ao BlackBelt</h1>
+        <p style="margin: 10px 0 0; opacity: 0.9;">Plataforma de Conformidade NR-01</p>
+      </div>
+
+      <div style="background: #fff; padding: 30px 20px; border: 1px solid #e2e8f0;">
+        <p style="font-size: 16px; color: #2d3748;">Prezado(a) responsável da <strong>${escapeHtml(companyName)}</strong>,</p>
+
+        <p style="color: #4a5568;">Sua proposta foi aprovada com sucesso! Abaixo estão suas credenciais de acesso à plataforma BlackBelt:</p>
+
+        <div style="background: #f7fafc; border: 2px solid #1a365d; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <h3 style="margin: 0 0 10px; color: #1a365d;">Credenciais de Acesso</h3>
+          <p style="margin: 5px 0; color: #2d3748;"><strong>Email:</strong> ${escapeHtml(companyEmail)}</p>
+          <p style="margin: 5px 0; color: #2d3748;"><strong>Senha:</strong> ${escapeHtml(tempPassword)}</p>
+          <p style="margin: 10px 0 0; font-size: 13px; color: #e53e3e;">Recomendamos alterar sua senha no primeiro acesso.</p>
+        </div>
+
+        <h3 style="color: #1a365d; margin-top: 25px;">Próximos Passos</h3>
+        <ol style="color: #4a5568; line-height: 1.8;">
+          <li>Acesse a plataforma com as credenciais acima</li>
+          <li>No menu lateral, acesse <strong>Colaboradores e Setores</strong></li>
+          <li>Cadastre os <strong>setores</strong> da empresa</li>
+          <li>Cadastre os <strong>colaboradores</strong> com nome, email e setor</li>
+          <li>Dica: use o botão <strong>"Baixar Modelo"</strong> para importar uma planilha com todos os dados de uma vez</li>
+        </ol>
+
+        <p style="color: #4a5568; margin-top: 15px;">Após o cadastro dos colaboradores, a consultoria enviará o <strong>questionário COPSOQ-II</strong> diretamente para o email de cada colaborador.</p>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${loginUrl}" style="display: inline-block; background: #1a365d; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: bold;">Acessar Plataforma</a>
+        </div>
+      </div>
+
+      <div style="background: #f7fafc; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; border: 1px solid #e2e8f0; border-top: 0;">
+        <p style="margin: 0; color: #718096; font-size: 13px;">Dúvidas? Entre em contato: contato@blackbeltconsultoria.com</p>
+        <p style="margin: 5px 0 0; color: #a0aec0; font-size: 12px;">Black Belt Consultoria — Conformidade NR-01</p>
+      </div>
+    </div>
+  `;
+
+  const textContent = `
+Bem-vindo(a) ao BlackBelt — Plataforma de Conformidade NR-01
+
+Prezado(a) responsável da ${companyName},
+
+Sua proposta foi aprovada! Credenciais de acesso:
+- Email: ${companyEmail}
+- Senha: ${tempPassword}
+
+PRÓXIMOS PASSOS:
+1. Acesse a plataforma: ${loginUrl}
+2. No menu lateral, acesse Colaboradores e Setores
+3. Cadastre os setores da empresa
+4. Cadastre os colaboradores com nome, email e setor
+5. Dica: use o botão "Baixar Modelo" para importar uma planilha
+
+Após o cadastro, a consultoria enviará o questionário COPSOQ-II para os colaboradores.
+
+Recomendamos alterar sua senha no primeiro acesso.
+
+Dúvidas? contato@blackbeltconsultoria.com
+  `.trim();
+
+  return sendEmail({
+    to: companyEmail,
+    subject: `Bem-vindo à BlackBelt — Acesso à Plataforma - ${companyName}`,
+    html,
+    text: textContent,
+  });
+}

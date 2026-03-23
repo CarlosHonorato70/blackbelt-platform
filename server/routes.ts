@@ -75,26 +75,88 @@ export function registerRoutes(app: Express) {
     try {
       const { token } = req.params;
       const db = await (await import("./db")).getDb();
-      const { proposals } = await import("../drizzle/schema");
+      const { proposals, tenants, users } = await import("../drizzle/schema");
       const { eq } = await import("drizzle-orm");
+      const frontendUrl = process.env.FRONTEND_URL || "";
 
       const [proposal] = await db.select().from(proposals).where(eq(proposals.approvalToken, token));
       if (!proposal) {
-        return res.redirect(`${process.env.FRONTEND_URL || ""}/proposal/result?status=invalid`);
+        res.set("Cache-Control", "no-store");
+        return res.redirect(`${frontendUrl}/proposal/result?status=invalid`);
       }
 
       if (proposal.status === "approved") {
-        return res.redirect(`${process.env.FRONTEND_URL || ""}/proposal/result?status=already_approved`);
+        res.set("Cache-Control", "no-store");
+        return res.redirect(`${frontendUrl}/proposal/result?status=already_approved`);
       }
 
+      // 1. Approve the proposal
       await db.update(proposals)
         .set({ status: "approved", approvedAt: new Date(), respondedAt: new Date(), updatedAt: new Date() })
         .where(eq(proposals.id, proposal.id));
 
       log.info(`[Proposal] Approved: ${proposal.id} by ${proposal.contactEmail}`);
-      res.redirect(`${process.env.FRONTEND_URL || ""}/proposal/result?status=approved&id=${proposal.id}`);
+
+      // 2. Create company user account if none exists
+      if (proposal.contactEmail && proposal.tenantId) {
+        try {
+          const [existingUser] = await db.select().from(users)
+            .where(eq(users.tenantId, proposal.tenantId))
+            .limit(1);
+
+          if (!existingUser) {
+            const { nanoid } = await import("nanoid");
+            const bcrypt = await import("bcrypt");
+            const { sendWelcomeCompanyEmail } = await import("./_core/email");
+
+            // Get company name
+            const [tenant] = await db.select().from(tenants).where(eq(tenants.id, proposal.tenantId));
+            const companyName = tenant?.name || "Empresa";
+
+            // Generate temp password
+            const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+            let tempPassword = "";
+            for (let i = 0; i < 10; i++) tempPassword += chars[Math.floor(Math.random() * chars.length)];
+            tempPassword += "@1"; // Ensure special char + number
+
+            const hashedPassword = await bcrypt.hash(tempPassword, 12);
+            const userId = nanoid();
+
+            await db.insert(users).values({
+              id: userId,
+              email: proposal.contactEmail.toLowerCase().trim(),
+              password: hashedPassword,
+              name: companyName,
+              tenantId: proposal.tenantId,
+              role: "user",
+              emailVerified: true,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            });
+
+            log.info(`[Proposal] Company user created: ${proposal.contactEmail} for tenant ${proposal.tenantId}`);
+
+            // Send welcome email (fire-and-forget)
+            sendWelcomeCompanyEmail({
+              companyEmail: proposal.contactEmail,
+              companyName,
+              tempPassword,
+              loginUrl: `${frontendUrl}/login`,
+            }).catch(err => log.error("[Proposal] Welcome email failed:", err));
+          } else {
+            log.info(`[Proposal] User already exists for tenant ${proposal.tenantId}, skipping creation`);
+          }
+        } catch (userErr: any) {
+          // Don't fail the approval if user creation fails
+          log.error("[Proposal] User creation failed (approval still OK):", userErr?.message);
+        }
+      }
+
+      res.set("Cache-Control", "no-store");
+      res.redirect(`${frontendUrl}/proposal/result?status=approved&id=${proposal.id}`);
     } catch (error) {
       log.error("[Proposal Approve] Error:", error);
+      res.set("Cache-Control", "no-store");
       res.redirect(`${process.env.FRONTEND_URL || ""}/proposal/result?status=error`);
     }
   });
