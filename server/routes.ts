@@ -97,54 +97,75 @@ export function registerRoutes(app: Express) {
 
       log.info(`[Proposal] Approved: ${proposal.id} by ${proposal.contactEmail}`);
 
-      // 2. Create company user account if none exists
+      // 2. Create or assign company user account
       if (proposal.contactEmail && proposal.tenantId) {
         try {
-          const [existingUser] = await db.select().from(users)
+          const { nanoid } = await import("nanoid");
+          const bcrypt = await import("bcrypt");
+          const { sendWelcomeCompanyEmail } = await import("./_core/email");
+
+          // Get company name
+          const [tenant] = await db.select().from(tenants).where(eq(tenants.id, proposal.tenantId));
+          const companyName = tenant?.name || "Empresa";
+
+          // Check if user already exists for this tenant
+          const [tenantUser] = await db.select().from(users)
             .where(eq(users.tenantId, proposal.tenantId))
             .limit(1);
 
-          if (!existingUser) {
-            const { nanoid } = await import("nanoid");
-            const bcrypt = await import("bcrypt");
-            const { sendWelcomeCompanyEmail } = await import("./_core/email");
+          if (tenantUser) {
+            log.info(`[Proposal] User already exists for tenant ${proposal.tenantId}, skipping creation`);
+          } else {
+            // Check if email already exists (maybe from another tenant or with null tenantId)
+            const emailNormalized = proposal.contactEmail.toLowerCase().trim();
+            const [existingEmailUser] = await db.select().from(users)
+              .where(eq(users.email, emailNormalized))
+              .limit(1);
 
-            // Get company name
-            const [tenant] = await db.select().from(tenants).where(eq(tenants.id, proposal.tenantId));
-            const companyName = tenant?.name || "Empresa";
-
-            // Generate temp password
-            const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
             let tempPassword = "";
+            const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
             for (let i = 0; i < 10; i++) tempPassword += chars[Math.floor(Math.random() * chars.length)];
-            tempPassword += "@1"; // Ensure special char + number
+            tempPassword += "@1";
 
-            const hashedPassword = await bcrypt.hash(tempPassword, 12);
-            const userId = nanoid();
+            if (existingEmailUser) {
+              // User exists with this email — assign to this tenant and reset password
+              const hashedPassword = await bcrypt.hash(tempPassword, 12);
+              await db.update(users).set({
+                tenantId: proposal.tenantId,
+                name: companyName,
+                password: hashedPassword,
+                emailVerified: true,
+                updatedAt: new Date(),
+              }).where(eq(users.id, existingEmailUser.id));
 
-            await db.insert(users).values({
-              id: userId,
-              email: proposal.contactEmail.toLowerCase().trim(),
-              password: hashedPassword,
-              name: companyName,
-              tenantId: proposal.tenantId,
-              role: "user",
-              emailVerified: true,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            });
+              log.info(`[Proposal] Existing user ${emailNormalized} assigned to tenant ${proposal.tenantId}`);
+            } else {
+              // Create new user
+              const hashedPassword = await bcrypt.hash(tempPassword, 12);
+              const userId = nanoid();
 
-            log.info(`[Proposal] Company user created: ${proposal.contactEmail} for tenant ${proposal.tenantId}`);
+              await db.insert(users).values({
+                id: userId,
+                email: emailNormalized,
+                password: hashedPassword,
+                name: companyName,
+                tenantId: proposal.tenantId,
+                role: "user",
+                emailVerified: true,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              });
 
-            // Send welcome email (fire-and-forget)
+              log.info(`[Proposal] Company user created: ${emailNormalized} for tenant ${proposal.tenantId}`);
+            }
+
+            // Send welcome email with credentials
             sendWelcomeCompanyEmail({
               companyEmail: proposal.contactEmail,
               companyName,
               tempPassword,
               loginUrl: `${frontendUrl}/login`,
             }).catch(err => log.error("[Proposal] Welcome email failed:", err));
-          } else {
-            log.info(`[Proposal] User already exists for tenant ${proposal.tenantId}, skipping creation`);
           }
         } catch (userErr: any) {
           // Don't fail the approval if user creation fails
