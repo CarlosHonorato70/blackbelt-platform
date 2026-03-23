@@ -98,23 +98,48 @@ export function registerRoutes(app: Express) {
       log.info(`[Proposal] Approved: ${proposal.id} by ${proposal.contactEmail}`);
 
       // 2. Create or assign company user account
-      if (proposal.contactEmail && proposal.tenantId) {
+      if (proposal.contactEmail) {
         try {
           const { nanoid } = await import("nanoid");
           const bcrypt = await import("bcrypt");
           const { sendWelcomeCompanyEmail } = await import("./_core/email");
+          const { clients } = await import("../drizzle/schema");
 
-          // Get company name
-          const [tenant] = await db.select().from(tenants).where(eq(tenants.id, proposal.tenantId));
-          const companyName = tenant?.name || "Empresa";
+          // Find the COMPANY tenant (not the consultant tenant) via client CNPJ
+          let companyTenantId = proposal.tenantId;
+          let companyName = "Empresa";
 
-          // Check if user already exists for this tenant
+          if (proposal.clientId) {
+            const [client] = await db.select().from(clients).where(eq(clients.id, proposal.clientId));
+            if (client?.cnpj) {
+              // Find company tenant by CNPJ (with or without formatting)
+              const cnpjClean = client.cnpj.replace(/\D/g, "");
+              const allTenants = await db.select().from(tenants);
+              const companyTenant = allTenants.find(t =>
+                t.tenantType === "company" && t.cnpj && t.cnpj.replace(/\D/g, "") === cnpjClean
+              );
+              if (companyTenant) {
+                companyTenantId = companyTenant.id;
+                companyName = companyTenant.name;
+              }
+            }
+          }
+
+          // Fallback: get name from proposal tenant if no company found
+          if (companyName === "Empresa") {
+            const [tenant] = await db.select().from(tenants).where(eq(tenants.id, companyTenantId));
+            companyName = tenant?.name || "Empresa";
+          }
+
+          log.info(`[Proposal] Company tenant: ${companyTenantId} (${companyName})`);
+
+          // Check if user already exists for this company tenant
           const [tenantUser] = await db.select().from(users)
-            .where(eq(users.tenantId, proposal.tenantId))
+            .where(eq(users.tenantId, companyTenantId))
             .limit(1);
 
           if (tenantUser) {
-            log.info(`[Proposal] User already exists for tenant ${proposal.tenantId}, skipping creation`);
+            log.info(`[Proposal] User already exists for tenant ${companyTenantId}, skipping creation`);
           } else {
             // Check if email already exists (maybe from another tenant or with null tenantId)
             const emailNormalized = proposal.contactEmail.toLowerCase().trim();
@@ -131,14 +156,14 @@ export function registerRoutes(app: Express) {
               // User exists with this email — assign to this tenant and reset password
               const hashedPassword = await bcrypt.hash(tempPassword, 12);
               await db.update(users).set({
-                tenantId: proposal.tenantId,
+                tenantId: companyTenantId,
                 name: companyName,
                 password: hashedPassword,
                 emailVerified: true,
                 updatedAt: new Date(),
               }).where(eq(users.id, existingEmailUser.id));
 
-              log.info(`[Proposal] Existing user ${emailNormalized} assigned to tenant ${proposal.tenantId}`);
+              log.info(`[Proposal] Existing user ${emailNormalized} assigned to tenant ${companyTenantId}`);
             } else {
               // Create new user
               const hashedPassword = await bcrypt.hash(tempPassword, 12);
@@ -149,14 +174,14 @@ export function registerRoutes(app: Express) {
                 email: emailNormalized,
                 password: hashedPassword,
                 name: companyName,
-                tenantId: proposal.tenantId,
+                tenantId: companyTenantId,
                 role: "user",
                 emailVerified: true,
                 createdAt: new Date(),
                 updatedAt: new Date(),
               });
 
-              log.info(`[Proposal] Company user created: ${emailNormalized} for tenant ${proposal.tenantId}`);
+              log.info(`[Proposal] Company user created: ${emailNormalized} for tenant ${companyTenantId}`);
             }
 
             // Send welcome email with credentials
