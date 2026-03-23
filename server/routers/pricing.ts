@@ -1043,7 +1043,7 @@ export const proposalsRouter = router({
         title: z.string().optional(),
         description: z.string().optional(),
         status: z
-          .enum(["draft", "sent", "accepted", "rejected", "expired"])
+          .enum(["draft", "pending", "sent", "accepted", "approved", "rejected", "expired"])
           .optional(),
         subtotal: z.number().int().optional(),
         discount: z.number().int().optional(),

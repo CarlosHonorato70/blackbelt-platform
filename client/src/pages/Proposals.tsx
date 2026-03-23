@@ -478,7 +478,7 @@ export default function Proposals() {
         id: selectedProposalId,
         title: editTitle,
         description: editDescription || undefined,
-        status: editStatusValue as "draft" | "sent" | "accepted" | "rejected" | "expired",
+        status: editStatusValue as "draft" | "pending" | "sent" | "accepted" | "approved" | "rejected" | "expired",
         subtotal: newSubtotal,
         discount: discountAmount,
         discountPercent: editDiscount,
