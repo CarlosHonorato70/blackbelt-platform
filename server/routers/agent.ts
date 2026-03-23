@@ -1266,7 +1266,9 @@ async function generateFallbackResponse(
           riskLevel,
         });
         content += `\n\n**Investimento estimado:** ${pricingSummary.recommendedPackage} — **R$ ${pricingSummary.totalEstimate.min.toLocaleString("pt-BR")} a R$ ${pricingSummary.totalEstimate.max.toLocaleString("pt-BR")}**`;
-        content += `\n(${pricingSummary.pricePerEmployee.min}-${pricingSummary.pricePerEmployee.max}/colaborador${pricingSummary.volumeDiscount.percentage > 0 ? `, desconto de ${pricingSummary.volumeDiscount.percentage}%` : ""})`;
+        if (pricingSummary.volumeDiscount.percentage > 0) {
+          content += `\n(desconto de ${pricingSummary.volumeDiscount.percentage}% aplicado)`;
+        }
 
         // Check if we have an email to send the proposal
         const contactEmail = (memory as any).contactEmail || data.email;
