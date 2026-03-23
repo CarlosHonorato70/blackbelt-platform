@@ -365,8 +365,7 @@ export async function deleteTenant(id: string) {
     ), "trainingProgress");
     await safeDelete(() => db.delete(nr01.trainingModules).where(eq(nr01.trainingModules.tenantId, id)), "trainingModules");
 
-    // Benchmark & PCMSO
-    await safeDelete(() => db.delete(nr01.benchmarkData).where(eq(nr01.benchmarkData.tenantId, id)), "benchmarkData");
+    // PCMSO (benchmarkData is global, not per-tenant)
     await safeDelete(() => db.delete(nr01.pcmsoRecommendations).where(eq(nr01.pcmsoRecommendations.tenantId, id)), "pcmsoRecommendations");
     await safeDelete(() => db.delete(nr01.dsrRequests).where(eq(nr01.dsrRequests.tenantId, id)), "dsrRequests");
 

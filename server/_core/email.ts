@@ -39,9 +39,63 @@ const EMAIL_RETRY_DELAYS = [1000, 3000, 5000]; // 1s, 3s, 5s
  * Envia um email usando o transporte configurado.
  * Retenta até 3 vezes com backoff exponencial em caso de falha transitória.
  */
+/**
+ * Send email via Brevo HTTP API (primary) — avoids SMTP port blocking on cloud providers.
+ */
+async function sendViaBrevoApi(options: SendEmailOptions): Promise<boolean> {
+  const apiKey = process.env.BREVO_API_KEY || process.env.SMTP_PASSWORD;
+  if (!apiKey) return false;
+
+  const fromEmail = process.env.SMTP_FROM || "contato@blackbeltconsultoria.com";
+  const fromName = "Black Belt Consultoria";
+
+  const body = JSON.stringify({
+    sender: { name: fromName, email: fromEmail },
+    to: [{ email: options.to }],
+    subject: options.subject,
+    htmlContent: options.html,
+    textContent: options.text || undefined,
+  });
+
+  try {
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "api-key": apiKey,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body,
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (res.ok) {
+      log.info("Email sent via Brevo API", { to: options.to, status: res.status });
+      return true;
+    }
+
+    const errBody = await res.text();
+    log.warn("Brevo API failed", { status: res.status, body: errBody.substring(0, 200), to: options.to });
+    return false;
+  } catch (err) {
+    log.warn("Brevo API error", { error: err instanceof Error ? err.message : String(err), to: options.to });
+    return false;
+  }
+}
+
 export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
+  if (!process.env.SMTP_USER && !process.env.BREVO_API_KEY && !process.env.SMTP_PASSWORD) {
+    log.warn("Email credentials not configured, skipping email send");
+    return false;
+  }
+
+  // Try Brevo HTTP API first (works on cloud providers that block SMTP ports)
+  const apiResult = await sendViaBrevoApi(options);
+  if (apiResult) return true;
+
+  // Fallback to SMTP
   if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
-    log.warn("SMTP credentials not configured, skipping email send");
+    log.warn("SMTP credentials not configured and Brevo API failed");
     return false;
   }
 
@@ -58,7 +112,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
       });
 
       if (attempt > 1) {
-        log.info("Email sent successfully after retry", { attempt, to: options.to });
+        log.info("Email sent successfully via SMTP after retry", { attempt, to: options.to });
       }
       return true;
     } catch (error) {
@@ -66,13 +120,13 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
 
       if (attempt < maxAttempts) {
         const delay = EMAIL_RETRY_DELAYS[attempt - 1];
-        log.warn(`Email send failed (attempt ${attempt}/${maxAttempts}), retrying in ${delay}ms...`, {
+        log.warn(`SMTP send failed (attempt ${attempt}/${maxAttempts}), retrying in ${delay}ms...`, {
           error: errorMsg,
           to: options.to,
         });
         await new Promise((r) => setTimeout(r, delay));
       } else {
-        log.error(`Email send failed after ${maxAttempts} attempts`, {
+        log.error(`Email send failed after ${maxAttempts} attempts (SMTP + API)`, {
           error: errorMsg,
           to: options.to,
           subject: options.subject,
