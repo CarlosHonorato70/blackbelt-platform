@@ -101,8 +101,8 @@ export function registerRoutes(app: Express) {
       if (proposal.contactEmail) {
         try {
           const { nanoid } = await import("nanoid");
-          let bcrypt: any;
-          try { bcrypt = await import("bcrypt"); } catch { const mod = await import("bcryptjs"); bcrypt = mod.default || mod; }
+          const bcryptMod = await import("bcryptjs");
+          const bcrypt = bcryptMod.default || bcryptMod;
           const { sendWelcomeCompanyEmail } = await import("./_core/email");
           const { clients } = await import("../drizzle/schema");
 
@@ -163,7 +163,7 @@ export function registerRoutes(app: Express) {
               await db.update(users).set({
                 tenantId: companyTenantId,
                 name: companyName,
-                password: hashedPassword,
+                passwordHash: hashedPassword,
                 emailVerified: true,
                 updatedAt: new Date(),
               }).where(eq(users.id, existingEmailUser.id));
@@ -177,7 +177,7 @@ export function registerRoutes(app: Express) {
               await db.insert(users).values({
                 id: userId,
                 email: emailNormalized,
-                password: hashedPassword,
+                passwordHash: hashedPassword,
                 name: companyName,
                 tenantId: companyTenantId,
                 role: "user",

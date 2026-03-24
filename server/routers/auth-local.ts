@@ -323,7 +323,7 @@ export const authLocalRouter = router({
     .mutation(async ({ input }) => {
       // Always return success to prevent email enumeration
       const user = await db.getUserByEmail(input.email);
-      if (!user || !user.passwordHash) {
+      if (!user) {
         return { success: true };
       }
 
