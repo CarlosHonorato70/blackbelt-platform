@@ -89,11 +89,22 @@ export function registerRoutes(app: Express) {
         res.set("Cache-Control", "no-store");
         return res.redirect(`${frontendUrl}/proposal/result?status=already_approved`);
       }
+      if (proposal.status === "rejected") {
+        res.set("Cache-Control", "no-store");
+        return res.redirect(`${frontendUrl}/proposal/result?status=already_rejected`);
+      }
 
-      // 1. Approve the proposal
-      await db.update(proposals)
+      // 1. Approve the proposal (atomic update with status check to prevent race condition)
+      const { and } = await import("drizzle-orm");
+      const [updated] = await db.update(proposals)
         .set({ status: "approved", approvedAt: new Date(), respondedAt: new Date(), updatedAt: new Date() })
-        .where(eq(proposals.id, proposal.id));
+        .where(and(eq(proposals.id, proposal.id), eq(proposals.status, proposal.status)));
+
+      // If no rows updated, another request already approved it
+      if (!updated || (updated as any).affectedRows === 0) {
+        res.set("Cache-Control", "no-store");
+        return res.redirect(`${frontendUrl}/proposal/result?status=already_approved`);
+      }
 
       log.info(`[Proposal] Approved: ${proposal.id} by ${proposal.contactEmail}`);
 
@@ -122,11 +133,26 @@ export function registerRoutes(app: Express) {
               if (companyTenant) {
                 companyTenantId = companyTenant.id;
                 companyName = companyTenant.name;
+              } else {
+                // Company tenant doesn't exist — create it automatically
+                const newTenantId = nanoid();
+                await db.insert(tenants).values({
+                  id: newTenantId,
+                  name: client.name || "Empresa",
+                  cnpj: client.cnpj,
+                  tenantType: "company",
+                  parentTenantId: proposal.tenantId,
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                });
+                companyTenantId = newTenantId;
+                companyName = client.name || "Empresa";
+                console.log(`[Proposal] Auto-created company tenant: ${newTenantId} (${companyName})`);
               }
             }
           }
 
-          // Fallback: get name from proposal tenant if no company found
+          // Fallback: get name from client or proposal tenant
           if (companyName === "Empresa") {
             const [tenant] = await db.select().from(tenants).where(eq(tenants.id, companyTenantId));
             companyName = tenant?.name || "Empresa";

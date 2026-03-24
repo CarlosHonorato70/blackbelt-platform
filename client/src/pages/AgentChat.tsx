@@ -639,7 +639,7 @@ function AgentChatPage() {
             </div>
 
             <div className="flex justify-end gap-3 p-5 border-t">
-              <Button variant="outline" onClick={() => setEditModalOpen(false)}>Cancelar</Button>
+              <Button variant="outline" onClick={() => { setEditModalOpen(false); setEditProposalId(null); }}>Cancelar</Button>
               <Button onClick={handleEditSave} disabled={updateProposal.isPending}>
                 <Save className="h-4 w-4 mr-2" />
                 {updateProposal.isPending ? "Salvando..." : "Salvar e Enviar"}

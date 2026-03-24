@@ -110,6 +110,7 @@ async function sendVerificationEmail(email: string, name: string | null, token: 
 
 // Track used password reset tokens to prevent reuse
 const usedResetTokens = new Set<string>();
+const forgotPasswordRateLimit = new Map<string, number[]>();
 
 export const authLocalRouter = router({
   register: publicProcedure
@@ -321,6 +322,20 @@ export const authLocalRouter = router({
   forgotPassword: publicProcedure
     .input(z.object({ email: z.string().email() }))
     .mutation(async ({ input }) => {
+      // Rate limiting: max 3 requests per email per 15 minutes
+      const rateLimitKey = `forgot:${input.email.toLowerCase()}`;
+      const now = Date.now();
+      const windowMs = 15 * 60 * 1000;
+      if (!forgotPasswordRateLimit.has(rateLimitKey)) {
+        forgotPasswordRateLimit.set(rateLimitKey, []);
+      }
+      const attempts = forgotPasswordRateLimit.get(rateLimitKey)!.filter(t => now - t < windowMs);
+      if (attempts.length >= 3) {
+        return { success: true }; // Silent rate limit (don't reveal to attacker)
+      }
+      attempts.push(now);
+      forgotPasswordRateLimit.set(rateLimitKey, attempts);
+
       // Always return success to prevent email enumeration
       const user = await db.getUserByEmail(input.email);
       if (!user) {
