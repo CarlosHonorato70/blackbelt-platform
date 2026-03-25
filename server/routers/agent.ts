@@ -1431,6 +1431,38 @@ async function generateFallbackResponse(
       if (execResult.success) {
         content += `\n\n**Empresa cadastrada com sucesso!**\n${execResult.message}`;
 
+        // Check if NR-01 process already exists for this company
+        if (execResult.companyId) {
+          const nextPhase = await getNextPhase(execResult.companyId);
+          if (nextPhase === "completed") {
+            content += `\n\n✅ **O processo NR-01 desta empresa ja esta 100% concluido!** Todas as fases foram finalizadas com sucesso.`;
+            content += `\n\n**Documentos Gerados** — Download PDF:`;
+            content += `\n- Proposta Comercial`;
+            content += `\n- Relatório COPSOQ-II`;
+            content += `\n- Inventário de Riscos Psicossociais`;
+            content += `\n- Plano de Ação`;
+            content += `\n- Programa de Treinamento`;
+            content += `\n- Certificado de Conformidade NR-01`;
+            content += `\n\nDeseja iniciar o processo para **outra empresa**? Envie o CNPJ, número de funcionários e email.`;
+            return { content, actions: [] };
+          }
+          if (nextPhase !== "create_assessment") {
+            // NR-01 in progress — show current phase
+            const phaseLabels: Record<string, string> = {
+              generate_inventory: "Gerar Inventário e Plano de Ação",
+              create_training: "Criar Programa de Treinamento",
+              complete_checklist: "Finalizar e Emitir Certificado",
+            };
+            const label = phaseLabels[nextPhase] || nextPhase;
+            content += `\n\n📋 **Processo NR-01 em andamento.** Próxima etapa: **${label}**`;
+            content += `\n\nClique no botão abaixo para continuar.`;
+            return {
+              content,
+              actions: [{ type: nextPhase, label, params: { companyId: execResult.companyId } }],
+            };
+          }
+        }
+
         // Generate pricing summary
         const riskLevel = result.highRisk ? "high" as const : "low" as const;
         const pricingSummary = generatePricingProposal({
