@@ -75,6 +75,21 @@ const statusConfig: Record<string, { label: string; className: string }> = {
     className:
       "bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-100",
   },
+  approved: {
+    label: "Aprovada",
+    className:
+      "bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100",
+  },
+  pending: {
+    label: "Pendente",
+    className:
+      "bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-100",
+  },
+  pending_approval: {
+    label: "Aguardando Aprovação",
+    className:
+      "bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100",
+  },
 };
 
 const taxRegimeLabels: Record<string, string> = {

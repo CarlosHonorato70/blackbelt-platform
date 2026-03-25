@@ -456,6 +456,7 @@ export const proposals = mysqlTable(
     title: varchar("title", { length: 255 }).notNull(),
     description: text("description"),
     status: varchar("status", { length: 30 }).default("draft").notNull(),
+    proposalType: varchar("proposalType", { length: 30 }).default("pre_proposal").notNull(),
     subtotal: int("subtotal").notNull(),
     discount: int("discount").default(0).notNull(),
     discountPercent: int("discountPercent").default(0).notNull(),

@@ -996,7 +996,10 @@ export const proposalsRouter = router({
   list: tenantProcedure
     .input(z.object({ clientId: z.string().optional() }))
     .query(async ({ ctx, input }) => {
-      return await db.listProposals(ctx.tenantId!, input.clientId);
+      // Proposals belong to the consultant, not the company
+      // When impersonating, use originalTenantId to show consultant's proposals
+      const effectiveTenantId = (ctx as any).originalTenantId || ctx.tenantId!;
+      return await db.listProposals(effectiveTenantId, input.clientId);
     }),
 
   create: tenantProcedure
