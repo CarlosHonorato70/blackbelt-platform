@@ -1252,6 +1252,53 @@ async function generateFallbackResponse(
     return { content: "Empresa não encontrada. Informe o CNPJ para continuar.", actions: [] };
   }
 
+  // ── 0b-pre. Handle "gerar relatorio" explicitly — triggers next phase (inventory/report) ──
+  const wantsReport = msg.includes("gerar relatorio") || msg.includes("gerar relatório") || msg.includes("generate report");
+  if (wantsReport) {
+    // Find company and execute next phase
+    let company = memory.cnpj ? await findCompanyByCNPJ() : null;
+    if (!company) {
+      const db2 = await getDb();
+      const [childTenant] = await db2.select().from(tenants)
+        .where(and(eq(tenants.parentTenantId, tenantId), eq(tenants.tenantType, "company")))
+        .orderBy(desc(tenants.createdAt)).limit(1);
+      if (childTenant) company = childTenant;
+    }
+    if (company) {
+      const nextPhase = await getNextPhase(company.id);
+      log.info(`[Agent] gerar relatorio: nextPhase=${nextPhase}, company=${company.id}`);
+
+      if (nextPhase === "generate_inventory") {
+        const db2 = await getDb();
+        const { copsoqAssessments: cAssessments } = await import("../../drizzle/schema_nr01");
+        const [latestAssessment] = await db2.select().from(cAssessments)
+          .where(eq(cAssessments.tenantId, company.id))
+          .orderBy(desc(cAssessments.createdAt)).limit(1);
+        if (latestAssessment) {
+          const result = await executeGenerateInventoryAndPlan(company.id, latestAssessment.id, company.name, memory.headcount || 3);
+          if (result.success) {
+            return {
+              content: result.message + `\n\n**Proxima etapa:** Criar programa de treinamento sobre riscos psicossociais.\nClique no botao abaixo ou diga **"sim"** para continuar.`,
+              actions: [{ type: "create_training", label: "Criar Programa de Treinamento", params: { companyId: company.id } }],
+            };
+          }
+          return { content: result.message, actions: [] };
+        }
+      }
+      // For other phases, show status
+      const phaseLabels: Record<string, string> = {
+        create_assessment: "Enviar COPSOQ-II",
+        generate_inventory: "Gerar Inventario e Plano de Acao",
+        create_training: "Criar Programa de Treinamento",
+        complete_checklist: "Finalizar e Emitir Certificado",
+      };
+      return {
+        content: `Empresa **${company.name}**. Proxima etapa: **${phaseLabels[nextPhase] || nextPhase}**.\n\nClique no botao abaixo ou diga **"sim"** para continuar.`,
+        actions: [{ type: nextPhase, label: phaseLabels[nextPhase] || "Continuar", params: { companyId: company.id } }],
+      };
+    }
+  }
+
   // ── 0b. Check proposal status and guide next steps ──
   // Works even without memory.cnpj — falls back to searching proposals by tenant
   if (isContinue) {
@@ -1312,13 +1359,24 @@ async function generateFallbackResponse(
           };
         }
 
-        // Employees exist — offer to send COPSOQ
-        return {
-          content: `✅ **Proposta aprovada!** A empresa **${existingCompany.name}** cadastrou **${employeeCount} colaborador(es)**.\n\n**Próximo passo:** Enviar o questionário COPSOQ-II para todos os colaboradores por email.\n\nClique em **"Enviar COPSOQ-II"** para disparar os convites.`,
-          actions: [
-            { type: "send_copsoq_invites", label: "Enviar COPSOQ-II", params: { companyId: existingCompany.id, headcount: employeeCount } },
-          ],
-        };
+        // Check if COPSOQ already exists — if so, skip to next phase (don't offer COPSOQ again)
+        const { copsoqAssessments: cAssess } = await import("../../drizzle/schema_nr01");
+        const [existingAssessment] = await db2.select().from(cAssess)
+          .where(eq(cAssess.tenantId, existingCompany.id))
+          .limit(1);
+
+        if (existingAssessment) {
+          // COPSOQ already sent — let section 3 handle next phase (report, inventory, etc.)
+          log.info(`[Agent] COPSOQ already exists for ${existingCompany.name}, skipping to next phase`);
+        } else {
+          // No COPSOQ yet — offer to send
+          return {
+            content: `✅ **Proposta aprovada!** A empresa **${existingCompany.name}** cadastrou **${employeeCount} colaborador(es)**.\n\n**Próximo passo:** Enviar o questionário COPSOQ-II para todos os colaboradores por email.\n\nClique em **"Enviar COPSOQ-II"** para disparar os convites.`,
+            actions: [
+              { type: "send_copsoq_invites", label: "Enviar COPSOQ-II", params: { companyId: existingCompany.id, headcount: employeeCount } },
+            ],
+          };
+        }
       }
     }
   }

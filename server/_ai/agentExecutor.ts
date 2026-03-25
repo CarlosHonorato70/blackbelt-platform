@@ -456,10 +456,86 @@ export async function executeGenerateInventoryAndPlan(
   if (!db) return { success: false, message: "Database not available" };
 
   try {
-    // Get the COPSOQ report
-    const [report] = await db.select().from(copsoqReports)
+    // Get or generate the COPSOQ report from partial/complete responses
+    let [report] = await db.select().from(copsoqReports)
       .where(eq(copsoqReports.assessmentId, assessmentId)).limit(1);
-    if (!report) return { success: false, message: "Relatório COPSOQ não encontrado. Execute a avaliação primeiro." };
+
+    if (!report) {
+      // No report yet — generate from existing responses (even partial)
+      const responses = await db.select().from(copsoqResponses)
+        .where(eq(copsoqResponses.assessmentId, assessmentId));
+      if (responses.length === 0) {
+        return { success: false, message: "Nenhuma resposta COPSOQ recebida ainda. Aguarde os colaboradores responderem." };
+      }
+      log.info(`[Agent] Generating COPSOQ report from ${responses.length} partial responses`);
+
+      // Calculate average scores from responses
+      const dimensionSums: Record<string, { sum: number; count: number }> = {};
+      const dimensions = ["demand", "control", "support", "leadership", "community", "meaning", "trust", "justice", "insecurity", "mentalHealth", "burnout", "violence"];
+      for (const dim of dimensions) {
+        dimensionSums[dim] = { sum: 0, count: 0 };
+      }
+      for (const resp of responses) {
+        const answers = typeof resp.answers === "string" ? JSON.parse(resp.answers) : resp.answers;
+        if (answers && typeof answers === "object") {
+          for (const dim of dimensions) {
+            const score = answers[dim] || answers[dim.toLowerCase()];
+            if (typeof score === "number") {
+              dimensionSums[dim].sum += score;
+              dimensionSums[dim].count += 1;
+            }
+          }
+        }
+        // Also check individual dimension score fields
+        if (resp.demandScore) { dimensionSums.demand.sum += Number(resp.demandScore); dimensionSums.demand.count++; }
+        if (resp.controlScore) { dimensionSums.control.sum += Number(resp.controlScore); dimensionSums.control.count++; }
+        if (resp.supportScore) { dimensionSums.support.sum += Number(resp.supportScore); dimensionSums.support.count++; }
+        if (resp.leadershipScore) { dimensionSums.leadership.sum += Number(resp.leadershipScore); dimensionSums.leadership.count++; }
+        if (resp.communityScore) { dimensionSums.community.sum += Number(resp.communityScore); dimensionSums.community.count++; }
+        if (resp.meaningScore) { dimensionSums.meaning.sum += Number(resp.meaningScore); dimensionSums.meaning.count++; }
+        if (resp.trustScore) { dimensionSums.trust.sum += Number(resp.trustScore); dimensionSums.trust.count++; }
+        if (resp.justiceScore) { dimensionSums.justice.sum += Number(resp.justiceScore); dimensionSums.justice.count++; }
+        if (resp.insecurityScore) { dimensionSums.insecurity.sum += Number(resp.insecurityScore); dimensionSums.insecurity.count++; }
+        if (resp.mentalHealthScore) { dimensionSums.mentalHealth.sum += Number(resp.mentalHealthScore); dimensionSums.mentalHealth.count++; }
+        if (resp.burnoutScore) { dimensionSums.burnout.sum += Number(resp.burnoutScore); dimensionSums.burnout.count++; }
+        if (resp.violenceScore) { dimensionSums.violence.sum += Number(resp.violenceScore); dimensionSums.violence.count++; }
+      }
+
+      const avg = (dim: string) => dimensionSums[dim].count > 0 ? Math.round(dimensionSums[dim].sum / dimensionSums[dim].count) : 50;
+      const overallScore = Math.round(dimensions.reduce((sum, dim) => sum + avg(dim), 0) / dimensions.length);
+      const reportId = nanoid();
+
+      await db.insert(copsoqReports).values({
+        id: reportId,
+        assessmentId,
+        tenantId,
+        reportDate: new Date(),
+        overallRiskScore: overallScore,
+        riskLevel: overallScore >= 70 ? "critical" : overallScore >= 50 ? "high" : overallScore >= 30 ? "medium" : "low",
+        averageDemandScore: avg("demand"),
+        averageControlScore: avg("control"),
+        averageSupportScore: avg("support"),
+        averageLeadershipScore: avg("leadership"),
+        averageCommunityScore: avg("community"),
+        averageMeaningScore: avg("meaning"),
+        averageTrustScore: avg("trust"),
+        averageJusticeScore: avg("justice"),
+        averageInsecurityScore: avg("insecurity"),
+        averageMentalHealthScore: avg("mentalHealth"),
+        averageBurnoutScore: avg("burnout"),
+        averageViolenceScore: avg("violence"),
+        aiAnalysis: `Relatório gerado a partir de ${responses.length} respostas parciais. Análise automática do perfil de risco psicossocial.`,
+      });
+
+      // Update assessment status
+      await db.update(copsoqAssessments)
+        .set({ status: "completed", updatedAt: new Date() })
+        .where(eq(copsoqAssessments.id, assessmentId));
+
+      [report] = await db.select().from(copsoqReports).where(eq(copsoqReports.id, reportId)).limit(1);
+    }
+
+    if (!report) return { success: false, message: "Erro ao gerar relatório COPSOQ." };
 
     const scores: Record<string, number> = {
       demanda: report.averageDemandScore || 50,
