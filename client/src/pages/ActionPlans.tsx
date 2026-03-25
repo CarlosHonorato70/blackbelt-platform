@@ -100,6 +100,8 @@ const defaultEditForm = {
 
 export default function ActionPlans() {
   const { selectedTenant } = useTenant();
+  const { data: user } = trpc.auth.me.useQuery();
+  const effectiveId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [form, setForm] = useState({ ...defaultForm });
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -109,8 +111,8 @@ export default function ActionPlans() {
 
   // ── Queries & Mutations ─────────────────────────────────────────────
   const plansQuery = trpc.riskAssessments.listActionPlans.useQuery(
-    { tenantId: selectedTenant?.id ?? "" },
-    { enabled: !!selectedTenant }
+    { tenantId: effectiveId ?? "" },
+    { enabled: !!effectiveId }
   );
 
   const createMutation = trpc.riskAssessments.createActionPlan.useMutation({
@@ -142,11 +144,11 @@ export default function ActionPlans() {
 
   // ── Handlers ────────────────────────────────────────────────────────
   const handleCreate = () => {
-    if (!selectedTenant) return toast.error("Selecione uma empresa primeiro");
+    if (!effectiveId) return toast.error("Selecione uma empresa primeiro");
     if (!form.title.trim()) return toast.error("O título é obrigatório");
 
     createMutation.mutate({
-      tenantId: selectedTenant.id,
+      tenantId: effectiveId,
       title: form.title,
       description: form.description || undefined,
       actionType: form.actionType,
@@ -196,8 +198,8 @@ export default function ActionPlans() {
   };
 
   const handleExportPdf = () => {
-    if (!selectedTenant) return toast.error("Selecione uma empresa primeiro");
-    window.open(`/api/pdf/plano/${selectedTenant.id}`, "_blank");
+    if (!effectiveId) return toast.error("Selecione uma empresa primeiro");
+    window.open(`/api/pdf/plano/${effectiveId}`, "_blank");
   };
 
   const plans = plansQuery.data ?? [];
@@ -210,7 +212,7 @@ export default function ActionPlans() {
   };
 
   // ── Render ──────────────────────────────────────────────────────────
-  if (!selectedTenant) {
+  if (!effectiveId) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-muted-foreground">Selecione uma empresa para ver os planos de ação.</p>

@@ -219,6 +219,7 @@ function RiskItemEditRow({
 // ─── Main component ───────────────────────────────────────────────────
 export default function RiskAssessments() {
   const { selectedTenant } = useTenant();
+  const { data: user } = trpc.auth.me.useQuery();
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [proposalDialogOpen, setProposalDialogOpen] = useState(false);
@@ -253,7 +254,7 @@ export default function RiskAssessments() {
     },
   });
 
-  const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const tenantId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
 
   const { data: assessments = [] } = trpc.riskAssessments.list.useQuery(
     { tenantId: tenantId ?? "" },
@@ -284,7 +285,7 @@ export default function RiskAssessments() {
     onError: (err) => toast.error(`Erro: ${err.message}`),
   });
 
-  if (!selectedTenant) {
+  if (!tenantId) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-12">

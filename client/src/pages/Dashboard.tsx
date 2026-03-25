@@ -21,9 +21,11 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 export default function Dashboard() {
   usePageMeta({ title: "Painel" });
   const { selectedTenant } = useTenant();
-  const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const { data: user } = trpc.auth.me.useQuery();
+  const effectiveId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
+  const tenantId = effectiveId;
 
-  if (!selectedTenant) {
+  if (!effectiveId) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-12">

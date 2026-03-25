@@ -36,9 +36,11 @@ import {
 
 export default function ComplianceReports() {
   const { selectedTenant } = useTenant();
+  const { data: user } = trpc.auth.me.useQuery();
+  const effectiveId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
 
-  if (!selectedTenant) {
+  if (!effectiveId) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-12">
@@ -52,7 +54,7 @@ export default function ComplianceReports() {
     );
   }
 
-  const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const tenantId = effectiveId;
 
   const { data: complianceDocs = [] } = trpc.complianceReports.list.useQuery(
     { tenantId: tenantId ?? "" },

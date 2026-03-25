@@ -35,6 +35,8 @@ import { toast } from "sonner";
 
 export default function SecurityDashboard() {
   const { selectedTenant } = useTenant();
+  const { data: user } = trpc.auth.me.useQuery();
+  const effectiveId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
 
   // Local state for add-IP form
   const [newIP, setNewIP] = useState("");
@@ -55,7 +57,7 @@ export default function SecurityDashboard() {
     isLoading: statsLoading,
     refetch: refetchStats,
   } = trpc.security.getSecurityStats.useQuery(undefined, {
-    enabled: !!selectedTenant,
+    enabled: !!effectiveId,
   });
 
   const {
@@ -64,7 +66,7 @@ export default function SecurityDashboard() {
     refetch: refetchAlerts,
   } = trpc.security.listAlerts.useQuery(
     { page: 1, perPage: 50 },
-    { enabled: !!selectedTenant }
+    { enabled: !!effectiveId }
   );
 
   const {
@@ -72,21 +74,21 @@ export default function SecurityDashboard() {
     refetch: refetchLogins,
   } = trpc.security.listLoginAttempts.useQuery(
     { page: 1, perPage: 50 },
-    { enabled: !!selectedTenant }
+    { enabled: !!effectiveId }
   );
 
   const {
     data: whitelistedIPs = [],
     refetch: refetchIPs,
   } = trpc.security.listWhitelistedIPs.useQuery(undefined, {
-    enabled: !!selectedTenant,
+    enabled: !!effectiveId,
   });
 
   const {
     data: activeSessions = [],
     refetch: refetchSessions,
   } = (trpc as any).security.listSessions.useQuery(undefined, {
-    enabled: !!selectedTenant,
+    enabled: !!effectiveId,
   });
 
   // ── tRPC Mutations ────────────────────────────────────────────────────
@@ -148,7 +150,7 @@ export default function SecurityDashboard() {
     isLoading: twoFALoading,
     refetch: refetchTwoFA,
   } = (trpc as any).twoFactor.getStatus.useQuery(undefined, {
-    enabled: !!selectedTenant,
+    enabled: !!effectiveId,
   });
 
   const enableTwoFAMutation = (trpc as any).twoFactor.enable.useMutation({
@@ -243,7 +245,7 @@ export default function SecurityDashboard() {
   };
 
   // ── No tenant guard ───────────────────────────────────────────────────
-  if (!selectedTenant) {
+  if (!effectiveId) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-12">
@@ -1063,7 +1065,7 @@ export function SecurityDashboardContent() {
     isLoading: statsLoading,
     refetch: refetchStats,
   } = trpc.security.getSecurityStats.useQuery(undefined, {
-    enabled: !!selectedTenant,
+    enabled: !!effectiveId,
   });
 
   const {
@@ -1072,7 +1074,7 @@ export function SecurityDashboardContent() {
     refetch: refetchAlerts,
   } = trpc.security.listAlerts.useQuery(
     { page: 1, perPage: 50 },
-    { enabled: !!selectedTenant }
+    { enabled: !!effectiveId }
   );
 
   const {
@@ -1080,21 +1082,21 @@ export function SecurityDashboardContent() {
     refetch: refetchLogins,
   } = trpc.security.listLoginAttempts.useQuery(
     { page: 1, perPage: 50 },
-    { enabled: !!selectedTenant }
+    { enabled: !!effectiveId }
   );
 
   const {
     data: whitelistedIPs = [],
     refetch: refetchIPs,
   } = trpc.security.listWhitelistedIPs.useQuery(undefined, {
-    enabled: !!selectedTenant,
+    enabled: !!effectiveId,
   });
 
   const {
     data: activeSessions = [],
     refetch: refetchSessions,
   } = (trpc as any).security.listSessions.useQuery(undefined, {
-    enabled: !!selectedTenant,
+    enabled: !!effectiveId,
   });
 
   const resolveAlertMutation = trpc.security.resolveAlert.useMutation({
@@ -1154,7 +1156,7 @@ export function SecurityDashboardContent() {
     isLoading: twoFALoading,
     refetch: refetchTwoFA,
   } = (trpc as any).twoFactor.getStatus.useQuery(undefined, {
-    enabled: !!selectedTenant,
+    enabled: !!effectiveId,
   });
 
   const enableTwoFAMutation = (trpc as any).twoFactor.enable.useMutation({

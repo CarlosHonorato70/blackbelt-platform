@@ -41,6 +41,8 @@ interface StepStatus {
 
 export default function GuidedWorkflow() {
   const { selectedTenant } = useTenant();
+  const { data: user } = trpc.auth.me.useQuery();
+  const effectiveId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
   const navigate = useNavigate();
   const [expandedStep, setExpandedStep] = useState<number | null>(null);
   const [exportingPdfs, setExportingPdfs] = useState(false);
@@ -51,8 +53,8 @@ export default function GuidedWorkflow() {
   // Queries to check data status for each step
   const { data: copsoqSummary, isLoading: loadingCopsoq } =
     trpc.psychosocialDashboard.getSummary.useQuery(
-      { tenantId: selectedTenant?.id || "" },
-      { enabled: !!selectedTenant }
+      { tenantId: effectiveId || "" },
+      { enabled: !!effectiveId }
     );
 
   const { data: actionPlansData } = trpc.riskAssessments.listActionPlans.useQuery(
@@ -218,9 +220,9 @@ export default function GuidedWorkflow() {
   };
 
   const exportAllPdfs = async () => {
-    if (!selectedTenant) return;
+    if (!effectiveId) return;
     setExportingPdfs(true);
-    const tid = selectedTenant.id;
+    const tid = effectiveId;
 
     const pdfList = [
       { name: "01-Matriz-de-Risco", fn: () => exportRiskMatrix.mutateAsync({ tenantId: tid }) },
@@ -269,7 +271,7 @@ export default function GuidedWorkflow() {
     toast.success(`${okCount}/${pdfList.length} PDFs gerados com sucesso!`);
   };
 
-  if (!selectedTenant) {
+  if (!effectiveId) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-12">
@@ -293,7 +295,7 @@ export default function GuidedWorkflow() {
           </h1>
           <p className="text-muted-foreground">
             Siga os passos abaixo para completar a conformidade NR-01 de{" "}
-            <span className="font-semibold">{selectedTenant.name}</span>
+            <span className="font-semibold">{typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.name ?? "sua empresa"}</span>
           </p>
         </div>
 

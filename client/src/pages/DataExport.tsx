@@ -46,10 +46,9 @@ import { toast } from "sonner";
 
 export default function DataExport() {
   const { selectedTenant } = useTenant();
-  const tenantId =
-    typeof selectedTenant === "string"
-      ? selectedTenant
-      : selectedTenant?.id || "";
+  const { data: user } = trpc.auth.me.useQuery();
+  const effectiveId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
+  const tenantId = effectiveId || "";
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -98,7 +97,7 @@ export default function DataExport() {
     },
   });
 
-  if (!selectedTenant) {
+  if (!effectiveId) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-12">
