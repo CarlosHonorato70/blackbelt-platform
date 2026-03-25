@@ -509,9 +509,10 @@ export async function executeGenerateInventoryAndPlan(
         id: reportId,
         assessmentId,
         tenantId,
-        reportDate: new Date(),
-        overallRiskScore: overallScore,
-        riskLevel: overallScore >= 70 ? "critical" : overallScore >= 50 ? "high" : overallScore >= 30 ? "medium" : "low",
+        title: `Relatório COPSOQ-II — ${responses.length} respondentes`,
+        description: `Relatório gerado a partir de ${responses.length} respostas parciais.`,
+        totalRespondents: responses.length,
+        responseRate: Math.round((responses.length / headcount) * 100),
         averageDemandScore: avg("demand"),
         averageControlScore: avg("control"),
         averageSupportScore: avg("support"),
@@ -524,7 +525,8 @@ export async function executeGenerateInventoryAndPlan(
         averageMentalHealthScore: avg("mentalHealth"),
         averageBurnoutScore: avg("burnout"),
         averageViolenceScore: avg("violence"),
-        aiAnalysis: `Relatório gerado a partir de ${responses.length} respostas parciais. Análise automática do perfil de risco psicossocial.`,
+        aiAnalysis: JSON.stringify({ summary: `Relatório gerado a partir de ${responses.length} respostas parciais. Análise automática do perfil de risco psicossocial.`, overallScore, riskLevel: overallScore >= 70 ? "critical" : overallScore >= 50 ? "high" : overallScore >= 30 ? "medium" : "low" }),
+        generatedAt: new Date(),
       });
 
       // Update assessment status
