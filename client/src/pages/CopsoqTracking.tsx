@@ -22,10 +22,18 @@ export default function CopsoqTracking() {
   const effectiveId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
 
   // Fetch assessments for this tenant
-  const assessmentsQuery = trpc.assessments.list.useQuery(undefined, { enabled: !!effectiveId });
+  const assessmentsQuery = trpc.assessments.list.useQuery({}, { enabled: !!effectiveId });
   const assessments = assessmentsQuery.data || [];
 
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string | null>(null);
+
+  // Refetch assessments when impersonated tenant changes
+  useEffect(() => {
+    if (effectiveId) {
+      setSelectedAssessmentId(null);
+      assessmentsQuery.refetch();
+    }
+  }, [effectiveId]);
 
   // Auto-select latest assessment
   useEffect(() => {

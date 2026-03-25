@@ -1384,6 +1384,71 @@ async function generateFallbackResponse(
   // ── 1. Current message has CNPJ: do fresh lookup ──
   const cnpj = extractCNPJ(userMessage);
   if (cnpj) {
+    // ── 1a. EARLY CHECK: If company already exists, skip headcount/email questions ──
+    const formattedCnpjCheck = cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+    const existingCompany = await dbOps.getTenantByCNPJ(formattedCnpjCheck);
+    if (existingCompany) {
+      const nextPhase = await getNextPhase(existingCompany.id);
+
+      if (nextPhase === "completed") {
+        // NR-01 fully completed — show status + PDF links, no need to ask anything
+        return {
+          content: `A empresa **${existingCompany.name}** (${formattedCnpjCheck}) ja esta cadastrada na plataforma.\n\n` +
+            `✅ **O processo NR-01 desta empresa ja esta 100% concluido!** Todas as fases foram finalizadas com sucesso.\n\n` +
+            `**Documentos Gerados** — Download PDF:\n` +
+            `- Proposta Comercial\n` +
+            `- Relatório COPSOQ-II\n` +
+            `- Inventário de Riscos Psicossociais\n` +
+            `- Plano de Ação\n` +
+            `- Programa de Treinamento\n` +
+            `- Certificado de Conformidade NR-01\n\n` +
+            `Deseja iniciar o processo para **outra empresa**? Envie o CNPJ.`,
+          actions: [],
+        };
+      }
+
+      if (nextPhase !== "unknown") {
+        // NR-01 in progress or at beginning — show current phase, don't re-ask for details
+        const phaseLabels: Record<string, string> = {
+          create_assessment: "Enviar COPSOQ-II",
+          generate_inventory: "Gerar Inventário e Plano de Ação",
+          create_training: "Criar Programa de Treinamento",
+          complete_checklist: "Finalizar e Emitir Certificado",
+        };
+        const label = phaseLabels[nextPhase] || nextPhase;
+
+        // For create_assessment, check employee count
+        if (nextPhase === "create_assessment") {
+          const db2 = await getDb();
+          const [pCount] = await db2.select({ count: sql<number>`COUNT(*)` })
+            .from(people)
+            .where(eq(people.tenantId, existingCompany.id));
+          const empCount = pCount?.count || 0;
+
+          if (empCount === 0) {
+            return {
+              content: `A empresa **${existingCompany.name}** (${formattedCnpjCheck}) ja esta cadastrada.\n\n` +
+                `⚠️ **Aguardando cadastro de colaboradores.** A empresa precisa cadastrar setores e colaboradores antes de prosseguir com o COPSOQ-II.`,
+              actions: [],
+            };
+          }
+
+          return {
+            content: `A empresa **${existingCompany.name}** (${formattedCnpjCheck}) ja esta cadastrada.\n\n` +
+              `📋 **Processo NR-01 em andamento.** Próxima etapa: **${label}**\n` +
+              `Colaboradores cadastrados: **${empCount}**\n\nClique no botão abaixo para continuar.`,
+            actions: [{ type: "create_assessment", label, params: { companyId: existingCompany.id, headcount: empCount } }],
+          };
+        }
+
+        return {
+          content: `A empresa **${existingCompany.name}** (${formattedCnpjCheck}) ja esta cadastrada.\n\n` +
+            `📋 **Processo NR-01 em andamento.** Próxima etapa: **${label}**\n\nClique no botão abaixo para continuar.`,
+          actions: [{ type: nextPhase, label, params: { companyId: existingCompany.id } }],
+        };
+      }
+    }
+    // ── 1b. Company is NEW or not found — proceed with full flow ──
     const headcount = extractHeadcount(userMessage) || memory.headcount;
     const result = await processCNPJForAgent(cnpj, headcount);
 
