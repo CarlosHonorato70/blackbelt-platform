@@ -8,7 +8,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
-  CheckCircle, Clock, AlertCircle, XCircle, Mail, Users, BarChart3,
+  CheckCircle, Clock, AlertCircle, XCircle, Mail, Users, BarChart3, ShieldCheck,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useState, useEffect } from "react";
@@ -75,15 +75,29 @@ export default function CopsoqTracking() {
     }
   };
 
-  const getRiskLabel = (level: string) => {
-    const map: Record<string, { label: string; color: string }> = {
-      critical: { label: "Crítico", color: "text-red-600 font-bold" },
-      high: { label: "Alto", color: "text-orange-600 font-bold" },
-      medium: { label: "Médio", color: "text-yellow-600" },
-      low: { label: "Baixo", color: "text-green-600" },
+  const getRiskBadge = (level: string) => {
+    const map: Record<string, { label: string; className: string }> = {
+      critical: { label: "Crítico", className: "bg-red-100 text-red-800 border-red-200" },
+      high: { label: "Alto", className: "bg-orange-100 text-orange-800 border-orange-200" },
+      medium: { label: "Médio", className: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+      low: { label: "Baixo", className: "bg-green-100 text-green-800 border-green-200" },
     };
-    const r = map[level] || { label: "N/A", color: "text-gray-500" };
-    return <span className={r.color}>{r.label}</span>;
+    const r = map[level] || { label: "N/A", className: "bg-gray-100 text-gray-500" };
+    return <Badge className={r.className}>{r.label}</Badge>;
+  };
+
+  const getScoreBar = (score: number | null | undefined, label: string) => {
+    if (score == null) return null;
+    const color = score >= 75 ? "bg-red-500" : score >= 50 ? "bg-yellow-500" : "bg-green-500";
+    return (
+      <div className="flex items-center gap-2 text-xs">
+        <span className="w-20 text-gray-600">{label}</span>
+        <div className="flex-1 bg-gray-200 rounded-full h-2">
+          <div className={`${color} rounded-full h-2`} style={{ width: `${Math.min(score, 100)}%` }} />
+        </div>
+        <span className="w-8 text-right font-medium">{score}</span>
+      </div>
+    );
   };
 
   return (
@@ -91,7 +105,15 @@ export default function CopsoqTracking() {
       <div>
         <h1 className="text-3xl font-bold">Respostas COPSOQ-II</h1>
         <p className="text-gray-600 mt-2">
-          Acompanhe o status de resposta dos colaboradores e visualize os resultados individuais
+          Acompanhe o status de resposta e visualize os resultados anônimos da avaliação
+        </p>
+      </div>
+
+      {/* Aviso de Anonimato */}
+      <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <ShieldCheck className="h-5 w-5 text-blue-600 flex-shrink-0" />
+        <p className="text-sm text-blue-800">
+          <strong>Sigilo garantido:</strong> As respostas são anônimas. Não é possível identificar qual colaborador respondeu cada questionário.
         </p>
       </div>
 
@@ -158,16 +180,16 @@ export default function CopsoqTracking() {
         </div>
       )}
 
-      {/* Tabela */}
+      {/* Tabela Anônima */}
       {selectedAssessmentId && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
-              Respostas Individuais
+              Respostas Anônimas
             </CardTitle>
             <CardDescription>
-              Status de cada colaborador convidado para a avaliação COPSOQ-II
+              Resultados individuais sem identificação do respondente
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -176,52 +198,52 @@ export default function CopsoqTracking() {
             ) : responses.length === 0 ? (
               <div className="text-center py-8 text-gray-500">Nenhuma resposta encontrada para esta avaliação.</div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Colaborador</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Cargo</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Envio</TableHead>
-                      <TableHead>Resposta</TableHead>
-                      <TableHead>Nível de Risco</TableHead>
-                      <TableHead>Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {responses.map((r: any) => (
-                      <TableRow key={r.inviteId || r.id}>
-                        <TableCell className="font-medium">{r.respondentName || "—"}</TableCell>
-                        <TableCell>{r.respondentEmail}</TableCell>
-                        <TableCell>{r.respondentPosition || "—"}</TableCell>
-                        <TableCell>
+              <div className="space-y-4">
+                {responses.map((r: any) => (
+                  <Card key={r.inviteId} className="border">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          {getStatusIcon(r.status)}
+                          <span className="font-medium text-gray-700">{r.respondentLabel}</span>
+                          {getStatusBadge(r.status)}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {r.completedAt
+                            ? `Respondido em ${new Date(r.completedAt).toLocaleDateString("pt-BR")}`
+                            : r.sentAt
+                            ? `Enviado em ${new Date(r.sentAt).toLocaleDateString("pt-BR")}`
+                            : "—"
+                          }
+                        </div>
+                      </div>
+
+                      {r.response && (
+                        <div className="mt-3 space-y-3">
                           <div className="flex items-center gap-2">
-                            {getStatusIcon(r.status)}
-                            {getStatusBadge(r.status)}
+                            <span className="text-sm font-medium text-gray-600">Nível de Risco Geral:</span>
+                            {getRiskBadge(r.response.overallRiskLevel)}
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          {r.sentAt ? new Date(r.sentAt).toLocaleDateString("pt-BR") : "—"}
-                        </TableCell>
-                        <TableCell>
-                          {r.completedAt ? new Date(r.completedAt).toLocaleDateString("pt-BR") : "—"}
-                        </TableCell>
-                        <TableCell>
-                          {r.response?.overallRiskLevel ? getRiskLabel(r.response.overallRiskLevel) : "—"}
-                        </TableCell>
-                        <TableCell>
-                          {(r.status === "pending" || r.status === "sent") && (
-                            <Button size="sm" variant="outline" className="text-xs">
-                              <Mail className="w-3 h-3 mr-1" /> Reenviar
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {getScoreBar(r.response.demandScore, "Demanda")}
+                            {getScoreBar(r.response.controlScore, "Controle")}
+                            {getScoreBar(r.response.supportScore, "Apoio")}
+                            {getScoreBar(r.response.leadershipScore, "Liderança")}
+                            {getScoreBar(r.response.communityScore, "Comunidade")}
+                            {getScoreBar(r.response.meaningScore, "Significado")}
+                            {getScoreBar(r.response.burnoutScore, "Burnout")}
+                          </div>
+                        </div>
+                      )}
+
+                      {!r.response && (r.status === "pending" || r.status === "sent") && (
+                        <div className="mt-3 text-sm text-gray-400 italic">
+                          Aguardando resposta do colaborador...
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
           </CardContent>

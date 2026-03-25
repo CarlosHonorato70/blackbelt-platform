@@ -290,15 +290,14 @@ export const webhookRouter = router({
         .from(copsoqResponses)
         .where(eq(copsoqResponses.assessmentId, input.assessmentId));
 
-      // Combinar dados
-      const result = invites.map(invite => {
+      // Combinar dados — ANÔNIMO: sem nome, email ou cargo
+      const result = invites.map((invite, index) => {
+        // Match: invite.id === response.personId (invite ID is used as person reference)
         const response = responses.find(r => r.personId === invite.id);
 
         return {
           inviteId: invite.id,
-          respondentName: invite.respondentName,
-          respondentEmail: invite.respondentEmail,
-          respondentPosition: invite.respondentPosition,
+          respondentLabel: `Respondente #${index + 1}`,
           status: invite.status,
           sentAt: invite.sentAt,
           completedAt: invite.completedAt,
@@ -311,6 +310,10 @@ export const webhookRouter = router({
                 demandScore: response.demandScore,
                 controlScore: response.controlScore,
                 supportScore: response.supportScore,
+                leadershipScore: response.leadershipScore,
+                communityScore: response.communityScore,
+                meaningScore: response.meaningScore,
+                burnoutScore: response.burnoutScore,
                 completedAt: response.completedAt,
               }
             : null,
