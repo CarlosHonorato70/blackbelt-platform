@@ -59,7 +59,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; badgeClass: 
 export default function ComplianceChecklist() {
   usePageMeta({ title: "Checklist de Conformidade Legal" });
   const { selectedTenant } = useTenant();
-  const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const { data: user } = trpc.auth.me.useQuery();
+  const tenantId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
   const { exportPdf, isExporting } = usePdfExport();
 
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());

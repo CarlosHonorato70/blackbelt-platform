@@ -67,7 +67,8 @@ function getDimensionBg(score: number): string {
 export default function PsychosocialDashboard() {
   usePageMeta({ title: "Dashboard de Indicadores Psicossociais" });
   const { selectedTenant } = useTenant();
-  const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const { data: user } = trpc.auth.me.useQuery();
+  const tenantId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
   const { exportPdf, isExporting } = usePdfExport();
 
   if (!tenantId) {

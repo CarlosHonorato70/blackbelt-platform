@@ -52,7 +52,8 @@ export default function TrainingPrograms() {
   usePageMeta({ title: "Programas de Treinamento" });
   const { exportPdf, isExporting } = usePdfExport();
   const { selectedTenant } = useTenant();
-  const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const { data: user } = trpc.auth.me.useQuery();
+  const tenantId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
   const navigate = useNavigate();
 
   const [dialogOpen, setDialogOpen] = useState(false);

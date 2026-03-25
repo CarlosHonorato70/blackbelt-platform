@@ -96,14 +96,8 @@ export default function Dashboard() {
     },
   ];
 
-  // Risk levels from assessments (extracted from description if stored)
-  const totalAssessments = assessmentCount || 1;
-  const risksByLevel = [
-    { level: "Crítico", count: riskAssessments.filter(a => a.status === "reviewed").length, percentage: Math.round((riskAssessments.filter(a => a.status === "reviewed").length / totalAssessments) * 100), color: "bg-red-500" },
-    { level: "Alto", count: riskAssessments.filter(a => a.status === "completed").length, percentage: Math.round((riskAssessments.filter(a => a.status === "completed").length / totalAssessments) * 100), color: "bg-orange-500" },
-    { level: "Médio", count: riskAssessments.filter(a => a.status === "in_progress").length, percentage: Math.round((riskAssessments.filter(a => a.status === "in_progress").length / totalAssessments) * 100), color: "bg-yellow-500" },
-    { level: "Baixo", count: riskAssessments.filter(a => a.status === "draft").length, percentage: Math.round((riskAssessments.filter(a => a.status === "draft").length / totalAssessments) * 100), color: "bg-green-500" },
-  ];
+  // Risk levels — no real risk-level data available at top level; show empty state
+  const risksByLevel: { level: string; count: number; percentage: number; color: string }[] = [];
 
   // Categories from action plan types
   const categoryMap: Record<string, string> = {
@@ -167,22 +161,31 @@ export default function Dashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {risksByLevel.map(risk => (
-                <div key={risk.level} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{risk.level}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {risk.count} ({risk.percentage}%)
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full ${risk.color}`}
-                      style={{ width: `${risk.percentage}%` }}
-                    />
-                  </div>
+              {risksByLevel.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                  <BarChart3 className="h-8 w-8 text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    Sem dados de risco disponíveis. Execute o inventário de riscos para classificar os níveis.
+                  </p>
                 </div>
-              ))}
+              ) : (
+                risksByLevel.map(risk => (
+                  <div key={risk.level} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{risk.level}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {risk.count} ({risk.percentage}%)
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full ${risk.color}`}
+                        style={{ width: `${risk.percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
 

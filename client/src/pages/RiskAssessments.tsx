@@ -64,7 +64,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   exportToJSON,
@@ -349,13 +349,9 @@ export default function RiskAssessments() {
 
   // ── Risk summary across all assessments ────────────────────────────
   const riskSummary = (() => {
-    // We only have top-level data; approximate from methodology field and items if expanded
     const counts = { low: 0, medium: 0, high: 0, critical: 0, total: assessments.length };
-    assessments.forEach((a: any) => {
-      // Use methodology heuristic same as original code, or default medium
-      const level = a.methodology === "critical" ? "critical" : "medium";
-      counts[level as keyof typeof counts]++;
-    });
+    // Without item-level data loaded for each assessment, we cannot determine real risk levels.
+    // Show total only; individual levels remain 0 until items are expanded.
     return counts;
   })();
 
@@ -595,9 +591,8 @@ export default function RiskAssessments() {
                 </TableHeader>
                 <TableBody>
                   {assessments.map((assessment: any) => (
-                    <>
+                    <Fragment key={assessment.id}>
                       <TableRow
-                        key={assessment.id}
                         className="cursor-pointer hover:bg-muted/50"
                         onClick={() => toggleExpand(assessment.id)}
                       >
@@ -625,7 +620,7 @@ export default function RiskAssessments() {
                         <TableCell>{assessment.assessor || "\u2014"}</TableCell>
                         <TableCell>{getStatusBadge(assessment.status ?? "draft")}</TableCell>
                         <TableCell>
-                          {getRiskLevelBadge(assessment.methodology === "critical" ? "critical" : "medium")}
+                          {getRiskLevelBadge(assessment.riskLevel ?? "medium")}
                         </TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-end gap-1">
@@ -767,7 +762,7 @@ export default function RiskAssessments() {
                           </TableCell>
                         </TableRow>
                       )}
-                    </>
+                    </Fragment>
                   ))}
                 </TableBody>
               </Table>

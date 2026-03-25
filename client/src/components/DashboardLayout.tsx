@@ -217,8 +217,9 @@ function DashboardLayoutContent({
     enabled: !!user && user.role !== "admin",
   });
   const isAdmin = user?.role === "admin";
-  const isCompanyUser = tenantInfo?.tenantType === "company";
-  const isConsultant = isAdmin || tenantInfo?.tenantType === "consultant";
+  const tenantInfoLoaded = tenantInfo !== undefined;
+  const isCompanyUser = tenantInfoLoaded ? tenantInfo?.tenantType === "company" : !isAdmin;
+  const isConsultant = isAdmin || (tenantInfoLoaded && tenantInfo?.tenantType === "consultant");
 
   useEffect(() => {
     if (isCollapsed) {
@@ -438,7 +439,7 @@ function DashboardLayoutContent({
               </div>
             </div>
             <div className="flex-1 max-w-xs ml-4 flex items-center gap-2">
-              <TenantSelectionModal />
+              {(isAdmin || isConsultant) && <TenantSelectionModal />}
               <NotificationCenter />
             </div>
           </div>

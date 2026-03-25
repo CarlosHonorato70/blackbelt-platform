@@ -21,7 +21,8 @@ import { usePdfExport } from "@/hooks/usePdfExport";
 export default function ComplianceCertificate() {
   usePageMeta({ title: "Certificado de Conformidade" });
   const { selectedTenant } = useTenant();
-  const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const { data: user } = trpc.auth.me.useQuery();
+  const tenantId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
   const { exportPdf, isExporting } = usePdfExport();
 
   if (!tenantId) {
