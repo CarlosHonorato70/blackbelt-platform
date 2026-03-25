@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { adminProcedure, router } from "../_core/trpc";
+import { adminProcedure, tenantProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { tenants, users, subscriptions, plans, supportTickets, userRoles, roles } from "../../drizzle/schema";
-import { copsoqAssessments } from "../../drizzle/schema_nr01";
-import { eq, and, sql, desc, gte, lte, like, or } from "drizzle-orm";
+import { tenants, users, subscriptions, plans, supportTickets, userRoles, roles, people, proposals } from "../../drizzle/schema";
+import { copsoqAssessments, copsoqReports, riskAssessments, riskAssessmentItems, actionPlans } from "../../drizzle/schema_nr01";
+import { eq, and, sql, desc, gte, lte, like, or, inArray } from "drizzle-orm";
 
 export const adminMetricsRouter = router({
   overview: adminProcedure.query(async () => {
@@ -132,4 +132,130 @@ export const adminMetricsRouter = router({
 
       return results;
     }),
+
+  // Dashboard executivo para consultoria (dados reais, não mock)
+  executiveDashboard: tenantProcedure.query(async ({ ctx }) => {
+    const database = await getDb();
+    if (!database) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const tenantId = ctx.user.tenantId;
+    if (!tenantId) throw new TRPCError({ code: "BAD_REQUEST", message: "Tenant not found" });
+
+    // 1. Empresas filhas (child tenants)
+    const childTenants = await database.select({ id: tenants.id, name: tenants.name, cnpj: tenants.cnpj })
+      .from(tenants).where(eq(tenants.parentTenantId, tenantId));
+    const childIds = childTenants.map(t => t.id);
+    const allTenantIds = [tenantId, ...childIds];
+
+    // 2. Total colaboradores
+    let totalPeople = 0;
+    if (allTenantIds.length > 0) {
+      const [pc] = await database.select({ count: sql<number>`COUNT(*)` }).from(people)
+        .where(inArray(people.tenantId, allTenantIds));
+      totalPeople = Number(pc?.count) || 0;
+    }
+
+    // 3. Propostas
+    const [proposalStats] = await database.select({
+      total: sql<number>`COUNT(*)`,
+      approved: sql<number>`SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END)`,
+      pending: sql<number>`SUM(CASE WHEN status IN ('pending_approval','draft') THEN 1 ELSE 0 END)`,
+      rejected: sql<number>`SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END)`,
+    }).from(proposals).where(eq(proposals.tenantId, tenantId));
+    const totalProposals = Number(proposalStats?.total) || 0;
+    const approvedProposals = Number(proposalStats?.approved) || 0;
+    const pendingProposals = Number(proposalStats?.pending) || 0;
+    const conversionRate = totalProposals > 0 ? Math.round((approvedProposals / totalProposals) * 100) : 0;
+
+    // 4. Avaliações COPSOQ
+    let totalCopsoq = 0, completedCopsoq = 0, activeCopsoq = 0;
+    if (allTenantIds.length > 0) {
+      const [cs] = await database.select({
+        total: sql<number>`COUNT(*)`,
+        completed: sql<number>`SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END)`,
+        active: sql<number>`SUM(CASE WHEN status IN ('active','in_progress') THEN 1 ELSE 0 END)`,
+      }).from(copsoqAssessments).where(inArray(copsoqAssessments.tenantId, allTenantIds));
+      totalCopsoq = Number(cs?.total) || 0;
+      completedCopsoq = Number(cs?.completed) || 0;
+      activeCopsoq = Number(cs?.active) || 0;
+    }
+
+    // 5. Planos de ação
+    let totalActions = 0, completedActions = 0, inProgressActions = 0, pendingActions = 0;
+    if (allTenantIds.length > 0) {
+      const [as2] = await database.select({
+        total: sql<number>`COUNT(*)`,
+        completed: sql<number>`SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END)`,
+        inProgress: sql<number>`SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END)`,
+        pending: sql<number>`SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END)`,
+      }).from(actionPlans).where(inArray(actionPlans.tenantId, allTenantIds));
+      totalActions = Number(as2?.total) || 0;
+      completedActions = Number(as2?.completed) || 0;
+      inProgressActions = Number(as2?.inProgress) || 0;
+      pendingActions = Number(as2?.pending) || 0;
+    }
+    const complianceRate = totalActions > 0 ? Math.round((completedActions / totalActions) * 100) : 0;
+
+    // 6. Distribuição de riscos
+    let riskDistribution = { low: 0, medium: 0, high: 0, critical: 0 };
+    if (allTenantIds.length > 0) {
+      const riskRows = await database.select({
+        level: riskAssessmentItems.riskLevel,
+        count: sql<number>`COUNT(*)`,
+      }).from(riskAssessmentItems)
+        .innerJoin(riskAssessments, eq(riskAssessmentItems.assessmentId, riskAssessments.id))
+        .where(inArray(riskAssessments.tenantId, allTenantIds))
+        .groupBy(riskAssessmentItems.riskLevel);
+      for (const row of riskRows) {
+        const level = row.level as keyof typeof riskDistribution;
+        if (level in riskDistribution) riskDistribution[level] = Number(row.count) || 0;
+      }
+    }
+
+    // 7. Dimensões COPSOQ (último relatório de cada empresa)
+    let copsoqDimensions: any = null;
+    if (allTenantIds.length > 0) {
+      const reports = await database.select()
+        .from(copsoqReports)
+        .where(inArray(copsoqReports.tenantId, allTenantIds))
+        .orderBy(desc(copsoqReports.createdAt));
+
+      // Pegar último relatório por tenant
+      const latestByTenant = new Map<string, typeof reports[0]>();
+      for (const r of reports) {
+        if (!latestByTenant.has(r.tenantId)) latestByTenant.set(r.tenantId, r);
+      }
+
+      if (latestByTenant.size > 0) {
+        const dims = ['demand', 'control', 'support', 'leadership', 'community', 'meaning', 'trust', 'justice', 'insecurity', 'mentalHealth', 'burnout', 'violence'];
+        const avgDims: Record<string, number> = {};
+        for (const dim of dims) {
+          let sum = 0, count = 0;
+          for (const [, report] of latestByTenant) {
+            const val = (report as any)[dim];
+            if (val != null) { sum += Number(val); count++; }
+          }
+          avgDims[dim] = count > 0 ? Math.round(sum / count) : 0;
+        }
+        copsoqDimensions = avgDims;
+      }
+    }
+
+    // 8. Alertas reais
+    const alerts = {
+      criticalRisks: riskDistribution.critical + riskDistribution.high,
+      pendingProposals: pendingProposals,
+      activeCopsoq: activeCopsoq,
+    };
+
+    return {
+      companies: { total: childTenants.length, list: childTenants },
+      people: { total: totalPeople },
+      proposals: { total: totalProposals, approved: approvedProposals, pending: pendingProposals, conversionRate },
+      copsoq: { total: totalCopsoq, completed: completedCopsoq, active: activeCopsoq },
+      actionPlans: { total: totalActions, completed: completedActions, inProgress: inProgressActions, pending: pendingActions, complianceRate },
+      riskDistribution,
+      copsoqDimensions,
+      alerts,
+    };
+  }),
 });
