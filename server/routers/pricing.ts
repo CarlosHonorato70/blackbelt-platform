@@ -10,6 +10,7 @@ import {
   pricingParameters,
   proposals,
   proposalItems,
+  proposalPayments,
   tenants,
 } from "../../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
@@ -1099,6 +1100,145 @@ export const proposalsRouter = router({
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       await db.deleteProposalItem(input.itemId);
+      return { success: true };
+    }),
+
+  // ============================================================================
+  // PAGAMENTOS
+  // ============================================================================
+
+  getPayments: tenantProcedure
+    .input(z.object({ proposalId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
+
+      // Verify proposal belongs to this tenant
+      const proposal = await db.getProposal(input.proposalId);
+      if (!proposal || proposal.tenantId !== ctx.tenantId!) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
+      }
+
+      const database = await getDb();
+      if (!database) return [];
+
+      const payments = await database
+        .select()
+        .from(proposalPayments)
+        .where(eq(proposalPayments.proposalId, input.proposalId))
+        .orderBy(proposalPayments.installment);
+
+      return payments;
+    }),
+
+  confirmPayment: tenantProcedure
+    .input(
+      z.object({
+        paymentId: z.string(),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
+
+      const database = await getDb();
+      if (!database) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Find the payment
+      const [payment] = await database
+        .select()
+        .from(proposalPayments)
+        .where(eq(proposalPayments.id, input.paymentId));
+
+      if (!payment) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Pagamento não encontrado" });
+      }
+
+      // Verify proposal belongs to this tenant
+      const proposal = await db.getProposal(payment.proposalId);
+      if (!proposal || proposal.tenantId !== ctx.tenantId!) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
+      }
+
+      // Mark payment as paid
+      await database
+        .update(proposalPayments)
+        .set({
+          status: "paid",
+          paidAt: new Date(),
+          paidBy: ctx.user.id,
+          notes: input.notes || null,
+        })
+        .where(eq(proposalPayments.id, input.paymentId));
+
+      // Check all payments for this proposal to update proposal paymentStatus
+      const allPayments = await database
+        .select()
+        .from(proposalPayments)
+        .where(eq(proposalPayments.proposalId, payment.proposalId));
+
+      // Count: the one we just updated is now paid
+      const paidCount = allPayments.filter(
+        (p) => p.status === "paid" || p.id === input.paymentId
+      ).length;
+      const totalCount = allPayments.length;
+
+      let newPaymentStatus: string;
+      if (paidCount >= totalCount) {
+        newPaymentStatus = "paid";
+      } else if (paidCount > 0) {
+        newPaymentStatus = "partial";
+      } else {
+        newPaymentStatus = "pending";
+      }
+
+      await database
+        .update(proposals)
+        .set({ paymentStatus: newPaymentStatus, updatedAt: new Date() })
+        .where(eq(proposals.id, payment.proposalId));
+
+      log.info(`[Payment] Confirmed payment ${input.paymentId} for proposal ${payment.proposalId} (${paidCount}/${totalCount})`);
+
+      return { success: true, paymentStatus: newPaymentStatus };
+    }),
+
+  getPaymentSettings: tenantProcedure
+    .query(async ({ ctx }) => {
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
+
+      const paymentPix = await db.getTenantSetting(ctx.tenantId!, "payment_pix");
+      const paymentBank = await db.getTenantSetting(ctx.tenantId!, "payment_bank");
+      const paymentInstructions = await db.getTenantSetting(ctx.tenantId!, "payment_instructions");
+
+      return {
+        paymentPix: paymentPix?.settingValue || "",
+        paymentBank: paymentBank?.settingValue || "",
+        paymentInstructions: paymentInstructions?.settingValue || "",
+      };
+    }),
+
+  savePaymentSettings: tenantProcedure
+    .input(
+      z.object({
+        paymentPix: z.string().optional(),
+        paymentBank: z.string().optional(),
+        paymentInstructions: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
+
+      if (input.paymentPix !== undefined) {
+        await db.setTenantSetting(ctx.tenantId!, "payment_pix", input.paymentPix);
+      }
+      if (input.paymentBank !== undefined) {
+        await db.setTenantSetting(ctx.tenantId!, "payment_bank", input.paymentBank);
+      }
+      if (input.paymentInstructions !== undefined) {
+        await db.setTenantSetting(ctx.tenantId!, "payment_instructions", input.paymentInstructions);
+      }
+
+      log.info(`[Payment] Settings saved for tenant ${ctx.tenantId}`);
+
       return { success: true };
     }),
 });

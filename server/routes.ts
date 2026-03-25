@@ -230,6 +230,64 @@ export function registerRoutes(app: Express) {
         }
       }
 
+      // 3. Handle payment flow for final proposals
+      if (proposal.proposalType === "final" && proposal.contactEmail) {
+        try {
+          const { nanoid: nanoidPayment } = await import("nanoid");
+          const { proposalPayments } = await import("../drizzle/schema");
+          const { sendPaymentInstructionsEmail } = await import("./_core/email");
+          const { getTenantSetting } = await import("./db");
+
+          const totalValue = proposal.totalValue || 0;
+          const percentages = [40, 30, 30];
+          const installmentsData = percentages.map((pct, idx) => ({
+            id: nanoidPayment(),
+            proposalId: proposal.id,
+            installment: idx + 1,
+            percentage: pct,
+            amount: Math.round(totalValue * pct / 100),
+            status: "pending" as const,
+            createdAt: new Date(),
+          }));
+
+          // Create payment installments
+          for (const inst of installmentsData) {
+            await db.insert(proposalPayments).values(inst);
+          }
+
+          // Set payment status on proposal
+          await db.update(proposals)
+            .set({ paymentStatus: "pending", updatedAt: new Date() })
+            .where(eq(proposals.id, proposal.id));
+
+          log.info(`[Proposal] Created ${installmentsData.length} payment installments for proposal ${proposal.id}`);
+
+          // Fetch consultancy payment settings
+          const paymentPix = await getTenantSetting(proposal.tenantId, "payment_pix");
+          const paymentBank = await getTenantSetting(proposal.tenantId, "payment_bank");
+          const paymentInstructions = await getTenantSetting(proposal.tenantId, "payment_instructions");
+
+          // Send payment instructions email
+          sendPaymentInstructionsEmail({
+            clientEmail: proposal.contactEmail,
+            clientName: proposal.contactEmail,
+            proposalTitle: proposal.title || "Proposta",
+            totalValue,
+            installments: installmentsData.map(i => ({
+              installment: i.installment,
+              percentage: i.percentage,
+              amount: i.amount,
+            })),
+            paymentPix: paymentPix?.settingValue || undefined,
+            paymentBank: paymentBank?.settingValue || undefined,
+            paymentInstructions: paymentInstructions?.settingValue || undefined,
+          }).catch(err => log.error("[Proposal] Payment instructions email failed:", err));
+        } catch (payErr: any) {
+          console.error("[Proposal] Payment setup failed (approval still OK):", payErr?.message);
+          log.error("[Proposal] Payment setup failed:", payErr?.message);
+        }
+      }
+
       res.set("Cache-Control", "no-store");
       res.redirect(`${frontendUrl}/proposal/result?status=approved&id=${proposal.id}`);
     } catch (error) {

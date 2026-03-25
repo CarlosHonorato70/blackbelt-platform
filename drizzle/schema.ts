@@ -471,6 +471,8 @@ export const proposals = mysqlTable(
     contactEmail: varchar("contactEmail", { length: 320 }),
     approvedAt: timestamp("approvedAt"),
     rejectedAt: timestamp("rejectedAt"),
+    paymentStatus: varchar("paymentStatus", { length: 20 }),
+    paymentNotes: text("paymentNotes"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
@@ -484,6 +486,31 @@ export const proposals = mysqlTable(
 
 export type Proposal = typeof proposals.$inferSelect;
 export type InsertProposal = typeof proposals.$inferInsert;
+
+// ============================================================================
+// PRECIFICACAO: Parcelas de Pagamento
+// ============================================================================
+
+export const proposalPayments = mysqlTable(
+  "proposal_payments",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    proposalId: varchar("proposalId", { length: 64 }).notNull(),
+    installment: int("installment").notNull(),
+    percentage: int("percentage").notNull(),
+    amount: int("amount").notNull(),
+    status: varchar("status", { length: 20 }).default("pending").notNull(),
+    paidAt: timestamp("paidAt"),
+    paidBy: varchar("paidBy", { length: 64 }),
+    notes: text("notes"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    proposalIdx: index("idx_payment_proposal").on(table.proposalId),
+  })
+);
+
+export type ProposalPayment = typeof proposalPayments.$inferSelect;
 
 // ============================================================================
 // PRECIFICACAO: Itens das Propostas

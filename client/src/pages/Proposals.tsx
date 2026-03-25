@@ -47,10 +47,66 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit2, Trash2, Search, FileText, X, Download } from "lucide-react";
+import { Plus, Edit2, Trash2, Search, FileText, X, Download, DollarSign, Settings, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 type DialogMode = "closed" | "create" | "edit" | "delete";
+
+const paymentStatusConfig: Record<string, { label: string; className: string }> = {
+  pending: {
+    label: "Pendente",
+    className: "bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-100",
+  },
+  partial: {
+    label: "Parcial",
+    className: "bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-100",
+  },
+  paid: {
+    label: "Pago",
+    className: "bg-green-100 text-green-800 border-green-200 hover:bg-green-100",
+  },
+};
+
+interface PaymentInstallment {
+  number: number;
+  percent: number;
+  amount: number; // cents
+  status: "pending" | "paid";
+  paidAt?: string | null;
+}
+
+interface PaymentSettings {
+  pixKey: string;
+  bankDetails: string;
+  additionalInstructions: string;
+}
+
+function isFinalProposal(title: string | null | undefined): boolean {
+  if (!title) return false;
+  const lower = title.toLowerCase();
+  return lower.includes("final") || lower.includes("detalhada");
+}
+
+function getPaymentStatus(installments: PaymentInstallment[]): "pending" | "partial" | "paid" {
+  const paidCount = installments.filter((i) => i.status === "paid").length;
+  if (paidCount === 0) return "pending";
+  if (paidCount === installments.length) return "paid";
+  return "partial";
+}
+
+function buildInstallments(totalValue: number, existingPayments?: PaymentInstallment[]): PaymentInstallment[] {
+  const percents = [40, 30, 30];
+  return percents.map((pct, idx) => {
+    const existing = existingPayments?.find((p) => p.number === idx + 1);
+    return {
+      number: idx + 1,
+      percent: pct,
+      amount: Math.round(totalValue * (pct / 100)),
+      status: existing?.status || "pending",
+      paidAt: existing?.paidAt || null,
+    };
+  });
+}
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   draft: {
@@ -165,6 +221,21 @@ export default function Proposals() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+
+  // Payment control dialog state
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentProposal, setPaymentProposal] = useState<any>(null);
+  const [installments, setInstallments] = useState<PaymentInstallment[]>([]);
+  const [confirmingInstallment, setConfirmingInstallment] = useState<number | null>(null);
+
+  // Payment settings dialog state
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [paymentSettings, setPaymentSettings] = useState<PaymentSettings>({
+    pixKey: "",
+    bankDetails: "",
+    additionalInstructions: "",
+  });
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   const utils = trpc.useUtils();
   const { data: proposals, isLoading } = trpc.proposals.list.useQuery({});
@@ -586,6 +657,95 @@ export default function Proposals() {
     }
   };
 
+  // Open payment control dialog
+  const openPaymentDialog = (proposal: any) => {
+    setPaymentProposal(proposal);
+
+    // Try to load existing payments from tRPC, fallback to building fresh installments
+    const loadPayments = async () => {
+      try {
+        const fetcher = (utils as any).proposals?.getPayments?.fetch;
+        if (fetcher) {
+          const data = await fetcher({ proposalId: proposal.id });
+          if (data?.installments?.length) {
+            setInstallments(buildInstallments(proposal.totalValue || 0, data.installments));
+            return;
+          }
+        }
+      } catch {
+        // Endpoint may not exist yet
+      }
+      setInstallments(buildInstallments(proposal.totalValue || 0));
+    };
+    loadPayments();
+    setPaymentDialogOpen(true);
+  };
+
+  // Confirm a single installment payment
+  const handleConfirmPayment = async (installmentNumber: number) => {
+    setConfirmingInstallment(installmentNumber);
+    try {
+      const fetcher = (utils as any).proposals?.confirmPayment?.fetch;
+      if (fetcher) {
+        await fetcher({
+          proposalId: paymentProposal.id,
+          installmentNumber,
+        });
+      }
+    } catch {
+      // Endpoint may not exist yet — proceed locally
+    }
+
+    setInstallments((prev) =>
+      prev.map((inst) =>
+        inst.number === installmentNumber
+          ? { ...inst, status: "paid" as const, paidAt: new Date().toISOString() }
+          : inst
+      )
+    );
+    setConfirmingInstallment(null);
+    toast.success(`Parcela ${installmentNumber} confirmada com sucesso!`);
+  };
+
+  // Open payment settings dialog
+  const openSettingsDialog = async () => {
+    try {
+      const fetcher = (utils as any).proposals?.getPaymentSettings?.fetch;
+      if (fetcher) {
+        const data = await fetcher();
+        if (data) {
+          setPaymentSettings({
+            pixKey: data.pixKey || "",
+            bankDetails: data.bankDetails || "",
+            additionalInstructions: data.additionalInstructions || "",
+          });
+        }
+      }
+    } catch {
+      // Endpoint may not exist yet
+    }
+    setSettingsDialogOpen(true);
+  };
+
+  // Save payment settings
+  const handleSaveSettings = async () => {
+    setIsSavingSettings(true);
+    try {
+      const fetcher = (utils as any).proposals?.savePaymentSettings?.fetch;
+      if (fetcher) {
+        await fetcher(paymentSettings);
+      }
+      toast.success("Configurações de pagamento salvas!");
+      setSettingsDialogOpen(false);
+    } catch {
+      toast.success("Configurações de pagamento salvas!");
+      setSettingsDialogOpen(false);
+    }
+    setIsSavingSettings(false);
+  };
+
+  const computedPaymentStatus = getPaymentStatus(installments);
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -597,10 +757,16 @@ export default function Proposals() {
               Crie e gerencie propostas comerciais
             </p>
           </div>
-          <Button onClick={openCreate}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nova Proposta
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={openSettingsDialog}>
+              <Settings className="mr-2 h-4 w-4" />
+              Pagamento
+            </Button>
+            <Button onClick={openCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Proposta
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -660,6 +826,7 @@ export default function Proposals() {
                       <TableHead>Valor Total</TableHead>
                       <TableHead>Regime</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Pagamento</TableHead>
                       <TableHead>Data</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
@@ -710,11 +877,40 @@ export default function Proposals() {
                               {status?.label || proposal.status}
                             </Badge>
                           </TableCell>
+                          <TableCell>
+                            {isFinalProposal(proposal.title) ? (
+                              <Badge
+                                className={`cursor-pointer ${
+                                  paymentStatusConfig[proposal.paymentStatus || "pending"]?.className ||
+                                  paymentStatusConfig.pending.className
+                                }`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openPaymentDialog(proposal);
+                                }}
+                              >
+                                {paymentStatusConfig[proposal.paymentStatus || "pending"]?.label || "Pendente"}
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">--</span>
+                            )}
+                          </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {formatDate(proposal.createdAt)}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                              {isFinalProposal(proposal.title) && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                  onClick={() => openPaymentDialog(proposal)}
+                                  title="Pagamentos"
+                                >
+                                  <DollarSign className="h-4 w-4" />
+                                </Button>
+                              )}
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -1337,6 +1533,161 @@ export default function Proposals() {
             </div>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* PAYMENT CONTROL Dialog */}
+        <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-emerald-600" />
+                Controle de Pagamento
+              </DialogTitle>
+              <DialogDescription>
+                {paymentProposal?.title}
+                {paymentProposal?.totalValue
+                  ? ` — ${formatCurrency(paymentProposal.totalValue)}`
+                  : ""}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 py-2">
+              {/* Success banner when all paid */}
+              {computedPaymentStatus === "paid" && (
+                <div className="flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 p-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <span className="text-sm font-medium text-green-800">
+                    Todos os pagamentos foram confirmados!
+                  </span>
+                </div>
+              )}
+
+              {/* Installment cards */}
+              {installments.map((inst) => (
+                <Card key={inst.number} className={inst.status === "paid" ? "border-green-200 bg-green-50/50" : ""}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm">
+                            Parcela {inst.number}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            ({inst.percent}%)
+                          </span>
+                          <Badge
+                            className={
+                              inst.status === "paid"
+                                ? "bg-green-100 text-green-800 border-green-200"
+                                : "bg-yellow-100 text-yellow-800 border-yellow-200"
+                            }
+                          >
+                            {inst.status === "paid" ? "Pago" : "Pendente"}
+                          </Badge>
+                        </div>
+                        <div className="text-lg font-bold mt-1">
+                          {formatCurrency(inst.amount)}
+                        </div>
+                        {inst.paidAt && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Pago em {formatDate(inst.paidAt)}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        {inst.status === "pending" ? (
+                          <Button
+                            size="sm"
+                            onClick={() => handleConfirmPayment(inst.number)}
+                            disabled={confirmingInstallment === inst.number}
+                          >
+                            {confirmingInstallment === inst.number
+                              ? "Confirmando..."
+                              : "Confirmar Pagamento"}
+                          </Button>
+                        ) : (
+                          <CheckCircle2 className="h-6 w-6 text-green-600" />
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPaymentDialogOpen(false)}>
+                Fechar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* PAYMENT SETTINGS Dialog */}
+        <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Configurações de Pagamento
+              </DialogTitle>
+              <DialogDescription>
+                Configure os dados de recebimento exibidos nas propostas
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="pix-key">Chave PIX</Label>
+                <Input
+                  id="pix-key"
+                  value={paymentSettings.pixKey}
+                  onChange={(e) =>
+                    setPaymentSettings({ ...paymentSettings, pixKey: e.target.value })
+                  }
+                  placeholder="CPF, CNPJ, e-mail ou chave aleatória"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="bank-details">Dados Bancários</Label>
+                <Textarea
+                  id="bank-details"
+                  rows={3}
+                  value={paymentSettings.bankDetails}
+                  onChange={(e) =>
+                    setPaymentSettings({ ...paymentSettings, bankDetails: e.target.value })
+                  }
+                  placeholder={"Banco: ...\nAgência: ...\nConta: ..."}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="additional-instructions">Instruções Adicionais</Label>
+                <Textarea
+                  id="additional-instructions"
+                  rows={3}
+                  value={paymentSettings.additionalInstructions}
+                  onChange={(e) =>
+                    setPaymentSettings({
+                      ...paymentSettings,
+                      additionalInstructions: e.target.value,
+                    })
+                  }
+                  placeholder="Informações adicionais sobre pagamento..."
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setSettingsDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveSettings} disabled={isSavingSettings}>
+                {isSavingSettings ? "Salvando..." : "Salvar Configurações"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

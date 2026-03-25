@@ -599,6 +599,155 @@ contato@blackbeltconsultoria.com
 }
 
 /**
+ * Envia email com instruções de pagamento após aprovação de proposta final
+ */
+export async function sendPaymentInstructionsEmail(params: {
+  clientEmail: string;
+  clientName: string;
+  proposalTitle: string;
+  totalValue: number;
+  installments: Array<{ installment: number; percentage: number; amount: number }>;
+  paymentPix?: string;
+  paymentBank?: string;
+  paymentInstructions?: string;
+}): Promise<boolean> {
+  const {
+    clientEmail,
+    clientName,
+    proposalTitle,
+    totalValue,
+    installments,
+    paymentPix,
+    paymentBank,
+    paymentInstructions,
+  } = params;
+
+  const formatCurrency = (v: number) =>
+    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v / 100);
+
+  const installmentsHtml = installments
+    .map(
+      (inst) => `
+        <tr>
+          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px; text-align: center;">${inst.installment}ª Parcela</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px; text-align: center;">${inst.percentage}%</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px; text-align: right; font-weight: bold;">${formatCurrency(inst.amount)}</td>
+        </tr>
+      `
+    )
+    .join("");
+
+  const paymentDataHtml = [];
+  if (paymentPix) {
+    paymentDataHtml.push(`<p style="margin: 8px 0; font-size: 14px; color: #2d3748;"><strong>Chave PIX:</strong> ${escapeHtml(paymentPix)}</p>`);
+  }
+  if (paymentBank) {
+    paymentDataHtml.push(`<p style="margin: 8px 0; font-size: 14px; color: #2d3748;"><strong>Dados Bancários:</strong><br>${escapeHtml(paymentBank).replace(/\n/g, "<br>")}</p>`);
+  }
+  if (paymentInstructions) {
+    paymentDataHtml.push(`<p style="margin: 8px 0; font-size: 14px; color: #2d3748;"><strong>Instruções:</strong><br>${escapeHtml(paymentInstructions).replace(/\n/g, "<br>")}</p>`);
+  }
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 28px;">Instruções de Pagamento</h1>
+        <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Black Belt Consultoria</p>
+      </div>
+
+      <div style="background: white; padding: 40px 20px; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="margin: 0 0 20px 0; font-size: 16px;">
+          Prezado(a) <strong>${escapeHtml(clientName)}</strong>,
+        </p>
+
+        <p style="margin: 0 0 20px 0; font-size: 14px; color: #666;">
+          Sua proposta <strong>"${escapeHtml(proposalTitle)}"</strong> foi aprovada com sucesso!
+          Abaixo estão as informações para efetuar o pagamento.
+        </p>
+
+        <div style="background: #f0fdf4; padding: 20px; border-left: 4px solid #10b981; margin: 20px 0; border-radius: 6px;">
+          <p style="margin: 0; font-size: 16px; color: #166534;">
+            <strong>Valor Total:</strong> ${formatCurrency(totalValue)}
+          </p>
+        </div>
+
+        <h2 style="font-size: 18px; color: #333; margin: 30px 0 15px 0; border-bottom: 2px solid #667eea; padding-bottom: 10px;">
+          Condições de Pagamento
+        </h2>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <thead>
+            <tr style="background: #f3f4f6;">
+              <th style="padding: 12px; text-align: center; font-size: 14px; font-weight: 600; border-bottom: 2px solid #667eea;">Parcela</th>
+              <th style="padding: 12px; text-align: center; font-size: 14px; font-weight: 600; border-bottom: 2px solid #667eea;">Percentual</th>
+              <th style="padding: 12px; text-align: right; font-size: 14px; font-weight: 600; border-bottom: 2px solid #667eea;">Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${installmentsHtml}
+          </tbody>
+        </table>
+
+        ${paymentDataHtml.length > 0 ? `
+        <h2 style="font-size: 18px; color: #333; margin: 30px 0 15px 0; border-bottom: 2px solid #667eea; padding-bottom: 10px;">
+          Dados para Pagamento
+        </h2>
+        <div style="background: #f7fafc; border: 2px solid #667eea; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          ${paymentDataHtml.join("")}
+        </div>
+        ` : ""}
+
+        <div style="background: #fef3c7; padding: 20px; border-left: 4px solid #f59e0b; margin: 30px 0; border-radius: 6px;">
+          <p style="margin: 0; font-size: 14px; color: #92400e;">
+            <strong>Importante:</strong> Após efetuar cada pagamento, por favor envie o comprovante para que possamos registrar e dar andamento aos serviços contratados.
+          </p>
+        </div>
+      </div>
+
+      <div style="background: #f9fafb; padding: 25px 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+        <p style="margin: 0; font-size: 12px; color: #666; text-align: center;">
+          Black Belt Consultoria | Plataforma de Gestão de Riscos Psicossociais<br>
+          <a href="mailto:contato@blackbeltconsultoria.com" style="color: #667eea; text-decoration: none;">contato@blackbeltconsultoria.com</a>
+        </p>
+      </div>
+    </div>
+  `;
+
+  const installmentsText = installments
+    .map((inst) => `  ${inst.installment}ª Parcela: ${inst.percentage}% - ${formatCurrency(inst.amount)}`)
+    .join("\n");
+
+  const textContent = `
+Instruções de Pagamento - Black Belt Consultoria
+
+Prezado(a) ${clientName},
+
+Sua proposta "${proposalTitle}" foi aprovada!
+
+Valor Total: ${formatCurrency(totalValue)}
+
+Condições de Pagamento:
+${installmentsText}
+
+${paymentPix ? `Chave PIX: ${paymentPix}` : ""}
+${paymentBank ? `Dados Bancários: ${paymentBank}` : ""}
+${paymentInstructions ? `Instruções: ${paymentInstructions}` : ""}
+
+Após efetuar cada pagamento, envie o comprovante para registro.
+
+Black Belt Consultoria
+contato@blackbeltconsultoria.com
+  `.trim();
+
+  return sendEmail({
+    to: clientEmail,
+    subject: `Instruções de Pagamento: ${proposalTitle} - Black Belt Consultoria`,
+    html,
+    text: textContent,
+  });
+}
+
+/**
  * Envia email de boas-vindas para empresa com credenciais de acesso
  * e orientações sobre cadastro de setores/colaboradores.
  */

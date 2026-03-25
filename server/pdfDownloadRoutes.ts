@@ -785,6 +785,29 @@ export function registerPdfDownloadRoutes(app: Express) {
         return res.status(403).json({ error: "Sem permissao para acessar esta empresa" });
       }
 
+      // Payment check: company users can only download if payment is complete
+      // Consultants (parent tenant) always have access
+      const isCompanyUser = auth.tenantId === companyId;
+      if (isCompanyUser && type !== "proposta") {
+        const [finalProposal] = await db.select({ paymentStatus: proposals.paymentStatus })
+          .from(proposals)
+          .where(and(
+            eq(proposals.clientId, companyId),
+            sql`proposalType = 'final'`,
+            sql`status = 'approved'`
+          ))
+          .orderBy(desc(proposals.createdAt))
+          .limit(1);
+
+        if (finalProposal && finalProposal.paymentStatus !== "paid") {
+          return res.status(402).json({
+            error: "Aguardando confirmacao de pagamento",
+            paymentStatus: finalProposal.paymentStatus || "pending",
+            message: "Os documentos serao liberados apos a confirmacao do pagamento pela consultoria.",
+          });
+        }
+      }
+
       const { buffer, filename } = await generator(companyId, db);
 
       res.setHeader("Content-Type", "application/pdf");
