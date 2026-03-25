@@ -952,7 +952,7 @@ async function generateAndSavePreProposal(params: {
       id: proposalId,
       tenantId: params.tenantId,
       clientId: client.id,
-      title: `Proposta NR-01 — ${params.companyName}`,
+      title: `Pré-Proposta NR-01 — ${params.companyName}`,
       description: `Pre-proposta para ${params.headcount} colaboradores. Pacote ${params.pricingSummary.recommendedPackage}.`,
       status: "pending",
       subtotal: totalValue,
@@ -1639,34 +1639,8 @@ async function generateFallbackResponse(
           if (latestAssessment) {
             const result = await executeGenerateInventoryAndPlan(existingCompany.id, latestAssessment.id, existingCompany.name, memory.headcount || 5);
             if (result.success) {
-              // Auto-generate final proposal after action plan
-              let finalProposalContent = "";
-              try {
-                const hc = memory.headcount || 5;
-                const fpData = await buildFinalProposalData(
-                  existingCompany.id, existingCompany.name,
-                  memory.cnpj ? formatCNPJ(memory.cnpj) : undefined,
-                  hc, memory.sectorName,
-                );
-                if (fpData) {
-                  const riskLevel = memory.highRisk ? "high" as const : "low" as const;
-                  const initialProposal = generatePricingProposal({
-                    name: existingCompany.name, cnpj: memory.cnpj ? formatCNPJ(memory.cnpj) : undefined,
-                    headcount: hc, sector: memory.sector, sectorName: memory.sectorName, riskLevel,
-                  });
-                  const finalProposalMarkdown = generateFinalProposal(fpData, initialProposal);
-                  finalProposalContent = "\n\n" + finalProposalMarkdown;
-
-                  // Save final proposal to DB with itemized services
-                  const savedId = await saveFinalProposal(db2, tenantId, existingCompany.id, existingCompany.name, finalProposalMarkdown, initialProposal, fpData, hc);
-                  if (savedId) {
-                    finalProposalContent += `\n\n✅ Proposta salva! Acesse em **Precificação > Propostas** para visualizar e exportar em PDF.`;
-                  }
-                }
-              } catch { /* final proposal generation failed, continue without it */ }
-
               return {
-                content: result.message + finalProposalContent + `\n\n**Proxima etapa:** Criar programa de treinamento sobre riscos psicossociais.\nClique no botao abaixo ou diga **"sim"** para continuar.`,
+                content: result.message + `\n\n**Proxima etapa:** Criar programa de treinamento sobre riscos psicossociais.\nClique no botao abaixo ou diga **"sim"** para continuar.`,
                 actions: [{ type: "create_training", label: "Criar Programa de Treinamento", params: { companyId: existingCompany.id } }],
               };
             }
@@ -1678,8 +1652,33 @@ async function generateFallbackResponse(
       if (nextPhase === "create_training") {
         const result = await executeCreateTraining(existingCompany.id, existingCompany.name);
         if (result.success) {
+          // Generate final proposal after training (all data is available now)
+          let finalProposalContent = "";
+          try {
+            const hc = memory.headcount || 3;
+            const db2 = await getDb();
+            const fpData = await buildFinalProposalData(
+              existingCompany.id, existingCompany.name,
+              memory.cnpj ? formatCNPJ(memory.cnpj) : existingCompany.cnpj,
+              hc, memory.sectorName,
+            );
+            if (fpData) {
+              const riskLevel = memory.highRisk ? "high" as const : "low" as const;
+              const initialProposal = generatePricingProposal({
+                name: existingCompany.name, cnpj: memory.cnpj ? formatCNPJ(memory.cnpj) : existingCompany.cnpj,
+                headcount: hc, sector: memory.sector, sectorName: memory.sectorName, riskLevel,
+              });
+              const finalProposalMarkdown = generateFinalProposal(fpData, initialProposal);
+              finalProposalContent = "\n\n" + finalProposalMarkdown;
+              const savedId = await saveFinalProposal(db2, tenantId, existingCompany.id, existingCompany.name, finalProposalMarkdown, initialProposal, fpData, hc);
+              if (savedId) {
+                finalProposalContent += `\n\n✅ **Proposta Final salva!** Acesse em **Propostas Comerciais** para visualizar e exportar em PDF.`;
+              }
+            }
+          } catch { /* final proposal generation failed, continue without it */ }
+
           return {
-            content: result.message + `\n\n**Proxima etapa:** Finalizar checklist e emitir certificado de conformidade.\nClique no botao abaixo ou diga **"sim"** para continuar.`,
+            content: result.message + finalProposalContent + `\n\n**Proxima etapa:** Finalizar checklist e emitir certificado de conformidade.\nClique no botao abaixo ou diga **"sim"** para continuar.`,
             actions: [{ type: "complete_checklist", label: "Finalizar e Emitir Certificado", params: { companyId: existingCompany.id } }],
           };
         }

@@ -102,13 +102,13 @@ interface ProposalItem {
 function getProposalTypeBadge(title: string | null | undefined) {
   if (!title) return null;
   const lower = title.toLowerCase();
-  if (lower.includes("inicial")) {
-    return { label: "Inicial", className: "bg-blue-100 text-blue-800 border-blue-200" };
+  if (lower.includes("pré-proposta") || lower.includes("pre-proposta") || lower.includes("inicial")) {
+    return { label: "Pré-Proposta", className: "bg-blue-100 text-blue-800 border-blue-200" };
   }
   if (lower.includes("final") || lower.includes("detalhada")) {
-    return { label: "Final", className: "bg-green-100 text-green-800 border-green-200" };
+    return { label: "Proposta Final", className: "bg-green-100 text-green-800 border-green-200" };
   }
-  return null;
+  return { label: "Proposta", className: "bg-gray-100 text-gray-800 border-gray-200" };
 }
 
 // Editable item used in the edit dialog
