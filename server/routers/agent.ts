@@ -10,7 +10,7 @@ import { getNR01Status, getCompanyStrategy } from "../_ai/agentOrchestrator";
 import { scanTenantAlerts } from "../_ai/agentAlerts";
 import { buildAgentSystemPrompt, buildContextMessage } from "../_ai/prompts/agent-system";
 import { processCNPJForAgent, formatCNPJ, sectorLabel, isHighRiskSector } from "../_core/cnpjLookup";
-import { tenants, proposals, proposalItems } from "../../drizzle/schema";
+import { tenants, proposals, proposalItems, clients, people } from "../../drizzle/schema";
 import { complianceChecklist, complianceMilestones } from "../../drizzle/schema_nr01";
 import { executeCreateAssessment, executeGenerateInventoryAndPlan, executeCreateTraining, executeCompleteChecklist } from "../_ai/agentExecutor";
 import { log } from "../_core/logger";
@@ -1228,8 +1228,33 @@ async function generateFallbackResponse(
     return { content: "Nenhuma proposta pendente encontrada. Informe o CNPJ da empresa para gerar uma nova proposta.", actions: [] };
   }
 
+  // ── 0a2. Handle send_copsoq_invites action ──
+  if (msg.startsWith("executar:send_copsoq_invites") || msg.includes("enviar copsoq")) {
+    const companyIdMatch = msg.match(/companyId[=:]([^\s,}]+)/);
+    let companyId = companyIdMatch?.[1];
+    if (!companyId) {
+      // Find company from memory or latest approved proposal
+      const existingCompany = await findCompanyByCNPJ();
+      if (existingCompany) companyId = existingCompany.id;
+      if (!companyId) {
+        const db2 = await getDb();
+        const [childTenant] = await db2.select().from(tenants)
+          .where(and(eq(tenants.parentTenantId, tenantId), eq(tenants.tenantType, "company")))
+          .orderBy(desc(tenants.createdAt)).limit(1);
+        if (childTenant) companyId = childTenant.id;
+      }
+    }
+    if (companyId) {
+      const { executeSendCopsoqInvites } = await import("../_ai/agentExecutor");
+      const result = await executeSendCopsoqInvites(companyId, tenantId);
+      return { content: result.message, actions: result.success ? [] : [] };
+    }
+    return { content: "Empresa não encontrada. Informe o CNPJ para continuar.", actions: [] };
+  }
+
   // ── 0b. Check proposal status and guide next steps ──
-  if (isContinue && memory.cnpj) {
+  // Works even without memory.cnpj — falls back to searching proposals by tenant
+  if (isContinue) {
     const db2 = await getDb();
 
     // Check if there's a pending_approval proposal
@@ -1254,8 +1279,26 @@ async function generateFallbackResponse(
     if (approvedProposal) {
       log.info(`[Agent] Proposal approved, checking employees`);
 
-      // Check if company has employees registered
-      const existingCompany = await findCompanyByCNPJ();
+      // Find company tenant: try CNPJ first, then clientId fallback
+      let existingCompany = memory.cnpj ? await findCompanyByCNPJ() : null;
+      if (!existingCompany && approvedProposal.clientId) {
+        // Fallback: find company via client record
+        const [client] = await db2.select().from(clients)
+          .where(eq(clients.id, approvedProposal.clientId));
+        if (client?.cnpj) {
+          const formatted = client.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+          existingCompany = await dbOps.getTenantByCNPJ(formatted) || await dbOps.getTenantByCNPJ(client.cnpj);
+        }
+      }
+      // Last resort: find child tenants of this consultant
+      if (!existingCompany) {
+        const [childTenant] = await db2.select().from(tenants)
+          .where(and(eq(tenants.parentTenantId, tenantId), eq(tenants.tenantType, "company")))
+          .orderBy(desc(tenants.createdAt))
+          .limit(1);
+        if (childTenant) existingCompany = childTenant;
+      }
+
       if (existingCompany) {
         const [peopleCount] = await db2.select({ count: sql<number>`COUNT(*)` })
           .from(people)
@@ -1264,16 +1307,16 @@ async function generateFallbackResponse(
 
         if (employeeCount === 0) {
           return {
-            content: `✅ **Proposta aprovada!** A empresa já recebeu as credenciais de acesso.\n\n⚠️ **Aguardando cadastro de colaboradores.** A empresa precisa cadastrar os setores e colaboradores na plataforma antes de prosseguir.\n\n**Orientações para a empresa:**\n1. Acessar a plataforma com as credenciais recebidas por email\n2. No menu lateral, ir em **Colaboradores e Setores**\n3. Cadastrar setores e colaboradores (manualmente ou via planilha)\n\nQuando os colaboradores estiverem cadastrados, diga **"continuar"** para enviar o questionário COPSOQ-II.`,
+            content: `✅ **Proposta aprovada pela empresa ${existingCompany.name}!** Credenciais de acesso já foram enviadas.\n\n⚠️ **Aguardando cadastro de colaboradores.** A empresa precisa cadastrar os setores e colaboradores na plataforma antes de prosseguir.\n\n**Orientações para a empresa:**\n1. Acessar a plataforma com as credenciais recebidas por email\n2. No menu lateral, ir em **Colaboradores e Setores**\n3. Cadastrar setores e colaboradores (manualmente ou via planilha)\n\nQuando os colaboradores estiverem cadastrados, diga **"continuar"** para enviar o questionário COPSOQ-II.`,
             actions: [],
           };
         }
 
         // Employees exist — offer to send COPSOQ
         return {
-          content: `✅ **Proposta aprovada!** A empresa cadastrou **${employeeCount} colaborador(es)**.\n\n**Próximo passo:** Enviar o questionário COPSOQ-II para todos os colaboradores por email.\n\nClique em **"Enviar COPSOQ-II"** para disparar os convites.`,
+          content: `✅ **Proposta aprovada!** A empresa **${existingCompany.name}** cadastrou **${employeeCount} colaborador(es)**.\n\n**Próximo passo:** Enviar o questionário COPSOQ-II para todos os colaboradores por email.\n\nClique em **"Enviar COPSOQ-II"** para disparar os convites.`,
           actions: [
-            { type: "create_assessment", label: "Enviar COPSOQ-II", params: { companyId: existingCompany.id, headcount: employeeCount } },
+            { type: "send_copsoq_invites", label: "Enviar COPSOQ-II", params: { companyId: existingCompany.id, headcount: employeeCount } },
           ],
         };
       }
@@ -1506,14 +1549,26 @@ async function generateFallbackResponse(
       log.info(`[Agent] Auto-continue: nextPhase=${nextPhase}, company=${existingCompany.id}`);
 
       if (nextPhase === "create_assessment") {
-        const result = await executeCreateAssessment(existingCompany.id, existingCompany.name, memory.headcount || 5);
-        if (result.success) {
+        // Check if company has employees before creating assessment
+        const db3 = await getDb();
+        const [pc] = await db3.select({ count: sql<number>`COUNT(*)` })
+          .from(people).where(eq(people.tenantId, existingCompany.id));
+        const empCount = pc?.count || 0;
+
+        if (empCount === 0) {
           return {
-            content: result.message + `\n\n**Proxima etapa:** Gerar inventario de riscos e plano de acao com base nos resultados.\nClique no botao abaixo ou diga **"sim"** para continuar.`,
-            actions: [{ type: "generate_inventory", label: "Gerar Inventario e Plano de Acao", params: { companyId: existingCompany.id } }],
+            content: `⚠️ **Nenhum colaborador cadastrado** na empresa **${existingCompany.name}**.\n\nA empresa precisa cadastrar os colaboradores antes de enviar o COPSOQ-II.\n\n**Orientações para a empresa:**\n1. Acessar a plataforma com as credenciais recebidas\n2. No menu lateral, ir em **Colaboradores e Setores**\n3. Cadastrar setores e colaboradores (manualmente ou via planilha)\n\nQuando os colaboradores estiverem cadastrados, diga **"continuar"**.`,
+            actions: [],
           };
         }
-        return { content: result.message, actions: [] };
+
+        // Has employees — offer to send COPSOQ invites by email
+        return {
+          content: `A empresa **${existingCompany.name}** tem **${empCount} colaborador(es)** cadastrados.\n\n**Próximo passo:** Enviar o questionário COPSOQ-II para todos os colaboradores por email.\n\nClique em **"Enviar COPSOQ-II"** para disparar os convites.`,
+          actions: [
+            { type: "send_copsoq_invites", label: "Enviar COPSOQ-II", params: { companyId: existingCompany.id, headcount: empCount } },
+          ],
+        };
       }
 
       if (nextPhase === "generate_inventory") {

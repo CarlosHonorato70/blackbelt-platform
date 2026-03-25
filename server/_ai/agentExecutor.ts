@@ -7,7 +7,7 @@ import { nanoid } from "nanoid";
 import crypto from "crypto";
 import { getDb } from "../db";
 import { eq, and, sql, isNotNull } from "drizzle-orm";
-import { people } from "../../drizzle/schema";
+import { people, tenants } from "../../drizzle/schema";
 import {
   copsoqAssessments, copsoqResponses, copsoqReports, copsoqInvites,
   complianceChecklist, complianceMilestones, complianceCertificates,
@@ -198,6 +198,49 @@ async function executeCreateAssessmentWithInvites(
       (emailResult.failed > 0 ? `⚠️ ${emailResult.failed} email(s) falharam no envio.\n\n` : "") +
       `**Proxima etapa:** Aguardar respostas dos colaboradores.`,
   };
+}
+
+// ============================================================================
+// SEND COPSOQ INVITES: Public wrapper for sending invites from agent
+// ============================================================================
+
+export async function executeSendCopsoqInvites(
+  companyTenantId: string,
+  consultantTenantId: string
+): Promise<{ success: boolean; message: string }> {
+  const db = await getDb();
+  if (!db) return { success: false, message: "Database not available" };
+
+  try {
+    // Get company name
+    const [company] = await db.select().from(tenants).where(eq(tenants.id, companyTenantId));
+    if (!company) return { success: false, message: "Empresa não encontrada." };
+
+    // Get employees with email
+    const peopleWithEmail = await db.select()
+      .from(people)
+      .where(and(eq(people.tenantId, companyTenantId), isNotNull(people.email)));
+
+    const validPeople = peopleWithEmail.filter((p: any) => p.email && p.email.trim());
+
+    if (validPeople.length === 0) {
+      return { success: false, message: `Nenhum colaborador com email cadastrado na empresa **${company.name}**. A empresa precisa cadastrar os colaboradores com email para receber o COPSOQ-II.` };
+    }
+
+    // Check if there's already an active assessment
+    const [existingAssessment] = await db.select().from(copsoqAssessments)
+      .where(and(eq(copsoqAssessments.tenantId, companyTenantId), eq(copsoqAssessments.status, "in_progress")))
+      .limit(1);
+
+    if (existingAssessment) {
+      return { success: false, message: `Já existe uma avaliação COPSOQ-II em andamento para **${company.name}**. Aguarde as respostas dos colaboradores.` };
+    }
+
+    return await executeCreateAssessmentWithInvites(companyTenantId, company.name, validPeople, db);
+  } catch (error: any) {
+    log.error("Agent send_copsoq_invites failed", { error: error.message });
+    return { success: false, message: `Erro ao enviar convites COPSOQ: ${error.message}` };
+  }
 }
 
 // ============================================================================
