@@ -83,7 +83,7 @@ const menuItems: MenuItem[] = [
   // --- Documentos NR-01 (consultor revisa/edita, exporta PDF) ---
   { icon: FileText, label: "Propostas Comerciais", path: "/proposals", group: "Documentos NR-01", consultantOnly: true },
   { icon: Clipboard, label: "Relatório COPSOQ-II", path: "/copsoq/analytics", group: "Documentos NR-01", companyVisible: true },
-  { icon: Eye, label: "Respostas COPSOQ", path: "/copsoq-tracking", group: "Documentos NR-01", companyVisible: true },
+  { icon: Eye, label: "Respostas COPSOQ", path: "/copsoq/tracking", group: "Documentos NR-01", companyVisible: true },
   { icon: Target, label: "Inventário de Riscos", path: "/risk-assessments", group: "Documentos NR-01", companyVisible: true },
   { icon: ClipboardList, label: "Plano de Ação", path: "/action-plans", group: "Documentos NR-01", companyVisible: true },
   { icon: GraduationCap, label: "Programa de Treinamento", path: "/training", group: "Documentos NR-01", companyVisible: true },
