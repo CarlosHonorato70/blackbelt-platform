@@ -37,7 +37,7 @@ export default function ProposalResult() {
     invalid: {
       icon: AlertTriangle,
       title: "Link Invalido",
-      message: "Este link de aprovacao nao e valido ou ja expirou. Entre em contato com o consultor responsavel.",
+      message: "Este link de aprovação não é válido ou já expirou. Entre em contato com o consultor responsável.",
       color: "text-amber-600",
       bgColor: "bg-amber-50",
     },

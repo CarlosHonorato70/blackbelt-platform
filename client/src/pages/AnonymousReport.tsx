@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { ShieldAlert, Loader2, CheckCircle2, Copy } from "lucide-react";
 
 export default function AnonymousReport() {
-  usePageMeta({ title: "Canal de Denuncias" });
+  usePageMeta({ title: "Canal de Denúncias" });
   const { selectedTenant } = useTenant();
   const { data: user } = trpc.auth.me.useQuery();
   const tenantId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
@@ -50,7 +50,7 @@ export default function AnonymousReport() {
   const submitMutation = trpc.anonymousReports.submit.useMutation({
     onSuccess: (data: any) => {
       setReportCode(data.reportCode);
-      toast.success("Denuncia enviada com sucesso!");
+      toast.success("Denúncia enviada com sucesso!");
     },
     onError: (err: any) => {
       toast.error(err.message || "Erro ao enviar denuncia");
@@ -78,7 +78,7 @@ export default function AnonymousReport() {
   const handleCopyCode = () => {
     if (reportCode) {
       navigator.clipboard.writeText(reportCode);
-      toast.success("Codigo copiado!");
+      toast.success("Código copiado!");
     }
   };
 
@@ -90,13 +90,13 @@ export default function AnonymousReport() {
             <CardContent className="p-8 text-center space-y-6">
               <CheckCircle2 className="mx-auto h-16 w-16 text-green-500" />
               <div>
-                <h2 className="text-xl font-bold mb-2">Denuncia Enviada</h2>
+                <h2 className="text-xl font-bold mb-2">Denúncia Enviada</h2>
                 <p className="text-muted-foreground">
-                  Sua denuncia foi registrada com sucesso. Guarde este codigo para acompanhar sua denuncia.
+                  Sua denúncia foi registrada com sucesso. Guarde este código para acompanhar sua denúncia.
                 </p>
               </div>
               <div className="bg-muted rounded-lg p-4">
-                <p className="text-sm text-muted-foreground mb-1">Codigo da Denuncia</p>
+                <p className="text-sm text-muted-foreground mb-1">Código da Denúncia</p>
                 <div className="flex items-center justify-center gap-2">
                   <code className="text-2xl font-bold tracking-wider">{reportCode}</code>
                   <Button variant="ghost" size="icon" onClick={handleCopyCode}>
@@ -111,7 +111,7 @@ export default function AnonymousReport() {
                   setForm({ category: "", description: "", severity: "medium", anonymous: true, email: "" });
                 }}
               >
-                Enviar Outra Denuncia
+                Enviar Outra Denúncia
               </Button>
             </CardContent>
           </Card>
@@ -128,7 +128,7 @@ export default function AnonymousReport() {
             <div className="mx-auto mb-2">
               <ShieldAlert className="h-10 w-10 text-primary" />
             </div>
-            <CardTitle className="text-xl">Canal de Denuncias</CardTitle>
+            <CardTitle className="text-xl">Canal de Denúncias</CardTitle>
             <p className="text-sm text-muted-foreground">
               Registre situacoes de risco psicossocial de forma segura e confidencial.
             </p>
@@ -142,11 +142,11 @@ export default function AnonymousReport() {
                     <SelectValue placeholder="Selecione a categoria" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="assedio_moral">Assedio Moral</SelectItem>
-                    <SelectItem value="assedio_sexual">Assedio Sexual</SelectItem>
-                    <SelectItem value="discrimination">Discriminacao</SelectItem>
-                    <SelectItem value="condicoes_trabalho">Condicoes de Trabalho</SelectItem>
-                    <SelectItem value="violencia_psicologica">Violencia Psicologica</SelectItem>
+                    <SelectItem value="assedio_moral">Assédio Moral</SelectItem>
+                    <SelectItem value="assedio_sexual">Assédio Sexual</SelectItem>
+                    <SelectItem value="discrimination">Discriminação</SelectItem>
+                    <SelectItem value="condicoes_trabalho">Condições de Trabalho</SelectItem>
+                    <SelectItem value="violencia_psicologica">Violência Psicológica</SelectItem>
                     <SelectItem value="other">Outros</SelectItem>
                   </SelectContent>
                 </Select>
@@ -171,9 +171,9 @@ export default function AnonymousReport() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="low">Baixa</SelectItem>
-                    <SelectItem value="medium">Media</SelectItem>
+                    <SelectItem value="medium">Média</SelectItem>
                     <SelectItem value="high">Alta</SelectItem>
-                    <SelectItem value="critical">Critica</SelectItem>
+                    <SelectItem value="critical">Crítica</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -210,7 +210,7 @@ export default function AnonymousReport() {
                 disabled={submitMutation.isPending}
               >
                 {submitMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Enviar Denuncia
+                Enviar Denúncia
               </Button>
             </div>
           </CardContent>

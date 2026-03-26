@@ -44,11 +44,11 @@ import {
 import { usePdfExport } from "@/hooks/usePdfExport";
 
 const CATEGORY_LABELS: Record<string, string> = {
-  assedio_moral: "Assedio Moral",
-  assedio_sexual: "Assedio Sexual",
-  discrimination: "Discriminacao",
-  condicoes_trabalho: "Condicoes de Trabalho",
-  violencia_psicologica: "Violencia Psicologica",
+  assedio_moral: "Assédio Moral",
+  assedio_sexual: "Assédio Sexual",
+  discrimination: "Discriminação",
+  condicoes_trabalho: "Condições de Trabalho",
+  violencia_psicologica: "Violência Psicológica",
   other: "Outros",
   // Legacy
   harassment: "Assedio",
@@ -80,13 +80,13 @@ const SEVERITY_VARIANT: Record<string, "default" | "secondary" | "destructive" |
 
 const SEVERITY_LABELS: Record<string, string> = {
   low: "Baixa",
-  medium: "Media",
+  medium: "Média",
   high: "Alta",
-  critical: "Critica",
+  critical: "Crítica",
 };
 
 export default function ReportManagement() {
-  usePageMeta({ title: "Gestao de Denuncias" });
+  usePageMeta({ title: "Gestão de Denúncias" });
   const { exportPdf, isExporting } = usePdfExport();
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
@@ -131,7 +131,7 @@ export default function ReportManagement() {
 
   const updateMutation = trpc.anonymousReports.update.useMutation({
     onSuccess: () => {
-      toast.success("Denuncia atualizada com sucesso!");
+      toast.success("Denúncia atualizada com sucesso!");
       setSelectedReport(null);
       refetch();
     },
@@ -166,7 +166,7 @@ export default function ReportManagement() {
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Gestao de Denuncias</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Gestão de Denúncias</h1>
             <p className="text-muted-foreground">
               Acompanhe e gerencie denuncias do canal anonimo
             </p>
@@ -185,7 +185,7 @@ export default function ReportManagement() {
         <div className="grid gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Denuncias</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Denúncias</CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -236,7 +236,7 @@ export default function ReportManagement() {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <ShieldAlert className="h-5 w-5" />
-                Denuncias Registradas
+                Denúncias Registradas
               </CardTitle>
               <div className="flex gap-2">
                 <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); }}>
@@ -258,9 +258,9 @@ export default function ReportManagement() {
                   <SelectContent>
                     <SelectItem value="all">Todas Gravidades</SelectItem>
                     <SelectItem value="low">Baixa</SelectItem>
-                    <SelectItem value="medium">Media</SelectItem>
+                    <SelectItem value="medium">Média</SelectItem>
                     <SelectItem value="high">Alta</SelectItem>
-                    <SelectItem value="critical">Critica</SelectItem>
+                    <SelectItem value="critical">Crítica</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -392,11 +392,11 @@ export default function ReportManagement() {
                     id="adminNotes"
                     value={detailForm.adminNotes}
                     onChange={(e) => setDetailForm({ ...detailForm, adminNotes: e.target.value })}
-                    placeholder="Anotacoes internas sobre a denuncia (nao visivel ao denunciante)..."
+                    placeholder="Anotações internas sobre a denúncia (não visível ao denunciante)..."
                     rows={3}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Estas notas sao de uso interno e nao sao visiveis ao denunciante.
+                    Estas notas são de uso interno e não são visíveis ao denunciante.
                   </p>
                 </div>
 
@@ -406,7 +406,7 @@ export default function ReportManagement() {
                   </Button>
                   <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
                     {updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Atualizar Denuncia
+                    Atualizar Denúncia
                   </Button>
                 </div>
               </div>

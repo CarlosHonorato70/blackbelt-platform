@@ -532,7 +532,7 @@ export default function AssessmentAnalytics() {
               />
             )}
 
-            {/* Etapa 2: Inventario de Riscos */}
+            {/* Etapa 2: Inventário de Riscos */}
             {firstAssessmentId && (
               <AiInventoryPanel
                 assessmentId={firstAssessmentId}
@@ -541,7 +541,7 @@ export default function AssessmentAnalytics() {
               />
             )}
 
-            {/* Etapa 3: Plano de Acao */}
+            {/* Etapa 3: Plano de Ação */}
             {firstAssessmentId && (
               <AiActionPlanPanel
                 assessmentId={firstAssessmentId}

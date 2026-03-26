@@ -43,7 +43,7 @@ const plans = [
       "Cadastro via CPF (pessoa fisica)",
       "3 empresas/mes incluidas",
       "SamurAI basico (cadastro + COPSOQ)",
-      "Relatorios padrao",
+      "Relatórios padrão",
       "Exportacao PDF",
       "Suporte por email",
     ],
@@ -82,7 +82,7 @@ const plans = [
       "Tudo do Professional",
       "White-label (sua marca)",
       "API access",
-      "Relatorios personalizados",
+      "Relatórios personalizados",
       "Suporte dedicado",
     ],
     cta: "Comecar Agora",
@@ -136,7 +136,7 @@ const features = [
   },
   {
     icon: Eye,
-    title: "Canal de Denuncias",
+    title: "Canal de Denúncias",
     description:
       "Canal anonimo integrado para relatos de riscos psicossociais.",
   },
@@ -146,13 +146,13 @@ const features = [
 const samuraiPhases = [
   { icon: Search, title: "Cadastro", desc: "CNPJ > dados automaticos da Receita Federal" },
   { icon: Brain, title: "Diagnostico", desc: "Analise do porte, setor e riscos iniciais" },
-  { icon: ClipboardCheck, title: "Avaliacao", desc: "COPSOQ-II automatizado para colaboradores" },
+  { icon: ClipboardCheck, title: "Avaliação", desc: "COPSOQ-II automatizado para colaboradores" },
   { icon: BarChart3, title: "Analise", desc: "Scores de risco por dimensao e setor" },
-  { icon: FileCheck, title: "Inventario", desc: "Inventario de riscos psicossociais" },
-  { icon: Target, title: "Plano de Acao", desc: "Intervencoes priorizadas com prazos" },
+  { icon: FileCheck, title: "Inventário", desc: "Inventário de riscos psicossociais" },
+  { icon: Target, title: "Plano de Ação", desc: "Intervencoes priorizadas com prazos" },
   { icon: Users, title: "Treinamentos", desc: "Programas de capacitacao sugeridos" },
   { icon: FileText, title: "Documentacao", desc: "PGR, PCMSO e laudos gerados" },
-  { icon: Award, title: "Certificacao", desc: "Certificado de conformidade NR-01" },
+  { icon: Award, title: "Certificação", desc: "Certificado de conformidade NR-01" },
   { icon: Bell, title: "Monitoramento", desc: "Alertas de prazos e reavaliacoes" },
 ];
 
@@ -184,7 +184,7 @@ const faqItems = [
   },
   {
     q: "Posso usar minha propria marca (white-label)?",
-    a: "Sim! No plano Enterprise, voce pode personalizar a plataforma com sua marca, logo e cores. Seus clientes verao apenas a identidade visual da sua consultoria.",
+    a: "Sim! No plano Enterprise, você pode personalizar a plataforma com sua marca, logo e cores. Seus clientes verao apenas a identidade visual da sua consultoria.",
   },
   {
     q: "Qual o formato do questionario utilizado?",
@@ -194,7 +194,7 @@ const faqItems = [
 
 export default function Landing() {
   usePageMeta({
-    title: "Gestao de Riscos Psicossociais | SamurAI",
+    title: "Gestão de Riscos Psicossociais | SamurAI",
     description:
       "Automatize a conformidade NR-01 com inteligencia artificial. SamurAI: do CNPJ ao certificado em minutos.",
   });
@@ -285,7 +285,7 @@ export default function Landing() {
             com Inteligencia Artificial
           </h1>
           <p className="text-lg md:text-xl text-gray-400 mb-10 max-w-3xl mx-auto leading-relaxed">
-            Do CNPJ ao certificado em minutos, nao meses. O SamurAI automatiza as 10
+            Do CNPJ ao certificado em minutos, não meses. O SamurAI automatiza as 10
             fases da gestao de riscos psicossociais para consultores de SST e
             empresas.
           </p>
@@ -470,7 +470,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-              Tudo que voce precisa para a NR-01
+              Tudo que você precisa para a NR-01
             </h2>
             <p className="text-gray-500 max-w-2xl mx-auto text-lg">
               Plataforma completa com 48+ paginas, 9 modulos e automacao de ponta a ponta.
@@ -653,7 +653,7 @@ export default function Landing() {
               Perguntas Frequentes
             </h2>
             <p className="text-gray-500 text-lg">
-              Tudo que voce precisa saber sobre a plataforma e a NR-01.
+              Tudo que você precisa saber sobre a plataforma e a NR-01.
             </p>
           </div>
           <div className="space-y-3">

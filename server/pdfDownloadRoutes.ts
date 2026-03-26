@@ -37,9 +37,9 @@ import { eq, and, desc, sql } from "drizzle-orm";
 
 const branding: PdfBranding = { companyName: "Black Belt Platform", primaryColor: "#1a365d" };
 
-const SEVERITY_LABELS: Record<string, string> = { low: "Leve", medium: "Moderada", high: "Grave", critical: "Gravissima" };
-const PROBABILITY_LABELS: Record<string, string> = { rare: "Rara", unlikely: "Improvavel", possible: "Possivel", likely: "Provavel", certain: "Certa" };
-const RISK_LABELS: Record<string, string> = { low: "Baixo", medium: "Medio", high: "Alto", critical: "Critico" };
+const SEVERITY_LABELS: Record<string, string> = { low: "Leve", medium: "Moderada", high: "Grave", critical: "Gravíssima" };
+const PROBABILITY_LABELS: Record<string, string> = { rare: "Rara", unlikely: "Improvável", possible: "Possível", likely: "Provável", certain: "Certa" };
+const RISK_LABELS: Record<string, string> = { low: "Baixo", medium: "Médio", high: "Alto", critical: "Crítico" };
 const RISK_COLORS: Record<string, string> = { low: "#10b981", medium: "#f59e0b", high: "#f97316", critical: "#ef4444" };
 
 function fmtDate(d: Date | string | null | undefined): string {
@@ -54,19 +54,19 @@ function fmtDate(d: Date | string | null | undefined): string {
 async function authenticateRequest(req: Request, res: Response): Promise<{ userId: string; tenantId: string } | null> {
   const sessionToken = req.cookies?.[COOKIE_NAME];
   if (!sessionToken) {
-    res.status(401).json({ error: "Autenticacao necessaria" });
+    res.status(401).json({ error: "Autenticação necessária" });
     return null;
   }
 
   const result = verifySessionToken(sessionToken);
   if (!result) {
-    res.status(401).json({ error: "Sessao invalida ou expirada" });
+    res.status(401).json({ error: "Sessão inválida ou expirada" });
     return null;
   }
 
   const user = await getUserById(result.userId);
   if (!user || !user.tenantId) {
-    res.status(403).json({ error: "Usuario nao encontrado" });
+    res.status(403).json({ error: "Usuário não encontrado" });
     return null;
   }
 
@@ -93,7 +93,7 @@ type PdfGenerator = (companyId: string, db: any) => Promise<{ buffer: Buffer; fi
 
 const pdfGenerators: Record<string, PdfGenerator> = {
 
-  // Relatorio COPSOQ-II
+  // Relatório COPSOQ-II
   async copsoq(companyId, db) {
     const [report] = await db.select().from(copsoqReports)
       .where(eq(copsoqReports.tenantId, companyId))
@@ -103,7 +103,7 @@ const pdfGenerators: Record<string, PdfGenerator> = {
       .where(eq(tenants.id, companyId)).limit(1);
 
     const sections: PdfSection[] = [
-      { type: "title", content: "Relatorio de Avaliacao Psicossocial COPSOQ-II" },
+      { type: "title", content: "Relatório de Avaliação Psicossocial COPSOQ-II" },
     ];
 
     if (report) {
@@ -111,7 +111,7 @@ const pdfGenerators: Record<string, PdfGenerator> = {
         type: "kpis", kpis: [
           { label: "Respondentes", value: String(report.totalRespondents || 0), color: "#1a365d" },
           { label: "Taxa de Resposta", value: `${report.responseRate || 0}%`, color: "#10b981" },
-          { label: "Riscos Criticos", value: String(report.criticalRiskCount || 0), color: "#ef4444" },
+          { label: "Riscos Críticos", value: String(report.criticalRiskCount || 0), color: "#ef4444" },
           { label: "Riscos Altos", value: String(report.highRiskCount || 0), color: "#f97316" },
         ],
       });
@@ -125,38 +125,38 @@ const pdfGenerators: Record<string, PdfGenerator> = {
       ];
 
       const dimensionLabels: Record<string, string> = {
-        averageDemandScore: "Exigencias Quantitativas",
-        averageControlScore: "Influencia no Trabalho",
+        averageDemandScore: "Exigências Quantitativas",
+        averageControlScore: "Influência no Trabalho",
         averageSupportScore: "Apoio Social",
-        averageLeadershipScore: "Qualidade da Lideranca",
+        averageLeadershipScore: "Qualidade da Liderança",
         averageCommunityScore: "Comunidade Social",
         averageMeaningScore: "Significado do Trabalho",
-        averageTrustScore: "Confianca Horizontal",
-        averageJusticeScore: "Justica e Respeito",
-        averageInsecurityScore: "Inseguranca no Trabalho",
-        averageMentalHealthScore: "Saude Mental",
+        averageTrustScore: "Confiança Horizontal",
+        averageJusticeScore: "Justiça e Respeito",
+        averageInsecurityScore: "Insegurança no Trabalho",
+        averageMentalHealthScore: "Saúde Mental",
         averageBurnoutScore: "Burnout",
-        averageViolenceScore: "Violencia e Assedio",
+        averageViolenceScore: "Violência e Assédio",
       };
 
       const rows = dimensionFields
         .filter((f) => (report as any)[f] != null)
         .map((f) => {
           const val = Number((report as any)[f]) || 0;
-          const level = val >= 66 ? "Critico" : val >= 50 ? "Alto" : val >= 33 ? "Medio" : "Favoravel";
+          const level = val >= 66 ? "Crítico" : val >= 50 ? "Alto" : val >= 33 ? "Médio" : "Favorável";
           const color = val >= 66 ? "#ef4444" : val >= 50 ? "#f97316" : val >= 33 ? "#f59e0b" : "#10b981";
           return { cells: [dimensionLabels[f] || f, `${val.toFixed(1)}`, level], accentColor: color };
         });
 
       if (rows.length > 0) {
         sections.push({ type: "divider" });
-        sections.push({ type: "title", content: "Resultados por Dimensao" });
+        sections.push({ type: "title", content: "Resultados por Dimensão" });
         sections.push({
           type: "table",
           columns: [
-            { header: "Dimensao", width: 200 },
+            { header: "Dimensão", width: 200 },
             { header: "Score", width: 80, align: "center" },
-            { header: "Nivel de Risco", width: 100, align: "center" },
+            { header: "Nível de Risco", width: 100, align: "center" },
           ],
           rows,
         });
@@ -164,16 +164,16 @@ const pdfGenerators: Record<string, PdfGenerator> = {
 
       if (report.recommendations) {
         sections.push({ type: "divider" });
-        sections.push({ type: "title", content: "Recomendacoes" });
+        sections.push({ type: "title", content: "Recomendações" });
         sections.push({ type: "text", content: String(report.recommendations) });
       }
     } else {
-      sections.push({ type: "text", content: "Nenhuma avaliacao COPSOQ-II concluida para esta empresa." });
+      sections.push({ type: "text", content: "Nenhuma avaliação COPSOQ-II concluída para esta empresa." });
     }
 
     const buffer = await generateGenericReportPdf({
-      reportTitle: "Relatorio COPSOQ-II",
-      reportSubtitle: "Avaliacao Psicossocial — NR-01",
+      reportTitle: "Relatório COPSOQ-II",
+      reportSubtitle: "Avaliação Psicossocial — NR-01",
       companyName: tenant?.name,
       date: fmtDate(new Date()),
       sections,
@@ -181,7 +181,7 @@ const pdfGenerators: Record<string, PdfGenerator> = {
     return { buffer, filename: "relatorio-copsoq-ii.pdf" };
   },
 
-  // Inventario de Riscos Psicossociais
+  // Inventário de Riscos Psicossociais
   async inventario(companyId, db) {
     const [tenant] = await db.select({ name: tenants.name }).from(tenants)
       .where(eq(tenants.id, companyId)).limit(1);
@@ -192,10 +192,10 @@ const pdfGenerators: Record<string, PdfGenerator> = {
 
     if (!assessment) {
       const buffer = await generateGenericReportPdf({
-        reportTitle: "Inventario de Riscos Psicossociais",
+        reportTitle: "Inventário de Riscos Psicossociais",
         companyName: tenant?.name,
         date: fmtDate(new Date()),
-        sections: [{ type: "text", content: "Nenhum inventario de riscos gerado para esta empresa." }],
+        sections: [{ type: "text", content: "Nenhum inventário de riscos gerado para esta empresa." }],
       }, branding);
       return { buffer, filename: "inventario-riscos.pdf" };
     }
@@ -238,12 +238,12 @@ const pdfGenerators: Record<string, PdfGenerator> = {
     };
 
     const buffer = await generateInventoryPdf(pdfData, branding, {
-      title: "Inventario de Riscos Ocupacionais \u2014 Psicossociais",
+      title: "Inventário de Riscos Ocupacionais \u2014 Psicossociais",
     });
     return { buffer, filename: "inventario-riscos-psicossociais.pdf" };
   },
 
-  // Plano de Acao
+  // Plano de Ação
   async plano(companyId, db) {
     const [tenant] = await db.select({ name: tenants.name }).from(tenants)
       .where(eq(tenants.id, companyId)).limit(1);
@@ -254,10 +254,10 @@ const pdfGenerators: Record<string, PdfGenerator> = {
 
     if (plans.length === 0) {
       const buffer = await generateGenericReportPdf({
-        reportTitle: "Plano de Acao",
+        reportTitle: "Plano de Ação",
         companyName: tenant?.name,
         date: fmtDate(new Date()),
-        sections: [{ type: "text", content: "Nenhum plano de acao gerado para esta empresa." }],
+        sections: [{ type: "text", content: "Nenhum plano de ação gerado para esta empresa." }],
       }, branding);
       return { buffer, filename: "plano-acao.pdf" };
     }
@@ -266,12 +266,12 @@ const pdfGenerators: Record<string, PdfGenerator> = {
       companyName: tenant?.name || "Empresa",
       sector: "Geral",
       date: fmtDate(new Date()),
-      planTitle: "Plano de Acao \u2014 Mitigacao de Riscos Psicossociais",
+      planTitle: "Plano de Ação \u2014 Mitigação de Riscos Psicossociais",
       actions: plans.map((p: any) => ({
         riskIdentified: p.title || "\u2014",
         controlMeasure: p.description || "\u2014",
         actionType: p.actionType || "administrative",
-        responsibleRole: "Gestao de RH",
+        responsibleRole: "Gestão de RH",
         deadline: p.deadline ? new Date(p.deadline).toLocaleDateString("pt-BR") : "\u2014",
         priority: p.priority || "medium",
         monthlySchedule: p.monthlySchedule || [],
@@ -279,11 +279,11 @@ const pdfGenerators: Record<string, PdfGenerator> = {
         kpiIndicator: p.kpiIndicator || "",
       })),
       generalActions: [],
-      monitoringStrategy: "Acompanhamento mensal de indicadores COPSOQ-II com reavaliacao trimestral.",
+      monitoringStrategy: "Acompanhamento mensal de indicadores COPSOQ-II com reavaliação trimestral.",
     };
 
     const buffer = await generateActionPlanPdf(pdfData, branding, {
-      title: "Plano de Acao \u2014 Mitigacao de Riscos Psicossociais",
+      title: "Plano de Ação \u2014 Mitigação de Riscos Psicossociais",
     });
     return { buffer, filename: "plano-acao-nr01.pdf" };
   },
@@ -304,25 +304,25 @@ const pdfGenerators: Record<string, PdfGenerator> = {
     if (modules.length > 0) {
       sections.push({
         type: "kpis", kpis: [
-          { label: "Total de Modulos", value: String(modules.length), color: "#1a365d" },
-          { label: "Carga Horaria Total", value: `${modules.reduce((s: number, m: any) => s + Math.round((m.duration || 0) / 60), 0)}h`, color: "#3b82f6" },
+          { label: "Total de Módulos", value: String(modules.length), color: "#1a365d" },
+          { label: "Carga Horária Total", value: `${modules.reduce((s: number, m: any) => s + Math.round((m.duration || 0) / 60), 0)}h`, color: "#3b82f6" },
         ],
       });
 
       sections.push({
         type: "table",
         columns: [
-          { header: "Modulo", width: 180 },
-          { header: "Descricao", width: 200 },
-          { header: "Duracao", width: 60, align: "center" },
-          { header: "Obrigatorio", width: 60, align: "center" },
+          { header: "Módulo", width: 180 },
+          { header: "Descrição", width: 200 },
+          { header: "Duração", width: 60, align: "center" },
+          { header: "Obrigatório", width: 60, align: "center" },
         ],
         rows: modules.map((m: any) => ({
           cells: [
             m.title || "\u2014",
             m.description || "\u2014",
             `${Math.round((m.duration || 0) / 60)}h`,
-            m.mandatory ? "Sim" : "Nao",
+            m.mandatory ? "Sim" : "Não",
           ],
         })),
       });
@@ -332,7 +332,7 @@ const pdfGenerators: Record<string, PdfGenerator> = {
 
     const buffer = await generateGenericReportPdf({
       reportTitle: "Programa de Treinamento",
-      reportSubtitle: "Capacitacao em Saude Mental e Riscos Psicossociais",
+      reportSubtitle: "Capacitação em Saúde Mental e Riscos Psicossociais",
       companyName: tenant?.name,
       date: fmtDate(new Date()),
       sections,
@@ -377,7 +377,7 @@ const pdfGenerators: Record<string, PdfGenerator> = {
         sections.push({
           type: "table",
           columns: [
-            { header: "Servico", width: 250 },
+            { header: "Serviço", width: 250 },
             { header: "Qtd", width: 40, align: "center" },
             { header: "Valor Unit.", width: 90, align: "right" },
             { header: "Subtotal", width: 90, align: "right" },
@@ -410,30 +410,30 @@ const pdfGenerators: Record<string, PdfGenerator> = {
           sections.push({
             type: "table",
             columns: [
-              { header: "Dimensao", width: 280 },
+              { header: "Dimensão", width: 280 },
               { header: "Score", width: 80, align: "center" },
-              { header: "Nivel", width: 100, align: "center" },
+              { header: "Nível", width: 100, align: "center" },
             ],
             rows: [
-              { label: "Exigencias Quantitativas", score: r.averageDemandScore },
-              { label: "Influencia no Trabalho", score: r.averageControlScore },
+              { label: "Exigências Quantitativas", score: r.averageDemandScore },
+              { label: "Influência no Trabalho", score: r.averageControlScore },
               { label: "Apoio Social", score: r.averageSupportScore },
-              { label: "Lideranca", score: r.averageLeadershipScore },
+              { label: "Liderança", score: r.averageLeadershipScore },
               { label: "Comunidade no Trabalho", score: r.averageCommunityScore },
               { label: "Significado do Trabalho", score: r.averageMeaningScore },
-              { label: "Confianca", score: r.averageTrustScore },
-              { label: "Justica", score: r.averageJusticeScore },
-              { label: "Inseguranca no Trabalho", score: r.averageInsecurityScore },
-              { label: "Saude Mental", score: r.averageMentalHealthScore },
+              { label: "Confiança", score: r.averageTrustScore },
+              { label: "Justiça", score: r.averageJusticeScore },
+              { label: "Insegurança no Trabalho", score: r.averageInsecurityScore },
+              { label: "Saúde Mental", score: r.averageMentalHealthScore },
               { label: "Burnout", score: r.averageBurnoutScore },
-              { label: "Violencia e Assedio", score: r.averageViolenceScore },
+              { label: "Violência e Assédio", score: r.averageViolenceScore },
             ]
               .filter((d) => d.score != null)
               .map((d) => ({
                 cells: [
                   d.label,
                   String(d.score),
-                  (d.score ?? 0) >= 75 ? "Critico" : (d.score ?? 0) >= 50 ? "Alto" : (d.score ?? 0) >= 25 ? "Medio" : "Baixo",
+                  (d.score ?? 0) >= 75 ? "Crítico" : (d.score ?? 0) >= 50 ? "Alto" : (d.score ?? 0) >= 25 ? "Médio" : "Baixo",
                 ],
               })),
           });
@@ -443,9 +443,9 @@ const pdfGenerators: Record<string, PdfGenerator> = {
             sections.push({
               type: "kpis", kpis: [
                 { label: "Risco Baixo", value: String(r.lowRiskCount || 0), color: "#10b981" },
-                { label: "Risco Medio", value: String(r.mediumRiskCount || 0), color: "#f59e0b" },
+                { label: "Risco Médio", value: String(r.mediumRiskCount || 0), color: "#f59e0b" },
                 { label: "Risco Alto", value: String(r.highRiskCount || 0), color: "#f97316" },
-                { label: "Risco Critico", value: String(r.criticalRiskCount || 0), color: "#ef4444" },
+                { label: "Risco Crítico", value: String(r.criticalRiskCount || 0), color: "#ef4444" },
               ],
             });
           }
@@ -470,7 +470,7 @@ const pdfGenerators: Record<string, PdfGenerator> = {
             sections.push({
               type: "table",
               columns: [
-                { header: "Nivel de Risco", width: 200 },
+                { header: "Nível de Risco", width: 200 },
                 { header: "Quantidade", width: 100, align: "center" },
               ],
               rows: riskItems.map((ri: any) => ({
@@ -495,11 +495,11 @@ const pdfGenerators: Record<string, PdfGenerator> = {
           const statusLabels: Record<string, string> = {
             pending: "Pendente",
             in_progress: "Em Andamento",
-            completed: "Concluido",
+            completed: "Concluído",
             cancelled: "Cancelado",
           };
           sections.push({ type: "spacer" });
-          sections.push({ type: "subtitle", content: "Planos de Acao" });
+          sections.push({ type: "subtitle", content: "Planos de Ação" });
           sections.push({
             type: "table",
             columns: [
@@ -514,15 +514,15 @@ const pdfGenerators: Record<string, PdfGenerator> = {
 
         // === Recommended Services ===
         sections.push({ type: "spacer" });
-        sections.push({ type: "subtitle", content: "Servicos Recomendados" });
+        sections.push({ type: "subtitle", content: "Serviços Recomendados" });
         sections.push({
           type: "list", items: [
-            "Diagnostico Psicossocial Completo (COPSOQ-II + entrevistas)",
-            "Inventario de Riscos Psicossociais conforme NR-01",
-            "Plano de Acao com cronograma e responsaveis",
-            "Treinamento de Gestores em Saude Mental Ocupacional",
-            "Programa de Acompanhamento e Monitoramento Continuo",
-            "Certificacao de Conformidade NR-01",
+            "Diagnóstico Psicossocial Completo (COPSOQ-II + entrevistas)",
+            "Inventário de Riscos Psicossociais conforme NR-01",
+            "Plano de Ação com cronograma e responsáveis",
+            "Treinamento de Gestores em Saúde Mental Ocupacional",
+            "Programa de Acompanhamento e Monitoramento Contínuo",
+            "Certificação de Conformidade NR-01",
           ],
         });
 
@@ -539,7 +539,7 @@ const pdfGenerators: Record<string, PdfGenerator> = {
 
         sections.push({ type: "spacer" });
         sections.push({ type: "subtitle", content: "Estimativa de ROI" });
-        sections.push({ type: "text", content: `Base de calculo: ${employeeCount} colaboradores cadastrados` });
+        sections.push({ type: "text", content: `Base de cálculo: ${employeeCount} colaboradores cadastrados` });
         sections.push({
           type: "table",
           columns: [
@@ -547,10 +547,10 @@ const pdfGenerators: Record<string, PdfGenerator> = {
             { header: "Valor", width: 180, align: "right" },
           ],
           rows: [
-            { cells: ["Custo medio de absenteismo/dia", `R$ ${dailyAbsentCost.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`] },
-            { cells: ["Dias de ausencia evitados (estimativa/ano)", String(estimatedDaysAvoided)] },
+            { cells: ["Custo médio de absenteísmo/dia", `R$ ${dailyAbsentCost.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`] },
+            { cells: ["Dias de ausência evitados (estimativa/ano)", String(estimatedDaysAvoided)] },
             { cells: ["Economia anual estimada", `R$ ${annualSavings.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`] },
-            { cells: ["Reducao estimada de turnover", "15% a 25%"] },
+            { cells: ["Redução estimada de turnover", "15% a 25%"] },
             { cells: ["Melhoria de produtividade estimada", "10% a 20%"] },
           ],
         });
@@ -569,15 +569,15 @@ const pdfGenerators: Record<string, PdfGenerator> = {
           const statusLabels2: Record<string, string> = {
             pending: "Pendente",
             in_progress: "Em Andamento",
-            completed: "Concluido",
+            completed: "Concluído",
             cancelled: "Cancelado",
           };
           sections.push({ type: "spacer" });
-          sections.push({ type: "subtitle", content: "Cronograma de Implementacao" });
+          sections.push({ type: "subtitle", content: "Cronograma de Implementação" });
           sections.push({
             type: "table",
             columns: [
-              { header: "Acao", width: 230 },
+              { header: "Ação", width: 230 },
               { header: "Prazo", width: 100, align: "center" },
               { header: "Status", width: 100, align: "center" },
             ],
@@ -593,7 +593,7 @@ const pdfGenerators: Record<string, PdfGenerator> = {
 
         // === Payment Terms ===
         sections.push({ type: "spacer" });
-        sections.push({ type: "subtitle", content: "Condicoes de Pagamento" });
+        sections.push({ type: "subtitle", content: "Condições de Pagamento" });
         sections.push({
           type: "table",
           columns: [
@@ -602,26 +602,26 @@ const pdfGenerators: Record<string, PdfGenerator> = {
           ],
           rows: [
             { cells: ["Assinatura do contrato", "40%"] },
-            { cells: ["Inicio dos trabalhos", "30%"] },
+            { cells: ["Início dos trabalhos", "30%"] },
             { cells: ["Entrega final", "30%"] },
           ],
         });
 
         // === Next Steps ===
         sections.push({ type: "spacer" });
-        sections.push({ type: "subtitle", content: "Proximos Passos" });
+        sections.push({ type: "subtitle", content: "Próximos Passos" });
         sections.push({
           type: "list", items: [
-            "1. Aprovacao da proposta pelo cliente",
-            "2. Assinatura do contrato de prestacao de servicos",
-            "3. Inicio do diagnostico e implementacao conforme cronograma",
+            "1. Aprovação da proposta pelo cliente",
+            "2. Assinatura do contrato de prestação de serviços",
+            "3. Início do diagnóstico e implementação conforme cronograma",
           ],
         });
 
       } else {
         // Initial proposal — brief text only
         sections.push({ type: "spacer" });
-        sections.push({ type: "text", content: "Esta e uma proposta inicial de estimativa de custos para servicos de gestao de riscos psicossociais conforme NR-01. Os valores apresentados sao baseados no escopo preliminar e podem ser ajustados apos o diagnostico completo." });
+        sections.push({ type: "text", content: "Esta é uma proposta inicial de estimativa de custos para serviços de gestão de riscos psicossociais conforme NR-01. Os valores apresentados são baseados no escopo preliminar e podem ser ajustados após o diagnóstico completo." });
       }
     }
 
@@ -651,10 +651,10 @@ const pdfGenerators: Record<string, PdfGenerator> = {
         { type: "spacer" },
         { type: "title", content: "CERTIFICADO DE CONFORMIDADE NR-01" },
         { type: "spacer" },
-        { type: "text", content: `Certificamos que a empresa ${tenant?.name || "organizacao"} (CNPJ: ${tenant?.cnpj || ""}) atende aos requisitos da Norma Regulamentadora NR-01 para gestao de riscos psicossociais ocupacionais.` },
+        { type: "text", content: `Certificamos que a empresa ${tenant?.name || "organização"} (CNPJ: ${tenant?.cnpj || ""}) atende aos requisitos da Norma Regulamentadora NR-01 para gestão de riscos psicossociais ocupacionais.` },
         {
           type: "kpis", kpis: [
-            { label: "Numero do Certificado", value: cert.certificateNumber, color: "#1a365d" },
+            { label: "Número do Certificado", value: cert.certificateNumber, color: "#1a365d" },
             { label: "Score de Conformidade", value: `${cert.complianceScore}%`, color: cert.complianceScore >= 70 ? "#10b981" : "#ef4444" },
             { label: "Status", value: cert.status === "active" ? "Ativo" : cert.status === "expired" ? "Expirado" : "Revogado", color: cert.status === "active" ? "#10b981" : "#ef4444" },
           ],
@@ -666,12 +666,12 @@ const pdfGenerators: Record<string, PdfGenerator> = {
             { header: "Valor", width: 300 },
           ], rows: [
             { cells: ["Emitido em", fmtDate(cert.issuedAt)] },
-            { cells: ["Valido ate", fmtDate(cert.validUntil)] },
+            { cells: ["Válido até", fmtDate(cert.validUntil)] },
             { cells: ["Emitido por", cert.issuedBy || "\u2014"] },
           ],
         },
         { type: "spacer" },
-        { type: "signature", signatureName: cert.issuedBy || "Responsavel Tecnico", signatureRole: "Auditor de Conformidade NR-01" },
+        { type: "signature", signatureName: cert.issuedBy || "Responsável Técnico", signatureRole: "Auditor de Conformidade NR-01" },
       );
     } else {
       sections.push({ type: "text", content: "Nenhum certificado de conformidade emitido para esta empresa." });
@@ -698,7 +698,7 @@ const pdfGenerators: Record<string, PdfGenerator> = {
     const statusLabels: Record<string, string> = {
       compliant: "Conforme",
       partial: "Parcial",
-      non_compliant: "Nao Conforme",
+      non_compliant: "Não Conforme",
     };
     const statusColors: Record<string, string> = {
       compliant: "#10b981",
@@ -718,13 +718,13 @@ const pdfGenerators: Record<string, PdfGenerator> = {
           { label: "Score", value: `${score}%`, color: score >= 70 ? "#10b981" : "#ef4444" },
           { label: "Conforme", value: String(compliant), color: "#10b981" },
           { label: "Parcial", value: String(partial), color: "#f59e0b" },
-          { label: "Nao Conforme", value: String(total - compliant - partial), color: "#ef4444" },
+          { label: "Não Conforme", value: String(total - compliant - partial), color: "#ef4444" },
         ],
       },
       {
         type: "table",
         columns: [
-          { header: "Codigo", width: 90 },
+          { header: "Código", width: 90 },
           { header: "Requisito", width: 280 },
           { header: "Status", width: 80, align: "center" },
         ],
@@ -766,23 +766,23 @@ export function registerPdfDownloadRoutes(app: Express) {
       const { type, companyId } = req.params;
 
       if (!type || !companyId) {
-        return res.status(400).json({ error: "Tipo e companyId sao obrigatorios" });
+        return res.status(400).json({ error: "Tipo e companyId são obrigatórios" });
       }
 
       const generator = pdfGenerators[type];
       if (!generator) {
-        return res.status(400).json({ error: `Tipo de PDF desconhecido: ${type}. Tipos validos: ${Object.keys(pdfGenerators).join(", ")}` });
+        return res.status(400).json({ error: `Tipo de PDF desconhecido: ${type}. Tipos válidos: ${Object.keys(pdfGenerators).join(", ")}` });
       }
 
       const db = await getDb();
       if (!db) {
-        return res.status(503).json({ error: "Banco de dados indisponivel" });
+        return res.status(503).json({ error: "Banco de dados indisponível" });
       }
 
       // Validate access
       const hasAccess = await validateCompanyAccess(auth.tenantId, companyId, db);
       if (!hasAccess) {
-        return res.status(403).json({ error: "Sem permissao para acessar esta empresa" });
+        return res.status(403).json({ error: "Sem permissão para acessar esta empresa" });
       }
 
       // Payment check: company users can only download if payment is complete
@@ -801,9 +801,9 @@ export function registerPdfDownloadRoutes(app: Express) {
 
         if (finalProposal && finalProposal.paymentStatus !== "paid") {
           return res.status(402).json({
-            error: "Aguardando confirmacao de pagamento",
+            error: "Aguardando confirmação de pagamento",
             paymentStatus: finalProposal.paymentStatus || "pending",
-            message: "Os documentos serao liberados apos a confirmacao do pagamento pela consultoria.",
+            message: "Os documentos serão liberados após a confirmação do pagamento pela consultoria.",
           });
         }
       }

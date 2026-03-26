@@ -16,11 +16,11 @@ const STATUS_MAP: Record<string, { label: string; color: string; icon: typeof Cl
 };
 
 const CATEGORY_MAP: Record<string, string> = {
-  assedio_moral: "Assedio Moral",
-  assedio_sexual: "Assedio Sexual",
-  discrimination: "Discriminacao",
-  condicoes_trabalho: "Condicoes de Trabalho",
-  violencia_psicologica: "Violencia Psicologica",
+  assedio_moral: "Assédio Moral",
+  assedio_sexual: "Assédio Sexual",
+  discrimination: "Discriminação",
+  condicoes_trabalho: "Condições de Trabalho",
+  violencia_psicologica: "Violência Psicológica",
   other: "Outros",
   harassment: "Assedio",
   violence: "Violencia",
@@ -30,9 +30,9 @@ const CATEGORY_MAP: Record<string, string> = {
 
 const SEVERITY_MAP: Record<string, { label: string; color: string }> = {
   low: { label: "Baixa", color: "bg-green-100 text-green-800" },
-  medium: { label: "Media", color: "bg-yellow-100 text-yellow-800" },
+  medium: { label: "Média", color: "bg-yellow-100 text-yellow-800" },
   high: { label: "Alta", color: "bg-orange-100 text-orange-800" },
-  critical: { label: "Critica", color: "bg-red-100 text-red-800" },
+  critical: { label: "Crítica", color: "bg-red-100 text-red-800" },
 };
 
 export default function ComplaintTrack() {
@@ -49,7 +49,7 @@ export default function ComplaintTrack() {
     e.preventDefault();
     const trimmed = protocol.trim().toUpperCase();
     if (!trimmed) {
-      toast({ title: "Digite o numero do protocolo", variant: "destructive" });
+      toast({ title: "Digite o número do protocolo", variant: "destructive" });
       return;
     }
     setSearchCode(trimmed);
@@ -99,9 +99,9 @@ export default function ComplaintTrack() {
           <Card className="border-red-200">
             <CardContent className="p-6 text-center">
               <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-3" />
-              <h3 className="font-bold text-lg mb-1">Protocolo nao encontrado</h3>
+              <h3 className="font-bold text-lg mb-1">Protocolo não encontrado</h3>
               <p className="text-sm text-muted-foreground">
-                Verifique o numero do protocolo e tente novamente.
+                Verifique o número do protocolo e tente novamente.
               </p>
             </CardContent>
           </Card>
@@ -112,7 +112,7 @@ export default function ComplaintTrack() {
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-green-500" />
-                Denuncia Encontrada
+                Denúncia Encontrada
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -189,7 +189,7 @@ export default function ComplaintTrack() {
           <ShieldCheck className="h-5 w-5 text-blue-500 mt-0.5 shrink-0" />
           <p className="text-xs text-muted-foreground">
             Nenhum dado pessoal e solicitado para esta consulta.
-            O numero de protocolo e a unica forma de rastreamento.
+            O número de protocolo é a única forma de rastreamento.
           </p>
         </div>
 

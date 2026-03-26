@@ -57,7 +57,7 @@ export default function TrainingModule() {
         <div className="p-6">
           <Card>
             <CardContent className="p-6 text-center text-muted-foreground">
-              Modulo nao encontrado.
+              Módulo não encontrado.
             </CardContent>
           </Card>
         </div>
@@ -229,7 +229,7 @@ export default function TrainingModule() {
                 {currentModule?.completed ? (
                   <>
                     <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Modulo Concluido
+                    Módulo Concluído
                   </>
                 ) : (
                   "Concluir Modulo"

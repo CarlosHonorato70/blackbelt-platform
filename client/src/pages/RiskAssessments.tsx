@@ -269,7 +269,7 @@ export default function RiskAssessments() {
 
   const deleteMutation = trpc.riskAssessments.delete.useMutation({
     onSuccess: () => {
-      toast.success("Avaliacao excluida com sucesso!");
+      toast.success("Avaliação excluída com sucesso!");
       utils.riskAssessments.list.invalidate();
       setDeleteDialogOpen(false);
       setAssessmentToDelete(null);
@@ -380,7 +380,7 @@ export default function RiskAssessments() {
               Avaliacoes de Riscos Psicossociais
             </h1>
             <p className="text-muted-foreground">
-              Gestao de riscos conforme NR-01 (Portaria MTE no 1.419/2024)
+              Gestão de riscos conforme NR-01 (Portaria MTE no 1.419/2024)
             </p>
           </div>
 
@@ -391,11 +391,11 @@ export default function RiskAssessments() {
             </Button>
             <Button onClick={() => navigate("/risk-assessments/new")}>
               <Plus className="mr-2 h-4 w-4" />
-              Nova Avaliacao
+              Nova Avaliação
             </Button>
           </div>
 
-          {/* Dead dialog removed — "Nova Avaliacao" button above navigates to /risk-assessments/new */}
+          {/* Dead dialog removed — "Nova Avaliação" button above navigates to /risk-assessments/new */}
         </div>
 
         {/* Risk Summary Badges */}
@@ -707,8 +707,8 @@ export default function RiskAssessments() {
                 <p className="text-sm text-blue-900">
                   <strong>Como funciona:</strong>
                   <br />
-                  A proposta sera gerada automaticamente com base no nivel de risco identificado.
-                  Servicos recomendados serao selecionados conforme a necessidade.
+                  A proposta será gerada automaticamente com base no nível de risco identificado.
+                  Serviços recomendados serão selecionados conforme a necessidade.
                   O cliente recebera um email com a proposta completa (se marcado).
                 </p>
               </div>
@@ -749,7 +749,7 @@ export default function RiskAssessments() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar exclusao</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir esta avaliacao? Esta acao nao pode ser desfeita.
+              Tem certeza que deseja excluir esta avaliação? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

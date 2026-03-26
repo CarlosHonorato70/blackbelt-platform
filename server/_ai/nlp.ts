@@ -110,7 +110,7 @@ function prepareOpenResponses(
 function buildUserPrompt(input: CopsoqAnalysisInput): string {
   const openTexts = prepareOpenResponses(input.openResponses);
 
-  return `## Dados da Avaliacao COPSOQ-II
+  return `## Dados da Avaliação COPSOQ-II
 
 **Titulo:** ${input.assessmentTitle}
 **Total de Respondentes:** ${input.totalRespondents}

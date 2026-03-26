@@ -113,7 +113,7 @@ export default function Login() {
                 Verificacao em 2 Etapas
               </h1>
               <p className="text-sm text-gray-600 text-center mt-2">
-                Digite o codigo do seu app autenticador ou um codigo de backup
+                Digite o código do seu app autenticador ou um código de backup
               </p>
             </div>
 
@@ -126,7 +126,7 @@ export default function Login() {
             <form onSubmit={handle2FASubmit} className="space-y-4">
               <Input
                 type="text"
-                placeholder="Codigo de 6 digitos ou codigo de backup"
+                placeholder="Código de 6 dígitos ou código de backup"
                 value={twoFactorCode}
                 onChange={e => setTwoFactorCode(e.target.value)}
                 required

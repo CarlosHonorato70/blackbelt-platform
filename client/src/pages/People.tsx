@@ -217,7 +217,7 @@ export default function People() {
         data.summary.peopleCreated > 0 ? `${data.summary.peopleCreated} colaborador(es) criado(s)` : null,
       ].filter(Boolean).join(", ");
 
-      toast.success(msg || "Importacao concluida (nenhum registro novo)");
+      toast.success(msg || "Importação concluída (nenhum registro novo)");
     } catch (err: any) {
       toast.error(err.message || "Erro ao importar planilha");
     } finally {

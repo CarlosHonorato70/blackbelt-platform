@@ -185,7 +185,7 @@ export default function LaudoTecnico() {
                   id="title"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  placeholder="Laudo de Avaliacao Psicossocial"
+                  placeholder="Laudo de Avaliação Psicossocial"
                 />
               </div>
               <div>

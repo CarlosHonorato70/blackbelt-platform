@@ -46,7 +46,7 @@ export default function ClimateSurveyResults() {
         <div className="p-6">
           <Card>
             <CardContent className="p-6 text-center text-muted-foreground">
-              Pesquisa nao encontrada.
+              Pesquisa não encontrada.
             </CardContent>
           </Card>
         </div>

@@ -58,19 +58,19 @@ const EMPLOYMENT_TYPE_OPTIONS = ["CLT", "PJ", "Estagiario", "Terceirizado", "Soc
 async function authenticateRequest(req: Request, res: Response): Promise<{ userId: string; tenantId: string } | null> {
   const sessionToken = req.cookies?.[COOKIE_NAME];
   if (!sessionToken) {
-    res.status(401).json({ error: "Autenticacao necessaria" });
+    res.status(401).json({ error: "Autenticação necessária" });
     return null;
   }
 
   const result = verifySessionToken(sessionToken);
   if (!result) {
-    res.status(401).json({ error: "Sessao invalida ou expirada" });
+    res.status(401).json({ error: "Sessão inválida ou expirada" });
     return null;
   }
 
   const user = await getUserById(result.userId);
   if (!user || !user.tenantId) {
-    res.status(403).json({ error: "Usuario nao encontrado" });
+    res.status(403).json({ error: "Usuário não encontrado" });
     return null;
   }
 
@@ -117,7 +117,7 @@ async function generateTemplate(companyId: string, db: any): Promise<Buffer> {
     "Telefone",
     "Cargo",
     "Setor",
-    "Tipo de Vinculo",
+    "Tipo de Vínculo",
   ];
   const peopleSheet = XLSX.utils.aoa_to_sheet([peopleHeaders]);
 
@@ -128,7 +128,7 @@ async function generateTemplate(companyId: string, db: any): Promise<Buffer> {
     { wch: 18 }, // Telefone
     { wch: 25 }, // Cargo
     { wch: 25 }, // Setor
-    { wch: 20 }, // Tipo de Vinculo
+    { wch: 20 }, // Tipo de Vínculo
   ];
 
   XLSX.utils.book_append_sheet(wb, peopleSheet, "Colaboradores");
@@ -236,7 +236,7 @@ async function processImport(companyId: string, fileBuffer: Buffer, db: any): Pr
 
       if (!name) {
         if (row.some((cell: any) => cell)) {
-          result.errors.push(`Linha ${i + 1}: Nome e obrigatorio`);
+          result.errors.push(`Linha ${i + 1}: Nome é obrigatório`);
         }
         result.peopleSkipped++;
         continue;
@@ -264,7 +264,7 @@ async function processImport(companyId: string, fileBuffer: Buffer, db: any): Pr
             result.sectorsCreated++;
           } else {
             result.errors.push(
-              `Linha ${i + 1}: Setor "${sectorName}" nao encontrado. Crie-o na aba Setores.`
+              `Linha ${i + 1}: Setor "${sectorName}" não encontrado. Crie-o na aba Setores.`
             );
             result.peopleSkipped++;
             continue;
@@ -282,7 +282,7 @@ async function processImport(companyId: string, fileBuffer: Buffer, db: any): Pr
           employmentType = employmentTypeRaw;
         } else {
           result.errors.push(
-            `Linha ${i + 1}: Tipo de vinculo "${employmentTypeRaw}" invalido. Usando CLT.`
+            `Linha ${i + 1}: Tipo de vínculo "${employmentTypeRaw}" inválido. Usando CLT.`
           );
         }
       }
@@ -377,9 +377,9 @@ export function registerImportExportRoutes(app: Express) {
       } catch (error: any) {
         log.error("[Import People] Error:", error);
         if (error.message?.includes("xlsx")) {
-          return res.status(400).json({ error: "Arquivo invalido. Envie um arquivo .xlsx valido." });
+          return res.status(400).json({ error: "Arquivo inválido. Envie um arquivo .xlsx válido." });
         }
-        res.status(500).json({ error: "Erro ao processar importacao" });
+        res.status(500).json({ error: "Erro ao processar importação" });
       }
     }
   );

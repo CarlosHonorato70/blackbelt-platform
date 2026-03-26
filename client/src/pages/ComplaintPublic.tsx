@@ -10,19 +10,19 @@ import { useToast } from "@/hooks/use-toast";
 import { ShieldCheck, AlertTriangle, CheckCircle, Copy, Search } from "lucide-react";
 
 const categories = [
-  { value: "assedio_moral", label: "Assedio Moral" },
-  { value: "assedio_sexual", label: "Assedio Sexual" },
-  { value: "discrimination", label: "Discriminacao" },
-  { value: "condicoes_trabalho", label: "Condicoes de Trabalho" },
-  { value: "violencia_psicologica", label: "Violencia Psicologica" },
+  { value: "assedio_moral", label: "Assédio Moral" },
+  { value: "assedio_sexual", label: "Assédio Sexual" },
+  { value: "discrimination", label: "Discriminação" },
+  { value: "condicoes_trabalho", label: "Condições de Trabalho" },
+  { value: "violencia_psicologica", label: "Violência Psicológica" },
   { value: "other", label: "Outros" },
 ] as const;
 
 const severities = [
   { value: "low", label: "Baixa", color: "bg-green-100 text-green-800 border-green-300" },
-  { value: "medium", label: "Media", color: "bg-yellow-100 text-yellow-800 border-yellow-300" },
+  { value: "medium", label: "Média", color: "bg-yellow-100 text-yellow-800 border-yellow-300" },
   { value: "high", label: "Alta", color: "bg-orange-100 text-orange-800 border-orange-300" },
-  { value: "critical", label: "Critica", color: "bg-red-100 text-red-800 border-red-300" },
+  { value: "critical", label: "Crítica", color: "bg-red-100 text-red-800 border-red-300" },
 ] as const;
 
 export default function ComplaintPublic() {
@@ -47,11 +47,11 @@ export default function ComplaintPublic() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!category || !description || description.length < 10) {
-      toast({ title: "Preencha todos os campos obrigatorios", variant: "destructive" });
+      toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
       return;
     }
     if (!tenantId) {
-      toast({ title: "Empresa nao identificada", variant: "destructive" });
+      toast({ title: "Empresa não identificada", variant: "destructive" });
       return;
     }
     submitReport.mutate({
@@ -66,7 +66,7 @@ export default function ComplaintPublic() {
   const copyCode = () => {
     if (reportCode) {
       navigator.clipboard.writeText(reportCode);
-      toast({ title: "Codigo copiado!" });
+      toast({ title: "Código copiado!" });
     }
   };
 
@@ -77,12 +77,12 @@ export default function ComplaintPublic() {
         <Card className="max-w-md w-full">
           <CardContent className="p-8 text-center">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold mb-2">Denuncia Registrada</h2>
+            <h2 className="text-2xl font-bold mb-2">Denúncia Registrada</h2>
             <p className="text-muted-foreground mb-6">
-              Sua denuncia foi recebida e sera tratada com total sigilo.
+              Sua denúncia foi recebida e será tratada com total sigilo.
             </p>
             <div className="bg-slate-100 rounded-lg p-4 mb-4">
-              <p className="text-sm text-muted-foreground mb-1">Numero do protocolo:</p>
+              <p className="text-sm text-muted-foreground mb-1">Número do protocolo:</p>
               <div className="flex items-center justify-center gap-2">
                 <span className="text-2xl font-mono font-bold text-primary">{reportCode}</span>
                 <Button variant="ghost" size="sm" onClick={copyCode}>
@@ -91,7 +91,7 @@ export default function ComplaintPublic() {
               </div>
             </div>
             <p className="text-xs text-muted-foreground mb-4">
-              Guarde este numero para acompanhar o status da sua denuncia.
+              Guarde este número para acompanhar o status da sua denúncia.
             </p>
             <Link to="/denuncia/consulta">
               <Button variant="outline" className="gap-2">
@@ -113,22 +113,22 @@ export default function ComplaintPublic() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
             <ShieldCheck className="h-8 w-8 text-blue-600" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-800">Canal de Denuncia Confidencial</h1>
+          <h1 className="text-2xl font-bold text-slate-800">Canal de Denúncia Confidencial</h1>
           <p className="text-muted-foreground mt-2">
-            Sua identidade sera preservada. Denuncias sao tratadas com total sigilo.
+            Sua identidade será preservada. Denúncias são tratadas com total sigilo.
           </p>
         </div>
 
         {/* Form */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Registrar Denuncia</CardTitle>
+            <CardTitle className="text-lg">Registrar Denúncia</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Category */}
               <div>
-                <Label className="mb-2 block font-medium">Tipo de Denuncia *</Label>
+                <Label className="mb-2 block font-medium">Tipo de Denúncia *</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {categories.map((cat) => (
                     <button
@@ -206,7 +206,7 @@ export default function ComplaintPublic() {
                 size="lg"
                 disabled={submitReport.isPending || !category || description.length < 10}
               >
-                {submitReport.isPending ? "Enviando..." : "Enviar Denuncia"}
+                {submitReport.isPending ? "Enviando..." : "Enviar Denúncia"}
               </Button>
 
               {/* Privacy note */}

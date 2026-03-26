@@ -44,15 +44,15 @@ const DIMENSION_MAP: Record<string, string> = {
   averageDemandScore: "Demandas Quantitativas",
   averageControlScore: "Controle sobre o Trabalho",
   averageSupportScore: "Suporte Social",
-  averageLeadershipScore: "Lideranca",
+  averageLeadershipScore: "Liderança",
   averageCommunityScore: "Comunidade no Trabalho",
   averageMeaningScore: "Significado do Trabalho",
-  averageTrustScore: "Confianca",
-  averageJusticeScore: "Justica",
-  averageInsecurityScore: "Inseguranca no Trabalho",
-  averageMentalHealthScore: "Saude Mental",
+  averageTrustScore: "Confiança",
+  averageJusticeScore: "Justiça",
+  averageInsecurityScore: "Insegurança no Trabalho",
+  averageMentalHealthScore: "Saúde Mental",
   averageBurnoutScore: "Burnout",
-  averageViolenceScore: "Violencia e Assedio",
+  averageViolenceScore: "Violência e Assédio",
 };
 
 // ============================================================================
@@ -217,7 +217,7 @@ const DIMENSION_RECOMMENDATIONS: Record<string, { title: string; description: st
     description: "Criar programas de mentoria, grupos de apoio e canais de comunicação abertos entre colegas e gestores.",
     impact: "Redução de isolamento e melhoria no clima organizacional",
   },
-  "Lideranca": {
+  "Liderança": {
     title: "Desenvolver competências de liderança",
     description: "Investir em treinamento de gestores em comunicação, feedback construtivo e gestão de conflitos.",
     impact: "Melhoria na confiança e produtividade das equipes",
@@ -232,22 +232,22 @@ const DIMENSION_RECOMMENDATIONS: Record<string, { title: string; description: st
     description: "Comunicar claramente a missão organizacional e mostrar como cada função contribui para os objetivos maiores.",
     impact: "Aumento de motivação intrínseca e comprometimento",
   },
-  "Confianca": {
+  "Confiança": {
     title: "Construir cultura de confiança",
     description: "Promover transparência nas decisões, cumprir promessas e criar espaços seguros para expressão de opiniões.",
     impact: "Melhoria na colaboração e inovação",
   },
-  "Justica": {
+  "Justiça": {
     title: "Garantir equidade nos processos",
     description: "Revisar critérios de promoção, distribuição de trabalho e reconhecimento para assegurar tratamento justo e imparcial.",
     impact: "Redução de conflitos e aumento de satisfação",
   },
-  "Inseguranca no Trabalho": {
+  "Insegurança no Trabalho": {
     title: "Reduzir insegurança laboral",
     description: "Comunicar com clareza sobre estabilidade, planos de carreira e mudanças organizacionais. Oferecer capacitação contínua.",
     impact: "Redução de ansiedade e melhoria no desempenho",
   },
-  "Saude Mental": {
+  "Saúde Mental": {
     title: "Implementar programa de saúde mental",
     description: "Oferecer acesso a profissionais de saúde mental, criar campanhas de conscientização e capacitar gestores para identificar sinais de alerta.",
     impact: "Redução de afastamentos por transtornos mentais em 20-40%",
@@ -257,7 +257,7 @@ const DIMENSION_RECOMMENDATIONS: Record<string, { title: string; description: st
     description: "Implementar pausas regulares, limitar horas extras, promover equilíbrio trabalho-vida e monitorar carga de trabalho individualmente.",
     impact: "Redução de presenteísmo e absenteísmo",
   },
-  "Violencia e Assedio": {
+  "Violência e Assédio": {
     title: "Fortalecer política anti-assédio",
     description: "Implementar canal de denúncias confidencial, treinar todos os colaboradores sobre condutas aceitáveis e aplicar consequências claras.",
     impact: "Ambiente de trabalho mais seguro e respeitoso",
@@ -341,16 +341,16 @@ export function generateFallbackAnalysis(
   if (criticalDims.some(d => d.dimension.includes("Burnout"))) {
     insights.push("Indicadores de burnout elevados sugerem sobrecarga crônica de trabalho.");
   }
-  if (criticalDims.some(d => d.dimension.includes("Violencia"))) {
+  if (criticalDims.some(d => d.dimension.includes("Violência"))) {
     insights.push("Scores de violência/assédio requerem atenção imediata e canal de denúncias.");
   }
-  if (criticalDims.some(d => d.dimension.includes("Saude Mental"))) {
+  if (criticalDims.some(d => d.dimension.includes("Saúde Mental"))) {
     insights.push("Saúde mental comprometida — considerar programa de apoio psicológico.");
   }
-  if (criticalDims.some(d => d.dimension.includes("Inseguranca"))) {
+  if (criticalDims.some(d => d.dimension.includes("Insegurança"))) {
     insights.push("Alta insegurança no trabalho pode estar gerando ansiedade e queda de desempenho.");
   }
-  if (criticalDims.some(d => d.dimension.includes("Lideranca"))) {
+  if (criticalDims.some(d => d.dimension.includes("Liderança"))) {
     insights.push("Deficiências na liderança impactam diretamente apoio social e clima organizacional.");
   }
   if (insights.length === 0) {

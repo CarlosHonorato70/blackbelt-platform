@@ -98,7 +98,7 @@ export default function LGPD() {
           </div>
           <p className="text-gray-600 leading-relaxed">
             Em conformidade com a <strong>Lei Geral de Protecao de Dados (Lei 13.709/2018)</strong>,
-            voce pode exercer seus direitos como titular de dados pessoais. Utilize o formulario
+            você pode exercer seus direitos como titular de dados pessoais. Utilize o formulario
             abaixo para enviar sua solicitacao.
           </p>
           <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">

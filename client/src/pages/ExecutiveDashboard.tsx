@@ -67,7 +67,7 @@ export default function ExecutiveDashboard() {
   const actionData = [
     { name: 'Pendentes', value: data.actionPlans.pending, color: '#94a3b8' },
     { name: 'Em Andamento', value: data.actionPlans.inProgress, color: '#3b82f6' },
-    { name: 'Concluidos', value: data.actionPlans.completed, color: '#10b981' },
+    { name: 'Concluídos', value: data.actionPlans.completed, color: '#10b981' },
   ].filter(d => d.value > 0);
 
   const dimLabels: Record<string, string> = {
@@ -80,7 +80,7 @@ export default function ExecutiveDashboard() {
     trust: 'Confianca',
     justice: 'Justica',
     insecurity: 'Inseguranca',
-    mentalHealth: 'Saude Mental',
+    mentalHealth: 'Saúde Mental',
     burnout: 'Burnout',
     violence: 'Violencia',
   };
@@ -194,7 +194,7 @@ export default function ExecutiveDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Planos de Acao</p>
+                <p className="text-sm font-medium text-muted-foreground">Planos de Ação</p>
                 <h3 className="text-2xl font-bold mt-2">{data.actionPlans.total}</h3>
                 <p className="text-sm text-muted-foreground mt-1">{data.actionPlans.inProgress} em andamento</p>
               </div>
@@ -220,7 +220,7 @@ export default function ExecutiveDashboard() {
       <Tabs defaultValue="risk" className="space-y-4">
         <TabsList>
           <TabsTrigger value="risk">Distribuicao de Riscos</TabsTrigger>
-          <TabsTrigger value="actions">Planos de Acao</TabsTrigger>
+          <TabsTrigger value="actions">Planos de Ação</TabsTrigger>
           {copsoqRadar.length > 0 && <TabsTrigger value="copsoq">Dimensoes COPSOQ-II</TabsTrigger>}
         </TabsList>
 
@@ -292,7 +292,7 @@ export default function ExecutiveDashboard() {
         <TabsContent value="actions" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Progresso dos Planos de Acao</CardTitle>
+              <CardTitle>Progresso dos Planos de Ação</CardTitle>
             </CardHeader>
             <CardContent>
               {actionData.length > 0 ? (

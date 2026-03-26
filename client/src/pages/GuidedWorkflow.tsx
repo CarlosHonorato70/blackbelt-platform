@@ -228,18 +228,18 @@ export default function GuidedWorkflow() {
       { name: "01-Matriz-de-Risco", fn: () => exportRiskMatrix.mutateAsync({ tenantId: tid }) },
       { name: "02-Integracao-PGR-PCMSO", fn: () => exportPcmso.mutateAsync({ tenantId: tid }) },
       { name: "03-Dashboard-Psicossocial", fn: () => exportDashboard.mutateAsync({ tenantId: tid }) },
-      { name: "04-Tendencias-Avaliacao", fn: () => exportTrends.mutateAsync({ tenantId: tid }) },
+      { name: "04-Tendências-Avaliação", fn: () => exportTrends.mutateAsync({ tenantId: tid }) },
       { name: "05-Calculadora-Financeira", fn: () => exportFinancial.mutateAsync({ tenantId: tid }) },
       { name: "06-Cronograma-NR01", fn: () => exportTimeline.mutateAsync({ tenantId: tid }) },
       { name: "07-Checklist-Conformidade", fn: () => exportChecklist.mutateAsync({ tenantId: tid }) },
       { name: "08-Certificado-Conformidade", fn: () => exportCertificate.mutateAsync({ tenantId: tid }) },
       { name: "09-Laudo-Tecnico", fn: () => exportLaudo.mutateAsync({ tenantId: tid }) },
       { name: "10-Benchmark-COPSOQ", fn: () => exportBenchmark.mutateAsync({ tenantId: tid }) },
-      { name: "11-Relatorio-Treinamento", fn: () => exportTraining.mutateAsync({ tenantId: tid }) },
-      { name: "12-Relatorio-Denuncias", fn: () => exportDenuncias.mutateAsync({ tenantId: tid }) },
+      { name: "11-Relatório-Treinamento", fn: () => exportTraining.mutateAsync({ tenantId: tid }) },
+      { name: "12-Relatório-Denúncias", fn: () => exportDenuncias.mutateAsync({ tenantId: tid }) },
       { name: "13-Alertas-Prazos", fn: () => exportAlerts.mutateAsync({ tenantId: tid }) },
-      { name: "14-Relatorio-eSocial", fn: () => exportEsocial.mutateAsync({ tenantId: tid }) },
-      { name: "15-Relatorio-Executivo", fn: () => exportExecutive.mutateAsync({ tenantId: tid }) },
+      { name: "14-Relatório-eSocial", fn: () => exportEsocial.mutateAsync({ tenantId: tid }) },
+      { name: "15-Relatório-Executivo", fn: () => exportExecutive.mutateAsync({ tenantId: tid }) },
     ];
 
     const results: typeof pdfResults = pdfList.map((p) => ({

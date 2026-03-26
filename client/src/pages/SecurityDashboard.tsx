@@ -195,7 +195,7 @@ export default function SecurityDashboard() {
       toast.success("Codigos de backup regenerados");
     },
     onError: (err: any) =>
-      toast.error("Erro ao regenerar codigos", { description: err.message }),
+      toast.error("Erro ao regenerar códigos", { description: err.message }),
   });
 
   // ── Helpers ───────────────────────────────────────────────────────────
@@ -817,7 +817,7 @@ export default function SecurityDashboard() {
 
                     <div className="max-w-md mx-auto space-y-3">
                       <label className="text-sm font-medium">
-                        Digite o codigo de 6 digitos do app:
+                        Digite o código de 6 dígitos do app:
                       </label>
                       <Input
                         type="text"
@@ -856,10 +856,10 @@ export default function SecurityDashboard() {
                   <div className="space-y-4">
                     <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                       <p className="text-sm font-medium text-yellow-800 mb-2">
-                        Salve seus codigos de backup em um local seguro!
+                        Salve seus códigos de backup em um local seguro!
                       </p>
                       <p className="text-xs text-yellow-700">
-                        Estes codigos so serao exibidos uma vez. Use-os para acessar sua conta caso perca acesso ao app autenticador.
+                        Estes códigos só serão exibidos uma vez. Use-os para acessar sua conta caso perca acesso ao app autenticador.
                       </p>
                     </div>
                     <div className="grid grid-cols-2 gap-2 max-w-md mx-auto">
@@ -915,7 +915,7 @@ export default function SecurityDashboard() {
                       <CardHeader>
                         <CardTitle className="text-base">Desativar 2FA</CardTitle>
                         <CardDescription>
-                          Insira um codigo do app autenticador para desativar
+                          Insira um código do app autenticador para desativar
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -950,7 +950,7 @@ export default function SecurityDashboard() {
                       <CardHeader>
                         <CardTitle className="text-base">Regenerar Codigos de Backup</CardTitle>
                         <CardDescription>
-                          Gere novos codigos de backup (os anteriores serao invalidados)
+                          Gere novos códigos de backup (os anteriores serão invalidados)
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -1201,7 +1201,7 @@ export function SecurityDashboardContent() {
       toast.success("Codigos de backup regenerados");
     },
     onError: (err: any) =>
-      toast.error("Erro ao regenerar codigos", { description: err.message }),
+      toast.error("Erro ao regenerar códigos", { description: err.message }),
   });
 
   const formatTimeAgo = (timestamp: string | Date) => {
@@ -1798,7 +1798,7 @@ export function SecurityDashboardContent() {
                   </div>
                   <div className="max-w-md mx-auto space-y-3">
                     <label className="text-sm font-medium">
-                      Digite o codigo de 6 digitos do app:
+                      Digite o código de 6 dígitos do app:
                     </label>
                     <Input
                       type="text"
@@ -1836,10 +1836,10 @@ export function SecurityDashboardContent() {
                 <div className="space-y-4">
                   <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <p className="text-sm font-medium text-yellow-800 mb-2">
-                      Salve seus codigos de backup em um local seguro!
+                      Salve seus códigos de backup em um local seguro!
                     </p>
                     <p className="text-xs text-yellow-700">
-                      Estes codigos so serao exibidos uma vez. Use-os para acessar sua conta caso perca acesso ao app autenticador.
+                      Estes códigos só serão exibidos uma vez. Use-os para acessar sua conta caso perca acesso ao app autenticador.
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-2 max-w-md mx-auto">
@@ -1892,7 +1892,7 @@ export function SecurityDashboardContent() {
                     <CardHeader>
                       <CardTitle className="text-base">Desativar 2FA</CardTitle>
                       <CardDescription>
-                        Insira um codigo do app autenticador para desativar
+                        Insira um código do app autenticador para desativar
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -1925,7 +1925,7 @@ export function SecurityDashboardContent() {
                     <CardHeader>
                       <CardTitle className="text-base">Regenerar Codigos de Backup</CardTitle>
                       <CardDescription>
-                        Gere novos codigos de backup (os anteriores serao invalidados)
+                        Gere novos códigos de backup (os anteriores serão invalidados)
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
