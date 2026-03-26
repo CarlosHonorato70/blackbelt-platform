@@ -271,10 +271,40 @@ export async function requireActiveSubscription(
   const context = await getSubscriptionContext(tenantId);
 
   if (!context) {
+    // Permitir acesso gratuito com até 1 empresa (modo teste)
+    const db = await getDb();
+    if (db) {
+      const { tenants } = await import("../../drizzle/schema");
+      const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+
+      // Consultoria sem assinatura: verificar quantas empresas tem
+      if (tenant?.tenantType === "consultant") {
+        const childCompanies = await db.select().from(tenants)
+          .where(and(eq(tenants.parentTenantId, tenantId), eq(tenants.tenantType, "company")));
+
+        if (childCompanies.length <= 1) {
+          // Retornar contexto "free tier" — 1 empresa grátis
+          return {
+            tenantId,
+            subscription: { id: "free-tier", status: "active", planId: "free", trialEnd: null },
+            plan: {
+              name: "free", displayName: "Gratuito (1 Empresa)",
+              maxTenants: 1, maxUsersPerTenant: 10, maxStorageGB: 1,
+              maxApiRequestsPerDay: 100, hasAdvancedReports: true,
+              hasApiAccess: false, hasWebhooks: false, hasWhiteLabel: false,
+              hasPrioritySupport: false, hasSLA: false,
+            },
+            isTrialing: false,
+            isActive: true,
+          };
+        }
+      }
+    }
+
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
       message:
-        "Nenhuma assinatura encontrada. Por favor, assine um plano para continuar.",
+        "Limite gratuito atingido (1 empresa). Assine um plano para atender mais empresas.",
     });
   }
 
