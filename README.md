@@ -52,7 +52,7 @@ Para grandes corporações e holdings
 - White-label + Webhooks
 - SLA 99.9% + Suporte dedicado
 
-**🎁 Teste Grátis:** 14 dias para Starter/Pro, 30 dias para Enterprise
+**🎁 Teste Grátis:** 1 empresa grátis em todos os planos (sem limite de tempo)
 
 📖 **Veja detalhes completos em:** [PRICING.md](PRICING.md)
 

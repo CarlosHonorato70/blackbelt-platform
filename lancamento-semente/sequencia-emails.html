@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sequencia de Emails - Lancamento Semente Black Belt</title>
+<style>
+  :root { --navy: #1A1A2E; --gold: #C9A84C; --white: #fff; --light: #F8F9FA; --text: #333; --muted: #6B7280; --green: #10B981; --red: #EF4444; --blue: #3B82F6; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--light); color: var(--text); }
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 20px; }
+  h1 { font-size: 32px; color: var(--navy); text-align: center; margin-bottom: 8px; }
+  .intro { text-align: center; color: var(--muted); font-size: 16px; margin-bottom: 48px; max-width: 700px; margin-left: auto; margin-right: auto; }
+
+  /* Timeline */
+  .timeline { position: relative; }
+  .timeline::before { content: ''; position: absolute; left: 24px; top: 0; bottom: 0; width: 3px; background: linear-gradient(180deg, var(--gold), var(--navy)); border-radius: 2px; }
+
+  .email-card {
+    position: relative;
+    margin-left: 56px;
+    margin-bottom: 32px;
+    background: var(--white);
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    overflow: hidden;
+  }
+  .email-dot {
+    position: absolute;
+    left: -44px;
+    top: 24px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 3px solid var(--gold);
+    background: var(--white);
+    z-index: 1;
+  }
+  .email-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #E5E7EB;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .email-phase {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .phase-captacao { background: #DBEAFE; color: #1D4ED8; }
+  .phase-aquecimento { background: #FEF3C7; color: #92400E; }
+  .phase-evento { background: #D1FAE5; color: #065F46; }
+  .phase-followup { background: #FEE2E2; color: #991B1B; }
+  .phase-fechamento { background: #EDE9FE; color: #5B21B6; }
+
+  .email-timing { font-size: 13px; color: var(--muted); font-weight: 600; }
+  .email-subject { font-size: 18px; font-weight: 700; color: var(--navy); flex: 1; min-width: 200px; }
+  .email-body { padding: 24px; }
+  .email-body h4 { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .email-body .content { font-size: 15px; line-height: 1.7; color: var(--text); white-space: pre-line; background: var(--light); border-radius: 8px; padding: 20px; border-left: 3px solid var(--gold); }
+  .email-body .notes { margin-top: 16px; padding: 12px 16px; background: #FFF7ED; border-radius: 8px; font-size: 13px; color: #92400E; }
+  .email-body .notes strong { color: #78350F; }
+  .cta-tag { display: inline-block; margin-top: 12px; padding: 6px 14px; background: var(--gold); color: var(--navy); border-radius: 6px; font-size: 13px; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Sequencia de Emails</h1>
+<p class="intro">Lancamento Semente Black Belt — 10 emails estrategicos do pre-lancamento ao fechamento do carrinho. Copie, personalize e configure no seu email marketing.</p>
+
+<div class="timeline">
+
+<!-- EMAIL 1 -->
+<div class="email-card">
+  <div class="email-dot"></div>
+  <div class="email-header">
+    <span class="email-phase phase-captacao">Captacao</span>
+    <span class="email-timing">D-14 (14 dias antes)</span>
+    <span class="email-subject">Voce ainda faz a NR-01 em planilhas?</span>
+  </div>
+  <div class="email-body">
+    <h4>Corpo do Email</h4>
+    <div class="content">Ola [NOME],
+
+Eu preciso te fazer uma pergunta honesta:
+
+Quanto tempo voce gasta por semana montando relatorios de riscos psicossociais em planilhas?
+
+Se a resposta for "mais de 2 horas", eu tenho uma noticia importante pra voce.
+
+Eu vou fazer uma aula ao vivo e gratuita onde vou mostrar como automatizar a conformidade NR-01 em minutos usando Inteligencia Artificial. Do CNPJ ao certificado.
+
+Nao e teoria. Eu vou demonstrar ao vivo.
+
+A aula acontece no dia [DATA] as 20h. E as vagas sao limitadas.
+
+[BOTAO: QUERO PARTICIPAR GRATUITAMENTE]
+
+Te vejo la,
+Carlos Honorato
+Black Belt Consultoria</div>
+    <span class="cta-tag">CTA: Link para Landing Page</span>
+    <div class="notes"><strong>Objetivo:</strong> Gerar curiosidade apontando a dor principal (planilhas/trabalho manual). Tom direto e pessoal.</div>
+  </div>
+</div>
+
+<!-- EMAIL 2 -->
+<div class="email-card">
+  <div class="email-dot"></div>
+  <div class="email-header">
+    <span class="email-phase phase-captacao">Captacao</span>
+    <span class="email-timing">D-10</span>
+    <span class="email-subject">De 3 empresas para 25 por mes (sem contratar ninguem)</span>
+  </div>
+  <div class="email-body">
+    <h4>Corpo do Email</h4>
+    <div class="content">Ola [NOME],
+
+Deixa eu te contar uma historia rapida.
+
+Ha 6 meses, eu atendia no maximo 3 empresas por mes na adequacao NR-01. Passava semanas em cada uma: coletando dados, aplicando questionarios, tabulando, gerando relatorios...
+
+Hoje, eu atendo mais de 25 empresas por mes. Sozinho.
+
+O que mudou? Eu parei de fazer tudo manualmente e deixei a Inteligencia Artificial cuidar da parte repetitiva.
+
+Nessa aula gratuita ao vivo, eu vou mostrar exatamente como fiz isso — e como voce pode fazer o mesmo.
+
+[DATA] as 20h. Vagas limitadas.
+
+[BOTAO: GARANTIR MINHA VAGA]
+
+Abraco,
+Carlos Honorato</div>
+    <span class="cta-tag">CTA: Link para Landing Page</span>
+    <div class="notes"><strong>Objetivo:</strong> Prova social + resultado concreto. Gerar desejo mostrando o que e possivel.</div>
+  </div>
+</div>
+
+<!-- EMAIL 3 -->
+<div class="email-card">
+  <div class="email-dot"></div>
+  <div class="email-header">
+    <span class="email-phase phase-aquecimento">Aquecimento</span>
+    <span class="email-timing">D-5</span>
+    <span class="email-subject">Os 5 erros que estao travando sua consultoria SST</span>
+  </div>
+  <div class="email-body">
+    <h4>Corpo do Email</h4>
+    <div class="content">Ola [NOME],
+
+Faltam 5 dias para a aula ao vivo. Enquanto isso, quero compartilhar algo importante.
+
+Depois de ajudar dezenas de consultores SST, identifiquei os 5 erros mais comuns na implementacao da NR-01:
+
+1. Fazer tudo em planilhas sem padronizacao
+2. Aplicar questionarios em papel e tabular na mao
+3. Nao ter controle automatico de prazos de reavaliacao
+4. Gerar relatorios inconsistentes entre clientes
+5. Nao usar benchmark setorial para comparar resultados
+
+Se voce comete pelo menos 2 desses erros, a aula de [DATA] vai ser um divisor de aguas pra voce.
+
+Eu vou mostrar o caminho correto — com uma demonstracao ao vivo da solucao.
+
+[BOTAO: JA ESTOU INSCRITO — QUERO LEMBRETE]
+
+Carlos Honorato</div>
+    <span class="cta-tag">CTA: Confirmar presenca / Inscrever-se</span>
+    <div class="notes"><strong>Objetivo:</strong> Conteudo de valor que antecipa o que sera ensinado. Posicionar o expert como autoridade.</div>
+  </div>
+</div>
+
+<!-- EMAIL 4 -->
+<div class="email-card">
+  <div class="email-dot"></div>
+  <div class="email-header">
+    <span class="email-phase phase-aquecimento">Aquecimento</span>
+    <span class="email-timing">D-1 (1 dia antes)</span>
+    <span class="email-subject">Amanha as 20h: nao perca isso</span>
+  </div>
+  <div class="email-body">
+    <h4>Corpo do Email</h4>
+    <div class="content">Ola [NOME],
+
+Amanha e o dia.
+
+As 20h, eu vou te mostrar ao vivo como automatizar a conformidade NR-01 em minutos usando Inteligencia Artificial.
+
+O que voce vai ver:
+- Uma demonstracao real da plataforma SamurAI
+- Como sair do CNPJ ao certificado de conformidade automaticamente
+- A estrategia para atender 10x mais empresas sem contratar equipe
+
+O evento comeca pontualmente. Chega 5 minutos antes.
+
+Link de acesso: [LINK DO ZOOM]
+
+Ate amanha,
+Carlos Honorato</div>
+    <span class="cta-tag">CTA: Link direto do Zoom</span>
+    <div class="notes"><strong>Objetivo:</strong> Lembrete + antecipacao. Reforcar horario e link. Tom de urgencia leve.</div>
+  </div>
+</div>
+
+<!-- EMAIL 5 -->
+<div class="email-card">
+  <div class="email-dot"></div>
+  <div class="email-header">
+    <span class="email-phase phase-evento">Dia do Evento</span>
+    <span class="email-timing">D-0 (dia do evento, 2h antes)</span>
+    <span class="email-subject">Comeca em 2 horas! Seu link de acesso</span>
+  </div>
+  <div class="email-body">
+    <h4>Corpo do Email</h4>
+    <div class="content">[NOME], faltam 2 horas!
+
+A aula comeca as 20h. Nao vai ficar gravada.
+
+Seu link de acesso: [LINK DO ZOOM]
+
+Dica: entre 5 minutos antes para garantir que tudo funciona.
+
+Ate ja!
+Carlos Honorato</div>
+    <span class="cta-tag">CTA: Link direto do Zoom</span>
+    <div class="notes"><strong>Objetivo:</strong> Lembrete final para maximizar presenca. Curto e direto.</div>
+  </div>
+</div>
+
+<!-- EMAIL 6 -->
+<div class="email-card">
+  <div class="email-dot"></div>
+  <div class="email-header">
+    <span class="email-phase phase-followup">Follow-up</span>
+    <span class="email-timing">D+1 (quem assistiu)</span>
+    <span class="email-subject">Voce viu a demonstracao. E agora?</span>
+  </div>
+  <div class="email-body">
+    <h4>Corpo do Email</h4>
+    <div class="content">Ola [NOME],
+
+Obrigado por participar da aula ontem. Espero que voce tenha visto o potencial de automatizar a NR-01.
+
+Agora voce tem 3 opcoes:
+
+1) Ignorar tudo e continuar gastando semanas em planilhas
+2) Tentar construir algo sozinho (e gastar mais tempo e energia)
+3) Comecar agora com o SamurAI — gratuitamente
+
+A opcao 3 e a mais simples: cadastre sua primeira empresa gratis, sem cartao de credito, e veja com seus proprios olhos.
+
+[BOTAO: CADASTRAR MINHA PRIMEIRA EMPRESA GRATIS]
+
+Se precisar de ajuda, responda esse email. Estou aqui.
+
+Carlos Honorato</div>
+    <span class="cta-tag">CTA: Link para blackbeltconsultoria.com.br</span>
+    <div class="notes"><strong>Objetivo:</strong> Converter para cadastro gratuito. Usar os 3 caminhos (tecnica do webinario). Tom de apoio.</div>
+  </div>
+</div>
+
+<!-- EMAIL 7 -->
+<div class="email-card">
+  <div class="email-dot"></div>
+  <div class="email-header">
+    <span class="email-phase phase-followup">Follow-up</span>
+    <span class="email-timing">D+1 (quem NAO assistiu)</span>
+    <span class="email-subject">Voce perdeu algo importante ontem</span>
+  </div>
+  <div class="email-body">
+    <h4>Corpo do Email</h4>
+    <div class="content">Ola [NOME],
+
+Ontem eu fiz uma demonstracao ao vivo mostrando como automatizar a conformidade NR-01 em minutos com Inteligencia Artificial.
+
+Eu entendo que nem sempre da pra participar. Mas quero que voce saiba o que as pessoas que assistiram disseram:
+
+"Eu nao acreditava que era possivel ate ver acontecendo ao vivo."
+"Isso vai mudar completamente a forma como eu trabalho."
+
+A boa noticia: voce pode testar a plataforma SamurAI gratuitamente. 1 empresa. Sem cartao de credito. Sem limite de tempo.
+
+[BOTAO: TESTAR O SAMURAI GRATIS]
+
+Carlos Honorato</div>
+    <span class="cta-tag">CTA: Link para blackbeltconsultoria.com.br</span>
+    <div class="notes"><strong>Objetivo:</strong> Resgatar quem nao compareceu. Usar prova social dos participantes. Direcionar para o free.</div>
+  </div>
+</div>
+
+<!-- EMAIL 8 -->
+<div class="email-card">
+  <div class="email-dot"></div>
+  <div class="email-header">
+    <span class="email-phase phase-followup">Follow-up</span>
+    <span class="email-timing">D+3</span>
+    <span class="email-subject">A objecao que quase me impediu</span>
+  </div>
+  <div class="email-body">
+    <h4>Corpo do Email</h4>
+    <div class="content">Ola [NOME],
+
+Nos ultimos dias, recebi muitas mensagens de psicologos e consultores SST dizendo:
+
+"Parece incrivel, mas eu nao sou bom com tecnologia."
+
+Eu entendo. E normal sentir isso.
+
+Mas deixa eu te perguntar: voce sabe usar WhatsApp? Entao voce sabe usar o SamurAI.
+
+Funciona assim: voce insere o CNPJ da empresa e a plataforma faz o resto. Diagnostico, avaliacao COPSOQ-II, relatorios, certificado — tudo automatico.
+
+Voce nao precisa ser "de tecnologia". Voce so precisa clicar em "iniciar".
+
+[BOTAO: EXPERIMENTAR AGORA (E GRATIS)]
+
+Estou aqui se tiver qualquer duvida.
+
+Carlos Honorato</div>
+    <span class="cta-tag">CTA: Link para blackbeltconsultoria.com.br</span>
+    <div class="notes"><strong>Objetivo:</strong> Quebrar a objecao de tecnologia. Tom empatico e encorajador. Simplificar ao maximo.</div>
+  </div>
+</div>
+
+<!-- EMAIL 9 -->
+<div class="email-card">
+  <div class="email-dot"></div>
+  <div class="email-header">
+    <span class="email-phase phase-fechamento">Fechamento</span>
+    <span class="email-timing">D+5</span>
+    <span class="email-subject">Faltam 48h: bonus exclusivo para os primeiros</span>
+  </div>
+  <div class="email-body">
+    <h4>Corpo do Email</h4>
+    <div class="content">Ola [NOME],
+
+Lembra que na aula eu mencionei um bonus especial para os primeiros que entrassem?
+
+30 dias de plano Professional GRATIS — que inclui:
+- SamurAI completo (10 fases automatizadas)
+- 10 empresas inclusas
+- Propostas comerciais automaticas
+- Benchmark setorial
+
+O valor normal e R$ 597/mes. Os primeiros 50 ganham 30 dias sem custo.
+
+Ja foram preenchidas [XX] das 50 vagas.
+
+[BOTAO: GARANTIR MEU BONUS AGORA]
+
+Carlos Honorato</div>
+    <span class="cta-tag">CTA: Link de upgrade para Professional</span>
+    <div class="notes"><strong>Objetivo:</strong> Escassez real (50 vagas) + urgencia (48h). Reforcar valor do bonus vs. preco normal.</div>
+  </div>
+</div>
+
+<!-- EMAIL 10 -->
+<div class="email-card">
+  <div class="email-dot"></div>
+  <div class="email-header">
+    <span class="email-phase phase-fechamento">Fechamento</span>
+    <span class="email-timing">D+7 (ultimo dia)</span>
+    <span class="email-subject">Ultima chance — o bonus expira hoje a meia-noite</span>
+  </div>
+  <div class="email-body">
+    <h4>Corpo do Email</h4>
+    <div class="content">Ola [NOME],
+
+Esse e o ultimo email que eu vou te enviar sobre isso.
+
+Hoje a meia-noite, o bonus de 30 dias gratis do plano Professional expira.
+
+Depois disso, o preco volta ao normal: R$ 597/mes.
+
+Eu sei que decidir exige coragem. Mas voce ja viu como funciona. Ja sabe que e possivel automatizar a NR-01 em minutos. Ja sabe que pode atender 10x mais empresas.
+
+A unica pergunta e: voce vai continuar fazendo tudo manualmente, ou vai dar o proximo passo?
+
+[BOTAO: SIM, EU QUERO AUTOMATIZAR MINHA CONSULTORIA]
+
+Obrigado por estar comigo nessa jornada.
+
+Carlos Honorato
+Black Belt Consultoria
+
+PS: Se voce nao quer receber mais emails sobre este assunto, e so clicar aqui [LINK UNSUBSCRIBE] e eu respeito sua decisao.</div>
+    <span class="cta-tag">CTA: Link de upgrade com deadline</span>
+    <div class="notes"><strong>Objetivo:</strong> Ultimo push emocional + logico. Tom de respeito pela decisao do avatar. Urgencia maxima.</div>
+  </div>
+</div>
+
+</div><!-- /timeline -->
+</div><!-- /container -->
+</body>
+</html>

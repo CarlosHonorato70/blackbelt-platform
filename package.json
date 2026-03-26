@@ -116,6 +116,7 @@
     "@types/react": "^18.3.27",
     "@types/react-dom": "^18.3.7",
     "autoprefixer": "^10.4.21",
+    "docx": "^9.6.1",
     "drizzle-kit": "^0.31.9",
     "esbuild": "^0.24.2",
     "esbuild-plugin-alias": "^0.2.1",

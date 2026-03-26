@@ -30,7 +30,7 @@
 | Gerente de Conta | ❌ | ❌ | ✅ |
 | | | | |
 | **SLA** | Melhor esforço | 99% | 99.9% |
-| **Período de Teste** | 14 dias grátis | 14 dias grátis | 30 dias grátis |
+| **Período de Teste** | 1 empresa grátis | 1 empresa grátis | 1 empresa grátis |
 
 ## 💡 Recomendações por Tipo de Negócio
 
@@ -69,17 +69,18 @@
 - Necessita de integrações avançadas (webhooks)
 - Requer SLA garantido e suporte dedicado
 
-## 🎁 Período de Teste Gratuito
+## 🎁 1 Empresa Grátis
 
-Todos os planos incluem um período de teste gratuito:
+Todos os planos permitem cadastrar 1 empresa gratuitamente:
 
-- **Starter e Pro**: 14 dias grátis
-- **Enterprise**: 30 dias grátis
+- **Sem limite de tempo** — use enquanto quiser
+- **Sem cartão de crédito** — comece imediatamente
+- Para adicionar mais empresas, assine um plano
 
-**Durante o teste:**
+**Com a empresa grátis:**
 - ✅ Acesso completo a todas as funcionalidades do plano
 - ✅ Sem necessidade de cartão de crédito
-- ✅ Sem compromisso - cancele quando quiser
+- ✅ Sem limite de tempo
 - ✅ Suporte completo via email
 
 **Após o teste:**

@@ -54,7 +54,9 @@ export default function ComplianceCertificate() {
   const latestCertificate = certificates.length > 0 ? certificates[0] : null;
 
   function handleDownloadPdf() {
-    toast.info("PDF em desenvolvimento");
+    if (tenantId) {
+      window.open(`/api/pdf/certificado/${tenantId}`, "_blank");
+    }
   }
 
   function isValid(cert: any): boolean {

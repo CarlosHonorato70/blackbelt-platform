@@ -48,7 +48,8 @@ const AdminSupportTickets = lazy(() => import("./pages/AdminSupportTickets"));
 const AdminDsrManagement = lazy(() => import("./pages/AdminDsrManagement"));
 const AdminMetricsDashboard = lazy(() => import("./pages/AdminMetricsDashboard"));
 const CopsoqRespond = lazy(() => import("./pages/CopsoqRespond"));
-const AnonymousReportPublic = lazy(() => import("./pages/AnonymousReportPublic"));
+const ComplaintPublic = lazy(() => import("./pages/ComplaintPublic"));
+const ComplaintTrack = lazy(() => import("./pages/ComplaintTrack"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
@@ -87,8 +88,6 @@ const Companies = lazy(() => import("./pages/Companies"));
 const GuidedWorkflow = lazy(() => import("./pages/GuidedWorkflow"));
 const AgentChat = lazy(() => import("./pages/AgentChat"));
 const SupportChat = lazy(() => import("./pages/SupportChat"));
-const ComplaintPublic = lazy(() => import("./pages/ComplaintPublic"));
-const ComplaintTrack = lazy(() => import("./pages/ComplaintTrack"));
 
 // Subscription pages
 const Pricing = lazy(() => import("./pages/subscription/Pricing"));

@@ -14,7 +14,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -221,7 +221,7 @@ export default function RiskAssessments() {
   const { selectedTenant } = useTenant();
   const { data: user } = trpc.auth.me.useQuery();
   const navigate = useNavigate();
-  const [dialogOpen, setDialogOpen] = useState(false);
+
   const [proposalDialogOpen, setProposalDialogOpen] = useState(false);
   const [selectedAssessmentId, setSelectedAssessmentId] = useState("");
   const [selectedClientId, setSelectedClientId] = useState("");
@@ -395,124 +395,7 @@ export default function RiskAssessments() {
             </Button>
           </div>
 
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild style={{ display: "none" }}>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Nova Avaliacao
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <form
-                onSubmit={e => {
-                  e.preventDefault();
-                  setDialogOpen(false);
-                }}
-              >
-                <DialogHeader>
-                  <DialogTitle>
-                    Nova Avaliacao de Riscos Psicossociais
-                  </DialogTitle>
-                  <DialogDescription>
-                    Inicie uma nova avaliacao de fatores de risco psicossociais
-                    relacionados ao trabalho
-                  </DialogDescription>
-                </DialogHeader>
-
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="tenant">Empresa *</Label>
-                    <Select required>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a empresa" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">Empresa XYZ Ltda</SelectItem>
-                        <SelectItem value="2">Industria ABC S.A.</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="sector">Setor (Opcional)</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o setor" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">Administrativo</SelectItem>
-                        <SelectItem value="2">Producao</SelectItem>
-                        <SelectItem value="3">Comercial</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Deixe em branco para avaliacao geral da empresa
-                    </p>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="title">Titulo da Avaliacao *</Label>
-                    <Input
-                      id="title"
-                      placeholder="Ex: Avaliacao Inicial - Setor Administrativo"
-                      required
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="description">Descricao</Label>
-                    <Textarea
-                      id="description"
-                      placeholder="Descreva o objetivo e escopo desta avaliacao..."
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="assessmentDate">Data da Avaliacao *</Label>
-                    <Input id="assessmentDate" type="date" required />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="assessor">Avaliador Responsavel *</Label>
-                    <Input
-                      id="assessor"
-                      placeholder="Nome do profissional responsavel"
-                      required
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="methodology">Metodologia</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a metodologia" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="iso45003">ISO 45003</SelectItem>
-                        <SelectItem value="whsq">WHSQ (WHO)</SelectItem>
-                        <SelectItem value="blackbelt">
-                          Metodo Black Belt
-                        </SelectItem>
-                        <SelectItem value="custom">Personalizada</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setDialogOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button type="submit">Criar Avaliacao</Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+          {/* Dead dialog removed — "Nova Avaliacao" button above navigates to /risk-assessments/new */}
         </div>
 
         {/* Risk Summary Badges */}

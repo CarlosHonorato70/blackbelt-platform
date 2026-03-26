@@ -55,9 +55,9 @@ A Plataforma oferece os seguintes planos de assinatura:
 
 ### 3.3 Período de Teste
 
-- Novos usuários têm direito a um período de teste gratuito de 14 dias
-- Não é necessário cartão de crédito para o teste
-- Após o período de teste, a assinatura será automaticamente convertida para o plano selecionado
+- Novos usuários têm direito a cadastrar 1 empresa gratuitamente, sem limite de tempo
+- Não é necessário cartão de crédito para a empresa gratuita
+- Para adicionar mais empresas, o usuário deve assinar um dos planos disponíveis
 
 ### 3.4 Cancelamento e Reembolso
 

@@ -53,12 +53,9 @@ function AgentChatPage() {
   // Update proposal mutation
   const updateProposal = trpc.proposals.update.useMutation({
     onSuccess: () => {
-      toast({ title: "Proposta atualizada!", description: "As alterações foram salvas com sucesso." });
+      toast({ title: "Proposta atualizada com sucesso!" });
       setEditModalOpen(false);
-      // Trigger send proposal email via agent
-      if (conversationId) {
-        sendMessage.mutate({ conversationId, content: "Executar: Enviar Proposta por Email" });
-      }
+      // Don't auto-send email — let user click the button
     },
     onError: (err: any) => {
       toast({ title: "Erro ao salvar", description: err.message || "Tente novamente", variant: "destructive" });
@@ -642,7 +639,7 @@ function AgentChatPage() {
               <Button variant="outline" onClick={() => { setEditModalOpen(false); setEditProposalId(null); }}>Cancelar</Button>
               <Button onClick={handleEditSave} disabled={updateProposal.isPending}>
                 <Save className="h-4 w-4 mr-2" />
-                {updateProposal.isPending ? "Salvando..." : "Salvar e Enviar"}
+                {updateProposal.isPending ? "Salvando..." : "Salvar"}
               </Button>
             </div>
           </div>

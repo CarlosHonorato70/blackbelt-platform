@@ -202,13 +202,13 @@ def build():
     S.append(p(h2, "Fluxo de Registro"))
     S.extend(nums([
         "Acesse <b>blackbeltconsultoria.com</b>",
-        'Clique em <b>"Teste Gratis por 14 Dias"</b> ou <b>"Criar Conta"</b>',
+        'Clique em <b>"Cadastre uma Empresa Gratuitamente"</b> ou <b>"Criar Conta"</b>',
         "Preencha nome, email e senha",
         "Confirme seu email (link enviado automaticamente)",
         "Escolha um plano na tela de pricing",
     ]))
     S.append(sp(0.3))
-    S.append(p(note, "Nota: Voce tera 14 dias de trial gratuito em qualquer plano."))
+    S.append(p(note, "Nota: Voce pode cadastrar 1 empresa gratuitamente, sem limite de tempo. Para mais empresas, assine um plano."))
     S.append(PageBreak())
 
     # ── 2. PLANOS E ASSINATURA ───────────────────────────────────────
@@ -231,7 +231,7 @@ def build():
     S.append(sp(0.5))
     S.extend(bullets([
         "Pagamento via Stripe ou Mercado Pago",
-        "Trial gratuito de 14 dias sem cartao de credito",
+        "1 empresa gratis sem cartao de credito — sem limite de tempo",
     ]))
     S.append(sp(0.3))
     S.append(p(h3, "Rota de Checkout"))
