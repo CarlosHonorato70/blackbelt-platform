@@ -12,7 +12,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Loader2, CreditCard, QrCode, FileText, CheckCircle2, Shield, Sparkles, Copy, ExternalLink } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, CreditCard, QrCode, FileText, CheckCircle2, Shield, Sparkles, Copy, ExternalLink, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Checkout() {
@@ -25,6 +26,8 @@ export default function Checkout() {
   const [billingType, setBillingType] = useState<"PIX" | "BOLETO" | "CREDIT_CARD">("PIX");
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentResult, setPaymentResult] = useState<any>(null);
+  const [cpfCnpj, setCpfCnpj] = useState("");
+  const [holderName, setHolderName] = useState("");
 
   // Parse URL params
   useEffect(() => {
@@ -46,8 +49,51 @@ export default function Checkout() {
   // Mutation para criar assinatura
   const createSubscription = trpc.asaas.createSubscription.useMutation();
 
+  // Determinar se pede CPF ou CNPJ baseado no plano
+  const isStarterPlan = plan?.name?.toLowerCase().includes("starter") || plan?.name?.toLowerCase().includes("básico");
+  const docLabel = isStarterPlan ? "CPF" : "CNPJ";
+  const docPlaceholder = isStarterPlan ? "000.000.000-00" : "00.000.000/0001-00";
+  const docMaxLength = isStarterPlan ? 14 : 18;
+
+  // Formatar CPF/CNPJ enquanto digita
+  const formatCpfCnpj = (value: string) => {
+    const digits = value.replace(/\D/g, "");
+    if (isStarterPlan) {
+      // CPF: 000.000.000-00
+      return digits
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d{1,2})$/, "$1-$2")
+        .substring(0, 14);
+    } else {
+      // CNPJ: 00.000.000/0001-00
+      return digits
+        .replace(/(\d{2})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1/$2")
+        .replace(/(\d{4})(\d{1,2})$/, "$1-$2")
+        .substring(0, 18);
+    }
+  };
+
   const handleCheckout = async () => {
     if (!planId) return;
+
+    // Validar CPF/CNPJ
+    const cleanDoc = cpfCnpj.replace(/\D/g, "");
+    if (isStarterPlan && cleanDoc.length !== 11) {
+      toast({ title: "CPF inválido", description: "Informe um CPF válido com 11 dígitos.", variant: "destructive" });
+      return;
+    }
+    if (!isStarterPlan && cleanDoc.length !== 14) {
+      toast({ title: "CNPJ inválido", description: "Informe um CNPJ válido com 14 dígitos.", variant: "destructive" });
+      return;
+    }
+    if (!holderName.trim()) {
+      toast({ title: "Nome obrigatório", description: "Informe o nome do titular.", variant: "destructive" });
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
@@ -55,6 +101,8 @@ export default function Checkout() {
         planId,
         billingCycle,
         billingType,
+        cpfCnpj: cleanDoc,
+        holderName: holderName.trim(),
       });
 
       setPaymentResult(result);
@@ -66,9 +114,9 @@ export default function Checkout() {
       }
 
       toast({
-        title: "Cobranca criada!",
+        title: "Cobrança criada!",
         description: billingType === "PIX"
-          ? "Escaneie o QR code ou copie o codigo PIX para pagar"
+          ? "Escaneie o QR code ou copie o código PIX para pagar"
           : "Seu boleto foi gerado. Pague ate o vencimento para ativar.",
       });
     } catch (error) {
@@ -102,8 +150,8 @@ export default function Checkout() {
       <div className="container mx-auto py-12 px-4">
         <Card>
           <CardHeader>
-            <CardTitle>Plano nao encontrado</CardTitle>
-            <CardDescription>O plano selecionado nao existe ou nao esta disponivel.</CardDescription>
+            <CardTitle>Plano não encontrado</CardTitle>
+            <CardDescription>O plano selecionado não existe ou não está disponível.</CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => navigate("/pricing")}>Voltar para Planos</Button>
@@ -147,7 +195,7 @@ export default function Checkout() {
                 {paymentResult.pixCopiaECola && (
                   <div className="w-full">
                     <p className="text-sm text-muted-foreground mb-2 text-center">
-                      Ou copie o codigo PIX:
+                      Ou copie o código PIX:
                     </p>
                     <div className="flex gap-2">
                       <input
@@ -165,7 +213,7 @@ export default function Checkout() {
 
                 <div className="bg-green-50 border border-green-200 p-4 rounded-lg w-full text-center">
                   <p className="text-sm text-green-800">
-                    Apos o pagamento, sua assinatura sera ativada automaticamente em ate 1 minuto.
+                    Apos o pagamento, sua assinatura será ativada automaticamente em até 1 minuto.
                   </p>
                 </div>
               </div>
@@ -176,7 +224,7 @@ export default function Checkout() {
               <div className="flex flex-col items-center gap-4">
                 <FileText className="h-16 w-16 text-primary" />
                 <p className="text-center text-muted-foreground">
-                  Seu boleto foi gerado. Clique no botao abaixo para visualizar e pagar.
+                  Seu boleto foi gerado. Clique no botão abaixo para visualizar e pagar.
                 </p>
 
                 {paymentResult.bankSlipUrl && (
@@ -192,15 +240,15 @@ export default function Checkout() {
                   <Button variant="outline" asChild className="w-full">
                     <a href={paymentResult.paymentUrl} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="mr-2 h-4 w-4" />
-                      Abrir Pagina de Pagamento
+                      Abrir Página de Pagamento
                     </a>
                   </Button>
                 )}
 
                 <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg w-full text-center">
                   <p className="text-sm text-amber-800">
-                    O boleto pode levar ate 3 dias uteis para ser compensado.
-                    Sua assinatura sera ativada automaticamente apos a confirmacao.
+                    O boleto pode levar até 3 dias úteis para ser compensado.
+                    Sua assinatura será ativada automaticamente após a confirmação.
                   </p>
                 </div>
               </div>
@@ -211,7 +259,7 @@ export default function Checkout() {
                 Ir para o Dashboard
               </Button>
               <Button variant="outline" className="flex-1" onClick={() => setPaymentResult(null)}>
-                Escolher Outro Metodo
+                Escolher Outro Método
               </Button>
             </div>
           </CardContent>
@@ -254,12 +302,12 @@ export default function Checkout() {
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles className="h-5 w-5 text-amber-600" />
                   <p className="font-semibold text-amber-800">
-                    1 empresa gratis incluida
+                    1 empresa grátis incluída
                   </p>
                 </div>
                 <p className="text-sm text-amber-700">
-                  Voce ja pode usar a plataforma com 1 empresa gratuitamente, sem limite de tempo.
-                  Assine um plano para atender mais empresas e acessar recursos avancados.
+                  Você já pode usar a plataforma com 1 empresa gratuitamente, sem limite de tempo.
+                  Assine um plano para atender mais empresas e acessar recursos avançados.
                 </p>
               </div>
             </CardContent>
@@ -270,7 +318,7 @@ export default function Checkout() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-primary" />
-                O que esta incluido no plano {plan.displayName}
+                O que está incluído no plano {plan.displayName}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -278,17 +326,55 @@ export default function Checkout() {
                 {[
                   "SamurAI — Agente de IA para conformidade NR-01",
                   "Cadastro de setores e colaboradores",
-                  "Questionario COPSOQ-II com envio por email",
-                  "Inventario de riscos psicossociais",
-                  "Planos de acao e compliance NR-01",
-                  "Exportacao de documentos em PDF",
-                  "Suporte tecnico",
+                  "Questionário COPSOQ-II com envio por email",
+                  "Inventário de riscos psicossociais",
+                  "Planos de ação e compliance NR-01",
+                  "Exportação de documentos em PDF",
+                  "Suporte técnico",
                 ].map((item, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
                     <span className="text-sm">{item}</span>
                   </div>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Dados do Titular */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                Dados do Titular
+              </CardTitle>
+              <CardDescription>
+                {isStarterPlan
+                  ? "Informe seu CPF para emissão da cobrança"
+                  : "Informe o CNPJ da empresa para emissão da cobrança"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="holderName">Nome {isStarterPlan ? "Completo" : "da Empresa"}</Label>
+                <Input
+                  id="holderName"
+                  placeholder={isStarterPlan ? "Nome completo do titular" : "Razão social da empresa"}
+                  value={holderName}
+                  onChange={(e) => setHolderName(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="cpfCnpj">{docLabel}</Label>
+                <Input
+                  id="cpfCnpj"
+                  placeholder={docPlaceholder}
+                  value={cpfCnpj}
+                  onChange={(e) => setCpfCnpj(formatCpfCnpj(e.target.value))}
+                  maxLength={docMaxLength}
+                  className="mt-1 font-mono"
+                />
               </div>
             </CardContent>
           </Card>
@@ -312,7 +398,7 @@ export default function Checkout() {
                       <QrCode className="h-5 w-5 text-green-600" />
                       <div>
                         <p className="font-medium">PIX</p>
-                        <p className="text-xs text-muted-foreground">Pagamento instantaneo — aprovacao imediata</p>
+                        <p className="text-xs text-muted-foreground">Pagamento instantâneo — aprovação imediata</p>
                       </div>
                     </div>
                   </Label>
@@ -325,7 +411,7 @@ export default function Checkout() {
                       <FileText className="h-5 w-5 text-blue-600" />
                       <div>
                         <p className="font-medium">Boleto Bancario</p>
-                        <p className="text-xs text-muted-foreground">Compensacao em ate 3 dias uteis</p>
+                        <p className="text-xs text-muted-foreground">Compensação em até 3 dias úteis</p>
                       </div>
                     </div>
                   </Label>
@@ -337,8 +423,8 @@ export default function Checkout() {
                     <div className="flex items-center gap-3">
                       <CreditCard className="h-5 w-5 text-purple-600" />
                       <div>
-                        <p className="font-medium">Cartao de Credito</p>
-                        <p className="text-xs text-muted-foreground">Pagamento seguro — aprovacao imediata</p>
+                        <p className="font-medium">Cartão de Crédito</p>
+                        <p className="text-xs text-muted-foreground">Pagamento seguro — aprovação imediata</p>
                       </div>
                     </div>
                   </Label>
@@ -402,16 +488,16 @@ export default function Checkout() {
 
               {!asaasConfig?.enabled && (
                 <p className="text-xs text-center text-destructive">
-                  Sistema de pagamento indisponivel no momento.
+                  Sistema de pagamento indisponível no momento.
                 </p>
               )}
 
               <div className="text-xs text-center text-muted-foreground">
                 {billingType === "PIX"
-                  ? "Voce recebera um QR code para pagamento instantaneo."
+                  ? "Você receberá um QR code para pagamento instantâneo."
                   : billingType === "BOLETO"
-                    ? "Um boleto sera gerado para pagamento."
-                    : "Voce sera redirecionado para completar o pagamento."}
+                    ? "Um boleto será gerado para pagamento."
+                    : "Você será redirecionado para completar o pagamento."}
                 <br />Cancele a qualquer momento.
               </div>
             </CardContent>

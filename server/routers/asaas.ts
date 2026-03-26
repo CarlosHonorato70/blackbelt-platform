@@ -74,6 +74,8 @@ export const asaasRouter = router({
       planId: z.string(),
       billingCycle: z.enum(["monthly", "yearly"]),
       billingType: z.enum(["PIX", "BOLETO", "CREDIT_CARD"]).default("PIX"),
+      cpfCnpj: z.string().optional(),
+      holderName: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
@@ -95,16 +97,23 @@ export const asaasRouter = router({
       let asaasCustomerId = existingSub?.asaasCustomerId;
 
       if (!asaasCustomerId) {
+        // Prioridade: CPF/CNPJ do formulário > CNPJ do tenant
+        const rawCpfCnpj = (input.cpfCnpj || tenant.cnpj || "").replace(/[^\d]/g, "");
+
         const customerData: any = {
-          name: tenant.name || ctx.user!.name || "Cliente BlackBelt",
-          cpfCnpj: (tenant.cnpj || "").replace(/[^\d]/g, ""),
+          name: input.holderName || tenant.name || ctx.user!.name || "Cliente BlackBelt",
+          cpfCnpj: rawCpfCnpj,
           email: ctx.user!.email,
           externalReference: tenantId,
         };
 
-        // Se não tem CNPJ válido, usar CPF do contato ou genérico
         if (!customerData.cpfCnpj || customerData.cpfCnpj.length < 11) {
-          throw new Error("CPF ou CNPJ é obrigatório para criar assinatura no Asaas");
+          throw new Error("CPF ou CNPJ é obrigatório para criar assinatura. Preencha o campo no formulário.");
+        }
+
+        // Salvar CPF/CNPJ no tenant se ainda não tem
+        if (!tenant.cnpj && rawCpfCnpj) {
+          await db.update(tenants).set({ cnpj: input.cpfCnpj || rawCpfCnpj }).where(eq(tenants.id, tenantId));
         }
 
         const customer = await asaasRequest("/customers", {
