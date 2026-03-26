@@ -41,6 +41,14 @@ export async function createContext({ req, res }: { req: Request; res: Response 
     if (impersonateTenantId) {
       const tenant = await db.getTenant(impersonateTenantId);
       if (tenant) {
+        // Validate target tenant is active before allowing impersonation
+        if (tenant.status !== "active") {
+          log.warn("Impersonation attempt for inactive tenant", {
+            userId: user.id,
+            targetTenantId: impersonateTenantId,
+            tenantStatus: tenant.status,
+          });
+        } else {
         let allowed = false;
 
         if (user.role === "admin") {
@@ -78,6 +86,7 @@ export async function createContext({ req, res }: { req: Request; res: Response 
             targetTenantId: impersonateTenantId,
           });
         }
+        } // close else (active tenant check)
       } else {
         log.warn("Impersonation attempt for non-existent tenant", {
           userId: user.id,

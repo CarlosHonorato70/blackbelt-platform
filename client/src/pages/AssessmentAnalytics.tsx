@@ -629,9 +629,6 @@ export default function AssessmentAnalytics() {
           <Download className="w-4 h-4 mr-2" />
           Exportar Relatório Executivo
         </Button>
-        <Button variant="outline" className="flex-1">
-          Compartilhar com Gestores
-        </Button>
       </div>
 
       {/* DIALOG — Gerar Plano de Ação */}

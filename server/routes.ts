@@ -309,9 +309,10 @@ export function registerRoutes(app: Express) {
         return res.redirect(`${process.env.FRONTEND_URL || ""}/proposal/result?status=invalid`);
       }
 
+      const { and } = await import("drizzle-orm");
       await db.update(proposals)
         .set({ status: "rejected", rejectedAt: new Date(), respondedAt: new Date(), updatedAt: new Date() })
-        .where(eq(proposals.id, proposal.id));
+        .where(and(eq(proposals.id, proposal.id), eq(proposals.status, proposal.status)));
 
       log.info(`[Proposal] Rejected: ${proposal.id} by ${proposal.contactEmail}`);
       res.redirect(`${process.env.FRONTEND_URL || ""}/proposal/result?status=rejected&id=${proposal.id}`);

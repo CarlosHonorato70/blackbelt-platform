@@ -107,7 +107,9 @@ export const rolesPermissionsRouter = router({
       .input(
         z.object({
           id: z.string(),
-        }).passthrough()
+          name: z.string().optional(),
+          description: z.string().optional(),
+        })
       )
       .mutation(async ({ input }) => {
         const db = await getDb();
@@ -241,7 +243,11 @@ export const rolesPermissionsRouter = router({
       .input(
         z.object({
           id: z.string(),
-        }).passthrough()
+          name: z.string().optional(),
+          description: z.string().optional(),
+          resource: z.string().optional(),
+          action: z.string().optional(),
+        })
       )
       .mutation(async ({ input }) => {
         const db = await getDb();
@@ -293,10 +299,9 @@ export const rolesPermissionsRouter = router({
       .input(
         z.object({
           roleId: z.string().optional(),
-          tenantId: z.string().optional(),
         })
       )
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) return [];
 
@@ -306,11 +311,12 @@ export const rolesPermissionsRouter = router({
           conditions.push(eq(rolePermissions.roleId, input.roleId));
         }
 
-        if (input.tenantId !== undefined) {
-          if (input.tenantId === "") {
-            conditions.push(isNull(rolePermissions.tenantId));
+        // Tenant isolation: non-admin users can only see their own tenant's role-permissions
+        if (ctx.user.role !== "admin") {
+          if (ctx.user.tenantId) {
+            conditions.push(eq(rolePermissions.tenantId, ctx.user.tenantId));
           } else {
-            conditions.push(eq(rolePermissions.tenantId, input.tenantId));
+            conditions.push(isNull(rolePermissions.tenantId));
           }
         }
 
@@ -386,10 +392,9 @@ export const rolesPermissionsRouter = router({
       .input(
         z.object({
           userId: z.string().optional(),
-          tenantId: z.string().optional(),
         })
       )
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) return [];
 
@@ -399,11 +404,12 @@ export const rolesPermissionsRouter = router({
           conditions.push(eq(userRoles.userId, input.userId));
         }
 
-        if (input.tenantId !== undefined) {
-          if (input.tenantId === "") {
-            conditions.push(isNull(userRoles.tenantId));
+        // Tenant isolation: non-admin users can only see their own tenant's user-roles
+        if (ctx.user.role !== "admin") {
+          if (ctx.user.tenantId) {
+            conditions.push(eq(userRoles.tenantId, ctx.user.tenantId));
           } else {
-            conditions.push(eq(userRoles.tenantId, input.tenantId));
+            conditions.push(isNull(userRoles.tenantId));
           }
         }
 

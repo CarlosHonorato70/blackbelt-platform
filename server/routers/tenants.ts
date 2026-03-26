@@ -253,7 +253,12 @@ export const tenantsRouter = router({
   // Obter configuracoes do tenant
   getSettings: protectedProcedure
     .input(z.object({ tenantId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      // Tenant validation: users can only access their own tenant's settings (admin bypasses)
+      if (ctx.user.role !== "admin" && ctx.user.tenantId !== input.tenantId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
+      }
+
       const settings: Record<string, unknown> = {};
 
       const maxUsers = await db.getTenantSetting(input.tenantId, "max_users");
@@ -266,7 +271,7 @@ export const tenantsRouter = router({
     }),
 
   // Atualizar configuracao do tenant (apenas admin)
-  updateSetting: protectedProcedure
+  updateSetting: adminProcedure
     .input(
       z.object({
         tenantId: z.string(),
@@ -275,9 +280,6 @@ export const tenantsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
-      }
 
       await db.setTenantSetting(input.tenantId, input.key, input.value);
 

@@ -21,7 +21,8 @@ import { ShieldAlert, Loader2, CheckCircle2, Copy } from "lucide-react";
 export default function AnonymousReport() {
   usePageMeta({ title: "Canal de Denuncias" });
   const { selectedTenant } = useTenant();
-  const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const { data: user } = trpc.auth.me.useQuery();
+  const tenantId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
 
   const [form, setForm] = useState({
     category: "",

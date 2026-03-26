@@ -547,7 +547,15 @@ export const authLocalRouter = router({
 
       // Try backup code (format XXXXX-XXXXX)
       if (!isValid && input.code.includes("-")) {
-        const backupCodes = JSON.parse(twoFA.backupCodes as string) as string[];
+        let backupCodes: string[];
+        try {
+          backupCodes = JSON.parse(twoFA.backupCodes as string) as string[];
+        } catch {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Erro ao processar códigos de backup. Contate o suporte.",
+          });
+        }
         const normalizedCode = input.code.toUpperCase().trim();
         for (let i = 0; i < backupCodes.length; i++) {
           const match = await bcrypt.compare(normalizedCode, backupCodes[i]);

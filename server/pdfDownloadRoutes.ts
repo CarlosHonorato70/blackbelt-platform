@@ -305,7 +305,7 @@ const pdfGenerators: Record<string, PdfGenerator> = {
       sections.push({
         type: "kpis", kpis: [
           { label: "Total de Modulos", value: String(modules.length), color: "#1a365d" },
-          { label: "Carga Horaria Total", value: `${modules.reduce((s: number, m: any) => s + (m.durationHours || 0), 0)}h`, color: "#3b82f6" },
+          { label: "Carga Horaria Total", value: `${modules.reduce((s: number, m: any) => s + Math.round((m.duration || 0) / 60), 0)}h`, color: "#3b82f6" },
         ],
       });
 
@@ -321,7 +321,7 @@ const pdfGenerators: Record<string, PdfGenerator> = {
           cells: [
             m.title || "\u2014",
             m.description || "\u2014",
-            `${m.durationHours || 0}h`,
+            `${Math.round((m.duration || 0) / 60)}h`,
             m.mandatory ? "Sim" : "Nao",
           ],
         })),

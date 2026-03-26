@@ -43,7 +43,7 @@ const EMAIL_RETRY_DELAYS = [1000, 3000, 5000]; // 1s, 3s, 5s
  * Send email via Brevo HTTP API (primary) — avoids SMTP port blocking on cloud providers.
  */
 async function sendViaBrevoApi(options: SendEmailOptions): Promise<boolean> {
-  const apiKey = process.env.BREVO_API_KEY || process.env.SMTP_PASSWORD;
+  const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) return false;
 
   const fromEmail = process.env.SMTP_FROM || "contato@blackbeltconsultoria.com";

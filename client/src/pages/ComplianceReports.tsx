@@ -33,6 +33,7 @@ import {
   generateComplianceReport,
   exportToPDF,
 } from "@/lib/exportUtils";
+import { toast } from "sonner";
 
 export default function ComplianceReports() {
   const { selectedTenant } = useTenant();
@@ -412,15 +413,18 @@ export default function ComplianceReports() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-3">
-                <Button className="w-full justify-start" variant="outline">
+                <Button className="w-full justify-start" variant="outline" onClick={() => {
+                  const reportText = generateComplianceReport(reports);
+                  exportToPDF(reportText, `compliance_completo_${new Date().toISOString().split("T")[0]}.txt`);
+                }}>
                   <FileText className="h-4 w-4 mr-2" />
                   Exportar como PDF
                 </Button>
-                <Button className="w-full justify-start" variant="outline">
+                <Button className="w-full justify-start" variant="outline" onClick={() => toast.info("Formato em desenvolvimento. Use PDF.")}>
                   <FileText className="h-4 w-4 mr-2" />
                   Exportar como Excel
                 </Button>
-                <Button className="w-full justify-start" variant="outline">
+                <Button className="w-full justify-start" variant="outline" onClick={() => toast.info("Formato em desenvolvimento. Use PDF.")}>
                   <FileText className="h-4 w-4 mr-2" />
                   Exportar como Word
                 </Button>

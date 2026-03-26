@@ -412,6 +412,7 @@ export default function DataExport() {
                         {request.status === "completo" && (
                           <>
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                              window.open(`/api/export/download/${request.id}`, "_blank");
                               toast.success("Download iniciado!", {
                                 description: `Arquivo ${request.format} (${request.fileSize}) será baixado.`,
                               });

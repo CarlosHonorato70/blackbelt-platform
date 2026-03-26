@@ -564,7 +564,7 @@ export default function COPSOQ() {
           </Card>
 
           <div className="flex gap-2">
-            <Button className="flex-1" onClick={() => window.open('/api/pdf/copsoq/' + (effectiveId || ''), '_blank')}>Exportar Relatório PDF</Button>
+            <Button className="flex-1" disabled={!effectiveId} onClick={() => { if (effectiveId) window.open(`/api/pdf/copsoq/${effectiveId}`, "_blank"); }}>Exportar Relatório PDF</Button>
             <Button
               variant="outline"
               className="flex-1"

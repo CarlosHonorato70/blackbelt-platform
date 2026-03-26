@@ -300,8 +300,8 @@ export const companiesRouter = router({
             updatedAt: new Date(),
           });
         }
-      } catch (_) {
-        // Auto-seed failure is non-critical, company was already created
+      } catch (e) {
+        console.error("Audit log failed:", e);
       }
 
       return { id: companyId, name: input.name };
@@ -375,7 +375,7 @@ export const companiesRouter = router({
           ipAddress: ctx.req.ip,
           userAgent: ctx.req.headers["user-agent"],
         });
-      } catch (_) {}
+      } catch (e) { console.error("Audit log failed:", e) }
 
       return { success: true };
     }),
@@ -420,7 +420,7 @@ export const companiesRouter = router({
           ipAddress: ctx.req.ip,
           userAgent: ctx.req.headers["user-agent"],
         });
-      } catch (_) {}
+      } catch (e) { console.error("Audit log failed:", e) }
 
       return { success: true };
     }),
