@@ -202,11 +202,11 @@ async function buildCompletedResponse(company: any, consultantTenantId: string):
     };
   }
 
-  if (fp.status === "draft" || fp.status === "pending" || fp.status === "pending_approval") {
-    const wasSent = !!fp.sentAt;
+  if (["draft", "pending", "pending_approval", "sent"].includes(fp.status)) {
+    const wasSent = !!fp.sentAt || fp.status === "sent";
     if (wasSent) {
       return {
-        content: `✅ **NR-01 concluído.** Proposta final enviada para **${fp.contactEmail}**.\n\n⏳ **Aguardando aprovação da empresa.**\n\nQuando a empresa aprovar, as instruções de pagamento serão enviadas automaticamente.`,
+        content: `✅ **NR-01 concluído.** Proposta final enviada para **${fp.contactEmail}**.\n\n⏳ **Aguardando aprovação da empresa.**\n\nQuando a empresa aprovar, as instruções de pagamento serão enviadas automaticamente.\n\nDiga **"continuar"** para verificar status.`,
         actions: [],
       };
     }
