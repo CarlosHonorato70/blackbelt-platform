@@ -10,7 +10,7 @@ import { getNR01Status, getCompanyStrategy } from "../_ai/agentOrchestrator";
 import { scanTenantAlerts } from "../_ai/agentAlerts";
 import { buildAgentSystemPrompt, buildContextMessage } from "../_ai/prompts/agent-system";
 import { processCNPJForAgent, formatCNPJ, sectorLabel, isHighRiskSector } from "../_core/cnpjLookup";
-import { tenants, proposals, proposalItems, clients, people } from "../../drizzle/schema";
+import { tenants, proposals, proposalItems, proposalPayments, clients, people } from "../../drizzle/schema";
 import { complianceChecklist, complianceMilestones } from "../../drizzle/schema_nr01";
 import { executeCreateAssessment, executeGenerateInventoryAndPlan, executeCreateTraining, executeCompleteChecklist } from "../_ai/agentExecutor";
 import { log } from "../_core/logger";
@@ -169,6 +169,109 @@ function buildPdfDownloadLinks(companyId: string): string {
     `- [Programa de Treinamento](${base}/treinamento/${companyId})\n` +
     `- [Checklist de Conformidade](${base}/checklist/${companyId})\n` +
     `- [Certificado de Conformidade NR-01](${base}/certificado/${companyId})\n`;
+}
+
+// Build response for completed NR-01 based on final proposal + payment status
+async function buildCompletedResponse(company: any, consultantTenantId: string): Promise<{ content: string; actions: any[] }> {
+  const db2 = await getDb();
+
+  // Check if final proposal exists
+  const [finalProp] = await db2.select().from(proposals)
+    .where(and(
+      eq(proposals.tenantId, consultantTenantId),
+      sql`proposalType = 'final'`,
+      sql`JSON_UNQUOTE(JSON_EXTRACT(description, '$.companyId')) = ${company.id} OR clientId IN (SELECT id FROM clients WHERE cnpj = ${company.cnpj?.replace(/\D/g, '')})`
+    ))
+    .orderBy(desc(proposals.createdAt))
+    .limit(1);
+
+  // Fallback: check any final proposal for this consultant
+  let fp = finalProp;
+  if (!fp) {
+    const [anyFinal] = await db2.select().from(proposals)
+      .where(and(eq(proposals.tenantId, consultantTenantId), sql`proposalType = 'final'`))
+      .orderBy(desc(proposals.createdAt))
+      .limit(1);
+    fp = anyFinal;
+  }
+
+  if (!fp) {
+    // No final proposal yet — offer to generate
+    return {
+      content: `✅ **Processo NR-01 da empresa ${company.name} está 100% concluído!**\n\n` +
+        `**Próximo passo:** Gerar a **Proposta Comercial Final** com os valores dos serviços realizados e enviar para aprovação + pagamento.\n\n` +
+        `Clique no botão abaixo para gerar.`,
+      actions: [
+        { type: "generate_final_proposal", label: "Gerar Proposta Final", params: { companyId: company.id } },
+      ],
+    };
+  }
+
+  if (fp.status === "draft" || fp.status === "pending" || fp.status === "pending_approval") {
+    const wasSent = !!fp.sentAt;
+    if (wasSent) {
+      return {
+        content: `✅ **NR-01 concluído.** Proposta final enviada para **${fp.contactEmail}**.\n\n⏳ **Aguardando aprovação da empresa.**\n\nQuando a empresa aprovar, as instruções de pagamento serão enviadas automaticamente.`,
+        actions: [],
+      };
+    }
+    return {
+      content: `✅ **NR-01 concluído.** Proposta final gerada mas **ainda não enviada**.\n\nEnvie para a empresa para aprovação e pagamento.`,
+      actions: [
+        { type: "send_final_proposal_email", label: "Enviar Proposta Final por Email", params: { proposalId: fp.id, email: fp.contactEmail, companyId: company.id } },
+        { type: "edit_proposal", label: "Editar Proposta Final", params: { proposalId: fp.id } },
+      ],
+    };
+  }
+
+  if (fp.status === "approved") {
+    // Check payment
+    const payments = await db2.select().from(proposalPayments)
+      .where(eq(proposalPayments.proposalId, fp.id))
+      .orderBy(proposalPayments.installment);
+
+    const paidCount = payments.filter((p: any) => p.status === "paid").length;
+    const totalInstallments = payments.length || 3;
+
+    if (fp.paymentStatus === "paid" || paidCount === totalInstallments) {
+      // Fully paid — show PDFs
+      return {
+        content: `✅ **Processo completo!** NR-01 finalizado, proposta aprovada e **pagamento confirmado**.\n\n` +
+          `Todos os documentos estão liberados para download:` + buildPdfDownloadLinks(company.id) +
+          `\n\nDeseja iniciar o processo para **outra empresa**? Envie o CNPJ.`,
+        actions: [],
+      };
+    }
+
+    // Partially paid or pending
+    let paymentInfo = `\n\n💰 **Status do Pagamento:** ${paidCount} de ${totalInstallments} parcelas pagas\n`;
+    for (const p of payments) {
+      const statusIcon = (p as any).status === "paid" ? "✅" : "⏳";
+      const pct = (p as any).percentage;
+      const val = ((p as any).amount / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      paymentInfo += `${statusIcon} Parcela ${(p as any).installment} (${pct}%) — ${val}\n`;
+    }
+
+    return {
+      content: `✅ **NR-01 concluído.** Proposta final **aprovada**.\n${paymentInfo}\n⚠️ **PDFs serão liberados após confirmação de todas as parcelas.**\n\nPara confirmar pagamentos, acesse **Propostas Comerciais** e clique em "Marcar Pagamento".`,
+      actions: [],
+    };
+  }
+
+  if (fp.status === "rejected") {
+    return {
+      content: `✅ **NR-01 concluído**, mas a proposta final foi **recusada** pela empresa.\n\nVocê pode gerar uma nova proposta com valores diferentes.`,
+      actions: [
+        { type: "generate_final_proposal", label: "Gerar Nova Proposta Final", params: { companyId: company.id } },
+      ],
+    };
+  }
+
+  // Fallback
+  return {
+    content: `✅ **Processo NR-01 da empresa ${company.name} está 100% concluído!**` + buildPdfDownloadLinks(company.id),
+    actions: [],
+  };
 }
 
 // Extract CNPJ from text
@@ -1228,6 +1331,86 @@ async function generateFallbackResponse(
     return { content: "Nenhuma proposta pendente encontrada. Informe o CNPJ da empresa para gerar uma nova proposta.", actions: [] };
   }
 
+  // ── 0a1b. Handle generate_final_proposal action ──
+  if (msg.startsWith("executar:generate_final_proposal") || msg.includes("gerar proposta final")) {
+    const existingCompany = await findCompanyByCNPJ();
+    if (existingCompany) {
+      const hc = memory.headcount || 10;
+      const riskLevel = memory.highRisk ? "high" as const : "low" as const;
+      const fpData = await buildFinalProposalData(
+        existingCompany.id, existingCompany.name,
+        formatCNPJ(memory.cnpj || existingCompany.cnpj?.replace(/\D/g, '') || ""), hc, memory.sectorName,
+      );
+      if (fpData) {
+        const initialProposal = generatePricingProposal({
+          name: existingCompany.name, cnpj: formatCNPJ(memory.cnpj || ""),
+          headcount: hc, sector: memory.sector, sectorName: memory.sectorName, riskLevel,
+        });
+        const content = generateFinalProposal(fpData, initialProposal);
+
+        try {
+          const db2 = await getDb();
+          if (db2) {
+            await saveFinalProposal(db2, tenantId, existingCompany.id, existingCompany.name, content, initialProposal, fpData, hc);
+          }
+        } catch (err: any) {
+          log.error("Failed to save final proposal", { error: err.message });
+        }
+
+        // Find the saved final proposal for action buttons
+        const db3 = await getDb();
+        const [savedFP] = await db3.select().from(proposals)
+          .where(and(eq(proposals.tenantId, tenantId), sql`proposalType = 'final'`))
+          .orderBy(desc(proposals.createdAt))
+          .limit(1);
+
+        const contactEmail = (memory as any).contactEmail || existingCompany.cnpj;
+
+        return {
+          content: content + `\n\n✅ **Proposta final gerada!** Revise e envie para a empresa.`,
+          actions: [
+            { type: "send_final_proposal_email", label: "Enviar Proposta Final por Email", params: { proposalId: savedFP?.id, email: contactEmail, companyId: existingCompany.id } },
+            { type: "edit_proposal", label: "Editar Proposta Final", params: { proposalId: savedFP?.id } },
+          ],
+        };
+      }
+      return { content: "Dados insuficientes para gerar proposta final. Complete o COPSOQ-II primeiro.", actions: [] };
+    }
+    return { content: "Empresa não encontrada. Informe o CNPJ.", actions: [] };
+  }
+
+  // ── 0a1c. Handle send_final_proposal_email action ──
+  if (msg.startsWith("executar:send_final_proposal_email") || msg.includes("enviar proposta final")) {
+    const db2 = await getDb();
+    const [finalProp] = await db2.select().from(proposals)
+      .where(and(eq(proposals.tenantId, tenantId), sql`proposalType = 'final'`))
+      .orderBy(desc(proposals.createdAt))
+      .limit(1);
+
+    if (finalProp?.id) {
+      const emailResult = await sendPreProposalByEmail(finalProp.id);
+      if (emailResult.success) {
+        await db2.update(proposals)
+          .set({ status: "pending_approval", sentAt: new Date(), updatedAt: new Date() })
+          .where(eq(proposals.id, finalProp.id));
+
+        return {
+          content: `✅ **Proposta final enviada com sucesso!**\n\n${emailResult.message}\n\n` +
+            `A empresa receberá um email com a proposta e botões para **aprovar** ou **recusar**.\n\n` +
+            `**Após aprovação:**\n` +
+            `1. Instruções de pagamento serão enviadas automaticamente\n` +
+            `2. Empresa efetua pagamento (parcelado em 3x)\n` +
+            `3. Consultoria confirma recebimento\n` +
+            `4. PDFs são liberados para a empresa\n\n` +
+            `⏳ **Aguardando aprovação...**\n\nDiga **"continuar"** para verificar status.`,
+          actions: [],
+        };
+      }
+      return { content: `Erro ao enviar proposta final: ${emailResult.message}`, actions: [] };
+    }
+    return { content: "Nenhuma proposta final encontrada. Gere primeiro com 'Gerar Proposta Final'.", actions: [] };
+  }
+
   // ── 0a2. Handle send_copsoq_invites action ──
   if (msg.startsWith("executar:send_copsoq_invites") || msg.includes("enviar copsoq")) {
     const companyIdMatch = msg.match(/companyId[=:]([^\s,}]+)/);
@@ -1391,20 +1574,8 @@ async function generateFallbackResponse(
       const nextPhase = await getNextPhase(existingCompany.id);
 
       if (nextPhase === "completed") {
-        // NR-01 fully completed — show status + PDF links, no need to ask anything
-        return {
-          content: `A empresa **${existingCompany.name}** (${formattedCnpjCheck}) ja esta cadastrada na plataforma.\n\n` +
-            `✅ **O processo NR-01 desta empresa ja esta 100% concluido!** Todas as fases foram finalizadas com sucesso.\n\n` +
-            `**Documentos Gerados** — Download PDF:\n` +
-            `- Proposta Comercial\n` +
-            `- Relatório COPSOQ-II\n` +
-            `- Inventário de Riscos Psicossociais\n` +
-            `- Plano de Ação\n` +
-            `- Programa de Treinamento\n` +
-            `- Certificado de Conformidade NR-01\n\n` +
-            `Deseja iniciar o processo para **outra empresa**? Envie o CNPJ.`,
-          actions: [],
-        };
+        // NR-01 fully completed — check final proposal + payment status
+        return await buildCompletedResponse(existingCompany, tenantId);
       }
 
       if (nextPhase !== "unknown") {
@@ -1500,16 +1671,10 @@ async function generateFallbackResponse(
         if (execResult.companyId) {
           const nextPhase = await getNextPhase(execResult.companyId);
           if (nextPhase === "completed") {
-            content += `\n\n✅ **O processo NR-01 desta empresa ja esta 100% concluido!** Todas as fases foram finalizadas com sucesso.`;
-            content += `\n\n**Documentos Gerados** — Download PDF:`;
-            content += `\n- Proposta Comercial`;
-            content += `\n- Relatório COPSOQ-II`;
-            content += `\n- Inventário de Riscos Psicossociais`;
-            content += `\n- Plano de Ação`;
-            content += `\n- Programa de Treinamento`;
-            content += `\n- Certificado de Conformidade NR-01`;
-            content += `\n\nDeseja iniciar o processo para **outra empresa**? Envie o CNPJ, número de funcionários e email.`;
-            return { content, actions: [] };
+            // Check final proposal + payment status
+            const completedResp = await buildCompletedResponse({ id: execResult.companyId, name: data.nome_fantasia || data.razao_social, cnpj: formattedCNPJ }, tenantId);
+            content += `\n\n` + completedResp.content;
+            return { content, actions: completedResp.actions };
           }
           if (nextPhase !== "create_assessment") {
             // NR-01 in progress — show current phase
@@ -1784,17 +1949,19 @@ async function generateFallbackResponse(
 
       if (nextPhase === "complete_checklist") {
         const result = await executeCompleteChecklist(existingCompany.id);
+        // After completing checklist, offer to generate final proposal
         return {
-          content: result.message + `\n\n**Processo NR-01 concluido com sucesso!** Todas as fases foram finalizadas.` + buildPdfDownloadLinks(existingCompany.id),
-          actions: [],
+          content: result.message + `\n\n✅ **Processo NR-01 concluido com sucesso!** Todas as fases técnicas foram finalizadas.\n\n` +
+            `**Próximo passo:** Gerar a **Proposta Comercial Final** com base nos serviços realizados e enviar para aprovação da empresa.`,
+          actions: [
+            { type: "generate_final_proposal", label: "Gerar Proposta Final", params: { companyId: existingCompany.id } },
+          ],
         };
       }
 
       if (nextPhase === "completed") {
-        return {
-          content: `O processo NR-01 desta empresa ja esta **100% concluido**! Todas as fases foram finalizadas com sucesso.` + buildPdfDownloadLinks(existingCompany.id) + `\n\nDeseja iniciar o processo para outra empresa? Envie o CNPJ, numero de funcionarios e email da empresa.`,
-          actions: [],
-        };
+        // Check final proposal + payment status
+        return await buildCompletedResponse(existingCompany, tenantId);
       }
     }
 
