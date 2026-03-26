@@ -48,6 +48,7 @@ const AdminSupportTickets = lazy(() => import("./pages/AdminSupportTickets"));
 const AdminDsrManagement = lazy(() => import("./pages/AdminDsrManagement"));
 const AdminMetricsDashboard = lazy(() => import("./pages/AdminMetricsDashboard"));
 const CopsoqRespond = lazy(() => import("./pages/CopsoqRespond"));
+const AnonymousReportPublic = lazy(() => import("./pages/AnonymousReportPublic"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
@@ -134,6 +135,7 @@ export default function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/copsoq/respond/:token" element={<Suspense fallback={<PageLoader />}><CopsoqRespond /></Suspense>} />
+                <Route path="/denuncia/:token" element={<Suspense fallback={<PageLoader />}><AnonymousReportPublic /></Suspense>} />
                 <Route path="/survey/respond/:token" element={<Suspense fallback={<PageLoader />}><ClimateSurveyRespond /></Suspense>} />
                 <Route path="/forgot-password" element={<Suspense fallback={<PageLoader />}><ForgotPassword /></Suspense>} />
                 <Route path="/reset-password/:token" element={<Suspense fallback={<PageLoader />}><ResetPassword /></Suspense>} />

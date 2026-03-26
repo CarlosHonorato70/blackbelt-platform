@@ -200,6 +200,20 @@ export async function sendCopsoqInvite(params: {
         </p>
       </div>
 
+      <div style="background: #fffbeb; padding: 20px; border: 1px solid #fbbf24; border-top: none;">
+        <table style="width: 100%;"><tr>
+          <td style="width: 40px; vertical-align: top; padding-right: 12px;">
+            <div style="width: 36px; height: 36px; background: #f59e0b; border-radius: 50%; text-align: center; line-height: 36px; color: white; font-size: 18px;">&#128737;</div>
+          </td>
+          <td>
+            <p style="margin: 0 0 4px 0; font-weight: bold; color: #92400e; font-size: 14px;">Canal de Denúncia Confidencial</p>
+            <p style="margin: 0 0 10px 0; color: #78350f; font-size: 12px;">Se você presenciou ou sofreu assédio, discriminação, violência ou outra situação inadequada, utilize nosso canal seguro.</p>
+            <a href="${process.env.FRONTEND_URL || "http://localhost:3000"}/denuncia/${inviteToken}" style="background: #d97706; color: white; padding: 8px 20px; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block;">Fazer Denúncia Anônima</a>
+            <p style="margin: 8px 0 0 0; font-size: 11px; color: #a16207;">Sua identidade será totalmente preservada. Protegido pela LGPD.</p>
+          </td>
+        </tr></table>
+      </div>
+
       <div style="background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; font-size: 12px; color: #666; text-align: center;">
         <p style="margin: 0;">
           Black Belt Consultoria | Plataforma de Gestão de Riscos Psicossociais

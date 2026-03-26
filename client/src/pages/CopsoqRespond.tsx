@@ -203,6 +203,23 @@ export default function CopsoqRespond() {
         </div>
       </div>
 
+      {/* Banner Canal de Denúncia */}
+      <div className="max-w-3xl mx-auto px-4 pt-4">
+        <a
+          href={`/denuncia/${token}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors"
+        >
+          <ShieldCheck className="h-5 w-5 text-amber-600 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-800">Canal de Denúncia Confidencial</p>
+            <p className="text-xs text-amber-600">Presenciou ou sofreu alguma situação inadequada? Clique aqui para fazer uma denúncia anônima.</p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-amber-400 shrink-0" />
+        </a>
+      </div>
+
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
         {/* Welcome bar */}
         <Card className="bg-blue-50 border-blue-200">

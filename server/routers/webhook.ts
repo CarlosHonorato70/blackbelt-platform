@@ -3,7 +3,7 @@ import { nanoid } from "nanoid";
 import { eq } from "drizzle-orm";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { copsoqInvites, copsoqResponses } from "../../drizzle/schema_nr01";
+import { copsoqInvites, copsoqResponses, anonymousReports } from "../../drizzle/schema_nr01";
 import { TRPCError } from "@trpc/server";
 import crypto from "crypto";
 
@@ -362,6 +362,48 @@ export const webhookRouter = router({
         expired,
         responseRate,
       };
+    }),
+
+  // Canal de denúncia público vinculado ao COPSOQ
+  submitAnonymousReport: publicProcedure
+    .input(z.object({
+      inviteToken: z.string(),
+      category: z.enum(["harassment", "discrimination", "violence", "workload", "leadership", "other"]),
+      description: z.string().min(10, "Descreva a situação com pelo menos 10 caracteres"),
+      severity: z.enum(["low", "medium", "high", "critical"]).default("medium"),
+      reporterEmail: z.string().email().optional().or(z.literal("")),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+
+      // Validar token e extrair tenantId
+      const [invite] = await db
+        .select({ tenantId: copsoqInvites.tenantId })
+        .from(copsoqInvites)
+        .where(eq(copsoqInvites.inviteToken, input.inviteToken))
+        .limit(1);
+
+      if (!invite) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Token inválido" });
+      }
+
+      // Gerar código de rastreamento
+      const reportCode = `RPT-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      const id = nanoid();
+
+      await db.insert(anonymousReports).values({
+        id,
+        tenantId: invite.tenantId,
+        reportCode,
+        category: input.category,
+        description: input.description,
+        severity: input.severity,
+        isAnonymous: true,
+        reporterEmail: input.reporterEmail || null,
+        status: "received",
+      });
+
+      return { reportCode };
     }),
 });
 
