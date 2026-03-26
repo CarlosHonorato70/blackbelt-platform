@@ -2139,7 +2139,10 @@ async function generateFallbackResponse(
       }
       if (wantsCertificate) {
         const result = await executeCompleteChecklist(existingCompany.id);
-        return { content: result.message + buildPdfDownloadLinks(existingCompany.id), actions: [] };
+        return {
+          content: result.message + `\n\n✅ **Processo NR-01 concluido com sucesso!**\n\n**Próximo passo:** Gerar a **Proposta Comercial Final** e enviar para aprovação e pagamento.`,
+          actions: [{ type: "generate_final_proposal", label: "Gerar Proposta Final", params: { companyId: existingCompany.id } }],
+        };
       }
     }
   }
@@ -2215,10 +2218,7 @@ async function generateFallbackResponse(
         };
       }
       if (nextPhase === "completed") {
-        return {
-          content: `Processo NR-01 da empresa **${existingCompany.name}** ja esta **100% concluido**!` + buildPdfDownloadLinks(existingCompany.id) + `\n\nDeseja iniciar o processo para outra empresa? Envie o CNPJ, numero de funcionarios e email da empresa.`,
-          actions: [],
-        };
+        return await buildCompletedResponse(existingCompany, tenantId);
       }
     }
   }
