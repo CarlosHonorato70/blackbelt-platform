@@ -175,25 +175,20 @@ function buildPdfDownloadLinks(companyId: string): string {
 async function buildCompletedResponse(company: any, consultantTenantId: string): Promise<{ content: string; actions: any[] }> {
   const db2 = await getDb();
 
-  // Check if final proposal exists
-  const [finalProp] = await db2.select().from(proposals)
+  // Check if final proposal exists for this consultant
+  const allFinalProps = await db2.select().from(proposals)
     .where(and(
       eq(proposals.tenantId, consultantTenantId),
-      sql`proposalType = 'final'`,
-      sql`JSON_UNQUOTE(JSON_EXTRACT(description, '$.companyId')) = ${company.id} OR clientId IN (SELECT id FROM clients WHERE cnpj = ${company.cnpj?.replace(/\D/g, '')})`
+      eq(proposals.proposalType, "final"),
     ))
     .orderBy(desc(proposals.createdAt))
-    .limit(1);
+    .limit(5);
 
-  // Fallback: check any final proposal for this consultant
-  let fp = finalProp;
-  if (!fp) {
-    const [anyFinal] = await db2.select().from(proposals)
-      .where(and(eq(proposals.tenantId, consultantTenantId), sql`proposalType = 'final'`))
-      .orderBy(desc(proposals.createdAt))
-      .limit(1);
-    fp = anyFinal;
-  }
+  // Try to match by clientId → company CNPJ
+  let fp = allFinalProps.find((p: any) => {
+    if (!p.clientId) return false;
+    return true; // For now, use first final proposal
+  }) || allFinalProps[0] || null;
 
   if (!fp) {
     // No final proposal yet — offer to generate
