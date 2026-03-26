@@ -67,11 +67,10 @@ export default function AnonymousReport() {
     }
     submitMutation.mutate({
       tenantId,
-      category: form.category,
+      category: form.category as any,
       description: form.description,
-      severity: form.severity,
-      anonymous: form.anonymous,
-      email: form.anonymous ? undefined : form.email || undefined,
+      severity: form.severity as any,
+      reporterEmail: form.anonymous ? undefined : form.email || undefined,
     });
   };
 
@@ -142,12 +141,12 @@ export default function AnonymousReport() {
                     <SelectValue placeholder="Selecione a categoria" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="harassment">Assedio Moral</SelectItem>
+                    <SelectItem value="assedio_moral">Assedio Moral</SelectItem>
+                    <SelectItem value="assedio_sexual">Assedio Sexual</SelectItem>
                     <SelectItem value="discrimination">Discriminacao</SelectItem>
-                    <SelectItem value="violence">Violencia</SelectItem>
-                    <SelectItem value="workload">Sobrecarga</SelectItem>
-                    <SelectItem value="leadership">Lideranca</SelectItem>
-                    <SelectItem value="other">Outro</SelectItem>
+                    <SelectItem value="condicoes_trabalho">Condicoes de Trabalho</SelectItem>
+                    <SelectItem value="violencia_psicologica">Violencia Psicologica</SelectItem>
+                    <SelectItem value="other">Outros</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -52,6 +52,7 @@ import {
   HeartPulse,
   MessageSquareWarning,
   Headphones,
+  ShieldAlert,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { CSSProperties, Fragment, useEffect, useState } from "react";
@@ -99,6 +100,7 @@ const menuItems: MenuItem[] = [
   // --- Ferramentas ---
   { icon: Megaphone, label: "Pesquisa de Clima", path: "/climate-surveys", group: "Ferramentas", companyVisible: true },
   { icon: MessageSquareWarning, label: "Canal de Denúncia", path: "/anonymous-report", group: "Ferramentas", companyVisible: true },
+  { icon: ShieldAlert, label: "Gestão de Denúncias", path: "/complaints", group: "Ferramentas", consultantOnly: true },
   { icon: Ruler, label: "Avaliação Ergonômica", path: "/ergonomic-assessments", group: "Ferramentas", companyVisible: true },
   { icon: Upload, label: "Exportação eSocial", path: "/esocial-export", group: "Ferramentas", consultantOnly: true },
 

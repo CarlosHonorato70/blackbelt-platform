@@ -358,6 +358,7 @@ export const assessmentsRouter = router({
           assessmentTitle: input.assessmentTitle,
           inviteToken,
           expiresIn: input.expiresIn,
+          tenantId: ctx.tenantId!,
         });
       }
 

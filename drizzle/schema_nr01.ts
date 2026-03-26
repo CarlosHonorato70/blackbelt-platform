@@ -623,9 +623,10 @@ export const trainingProgress = mysqlTable("training_progress", {
 export const anonymousReports = mysqlTable("anonymous_reports", {
   id: varchar("id", { length: 64 }).primaryKey(),
   tenantId: varchar("tenantId", { length: 64 }).notNull(),
-  reportCode: varchar("reportCode", { length: 20 }).notNull().unique(), // RPT-XXXX
+  reportCode: varchar("reportCode", { length: 20 }).notNull().unique(), // BB-2026-XXXX
   category: mysqlEnum("reportCategory", [
     "harassment", "discrimination", "violence", "workload", "leadership", "other",
+    "assedio_moral", "assedio_sexual", "condicoes_trabalho", "violencia_psicologica",
   ]).notNull(),
   description: text("description").notNull(),
   severity: mysqlEnum("reportSeverity", ["low", "medium", "high", "critical"]).default("medium").notNull(),
@@ -635,6 +636,7 @@ export const anonymousReports = mysqlTable("anonymous_reports", {
   isAnonymous: boolean("isAnonymous").default(true),
   reporterEmail: varchar("reporterEmail", { length: 320 }),
   resolution: text("resolution"),
+  adminNotes: text("adminNotes"),
   assignedTo: varchar("assignedTo", { length: 64 }),
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt").defaultNow(),

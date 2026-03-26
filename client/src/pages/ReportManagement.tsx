@@ -44,12 +44,17 @@ import {
 import { usePdfExport } from "@/hooks/usePdfExport";
 
 const CATEGORY_LABELS: Record<string, string> = {
-  harassment: "Assedio",
+  assedio_moral: "Assedio Moral",
+  assedio_sexual: "Assedio Sexual",
   discrimination: "Discriminacao",
+  condicoes_trabalho: "Condicoes de Trabalho",
+  violencia_psicologica: "Violencia Psicologica",
+  other: "Outros",
+  // Legacy
+  harassment: "Assedio",
   violence: "Violencia",
   workload: "Sobrecarga",
   leadership: "Lideranca",
-  other: "Outro",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -87,10 +92,13 @@ export default function ReportManagement() {
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
 
   const [selectedReport, setSelectedReport] = useState<any>(null);
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterSeverity, setFilterSeverity] = useState<string>("all");
   const [detailForm, setDetailForm] = useState({
     status: "",
     resolution: "",
     assignedTo: "",
+    adminNotes: "",
   });
 
   if (!tenantId) {
@@ -107,13 +115,17 @@ export default function ReportManagement() {
     );
   }
 
+  const queryInput: any = {};
+  if (filterStatus !== "all") queryInput.status = filterStatus;
+  if (filterSeverity !== "all") queryInput.severity = filterSeverity;
+
   const { data: reports = [], refetch } = trpc.anonymousReports.list.useQuery(
-    { tenantId },
+    queryInput,
     { enabled: !!tenantId }
   );
 
   const { data: stats } = trpc.anonymousReports.getStats.useQuery(
-    { tenantId },
+    {},
     { enabled: !!tenantId }
   );
 
@@ -134,6 +146,7 @@ export default function ReportManagement() {
       status: report.status || "received",
       resolution: report.resolution || "",
       assignedTo: report.assignedTo || "",
+      adminNotes: report.adminNotes || "",
     });
   };
 
@@ -141,10 +154,10 @@ export default function ReportManagement() {
     if (!selectedReport) return;
     updateMutation.mutate({
       id: selectedReport.id,
-      tenantId,
-      status: detailForm.status,
+      status: detailForm.status as any,
       resolution: detailForm.resolution || undefined,
       assignedTo: detailForm.assignedTo || undefined,
+      adminNotes: detailForm.adminNotes || undefined,
     });
   };
 
@@ -181,11 +194,11 @@ export default function ReportManagement() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Em Investigacao</CardTitle>
+              <CardTitle className="text-sm font-medium">Em Analise</CardTitle>
               <Search className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.investigating ?? 0}</div>
+              <div className="text-2xl font-bold">{stats?.byStatus?.investigating ?? 0}</div>
             </CardContent>
           </Card>
           <Card>
@@ -194,7 +207,7 @@ export default function ReportManagement() {
               <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.resolved ?? 0}</div>
+              <div className="text-2xl font-bold">{stats?.byStatus?.resolved ?? 0}</div>
             </CardContent>
           </Card>
           <Card>
@@ -220,10 +233,38 @@ export default function ReportManagement() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShieldAlert className="h-5 w-5" />
-              Denuncias Registradas
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <ShieldAlert className="h-5 w-5" />
+                Denuncias Registradas
+              </CardTitle>
+              <div className="flex gap-2">
+                <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); }}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os Status</SelectItem>
+                    <SelectItem value="received">Recebida</SelectItem>
+                    <SelectItem value="investigating">Em Analise</SelectItem>
+                    <SelectItem value="resolved">Resolvida</SelectItem>
+                    <SelectItem value="dismissed">Arquivada</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={filterSeverity} onValueChange={(v) => { setFilterSeverity(v); }}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="Gravidade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas Gravidades</SelectItem>
+                    <SelectItem value="low">Baixa</SelectItem>
+                    <SelectItem value="medium">Media</SelectItem>
+                    <SelectItem value="high">Alta</SelectItem>
+                    <SelectItem value="critical">Critica</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {reports.length === 0 ? (
@@ -343,6 +384,20 @@ export default function ReportManagement() {
                     placeholder="Descreva as acoes tomadas e a resolucao..."
                     rows={3}
                   />
+                </div>
+
+                <div>
+                  <Label htmlFor="adminNotes">Notas Internas</Label>
+                  <Textarea
+                    id="adminNotes"
+                    value={detailForm.adminNotes}
+                    onChange={(e) => setDetailForm({ ...detailForm, adminNotes: e.target.value })}
+                    placeholder="Anotacoes internas sobre a denuncia (nao visivel ao denunciante)..."
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Estas notas sao de uso interno e nao sao visiveis ao denunciante.
+                  </p>
                 </div>
 
                 <div className="flex justify-end gap-2">

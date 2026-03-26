@@ -148,6 +148,7 @@ export async function sendCopsoqInvite(params: {
   assessmentTitle: string;
   inviteToken: string;
   expiresIn: number; // dias
+  tenantId?: string;
 }): Promise<boolean> {
   const {
     respondentEmail,
@@ -155,6 +156,7 @@ export async function sendCopsoqInvite(params: {
     assessmentTitle,
     inviteToken,
     expiresIn,
+    tenantId,
   } = params;
 
   const inviteUrl = `${process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:3000"}/copsoq/respond/${inviteToken}`;
@@ -208,7 +210,7 @@ export async function sendCopsoqInvite(params: {
           <td>
             <p style="margin: 0 0 4px 0; font-weight: bold; color: #92400e; font-size: 14px;">Canal de Denúncia Confidencial</p>
             <p style="margin: 0 0 10px 0; color: #78350f; font-size: 12px;">Se você presenciou ou sofreu assédio, discriminação, violência ou outra situação inadequada, utilize nosso canal seguro.</p>
-            <a href="${process.env.FRONTEND_URL || "http://localhost:3000"}/denuncia/${inviteToken}" style="background: #d97706; color: white; padding: 8px 20px; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block;">Fazer Denúncia Anônima</a>
+            <a href="${process.env.FRONTEND_URL || "http://localhost:3000"}/denuncia/${tenantId || inviteToken}" style="background: #d97706; color: white; padding: 8px 20px; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block;">Fazer Denúncia Anônima</a>
             <p style="margin: 8px 0 0 0; font-size: 11px; color: #a16207;">Sua identidade será totalmente preservada. Protegido pela LGPD.</p>
           </td>
         </tr></table>
@@ -242,6 +244,7 @@ export async function sendBulkCopsoqInvites(
     assessmentTitle: string;
     inviteToken: string;
     expiresIn: number;
+    tenantId?: string;
   }>
 ): Promise<{ success: number; failed: number }> {
   let success = 0;

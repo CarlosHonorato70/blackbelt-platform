@@ -152,6 +152,7 @@ async function executeCreateAssessmentWithInvites(
       assessmentTitle,
       inviteToken,
       expiresIn,
+      tenantId,
     });
   }
 

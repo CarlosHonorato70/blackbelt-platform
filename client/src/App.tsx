@@ -87,6 +87,8 @@ const Companies = lazy(() => import("./pages/Companies"));
 const GuidedWorkflow = lazy(() => import("./pages/GuidedWorkflow"));
 const AgentChat = lazy(() => import("./pages/AgentChat"));
 const SupportChat = lazy(() => import("./pages/SupportChat"));
+const ComplaintPublic = lazy(() => import("./pages/ComplaintPublic"));
+const ComplaintTrack = lazy(() => import("./pages/ComplaintTrack"));
 
 // Subscription pages
 const Pricing = lazy(() => import("./pages/subscription/Pricing"));
@@ -135,7 +137,8 @@ export default function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/copsoq/respond/:token" element={<Suspense fallback={<PageLoader />}><CopsoqRespond /></Suspense>} />
-                <Route path="/denuncia/:token" element={<Suspense fallback={<PageLoader />}><AnonymousReportPublic /></Suspense>} />
+                <Route path="/denuncia/consulta" element={<Suspense fallback={<PageLoader />}><ComplaintTrack /></Suspense>} />
+                <Route path="/denuncia/:tenantId" element={<Suspense fallback={<PageLoader />}><ComplaintPublic /></Suspense>} />
                 <Route path="/survey/respond/:token" element={<Suspense fallback={<PageLoader />}><ClimateSurveyRespond /></Suspense>} />
                 <Route path="/forgot-password" element={<Suspense fallback={<PageLoader />}><ForgotPassword /></Suspense>} />
                 <Route path="/reset-password/:token" element={<Suspense fallback={<PageLoader />}><ResetPassword /></Suspense>} />
@@ -196,6 +199,7 @@ export default function App() {
                 <Route path="/anonymous-report" element={<ProtectedPage><AnonymousReport /></ProtectedPage>} />
                 <Route path="/anonymous-report/track" element={<ProtectedPage><AnonymousReportTrack /></ProtectedPage>} />
                 <Route path="/report-management" element={<ProtectedPage><ReportManagement /></ProtectedPage>} />
+                <Route path="/complaints" element={<ProtectedPage><ReportManagement /></ProtectedPage>} />
                 <Route path="/guided-workflow" element={<ProtectedPage><GuidedWorkflow /></ProtectedPage>} />
                 <Route path="/deadline-alerts" element={<ProtectedPage><DeadlineAlerts /></ProtectedPage>} />
                 <Route path="/ergonomic-assessments" element={<ProtectedPage><ErgonomicAssessments /></ProtectedPage>} />
