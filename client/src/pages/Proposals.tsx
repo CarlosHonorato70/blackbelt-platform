@@ -685,15 +685,24 @@ export default function Proposals() {
   const handleConfirmPayment = async (installmentNumber: number) => {
     setConfirmingInstallment(installmentNumber);
     try {
-      const fetcher = (utils as any).proposals?.confirmPayment?.fetch;
+      // Call the correct backend endpoint: pricing.confirmPayment
+      const fetcher = (utils as any).pricing?.confirmPayment?.fetch;
       if (fetcher) {
         await fetcher({
           proposalId: paymentProposal.id,
           installmentNumber,
         });
+      } else {
+        // Fallback: direct fetch to API
+        await fetch(`/api/trpc/pricing.confirmPayment`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ proposalId: paymentProposal.id, installmentNumber }),
+        });
       }
-    } catch {
-      // Endpoint may not exist yet — proceed locally
+    } catch (err) {
+      console.error("Failed to confirm payment:", err);
     }
 
     setInstallments((prev) =>
