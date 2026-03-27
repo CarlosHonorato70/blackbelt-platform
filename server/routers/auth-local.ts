@@ -280,7 +280,7 @@ export const authLocalRouter = router({
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.cookie(COOKIE_NAME, sessionToken, cookieOptions);
 
-      return { success: true };
+      return { success: true, role: user.role || "user" };
     }),
 
   me: publicProcedure.query(async ({ ctx }) => {
