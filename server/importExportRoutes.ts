@@ -77,14 +77,21 @@ async function authenticateRequest(req: Request, res: Response): Promise<{ userI
   return { userId: user.id, tenantId: user.tenantId };
 }
 
-async function validateCompanyAccess(tenantId: string, companyId: string, db: any): Promise<boolean> {
+async function validateCompanyAccess(tenantId: string, companyId: string, db: any): Promise<string | false> {
+  // If companyId equals user's tenantId, direct access
+  if (companyId === tenantId) return companyId;
+
   const [company] = await db
     .select({ id: tenants.id, parentTenantId: tenants.parentTenantId })
     .from(tenants)
     .where(eq(tenants.id, companyId))
     .limit(1);
-  if (!company) return false;
-  return company.id === tenantId || company.parentTenantId === tenantId;
+
+  // If company not found, fallback to user's own tenantId
+  if (!company) return tenantId;
+
+  if (company.id === tenantId || company.parentTenantId === tenantId) return companyId;
+  return false;
 }
 
 // ============================================================================
@@ -323,13 +330,13 @@ export function registerImportExportRoutes(app: Express) {
       const { companyId } = req.params;
       const db = await getDb();
 
-      // Validate access
-      const hasAccess = await validateCompanyAccess(auth.tenantId, companyId, db);
-      if (!hasAccess) {
+      // Validate access (returns resolved companyId or false)
+      const resolvedId = await validateCompanyAccess(auth.tenantId, companyId, db);
+      if (!resolvedId) {
         return res.status(403).json({ error: "Acesso negado a esta empresa" });
       }
 
-      const buffer = await generateTemplate(companyId, db);
+      const buffer = await generateTemplate(resolvedId, db);
 
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.setHeader("Content-Disposition", "attachment; filename=modelo_colaboradores.xlsx");
@@ -352,9 +359,9 @@ export function registerImportExportRoutes(app: Express) {
         const { companyId } = req.params;
         const db = await getDb();
 
-        // Validate access
-        const hasAccess = await validateCompanyAccess(auth.tenantId, companyId, db);
-        if (!hasAccess) {
+        // Validate access (returns resolved companyId or false)
+        const resolvedId = await validateCompanyAccess(auth.tenantId, companyId, db);
+        if (!resolvedId) {
           return res.status(403).json({ error: "Acesso negado a esta empresa" });
         }
 
@@ -362,7 +369,7 @@ export function registerImportExportRoutes(app: Express) {
           return res.status(400).json({ error: "Nenhum arquivo enviado" });
         }
 
-        const result = await processImport(companyId, req.file.buffer, db);
+        const result = await processImport(resolvedId, req.file.buffer, db);
 
         res.json({
           success: true,
