@@ -141,6 +141,7 @@ export default function App() {
                 <Route path="/survey/respond/:token" element={<Suspense fallback={<PageLoader />}><ClimateSurveyRespond /></Suspense>} />
                 <Route path="/forgot-password" element={<Suspense fallback={<PageLoader />}><ForgotPassword /></Suspense>} />
                 <Route path="/reset-password/:token" element={<Suspense fallback={<PageLoader />}><ResetPassword /></Suspense>} />
+                <Route path="/verify-email" element={<Suspense fallback={<PageLoader />}><VerifyEmail /></Suspense>} />
                 <Route path="/verify-email/:token" element={<Suspense fallback={<PageLoader />}><VerifyEmail /></Suspense>} />
                 <Route path="/terms" element={<Suspense fallback={<PageLoader />}><TermsOfService /></Suspense>} />
                 <Route path="/privacy" element={<Suspense fallback={<PageLoader />}><PrivacyPolicy /></Suspense>} />
