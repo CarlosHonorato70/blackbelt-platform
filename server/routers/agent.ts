@@ -873,6 +873,7 @@ async function saveFinalProposal(
   initialProposal: PricingProposal,
   fpData: FinalProposalData,
   headcount: number,
+  contactEmail?: string | null,
 ): Promise<string | null> {
   try {
     const finalProposalId = nanoid();
@@ -960,6 +961,19 @@ async function saveFinalProposal(
 
     const finalTotalValue = Math.max(totalCalc, initialProposal.totalEstimate.max * 1.3);
 
+    // Get contactEmail from pre-proposal if not provided
+    let finalContactEmail = contactEmail;
+    if (!finalContactEmail) {
+      const [preProposal] = await db2.select().from(proposals)
+        .where(and(eq(proposals.tenantId, tenantId), eq(proposals.clientId, clientId)))
+        .orderBy(desc(proposals.createdAt))
+        .limit(1);
+      finalContactEmail = preProposal?.contactEmail || null;
+    }
+
+    // Generate approval token
+    const approvalToken = crypto.randomBytes(32).toString("hex");
+
     await db2.insert(proposals).values({
       id: finalProposalId,
       tenantId,
@@ -967,6 +981,9 @@ async function saveFinalProposal(
       title: `Proposta Final NR-01 — ${companyName}`,
       description: fpMarkdown,
       status: 'sent',
+      proposalType: 'final',
+      contactEmail: finalContactEmail,
+      approvalToken,
       subtotal: Math.round(totalCalc * 100),
       discount: Math.round(totalCalc * (initialProposal.volumeDiscount.percentage / 100) * 100),
       discountPercent: Math.round(initialProposal.volumeDiscount.percentage),
