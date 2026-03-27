@@ -329,14 +329,17 @@ function DashboardLayoutContent({
           <SidebarMenu className="px-2 py-1">
             {(() => {
               const filtered = menuItems.filter(item => {
-                // Admin vê tudo
-                if (isAdmin) return true;
+                // Admin vê tudo EXCETO items exclusivos de consultoria
+                if (isAdmin) {
+                  // Admin não vê "Minhas Empresas" (usa Tenants) nem "Convites"
+                  if (item.path === "/companies" || item.path === "/user-invites") return false;
+                  return true;
+                }
                 // Items adminOnly: só admin vê
                 if (item.adminOnly) return false;
                 // Empresa: vê apenas items com companyVisible
                 if (isCompanyUser) return item.companyVisible === true;
                 // Consultor: vê tudo exceto adminOnly (já filtrado acima)
-                // Items consultantOnly: visíveis para consultor
                 return true;
               });
               let lastGroup = "";
