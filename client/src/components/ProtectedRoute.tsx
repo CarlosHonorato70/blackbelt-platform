@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -23,6 +24,12 @@ const ADMIN_ONLY_PATHS = [
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
   const location = useLocation();
+
+  // Contar empresas para verificar free tier (1 empresa grátis)
+  const { data: companies } = trpc.companies.list.useQuery(
+    undefined,
+    { enabled: !!user && user.role !== "admin" }
+  );
 
   if (loading) {
     return (
@@ -50,10 +57,16 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <>{children}</>;
   }
 
+  // Free tier: 1 empresa grátis — não exige assinatura
+  const companyCount = companies?.length ?? 0;
+  if (companyCount <= 1) {
+    return <>{children}</>;
+  }
+
   // Verificar se a rota atual é isenta de assinatura
   const isExempt = SUBSCRIPTION_EXEMPT_PATHS.some((p) => location.pathname.startsWith(p));
 
-  // Se não tem assinatura ativa e não está em rota isenta, redirecionar para pricing
+  // Se tem mais de 1 empresa e não tem assinatura, redirecionar para pricing
   if (!isExempt) {
     const status = user.subscriptionStatus;
     const hasActiveSubscription = status === "active" || status === "trialing";
