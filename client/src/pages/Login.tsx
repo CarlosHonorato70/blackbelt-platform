@@ -34,7 +34,7 @@ export default function Login() {
       window.location.href = "/dashboard";
     },
     onError: (error: any) => {
-      setError(error.message || "Email ou senha invalidos");
+      setError(error.message || "Email ou senha inválidos");
     },
   });
 
@@ -54,7 +54,7 @@ export default function Login() {
       window.location.href = "/dashboard";
     },
     onError: (err: any) => {
-      setError(err.message || "Codigo de verificacao invalido");
+      setError(err.message || "Codigo de verificacao inválido");
     },
   });
 
@@ -165,7 +165,7 @@ export default function Login() {
             <div className="mt-6 text-center text-xs text-gray-500 space-x-3">
               <Link to="/terms" className="hover:text-gray-700 underline">Termos de Uso</Link>
               <span>|</span>
-              <Link to="/privacy" className="hover:text-gray-700 underline">Politica de Privacidade</Link>
+              <Link to="/privacy" className="hover:text-gray-700 underline">Política de Privacidade</Link>
             </div>
           </div>
         </div>
@@ -188,7 +188,7 @@ export default function Login() {
         >
           {/* Titulo */}
           <h1 className="text-2xl font-bold text-gray-800 text-center mb-2">
-            {mode === "login" ? "Faca login na sua conta" : "Crie sua conta"}
+            {mode === "login" ? "Faça login na sua conta" : "Crie sua conta"}
           </h1>
 
           {/* Mensagem de Erro - Vermelho Brilhante */}
@@ -259,7 +259,7 @@ export default function Login() {
                 </>
               ) : (
                 <>
-                  Ja tem conta? <span className="font-bold">Faca login</span>
+                  Ja tem conta? <span className="font-bold">Faça login</span>
                 </>
               )}
             </button>
@@ -280,7 +280,7 @@ export default function Login() {
           <div className="mt-6 text-center text-xs text-gray-500 space-x-3">
             <Link to="/terms" className="hover:text-gray-700 underline">Termos de Uso</Link>
             <span>|</span>
-            <Link to="/privacy" className="hover:text-gray-700 underline">Politica de Privacidade</Link>
+            <Link to="/privacy" className="hover:text-gray-700 underline">Política de Privacidade</Link>
           </div>
         </div>
       </div>

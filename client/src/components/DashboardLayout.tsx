@@ -295,7 +295,7 @@ function DashboardLayoutContent({
                       Black Belt
                     </span>
                     <span className="text-[10px] text-[#c8a55a] font-medium tracking-widest uppercase">
-                      Consultoria
+                      {isAdmin ? "Administrador" : isCompanyUser ? "Empresa" : "Consultoria"}
                     </span>
                   </div>
                 </div>
