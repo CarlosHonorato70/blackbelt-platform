@@ -70,6 +70,7 @@ type MenuItem = {
   adminOnly?: boolean;
   consultantOnly?: boolean; // Visível apenas para consultores (e admin)
   companyVisible?: boolean; // Visível para empresas clientes
+  paidOnly?: boolean; // Visível para empresa somente após pagamento completo
   group?: string;
 };
 
@@ -83,13 +84,13 @@ const menuItems: MenuItem[] = [
 
   // --- Documentos NR-01 (consultor revisa/edita, exporta PDF) ---
   { icon: FileText, label: "Propostas Comerciais", path: "/proposals", group: "Documentos NR-01", consultantOnly: true },
-  { icon: Clipboard, label: "Relatório COPSOQ-II", path: "/copsoq/analytics", group: "Documentos NR-01", companyVisible: true },
-  { icon: Eye, label: "Respostas COPSOQ", path: "/copsoq/tracking", group: "Documentos NR-01", companyVisible: true },
-  { icon: Target, label: "Inventário de Riscos", path: "/risk-assessments", group: "Documentos NR-01", companyVisible: true },
-  { icon: ClipboardList, label: "Plano de Ação", path: "/action-plans", group: "Documentos NR-01", companyVisible: true },
-  { icon: GraduationCap, label: "Programa de Treinamento", path: "/training", group: "Documentos NR-01", companyVisible: true },
+  { icon: Clipboard, label: "Relatório COPSOQ-II", path: "/copsoq/analytics", group: "Documentos NR-01", companyVisible: true, paidOnly: true },
+  { icon: Eye, label: "Respostas COPSOQ", path: "/copsoq/tracking", group: "Documentos NR-01", companyVisible: true, paidOnly: true },
+  { icon: Target, label: "Inventário de Riscos", path: "/risk-assessments", group: "Documentos NR-01", companyVisible: true, paidOnly: true },
+  { icon: ClipboardList, label: "Plano de Ação", path: "/action-plans", group: "Documentos NR-01", companyVisible: true, paidOnly: true },
+  { icon: GraduationCap, label: "Programa de Treinamento", path: "/training", group: "Documentos NR-01", companyVisible: true, paidOnly: true },
   { icon: HeartPulse, label: "Integração PGR+PCMSO", path: "/pgr-pcmso", group: "Documentos NR-01", consultantOnly: true },
-  { icon: Award, label: "Certificado NR-01", path: "/compliance-certificate", group: "Documentos NR-01", companyVisible: true },
+  { icon: Award, label: "Certificado NR-01", path: "/compliance-certificate", group: "Documentos NR-01", companyVisible: true, paidOnly: true },
 
   // --- Acompanhamento ---
   { icon: Calendar, label: "Cronograma NR-01", path: "/compliance-timeline", group: "Acompanhamento", companyVisible: true },
@@ -223,6 +224,13 @@ function DashboardLayoutContent({
   const isCompanyUser = tenantInfoLoaded ? tenantInfo?.tenantType === "company" : !isAdmin;
   const isConsultant = isAdmin || (tenantInfoLoaded && tenantInfo?.tenantType === "consultant");
 
+  // Check if company has paid (for paidOnly menu items)
+  const { data: companyPaymentStatus } = trpc.proposals.getPaymentStatus.useQuery(undefined, {
+    retry: false,
+    enabled: isCompanyUser,
+  });
+  const isPaid = companyPaymentStatus?.paid === true;
+
   useEffect(() => {
     if (isCollapsed) {
       setIsResizing(false);
@@ -338,7 +346,12 @@ function DashboardLayoutContent({
                 // Items adminOnly: só admin vê
                 if (item.adminOnly) return false;
                 // Empresa: vê apenas items com companyVisible
-                if (isCompanyUser) return item.companyVisible === true;
+                // Items paidOnly só aparecem após pagamento completo
+                if (isCompanyUser) {
+                  if (!item.companyVisible) return false;
+                  if (item.paidOnly && !isPaid) return false;
+                  return true;
+                }
                 // Consultor: vê tudo exceto adminOnly (já filtrado acima)
                 return true;
               });

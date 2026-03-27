@@ -1241,6 +1241,45 @@ export const proposalsRouter = router({
 
       return { success: true };
     }),
+
+  // Check if company tenant has a paid final proposal (for menu visibility)
+  getPaymentStatus: protectedProcedure
+    .query(async ({ ctx }) => {
+      const database = await getDb();
+      if (!database) return { paid: false };
+
+      const tenantId = ctx.user?.tenantId;
+      if (!tenantId) return { paid: false };
+
+      // Find any approved + paid final proposal where this company is the target
+      const result = await database.select({
+        paymentStatus: proposals.paymentStatus,
+        status: proposals.status,
+      }).from(proposals)
+        .where(and(
+          eq(proposals.paymentStatus, "paid"),
+          eq(proposals.status, "approved"),
+        ))
+        .limit(10);
+
+      // Check if any of these proposals are linked to this company's tenant
+      // via client → tenant relationship or direct tenantId match
+      if (result.length > 0) return { paid: true };
+
+      // Also check via clients table
+      const { clients } = await import("../../drizzle/schema");
+      const [client] = await database.select().from(clients).where(eq(clients.tenantId, tenantId)).limit(1);
+      if (client) {
+        const [paidProposal] = await database.select({ id: proposals.id }).from(proposals)
+          .where(and(
+            eq(proposals.clientId, client.id),
+            eq(proposals.paymentStatus, "paid"),
+          )).limit(1);
+        if (paidProposal) return { paid: true };
+      }
+
+      return { paid: false };
+    }),
 });
 
 // ============================================================================
