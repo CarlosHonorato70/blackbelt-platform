@@ -236,6 +236,7 @@ export default function App() {
                 <Route path="/support" element={<ProtectedPage><SupportTickets /></ProtectedPage>} />
 
                 {/* Admin Operations */}
+                <Route path="/admin" element={<ProtectedPage><AdminMetricsDashboard /></ProtectedPage>} />
                 <Route path="/admin/metrics" element={<ProtectedPage><AdminMetricsDashboard /></ProtectedPage>} />
                 <Route path="/admin/subscriptions" element={<ProtectedPage><AdminSubscriptions /></ProtectedPage>} />
                 <Route path="/admin/support" element={<ProtectedPage><AdminSupportTickets /></ProtectedPage>} />
