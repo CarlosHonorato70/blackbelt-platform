@@ -92,20 +92,10 @@ services:
     command:
       - -c
       - |
-        echo "[$(date)] Running initial backup..."
-        bash /scripts/backup.sh || echo "[$(date)] Initial backup failed (MySQL may still be starting)"
-        echo "[$(date)] Backup loop started: every 24h at ~03:00"
-        while true; do
-          # Sleep until 03:00 next day
-          NOW=$(date +%s)
-          TARGET=$(date -d "tomorrow 03:00" +%s 2>/dev/null || date -d "$(date -d '+1 day' +%Y-%m-%d) 03:00:00" +%s)
-          SLEEP=$((TARGET - NOW))
-          [ "$SLEEP" -le 0 ] && SLEEP=86400
-          echo "[$(date)] Next backup in ${SLEEP}s"
-          sleep "$SLEEP"
-          echo "[$(date)] Starting scheduled backup..."
-          bash /scripts/backup.sh || echo "[$(date)] Backup failed!"
-        done
+        echo "[`date`] Running initial backup..."
+        bash /scripts/backup.sh || echo "[`date`] Initial backup failed"
+        echo "[`date`] Backup loop: every 24h"
+        while true; do sleep 86400; echo "[`date`] Starting scheduled backup..."; bash /scripts/backup.sh || echo "[`date`] Backup failed!"; done
     environment:
       MYSQL_HOST: mysql
       MYSQL_PORT: "3306"
