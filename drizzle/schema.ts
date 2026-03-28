@@ -588,6 +588,8 @@ export const plans = mysqlTable(
     hasSLA: boolean("hasSLA").default(false).notNull(),
     slaUptime: int("slaUptime"),
     trialDays: int("trialDays").default(14).notNull(),
+    pricePerCopsoqInvite: int("pricePerCopsoqInvite").default(0).notNull(),
+    copsoqInvitesIncluded: int("copsoqInvitesIncluded").default(0).notNull(),
     isActive: boolean("isActive").default(true).notNull(),
     isPublic: boolean("isPublic").default(true).notNull(),
     sortOrder: int("sortOrder").default(0).notNull(),
@@ -627,6 +629,10 @@ export const subscriptions = mysqlTable(
     asaasSubscriptionId: varchar("asaasSubscriptionId", { length: 255 }),
     asaasCustomerId: varchar("asaasCustomerId", { length: 255 }),
     currentPrice: int("currentPrice").notNull(),
+    copsoqInvitesSent: int("copsoqInvitesSent").default(0).notNull(),
+    copsoqExtraCharges: int("copsoqExtraCharges").default(0).notNull(),
+    totalPrice: int("totalPrice").default(0).notNull(),
+    cycleResetAt: timestamp("cycleResetAt"),
     autoRenew: boolean("autoRenew").default(true).notNull(),
     cancelAtPeriodEnd: boolean("cancelAtPeriodEnd").default(false).notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -1186,3 +1192,28 @@ export const maintenanceRequests = mysqlTable(
 
 export type MaintenanceRequest = typeof maintenanceRequests.$inferSelect;
 export type InsertMaintenanceRequest = typeof maintenanceRequests.$inferInsert;
+
+// ============================================================================
+// BILLING: Eventos de Cobrança por Convite COPSOQ
+// ============================================================================
+
+export const copsoqBillingEvents = mysqlTable(
+  "copsoq_billing_events",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+    subscriptionId: varchar("subscriptionId", { length: 64 }).notNull(),
+    inviteId: varchar("inviteId", { length: 64 }),
+    invitesSentBefore: int("invitesSentBefore").notNull(),
+    invitesSentAfter: int("invitesSentAfter").notNull(),
+    chargeAmount: int("chargeAmount").default(0).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    tenantIdx: index("idx_copsoq_billing_tenant").on(table.tenantId),
+    subIdx: index("idx_copsoq_billing_sub").on(table.subscriptionId),
+  })
+);
+
+export type CopsoqBillingEvent = typeof copsoqBillingEvents.$inferSelect;
+export type InsertCopsoqBillingEvent = typeof copsoqBillingEvents.$inferInsert;

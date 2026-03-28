@@ -61,6 +61,7 @@ export const subscriptionsRouter = router({
     return {
       status: result.subscription.status,
       planName: result.plan.name,
+      planDisplayName: result.plan.displayName,
       isActive,
       trialEnd: result.subscription.trialEnd,
       currentPeriodEnd: result.subscription.currentPeriodEnd,
@@ -68,6 +69,14 @@ export const subscriptionsRouter = router({
       limits: {
         maxUsersPerTenant: result.plan.maxUsersPerTenant,
         maxStorageGB: result.plan.maxStorageGB,
+      },
+      billing: {
+        monthlyPrice: result.plan.monthlyPrice,
+        copsoqInvitesSent: result.subscription.copsoqInvitesSent || 0,
+        copsoqInvitesIncluded: result.plan.copsoqInvitesIncluded || 0,
+        pricePerCopsoqInvite: result.plan.pricePerCopsoqInvite || 0,
+        copsoqExtraCharges: result.subscription.copsoqExtraCharges || 0,
+        totalPrice: result.subscription.totalPrice || result.subscription.currentPrice,
       },
     };
   }),

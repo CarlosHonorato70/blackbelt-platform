@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { protectedProcedure, router, tenantProcedure, subscribedProcedure, consultantProcedure } from "../_core/trpc";
 import { getDb } from "../db";
 import {
@@ -11,7 +11,9 @@ import {
   copsoqReports,
   copsoqInvites,
 } from "../../drizzle/schema_nr01";
+import { subscriptions, plans, copsoqBillingEvents } from "../../drizzle/schema";
 import { sendBulkCopsoqInvites } from "../_core/email";
+import { log } from "../_core/logger";
 
 export const assessmentsRouter = router({
   // Criar nova avaliacao (somente consultor/admin)
@@ -371,6 +373,65 @@ export const assessmentsRouter = router({
           .update(copsoqInvites)
           .set({ status: "sent", sentAt: new Date() })
           .where(eq(copsoqInvites.respondentEmail, invitee.email));
+      }
+
+      // ========== BILLING HOOK: Contabilizar convites COPSOQ ==========
+      try {
+        const inviteCount = input.invitees.length;
+        const [sub] = await db.select()
+          .from(subscriptions)
+          .where(eq(subscriptions.tenantId, ctx.tenantId!))
+          .limit(1);
+
+        if (sub) {
+          const [plan] = await db.select()
+            .from(plans)
+            .where(eq(plans.id, sub.planId))
+            .limit(1);
+
+          const sentBefore = sub.copsoqInvitesSent || 0;
+          const sentAfter = sentBefore + inviteCount;
+          const included = plan?.copsoqInvitesIncluded || 0;
+          const pricePerInvite = plan?.pricePerCopsoqInvite || 0;
+
+          // Calculate new extra charges
+          let newExtraCharges = 0;
+          if (sentAfter > included && pricePerInvite > 0) {
+            const excedentsBefore = Math.max(0, sentBefore - included);
+            const excedentsAfter = Math.max(0, sentAfter - included);
+            newExtraCharges = (excedentsAfter - excedentsBefore) * pricePerInvite;
+          }
+
+          const totalExtra = (sub.copsoqExtraCharges || 0) + newExtraCharges;
+          const totalPrice = (sub.currentPrice || 0) + totalExtra;
+
+          await db.update(subscriptions)
+            .set({
+              copsoqInvitesSent: sentAfter,
+              copsoqExtraCharges: totalExtra,
+              totalPrice,
+              updatedAt: new Date(),
+            })
+            .where(eq(subscriptions.id, sub.id));
+
+          // Audit trail
+          await db.insert(copsoqBillingEvents).values({
+            id: nanoid(),
+            tenantId: ctx.tenantId!,
+            subscriptionId: sub.id,
+            inviteId: assessmentId,
+            invitesSentBefore: sentBefore,
+            invitesSentAfter: sentAfter,
+            chargeAmount: newExtraCharges,
+          });
+
+          if (newExtraCharges > 0) {
+            log.info(`[Billing] COPSOQ charges: tenant=${ctx.tenantId} +${inviteCount} invites, extra=R$${(newExtraCharges / 100).toFixed(2)}, total=R$${(totalPrice / 100).toFixed(2)}`);
+          }
+        }
+      } catch (err) {
+        log.error("[Billing] Failed to process COPSOQ billing", { error: String(err) });
+        // Don't fail the invite send if billing fails
       }
 
       return {
