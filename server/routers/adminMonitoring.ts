@@ -3,10 +3,12 @@ import { TRPCError } from "@trpc/server";
 import { adminProcedure, router } from "../_core/trpc";
 import { getDb, checkDbHealth } from "../db";
 import { monitoringChecks } from "../../drizzle/schema";
-import { desc, sql, gte } from "drizzle-orm";
+import { agentConversations, agentMessages } from "../../drizzle/schema_agent";
+import { desc, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { log } from "../_core/logger";
 import { sendEmail } from "../_core/email";
+import { invokeLLM } from "../_core/llm";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -224,5 +226,154 @@ export const adminMonitoringRouter = router({
         ...r,
         details: typeof r.details === "string" ? JSON.parse(r.details) : r.details,
       }));
+    }),
+
+  // ============================================
+  // CHAT IA — Conversa com o Agente de Monitoramento
+  // ============================================
+
+  chatInit: adminProcedure.mutation(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+    const existing = await db.select()
+      .from(agentConversations)
+      .where(eq(agentConversations.companyId, "monitoring-agent"))
+      .limit(1);
+
+    if (existing.length > 0) return { id: existing[0].id };
+
+    const id = nanoid();
+    await db.insert(agentConversations).values({
+      id,
+      tenantId: ctx.user.tenantId,
+      userId: ctx.user.id,
+      companyId: "monitoring-agent",
+      title: "Agente de Monitoramento",
+      phase: "monitoring",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    return { id };
+  }),
+
+  chatHistory: adminProcedure
+    .input(z.object({ conversationId: z.string() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [];
+
+      const msgs = await db.select()
+        .from(agentMessages)
+        .where(eq(agentMessages.conversationId, input.conversationId))
+        .orderBy(agentMessages.createdAt)
+        .limit(100);
+
+      return msgs.map(m => ({ id: m.id, role: m.role, content: m.content }));
+    }),
+
+  chatSend: adminProcedure
+    .input(z.object({
+      conversationId: z.string(),
+      content: z.string().min(1).max(5000),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // 1. Save user message
+      const userMsgId = nanoid();
+      await db.insert(agentMessages).values({
+        id: userMsgId,
+        conversationId: input.conversationId,
+        role: "user",
+        content: input.content,
+        createdAt: new Date(),
+      });
+
+      // 2. Get conversation history (last 20)
+      const recent = await db.select()
+        .from(agentMessages)
+        .where(eq(agentMessages.conversationId, input.conversationId))
+        .orderBy(desc(agentMessages.createdAt))
+        .limit(20);
+      const history = [...recent].reverse();
+
+      // 3. Get live monitoring data
+      const status = await runMonitoringCheck();
+
+      // 4. Get recent error log
+      let errorLines: string[] = [];
+      try {
+        const logsDir = path.resolve("logs");
+        if (fs.existsSync(logsDir)) {
+          const files = fs.readdirSync(logsDir).filter(f => f.startsWith("error-")).sort().reverse();
+          for (const file of files) {
+            const content = fs.readFileSync(path.join(logsDir, file), "utf-8");
+            errorLines.push(...content.split("\n").filter(l => l.trim()).reverse());
+            if (errorLines.length >= 10) break;
+          }
+          errorLines = errorLines.slice(0, 10);
+        }
+      } catch { /* ignore */ }
+
+      // 5. Build LLM messages
+      const uptimeH = Math.floor(status.app.uptime / 3600);
+      const uptimeM = Math.floor((status.app.uptime % 3600) / 60);
+
+      const systemPrompt = `Voce e o Agente de Monitoramento da plataforma BlackBelt.
+Responda sempre em portugues de forma clara e direta.
+Voce tem acesso aos dados em tempo real da plataforma que sao fornecidos a cada mensagem.
+Ajude o admin a entender o estado do sistema, diagnosticar problemas e sugerir acoes.
+Seja conciso mas completo. Use emojis para indicar status (verde, amarelo, vermelho).
+Quando o admin perguntar sobre algo especifico, foque na resposta e nao repita todos os dados.`;
+
+      const contextMsg = `[DADOS EM TEMPO REAL DA PLATAFORMA]
+Status Geral: ${status.status.toUpperCase()}
+Uptime: ${uptimeH}h ${uptimeM}m
+Node: ${status.app.nodeVersion} (PID: ${status.app.pid})
+Memoria Heap: ${status.memory.heapUsedMB}MB / ${status.memory.maxHeapMB}MB (${status.memory.heapPercent}%)
+Memoria Status: ${status.memory.memoryStatus}
+RSS: ${status.memory.rssMB}MB
+Banco de Dados: ${status.database.connected ? "Conectado" : "DESCONECTADO"}
+Erros (24h): ${status.errors24h}
+RAM Sistema: ${status.disk.totalGB}GB total, ${status.disk.freeGB}GB livre (${status.disk.usedPercent}% uso)
+Ultimo Backup: ${status.lastBackup ? `${status.lastBackup.file} (${status.lastBackup.sizeMB}MB em ${status.lastBackup.date})` : "Nenhum encontrado"}
+${errorLines.length > 0 ? `\nUltimos erros:\n${errorLines.join("\n")}` : "Sem erros recentes."}`;
+
+      const llmMessages = [
+        { role: "system" as const, content: systemPrompt },
+        { role: "system" as const, content: contextMsg },
+        ...history.map(m => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+        })),
+      ];
+
+      // 6. Call LLM
+      let assistantContent: string;
+      try {
+        const result = await invokeLLM({ messages: llmMessages });
+        assistantContent = result.choices[0]?.message?.content || "Desculpe, nao consegui processar sua solicitacao.";
+      } catch (err) {
+        log.error("[MonitoringChat] LLM call failed", { error: String(err) });
+        // Fallback: respond with raw data
+        assistantContent = `Nao consegui acessar a IA no momento, mas aqui estao os dados atuais:\n\n**Status:** ${status.status}\n**Memoria:** ${status.memory.heapPercent}% (${status.memory.heapUsedMB}MB/${status.memory.maxHeapMB}MB)\n**Banco:** ${status.database.connected ? "Conectado" : "Desconectado"}\n**Erros 24h:** ${status.errors24h}`;
+      }
+
+      // 7. Save assistant message
+      const assistantMsgId = nanoid();
+      await db.insert(agentMessages).values({
+        id: assistantMsgId,
+        conversationId: input.conversationId,
+        role: "assistant",
+        content: assistantContent,
+        createdAt: new Date(),
+      });
+
+      return {
+        userMessage: { id: userMsgId, role: "user", content: input.content },
+        assistantMessage: { id: assistantMsgId, role: "assistant", content: assistantContent },
+      };
     }),
 });

@@ -1,11 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { trpc } from "@/lib/trpc";
-import { Activity, Database, HardDrive, AlertTriangle, CheckCircle, XCircle, RefreshCw, Server, Clock } from "lucide-react";
-import { useState } from "react";
+import { Activity, Database, HardDrive, AlertTriangle, CheckCircle, XCircle, RefreshCw, Server, Clock, Send, Bot, User, MessageSquare } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import Markdown from "react-markdown";
 
 const statusColors = {
   ok: "bg-green-500",
@@ -34,8 +37,53 @@ function StatusIcon({ status }: { status: string }) {
   return <XCircle className="h-5 w-5 text-red-500" />;
 }
 
+type ChatMessage = { id: string; role: string; content: string };
+
 export default function AdminMonitoring() {
   const [isRunning, setIsRunning] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const chatInitMutation = (trpc as any).adminMonitoring.chatInit.useMutation({
+    onSuccess: (data: any) => setConversationId(data.id),
+  });
+
+  const chatHistoryQuery = (trpc as any).adminMonitoring.chatHistory.useQuery(
+    { conversationId: conversationId! },
+    { enabled: !!conversationId }
+  );
+
+  const chatSendMutation = (trpc as any).adminMonitoring.chatSend.useMutation({
+    onMutate: () => setIsTyping(true),
+    onSuccess: (data: any) => {
+      setChatMessages(prev => [...prev, data.userMessage, data.assistantMessage]);
+      setIsTyping(false);
+    },
+    onError: () => setIsTyping(false),
+  });
+
+  useEffect(() => {
+    if (!conversationId) chatInitMutation.mutate({});
+  }, []);
+
+  useEffect(() => {
+    if (chatHistoryQuery.data && chatMessages.length === 0) {
+      setChatMessages(chatHistoryQuery.data);
+    }
+  }, [chatHistoryQuery.data]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages, isTyping]);
+
+  const handleChatSend = () => {
+    if (!chatInput.trim() || !conversationId || isTyping) return;
+    chatSendMutation.mutate({ conversationId, content: chatInput.trim() });
+    setChatInput("");
+  };
 
   const statusQuery = (trpc as any).adminMonitoring.getStatus.useQuery(undefined, {
     refetchInterval: 30000,
@@ -346,6 +394,90 @@ export default function AdminMonitoring() {
               </Table>
             </div>
           )}
+        </CardContent>
+      </Card>
+      {/* Chat IA */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            Agente de Monitoramento IA
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Converse com o agente para diagnosticar e entender o estado da plataforma
+          </p>
+        </CardHeader>
+        <CardContent>
+          {/* Messages */}
+          <div className="border rounded-lg mb-3">
+            <ScrollArea className="h-80 p-4">
+              {chatMessages.length === 0 && !isTyping && (
+                <div className="text-center text-muted-foreground py-12">
+                  <Bot className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>Pergunte qualquer coisa sobre a plataforma.</p>
+                  <p className="text-xs mt-1">Ex: "Como esta a memoria?" ou "Teve algum erro hoje?"</p>
+                </div>
+              )}
+              {chatMessages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`flex gap-3 mb-4 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
+                >
+                  <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                    msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
+                  }`}>
+                    {msg.role === "user" ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+                  </div>
+                  <div className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                    msg.role === "user"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted"
+                  }`}>
+                    {msg.role === "assistant" ? (
+                      <Markdown className="text-sm prose prose-sm dark:prose-invert max-w-none [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1">
+                        {msg.content}
+                      </Markdown>
+                    ) : (
+                      <p className="text-sm">{msg.content}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {isTyping && (
+                <div className="flex gap-3 mb-4">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-muted">
+                    <Bot className="h-4 w-4" />
+                  </div>
+                  <div className="bg-muted rounded-lg px-4 py-3">
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-foreground/40 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <div className="w-2 h-2 bg-foreground/40 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <div className="w-2 h-2 bg-foreground/40 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </ScrollArea>
+          </div>
+
+          {/* Input */}
+          <div className="flex gap-2">
+            <Input
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChatSend(); } }}
+              placeholder="Pergunte sobre a plataforma..."
+              disabled={isTyping || !conversationId}
+            />
+            <Button
+              onClick={handleChatSend}
+              disabled={!chatInput.trim() || isTyping || !conversationId}
+              size="icon"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
