@@ -15,6 +15,7 @@ import slowDown from "express-slow-down";
 import { ENV, logSecurityWarnings } from "./_core/env";
 import { log } from "./_core/logger";
 import { closePool } from "./db";
+import { runMonitoringCheck, saveCheckAndAlert } from "./routers/adminMonitoring";
 
 // tRPC
 import * as trpcExpress from "@trpc/server/adapters/express";
@@ -267,7 +268,30 @@ app.use((req, res, next) => {
     log.info(`Ambiente: ${ENV.nodeEnv}`);
   });
 
-  // 6. HTTP TIMEOUTS
+  // 6. MONITORING AGENT (every 15 min)
+  if (isProduction) {
+    const MONITORING_INTERVAL = 15 * 60 * 1000;
+    // First check after 2 min (let the app warm up)
+    setTimeout(async () => {
+      try {
+        const result = await runMonitoringCheck();
+        await saveCheckAndAlert(result);
+        log.info(`[Monitoring] Initial check: ${result.status}`);
+      } catch (err) { log.error("[Monitoring] Initial check failed", { error: String(err) }); }
+    }, 2 * 60 * 1000);
+
+    setInterval(async () => {
+      try {
+        const result = await runMonitoringCheck();
+        await saveCheckAndAlert(result);
+        log.info(`[Monitoring] Check: ${result.status} | heap=${result.memory.heapPercent}% | errors=${result.errors24h}`);
+      } catch (err) { log.error("[Monitoring] Check failed", { error: String(err) }); }
+    }, MONITORING_INTERVAL);
+
+    log.info("[Monitoring] Agent started: every 15 min");
+  }
+
+  // 7. HTTP TIMEOUTS
   server.setTimeout(30_000);
   server.keepAliveTimeout = 65_000; // > nginx default (60s)
   server.headersTimeout = 66_000;   // > keepAliveTimeout

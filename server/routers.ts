@@ -55,6 +55,7 @@ import { nr01PdfExportRouter } from "./routers/nr01PdfExport";
 import { companiesRouter } from "./routers/companies";
 import { agentRouter } from "./routers/agent";
 import { supportAgentRouter } from "./routers/supportAgent";
+import { adminMonitoringRouter } from "./routers/adminMonitoring";
 
 
 export const appRouter = router({
@@ -149,6 +150,9 @@ export const appRouter = router({
 
   // Agente de Suporte IA
   supportAgent: supportAgentRouter,
+
+  // Monitoramento (Admin Master)
+  adminMonitoring: adminMonitoringRouter,
 });
 
 export type AppRouter = typeof appRouter;

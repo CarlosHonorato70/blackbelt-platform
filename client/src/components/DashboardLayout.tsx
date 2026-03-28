@@ -53,6 +53,7 @@ import {
   MessageSquareWarning,
   Headphones,
   ShieldAlert,
+  Activity,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { CSSProperties, Fragment, useEffect, useState } from "react";
@@ -116,6 +117,7 @@ const menuItems: MenuItem[] = [
   { icon: Eye, label: "Auditoria e Segurança", path: "/audit-logs", adminOnly: true, group: "Administração" },
   { icon: CreditCard, label: "Assinaturas", path: "/admin/subscriptions", adminOnly: true, group: "Administração" },
   { icon: Palette, label: "Identidade Visual", path: "/branding-settings", adminOnly: true, group: "Administração" },
+  { icon: Activity, label: "Monitoramento", path: "/admin/monitoring", adminOnly: true, group: "Administração" },
 
   // --- Suporte ---
   { icon: Headphones, label: "Suporte IA", path: "/support-chat", group: "Suporte", companyVisible: true },

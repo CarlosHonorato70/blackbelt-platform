@@ -47,6 +47,7 @@ const AdminSubscriptions = lazy(() => import("./pages/AdminSubscriptions"));
 const AdminSupportTickets = lazy(() => import("./pages/AdminSupportTickets"));
 const AdminDsrManagement = lazy(() => import("./pages/AdminDsrManagement"));
 const AdminMetricsDashboard = lazy(() => import("./pages/AdminMetricsDashboard"));
+const AdminMonitoring = lazy(() => import("./pages/AdminMonitoring"));
 const CopsoqRespond = lazy(() => import("./pages/CopsoqRespond"));
 const ComplaintPublic = lazy(() => import("./pages/ComplaintPublic"));
 const ComplaintTrack = lazy(() => import("./pages/ComplaintTrack"));
@@ -239,6 +240,7 @@ export default function App() {
                 <Route path="/admin/subscriptions" element={<ProtectedPage><AdminSubscriptions /></ProtectedPage>} />
                 <Route path="/admin/support" element={<ProtectedPage><AdminSupportTickets /></ProtectedPage>} />
                 <Route path="/admin/dsr" element={<ProtectedPage><AdminDsrManagement /></ProtectedPage>} />
+                <Route path="/admin/monitoring" element={<ProtectedPage><AdminMonitoring /></ProtectedPage>} />
 
                 {/* Catch-all */}
                 <Route path="*" element={<Suspense fallback={<PageLoader />}><NotFound /></Suspense>} />

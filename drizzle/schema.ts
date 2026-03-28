@@ -1139,3 +1139,25 @@ export const ticketMessages = mysqlTable(
 
 export type TicketMessage = typeof ticketMessages.$inferSelect;
 export type InsertTicketMessage = typeof ticketMessages.$inferInsert;
+
+// ============================================================================
+// MONITORING CHECKS
+// ============================================================================
+
+export const monitoringChecks = mysqlTable(
+  "monitoring_checks",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    status: varchar("status", { length: 20 }).notNull(), // ok, warning, critical
+    details: json("details").notNull(),
+    alertSent: boolean("alertSent").default(false).notNull(),
+    checkedAt: timestamp("checkedAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    statusIdx: index("idx_monitoring_status").on(table.status),
+    checkedAtIdx: index("idx_monitoring_checked").on(table.checkedAt),
+  })
+);
+
+export type MonitoringCheck = typeof monitoringChecks.$inferSelect;
+export type InsertMonitoringCheck = typeof monitoringChecks.$inferInsert;
