@@ -262,6 +262,26 @@ A aplicação estará disponível em `http://localhost:3000`
 - [SETUP_GUIDE.md](SETUP_GUIDE.md) - Guia completo de instalação passo a passo
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Solução de problemas comuns
 
+### 🔐 Setup de GitHub Secrets para CI/CD
+
+Para configurar automaticamente os secrets necessários para deploy:
+
+```bash
+# Executar script de configuração automática
+./setup-github-secrets.sh
+```
+
+O script irá configurar automaticamente:
+- ✅ GitHub Container Registry (GHCR) ou Docker Hub
+- ✅ Chaves SSH para deploy
+- ✅ Configurações do servidor
+- ✅ Notificações Slack (opcional)
+
+📖 **Documentação:**
+- [GUIA_PASSO_A_PASSO_INICIANTE.md](GUIA_PASSO_A_PASSO_INICIANTE.md) - 🎓 **Guia para iniciantes** (recomendado!)
+- [GUIA_SETUP_AUTOMATICO_SECRETS.md](GUIA_SETUP_AUTOMATICO_SECRETS.md) - Guia completo técnico
+- [EXEMPLO_SETUP_SECRETS.md](EXEMPLO_SETUP_SECRETS.md) - Exemplos de uso
+
 ---
 
 ## 📚 Documentação
@@ -302,6 +322,18 @@ A documentação completa está disponível nos seguintes arquivos:
 | **DFD_ARQUITETURA.md**              | 16 diagramas de fluxo de dados                |
 | **PROJETO_PLATAFORMA_UNIFICADA.md** | Projeto estratégico de integração             |
 | **CODIGO_FONTE_EMPRESAS.md**        | Análise detalhada da página de Empresas       |
+
+### 🚀 Deploy e CI/CD
+
+| Arquivo                                  | Descrição                                     |
+| ---------------------------------------- | --------------------------------------------- |
+| **GUIA_PASSO_A_PASSO_INICIANTE.md**     | 🎓 **Guia para iniciantes - passo a passo** (NOVO!) |
+| **GUIA_SETUP_AUTOMATICO_SECRETS.md**    | ⚡ Setup automático de GitHub Secrets         |
+| **EXEMPLO_SETUP_SECRETS.md**            | 📝 Exemplos de uso do script de secrets      |
+| **GUIA_CONFIGURACAO_SECRETS_GITHUB.md** | 🔐 Guia manual detalhado de configuração de secrets |
+| **PRODUCTION_DEPLOYMENT.md**            | 🏭 Guia de deploy em produção                 |
+| **DEPLOYMENT_GUIDE.md**                 | 📦 Guia completo de deployment                |
+| **ROTEIRO_CICD_GITHUB_ACTIONS.md**      | ⚙️ Roteiro de CI/CD com GitHub Actions       |
 
 ---
 
