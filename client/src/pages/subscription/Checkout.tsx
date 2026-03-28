@@ -447,6 +447,13 @@ export default function Checkout() {
                   <span className="font-medium">{priceFormatted}</span>
                 </div>
 
+                {plan.copsoqInvitesIncluded > 0 && (
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>{plan.copsoqInvitesIncluded} convites COPSOQ inclusos</span>
+                    <span>+ R$ {(plan.pricePerCopsoqInvite / 100).toFixed(2)}/excedente</span>
+                  </div>
+                )}
+
                 {billingCycle === "yearly" && (
                   <div className="flex justify-between text-sm text-green-600">
                     <span>Desconto anual (17%)</span>

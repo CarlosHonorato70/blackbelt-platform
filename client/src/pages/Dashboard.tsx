@@ -15,7 +15,10 @@ import {
   CheckCircle2,
   AlertTriangle,
   BarChart3,
+  Receipt,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function Dashboard() {
@@ -51,6 +54,11 @@ export default function Dashboard() {
   );
 
   const { data: copsoqAssessments = [] } = trpc.assessments.list.useQuery(
+    undefined,
+    { enabled: !!tenantId }
+  );
+
+  const { data: billingStatus } = (trpc as any).subscriptions.getStatus.useQuery(
     undefined,
     { enabled: !!tenantId }
   );
@@ -151,6 +159,54 @@ export default function Dashboard() {
             );
           })}
         </div>
+
+        {/* Billing Card — COPSOQ Usage */}
+        {billingStatus?.billing && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Receipt className="h-5 w-5" />
+                  Uso de Convites COPSOQ
+                </CardTitle>
+                <CardDescription>
+                  Plano {billingStatus.planDisplayName || billingStatus.planName} — {billingStatus.billing.copsoqInvitesIncluded} convites inclusos
+                </CardDescription>
+              </div>
+              <Badge variant={billingStatus.billing.copsoqExtraCharges > 0 ? "destructive" : "default"}>
+                {billingStatus.billing.copsoqExtraCharges > 0
+                  ? `R$ ${(billingStatus.billing.copsoqExtraCharges / 100).toFixed(2)} excedente`
+                  : "Dentro do plano"}
+              </Badge>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between text-sm">
+                <span>Convites enviados</span>
+                <span className="font-semibold">
+                  {billingStatus.billing.copsoqInvitesSent} / {billingStatus.billing.copsoqInvitesIncluded}
+                </span>
+              </div>
+              <Progress
+                value={Math.min(
+                  (billingStatus.billing.copsoqInvitesSent / Math.max(billingStatus.billing.copsoqInvitesIncluded, 1)) * 100,
+                  100
+                )}
+                className="h-2"
+              />
+              {billingStatus.billing.copsoqInvitesSent > billingStatus.billing.copsoqInvitesIncluded && (
+                <p className="text-xs text-muted-foreground">
+                  {billingStatus.billing.copsoqInvitesSent - billingStatus.billing.copsoqInvitesIncluded} convite(s) excedente(s) x R$ {(billingStatus.billing.pricePerCopsoqInvite / 100).toFixed(2)} = R$ {(billingStatus.billing.copsoqExtraCharges / 100).toFixed(2)}
+                </p>
+              )}
+              <div className="flex justify-between text-sm pt-2 border-t">
+                <span>Total este ciclo</span>
+                <span className="font-bold">
+                  R$ {(billingStatus.billing.totalPrice / 100).toFixed(2)}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid md:grid-cols-2 gap-6">
           <Card>
