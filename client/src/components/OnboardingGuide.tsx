@@ -62,7 +62,7 @@ const onboardingSteps: OnboardingStep[] = [
       "Verifique seus dados de login e perfil",
       "Escolha o plano adequado (Starter, Pro ou Enterprise)",
       "O plano define a quantidade de empresas clientes e recursos disponíveis",
-      "Comece com 1 empresa gratis — sem limite de tempo",
+      "Convites COPSOQ inclusos em todos os planos",
     ],
     actionText: "Ver Meu Plano",
     actionUrl: "/subscription/pricing",

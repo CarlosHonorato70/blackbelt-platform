@@ -25,7 +25,6 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-  // Contar empresas para verificar free tier (1 empresa grátis)
   const { data: companies } = trpc.companies.list.useQuery(
     undefined,
     { enabled: !!user && user.role !== "admin" }

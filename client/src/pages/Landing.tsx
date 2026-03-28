@@ -38,10 +38,11 @@ const plans = [
     price: "R$ 297",
     period: "/mes",
     description: "Para psicologos e consultores autonomos (CPF)",
-    extra: "R$ 97/empresa adicional no mes",
+    extra: "20 convites COPSOQ inclusos + R$ 12/excedente",
     features: [
       "Cadastro via CPF (pessoa fisica)",
       "3 empresas/mes incluidas",
+      "20 convites COPSOQ inclusos/mes",
       "SamurAI basico (cadastro + COPSOQ)",
       "Relatórios padrão",
       "Exportacao PDF",
@@ -56,10 +57,11 @@ const plans = [
     price: "R$ 597",
     period: "/mes",
     description: "Para consultorias em crescimento (CNPJ)",
-    extra: "R$ 79/empresa adicional no mes",
+    extra: "100 convites COPSOQ inclusos + R$ 10/excedente",
     features: [
       "Cadastro via CNPJ (pessoa juridica)",
       "10 empresas/mes incluidas",
+      "100 convites COPSOQ inclusos/mes",
       "SamurAI completo (10 fases)",
       "Propostas comerciais automaticas",
       "PDF export ilimitado",
@@ -75,10 +77,11 @@ const plans = [
     price: "R$ 997",
     period: "/mes",
     description: "Para grandes consultorias e redes (CNPJ)",
-    extra: "R$ 59/empresa adicional no mes",
+    extra: "500 convites COPSOQ inclusos + R$ 8/excedente",
     features: [
       "Cadastro via CNPJ (pessoa juridica)",
       "30 empresas/mes incluidas",
+      "500 convites COPSOQ inclusos/mes",
       "Tudo do Professional",
       "White-label (sua marca)",
       "API access",
@@ -296,7 +299,7 @@ export default function Landing() {
                 className="text-lg px-10 h-14 font-bold shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 transition-all hover:scale-[1.02]"
                 style={{ backgroundColor: "#c8a55a", color: "#1a1a2e" }}
               >
-                Cadastre uma Empresa Gratuitamente
+                Comece Agora
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>
@@ -312,7 +315,7 @@ export default function Landing() {
             </a>
           </div>
           <p className="text-gray-500 text-sm mt-6">
-            1 empresa gratis. Sem cartao de credito. Sem limite de tempo.
+            Gestao de riscos psicossociais com IA. Planos a partir de R$ 297/mes.
           </p>
         </div>
       </section>
@@ -437,7 +440,7 @@ export default function Landing() {
                 className="text-base px-8 h-12 font-bold hover:scale-[1.02] transition-transform"
                 style={{ backgroundColor: "#c8a55a", color: "#1a1a2e" }}
               >
-                Testar SamurAI Gratis
+                Conhecer o SamurAI
                 <Sparkles className="w-5 h-5 ml-2" />
               </Button>
             </Link>
@@ -540,7 +543,7 @@ export default function Landing() {
               Planos que cabem no seu negocio
             </h2>
             <p className="text-gray-500 text-lg">
-              Teste com 1 empresa gratis. Sem compromisso. Para mais empresas, escolha um plano.
+              Escolha o plano ideal para sua consultoria. Convites COPSOQ inclusos em todos os planos.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
@@ -708,7 +711,7 @@ export default function Landing() {
             <span style={{ color: "#c8a55a" }}>NR-01</span>?
           </h2>
           <p className="text-gray-400 mb-8 text-lg">
-            Cadastre sua primeira empresa gratuitamente e veja o SamurAI em acao.
+            Comece a usar o SamurAI e transforme sua gestao de riscos psicossociais.
             Para adicionar mais empresas, escolha um plano.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -718,7 +721,7 @@ export default function Landing() {
                 className="text-lg px-10 h-14 font-bold shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 transition-all hover:scale-[1.02]"
                 style={{ backgroundColor: "#c8a55a", color: "#1a1a2e" }}
               >
-                Cadastre uma Empresa Gratuitamente
+                Comece Agora
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>

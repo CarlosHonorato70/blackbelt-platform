@@ -2,7 +2,7 @@
  * CHECKOUT PAGE
  *
  * Pagamento via Asaas: PIX, Boleto ou Cartão de Crédito.
- * Modelo: 1 empresa grátis para sempre. Para mais empresas, assinar plano.
+ * Modelo: Mensalidade fixa + cobranca por convite COPSOQ excedente.
  */
 
 import { useState, useEffect } from "react";
@@ -302,12 +302,11 @@ export default function Checkout() {
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles className="h-5 w-5 text-amber-600" />
                   <p className="font-semibold text-amber-800">
-                    1 empresa grátis incluída
+                    Convites COPSOQ inclusos no plano
                   </p>
                 </div>
                 <p className="text-sm text-amber-700">
-                  Você já pode usar a plataforma com 1 empresa gratuitamente, sem limite de tempo.
-                  Assine um plano para atender mais empresas e acessar recursos avançados.
+                  Cada plano inclui convites COPSOQ na mensalidade. Convites excedentes sao cobrados sob demanda via PIX, cartao ou creditos pre-pagos.
                 </p>
               </div>
             </CardContent>

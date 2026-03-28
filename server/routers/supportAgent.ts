@@ -67,7 +67,7 @@ const SUPPORT_KB: KBEntry[] = [
   },
   {
     keywords: ["plano", "assinatura", "preco", "valor", "pagamento", "assinar"],
-    answer: "Sobre planos e assinaturas:\n\n- **1 empresa gratis** para sempre, sem cartao de credito\n- **Starter** (CPF): R$ 297/mes — 3 empresas incluidas\n- **Professional** (CNPJ): R$ 597/mes — 10 empresas incluidas\n- **Enterprise** (CNPJ): R$ 997/mes — 30 empresas incluidas\n\nPara assinar, acesse **Planos** no menu ou a pagina de precos.",
+    answer: "Sobre planos e assinaturas:\n\n- **Starter** (CPF): R$ 297/mes — 20 convites COPSOQ inclusos + R$ 12/excedente\n- **Professional** (CNPJ): R$ 597/mes — 100 convites COPSOQ inclusos + R$ 10/excedente\n- **Enterprise** (CNPJ): R$ 997/mes — 500 convites COPSOQ inclusos + R$ 8/excedente\n\nConvites excedentes podem ser pagos via PIX, cartao ou creditos pre-pagos. Para assinar, acesse **Planos** no menu.",
     action: { type: "navigate", label: "Ver Planos", path: "/subscription/pricing" },
   },
 
