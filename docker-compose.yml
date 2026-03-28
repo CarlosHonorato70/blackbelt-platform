@@ -17,6 +17,7 @@ services:
         condition: service_healthy
     volumes:
       - app_logs:/app/logs
+      - backup_data:/backups:ro
     networks:
       - blackbelt-net
     deploy:
