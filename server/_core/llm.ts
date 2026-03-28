@@ -329,8 +329,8 @@ async function invokeAnthropic(params: InvokeParams): Promise<InvokeResult> {
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   assertApiKey();
 
-  // Use Anthropic if ANTHROPIC_API_KEY is set (priority)
-  if (process.env.ANTHROPIC_API_KEY) {
+  // Use Anthropic only if explicitly configured and no OpenAI/Gemini key
+  if (process.env.ANTHROPIC_API_KEY && !process.env.OPENAI_API_KEY) {
     return invokeAnthropic(params);
   }
 
