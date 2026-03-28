@@ -169,7 +169,7 @@ export default function AdminMonitoring() {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {data.memory.heapUsedMB}MB / {data.memory.heapTotalMB}MB (RSS: {data.memory.rssMB}MB)
+                  {data.memory.heapUsedMB}MB / {data.memory.maxHeapMB ?? data.memory.heapTotalMB}MB (RSS: {data.memory.rssMB}MB)
                 </p>
               </>
             ) : (

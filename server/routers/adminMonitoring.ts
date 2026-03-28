@@ -21,7 +21,7 @@ const ERROR_CRIT_THRESHOLD = 20;
 export async function runMonitoringCheck(): Promise<{
   status: "ok" | "warning" | "critical";
   app: { uptime: number; nodeVersion: string; pid: number };
-  memory: { heapUsedMB: number; heapTotalMB: number; rssMB: number; heapPercent: number; memoryStatus: string };
+  memory: { heapUsedMB: number; heapTotalMB: number; maxHeapMB: number; rssMB: number; heapPercent: number; memoryStatus: string };
   database: { connected: boolean };
   errors24h: number;
   disk: { totalGB: number; freeGB: number; usedPercent: number };
@@ -32,7 +32,11 @@ export async function runMonitoringCheck(): Promise<{
   const heapUsedMB = Math.round(mem.heapUsed / 1024 / 1024);
   const heapTotalMB = Math.round(mem.heapTotal / 1024 / 1024);
   const rssMB = Math.round(mem.rss / 1024 / 1024);
-  const heapPercent = Math.round((mem.heapUsed / mem.heapTotal) * 100);
+  // Use max heap size (--max-old-space-size or V8 default) as denominator, not dynamic heapTotal
+  const v8 = await import("v8");
+  const heapStats = v8.getHeapStatistics();
+  const maxHeapMB = Math.round(heapStats.heap_size_limit / 1024 / 1024);
+  const heapPercent = Math.round((mem.heapUsed / heapStats.heap_size_limit) * 100);
 
   let memoryStatus: "ok" | "warning" | "critical" = "ok";
   if (heapPercent >= MEMORY_CRIT_PERCENT) memoryStatus = "critical";
@@ -102,7 +106,7 @@ export async function runMonitoringCheck(): Promise<{
   return {
     status,
     app: { uptime: Math.floor(process.uptime()), nodeVersion: process.version, pid: process.pid },
-    memory: { heapUsedMB, heapTotalMB, rssMB, heapPercent, memoryStatus },
+    memory: { heapUsedMB, heapTotalMB, maxHeapMB, rssMB, heapPercent, memoryStatus },
     database: { connected: dbConnected },
     errors24h,
     disk: { totalGB, freeGB, usedPercent },
