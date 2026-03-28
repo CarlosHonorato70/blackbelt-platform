@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { trpc } from "@/lib/trpc";
 import { Activity, Database, HardDrive, AlertTriangle, CheckCircle, XCircle, RefreshCw, Server, Clock } from "lucide-react";
 import { useState } from "react";
+import DashboardLayout from "@/components/DashboardLayout";
 
 const statusColors = {
   ok: "bg-green-500",
@@ -58,6 +59,7 @@ export default function AdminMonitoring() {
   const history = historyQuery.data ?? [];
 
   return (
+    <DashboardLayout>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -347,5 +349,6 @@ export default function AdminMonitoring() {
         </CardContent>
       </Card>
     </div>
+    </DashboardLayout>
   );
 }

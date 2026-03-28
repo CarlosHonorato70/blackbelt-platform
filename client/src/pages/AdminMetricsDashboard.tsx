@@ -9,6 +9,7 @@ import { Building2, Users, CreditCard, AlertTriangle, Eye, DollarSign, Ticket, S
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import DashboardLayout from "@/components/DashboardLayout";
 
 export default function AdminMetricsDashboard() {
   const navigate = useNavigate();
@@ -41,6 +42,7 @@ export default function AdminMetricsDashboard() {
   const totalAlerts = (alerts.expiringTrials?.length || 0) + (alerts.pastDue?.length || 0);
 
   return (
+    <DashboardLayout>
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Painel Administrativo</h1>
@@ -344,5 +346,6 @@ export default function AdminMetricsDashboard() {
         </TabsContent>
       </Tabs>
     </div>
+    </DashboardLayout>
   );
 }

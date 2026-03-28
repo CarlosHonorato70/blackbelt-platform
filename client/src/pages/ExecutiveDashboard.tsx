@@ -1,4 +1,5 @@
 import React from 'react';
+import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -40,19 +41,23 @@ export default function ExecutiveDashboard() {
 
   if (isLoading) {
     return (
+      <DashboardLayout>
       <div className="container mx-auto p-6 flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
+      </DashboardLayout>
     );
   }
 
   if (error || !data) {
     return (
+      <DashboardLayout>
       <div className="container mx-auto p-6">
         <Card><CardContent className="p-6 text-center text-muted-foreground">
           Erro ao carregar dados do painel executivo.
         </CardContent></Card>
       </div>
+      </DashboardLayout>
     );
   }
 
@@ -92,6 +97,7 @@ export default function ExecutiveDashboard() {
     : [];
 
   return (
+    <DashboardLayout>
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div>
@@ -418,5 +424,6 @@ export default function ExecutiveDashboard() {
         </Card>
       </div>
     </div>
+    </DashboardLayout>
   );
 }
