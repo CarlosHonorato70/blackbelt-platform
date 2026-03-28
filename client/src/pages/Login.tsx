@@ -31,7 +31,7 @@ export default function Login() {
         return;
       }
       toast.success("Login realizado com sucesso!");
-      window.location.href = data.role === "admin" ? "/executive-dashboard" : "/dashboard";
+      window.location.href = data.role === "admin" ? "/admin/metrics" : "/dashboard";
     },
     onError: (error: any) => {
       setError(error.message || "Email ou senha inválidos");
