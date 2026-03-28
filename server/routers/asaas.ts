@@ -56,6 +56,44 @@ async function asaasRequest(path: string, options: RequestInit = {}) {
 // HELPER: Atualizar valor da assinatura no Asaas (chamado pelo billing hook)
 // ============================================
 
+export async function createOneTimeCharge(params: {
+  customerId: string;
+  value: number;
+  description: string;
+  billingType: "PIX" | "CREDIT_CARD" | "BOLETO";
+  externalReference?: string;
+}): Promise<{ id: string; pixQrCode?: string; pixCopyPaste?: string; invoiceUrl?: string }> {
+  const payment = await asaasRequest("/payments", {
+    method: "POST",
+    body: JSON.stringify({
+      customer: params.customerId,
+      billingType: params.billingType,
+      value: params.value,
+      dueDate: new Date(Date.now() + 30 * 60 * 1000).toISOString().split("T")[0], // today
+      description: params.description,
+      externalReference: params.externalReference || "",
+    }),
+  });
+
+  let pixQrCode: string | undefined;
+  let pixCopyPaste: string | undefined;
+
+  if (params.billingType === "PIX" && payment.id) {
+    try {
+      const pixData = await asaasRequest(`/payments/${payment.id}/pixQrCode`);
+      pixQrCode = pixData.encodedImage;
+      pixCopyPaste = pixData.payload;
+    } catch { /* PIX QR may not be ready immediately */ }
+  }
+
+  return {
+    id: payment.id,
+    pixQrCode,
+    pixCopyPaste,
+    invoiceUrl: payment.invoiceUrl,
+  };
+}
+
 export async function updateAsaasSubscriptionValue(asaasSubscriptionId: string, newValueCentavos: number): Promise<boolean> {
   if (!process.env.ASAAS_API_KEY || !asaasSubscriptionId) return false;
   try {

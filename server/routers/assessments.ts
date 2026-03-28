@@ -11,7 +11,7 @@ import {
   copsoqReports,
   copsoqInvites,
 } from "../../drizzle/schema_nr01";
-import { subscriptions, plans, copsoqBillingEvents } from "../../drizzle/schema";
+import { subscriptions, plans, copsoqBillingEvents, tenantCredits, creditTransactions, pendingCopsoqPayments } from "../../drizzle/schema";
 import { sendBulkCopsoqInvites } from "../_core/email";
 import { log } from "../_core/logger";
 import { updateAsaasSubscriptionValue } from "./asaas";
@@ -323,7 +323,99 @@ export const assessmentsRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      // Criar avaliacao
+      const inviteCount = input.invitees.length;
+
+      // ========== BILLING CHECK: Verificar excedentes ANTES de enviar ==========
+      const [sub] = await db.select()
+        .from(subscriptions)
+        .where(eq(subscriptions.tenantId, ctx.tenantId!))
+        .limit(1);
+
+      let exceedentCount = 0;
+      let chargeAmount = 0;
+      let pricePerInvite = 0;
+      let included = 0;
+
+      if (sub) {
+        const [plan] = await db.select()
+          .from(plans)
+          .where(eq(plans.id, sub.planId))
+          .limit(1);
+
+        const sentBefore = sub.copsoqInvitesSent || 0;
+        const sentAfter = sentBefore + inviteCount;
+        included = plan?.copsoqInvitesIncluded || 0;
+        pricePerInvite = plan?.pricePerCopsoqInvite || 0;
+
+        if (sentAfter > included && pricePerInvite > 0) {
+          const excedentsBefore = Math.max(0, sentBefore - included);
+          const excedentsAfter = Math.max(0, sentAfter - included);
+          exceedentCount = excedentsAfter - excedentsBefore;
+          chargeAmount = exceedentCount * pricePerInvite;
+        }
+      }
+
+      // If there are exceedents, check for credits or block
+      if (chargeAmount > 0) {
+        const [credits] = await db.select()
+          .from(tenantCredits)
+          .where(eq(tenantCredits.tenantId, ctx.tenantId!))
+          .limit(1);
+
+        const creditBalance = credits?.balance || 0;
+
+        if (creditBalance >= chargeAmount) {
+          // Has enough credits — deduct and continue
+          await db.update(tenantCredits)
+            .set({ balance: creditBalance - chargeAmount, updatedAt: new Date() })
+            .where(eq(tenantCredits.tenantId, ctx.tenantId!));
+
+          await db.insert(creditTransactions).values({
+            id: nanoid(),
+            tenantId: ctx.tenantId!,
+            type: "usage",
+            amount: -chargeAmount,
+            description: `${exceedentCount} convites COPSOQ excedentes — ${input.assessmentTitle}`,
+            referenceId: null,
+          });
+
+          log.info(`[Billing] Credits used: tenant=${ctx.tenantId} R$${(chargeAmount / 100).toFixed(2)} for ${exceedentCount} exceedents`);
+        } else {
+          // NOT enough credits — BLOCK and create pending payment
+          const pendingId = nanoid();
+          const expiresAt = new Date();
+          expiresAt.setMinutes(expiresAt.getMinutes() + 30);
+
+          await db.insert(pendingCopsoqPayments).values({
+            id: pendingId,
+            tenantId: ctx.tenantId!,
+            assessmentTitle: input.assessmentTitle,
+            invitees: JSON.stringify(input.invitees),
+            totalInvites: inviteCount,
+            freeInvites: Math.max(0, inviteCount - exceedentCount),
+            exceedentCount,
+            chargeAmount,
+            paymentStatus: "pending",
+            expiresAt,
+          });
+
+          log.info(`[Billing] BLOCKED: tenant=${ctx.tenantId} ${exceedentCount} exceedents, R$${(chargeAmount / 100).toFixed(2)} required`);
+
+          return {
+            blocked: true,
+            pendingPaymentId: pendingId,
+            totalInvites: inviteCount,
+            freeInvites: Math.max(0, inviteCount - exceedentCount),
+            exceedentCount,
+            chargeAmount,
+            pricePerInvite,
+            creditBalance,
+            message: `${exceedentCount} convite(s) excedente(s). Valor: R$ ${(chargeAmount / 100).toFixed(2)}. Pague para liberar o envio.`,
+          };
+        }
+      }
+
+      // ========== ENVIO: Criar avaliação e enviar convites ==========
       const assessmentId = `copsoq_${Date.now()}_${nanoid(8)}`;
       await db.insert(copsoqAssessments).values({
         id: assessmentId,
@@ -333,7 +425,6 @@ export const assessmentsRouter = router({
         status: "in_progress",
       });
 
-      // Criar convites
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + input.expiresIn);
 
@@ -365,10 +456,8 @@ export const assessmentsRouter = router({
         });
       }
 
-      // Enviar emails em lote
       const result = await sendBulkCopsoqInvites(invitesToSend);
 
-      // Atualizar status dos convites enviados
       for (const invitee of input.invitees) {
         await db
           .update(copsoqInvites)
@@ -376,73 +465,27 @@ export const assessmentsRouter = router({
           .where(eq(copsoqInvites.respondentEmail, invitee.email));
       }
 
-      // ========== BILLING HOOK: Contabilizar convites COPSOQ ==========
-      try {
-        const inviteCount = input.invitees.length;
-        const [sub] = await db.select()
-          .from(subscriptions)
-          .where(eq(subscriptions.tenantId, ctx.tenantId!))
-          .limit(1);
+      // ========== BILLING: Atualizar contadores ==========
+      if (sub) {
+        const sentBefore = sub.copsoqInvitesSent || 0;
+        const sentAfter = sentBefore + inviteCount;
+        const totalExtra = (sub.copsoqExtraCharges || 0) + chargeAmount;
+        const totalPrice = (sub.currentPrice || 0) + totalExtra;
 
-        if (sub) {
-          const [plan] = await db.select()
-            .from(plans)
-            .where(eq(plans.id, sub.planId))
-            .limit(1);
+        await db.update(subscriptions)
+          .set({ copsoqInvitesSent: sentAfter, copsoqExtraCharges: totalExtra, totalPrice, updatedAt: new Date() })
+          .where(eq(subscriptions.id, sub.id));
 
-          const sentBefore = sub.copsoqInvitesSent || 0;
-          const sentAfter = sentBefore + inviteCount;
-          const included = plan?.copsoqInvitesIncluded || 0;
-          const pricePerInvite = plan?.pricePerCopsoqInvite || 0;
-
-          // Calculate new extra charges
-          let newExtraCharges = 0;
-          if (sentAfter > included && pricePerInvite > 0) {
-            const excedentsBefore = Math.max(0, sentBefore - included);
-            const excedentsAfter = Math.max(0, sentAfter - included);
-            newExtraCharges = (excedentsAfter - excedentsBefore) * pricePerInvite;
-          }
-
-          const totalExtra = (sub.copsoqExtraCharges || 0) + newExtraCharges;
-          const totalPrice = (sub.currentPrice || 0) + totalExtra;
-
-          await db.update(subscriptions)
-            .set({
-              copsoqInvitesSent: sentAfter,
-              copsoqExtraCharges: totalExtra,
-              totalPrice,
-              updatedAt: new Date(),
-            })
-            .where(eq(subscriptions.id, sub.id));
-
-          // Audit trail
-          await db.insert(copsoqBillingEvents).values({
-            id: nanoid(),
-            tenantId: ctx.tenantId!,
-            subscriptionId: sub.id,
-            inviteId: assessmentId,
-            invitesSentBefore: sentBefore,
-            invitesSentAfter: sentAfter,
-            chargeAmount: newExtraCharges,
-          });
-
-          if (newExtraCharges > 0) {
-            log.info(`[Billing] COPSOQ charges: tenant=${ctx.tenantId} +${inviteCount} invites, extra=R$${(newExtraCharges / 100).toFixed(2)}, total=R$${(totalPrice / 100).toFixed(2)}`);
-
-            // Update Asaas subscription value if connected
-            if (sub.asaasSubscriptionId) {
-              await updateAsaasSubscriptionValue(sub.asaasSubscriptionId, totalPrice);
-            }
-          }
-        }
-      } catch (err) {
-        log.error("[Billing] Failed to process COPSOQ billing", { error: String(err) });
-        // Don't fail the invite send if billing fails
+        await db.insert(copsoqBillingEvents).values({
+          id: nanoid(), tenantId: ctx.tenantId!, subscriptionId: sub.id,
+          inviteId: assessmentId, invitesSentBefore: sentBefore, invitesSentAfter: sentAfter, chargeAmount,
+        });
       }
 
       return {
+        blocked: false,
         assessmentId,
-        totalInvites: input.invitees.length,
+        totalInvites: inviteCount,
         successfulSends: result.success,
         failedSends: result.failed,
       };

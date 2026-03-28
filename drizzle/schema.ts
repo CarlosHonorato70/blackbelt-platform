@@ -1217,3 +1217,63 @@ export const copsoqBillingEvents = mysqlTable(
 
 export type CopsoqBillingEvent = typeof copsoqBillingEvents.$inferSelect;
 export type InsertCopsoqBillingEvent = typeof copsoqBillingEvents.$inferInsert;
+
+// ============================================================================
+// BILLING: Créditos Pré-Pagos
+// ============================================================================
+
+export const tenantCredits = mysqlTable(
+  "tenant_credits",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull().unique(),
+    balance: int("balance").default(0).notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  }
+);
+
+export const creditTransactions = mysqlTable(
+  "credit_transactions",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+    type: varchar("type", { length: 20 }).notNull(), // purchase, usage, refund
+    amount: int("amount").notNull(), // positive = credit, negative = debit
+    description: text("description"),
+    referenceId: varchar("referenceId", { length: 64 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    tenantIdx: index("idx_credit_tx_tenant").on(table.tenantId),
+  })
+);
+
+// ============================================================================
+// BILLING: Pagamentos Pendentes de Convites COPSOQ
+// ============================================================================
+
+export const pendingCopsoqPayments = mysqlTable(
+  "pending_copsoq_payments",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+    assessmentTitle: varchar("assessmentTitle", { length: 255 }).notNull(),
+    invitees: json("invitees").notNull(),
+    totalInvites: int("totalInvites").notNull(),
+    freeInvites: int("freeInvites").notNull(),
+    exceedentCount: int("exceedentCount").notNull(),
+    chargeAmount: int("chargeAmount").notNull(), // centavos
+    asaasPaymentId: varchar("asaasPaymentId", { length: 255 }),
+    paymentStatus: varchar("paymentStatus", { length: 20 }).default("pending").notNull(),
+    paymentMethod: varchar("paymentMethod", { length: 20 }),
+    pixQrCode: text("pixQrCode"),
+    pixCopyPaste: text("pixCopyPaste"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    paidAt: timestamp("paidAt"),
+    expiresAt: timestamp("expiresAt"),
+  },
+  (table) => ({
+    tenantIdx: index("idx_pending_copsoq_tenant").on(table.tenantId),
+    statusIdx: index("idx_pending_copsoq_status").on(table.paymentStatus),
+  })
+);
