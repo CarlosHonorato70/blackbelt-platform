@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import {
   Card,
@@ -29,6 +29,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   Upload,
   Download,
   Mail,
@@ -38,6 +45,11 @@ import {
   Trash2,
   Plus,
   UserPlus,
+  QrCode,
+  CreditCard,
+  Wallet,
+  Copy,
+  Loader2,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth.tsx";
@@ -67,18 +79,73 @@ export default function CopsoqInvites() {
   const [manualPosition, setManualPosition] = useState("");
   const [manualSector, setManualSector] = useState("");
 
+  // Payment modal state
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingPaymentId, setPendingPaymentId] = useState<string | null>(null);
+  const [paymentData, setPaymentData] = useState<any>(null);
+  const [pixData, setPixData] = useState<any>(null);
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
+
   const invitesQuery = trpc.assessments.listInvites.useQuery(
     undefined,
     { enabled: !!user }
   );
 
   const sendInvitesMutation = trpc.assessments.sendInvites.useMutation({
-    onSuccess: () => {
+    onSuccess: (data: any) => {
+      if (data.blocked) {
+        // Exceedents detected — show payment modal
+        setPendingPaymentId(data.pendingPaymentId);
+        setPaymentData(data);
+        setShowPaymentModal(true);
+        setIsLoading(false);
+        return;
+      }
       invitesQuery.refetch();
       setInvitees([]);
       setAssessmentTitle("");
     },
   });
+
+  const payExceedentsMutation = (trpc as any).subscriptions.payExceedents.useMutation({
+    onSuccess: (data: any) => {
+      if (data.method === "credits") {
+        setPaymentCompleted(true);
+        setShowPaymentModal(false);
+        invitesQuery.refetch();
+        setInvitees([]);
+        setAssessmentTitle("");
+        alert("Pagamento com creditos realizado! Convites enviados.");
+      } else if (data.pixQrCode) {
+        setPixData(data);
+      }
+      setIsPaymentProcessing(false);
+    },
+    onError: (err: any) => {
+      alert(err.message || "Erro ao processar pagamento");
+      setIsPaymentProcessing(false);
+    },
+  });
+
+  // Poll for payment confirmation (PIX)
+  const paymentStatusQuery = (trpc as any).subscriptions.checkPaymentStatus.useQuery(
+    { pendingPaymentId: pendingPaymentId! },
+    { enabled: !!pendingPaymentId && !!pixData && !paymentCompleted, refetchInterval: 3000 }
+  );
+
+  useEffect(() => {
+    if (paymentStatusQuery.data?.status === "paid" && !paymentCompleted) {
+      setPaymentCompleted(true);
+      setShowPaymentModal(false);
+      setPixData(null);
+      setPendingPaymentId(null);
+      invitesQuery.refetch();
+      setInvitees([]);
+      setAssessmentTitle("");
+      alert("Pagamento confirmado! Convites enviados automaticamente.");
+    }
+  }, [paymentStatusQuery.data]);
 
   const cancelInviteMutation = trpc.assessments.cancelInvite.useMutation({
     onSuccess: () => {
@@ -628,6 +695,113 @@ export default function CopsoqInvites() {
           </div>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Payment Modal — shown when exceedents detected */}
+      <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-orange-500" />
+              Convites Excedentes
+            </DialogTitle>
+            <DialogDescription>
+              {paymentData?.exceedentCount} convite(s) alem do incluso no plano.
+              Valor: R$ {((paymentData?.chargeAmount || 0) / 100).toFixed(2)}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!pixData ? (
+            <div className="space-y-3">
+              <div className="bg-muted rounded-lg p-3 text-sm">
+                <div className="flex justify-between"><span>Total de convites</span><span>{paymentData?.totalInvites}</span></div>
+                <div className="flex justify-between"><span>Inclusos no plano</span><span>{paymentData?.freeInvites}</span></div>
+                <div className="flex justify-between font-semibold border-t pt-1 mt-1">
+                  <span>Excedentes ({paymentData?.exceedentCount} x R$ {((paymentData?.pricePerInvite || 0) / 100).toFixed(2)})</span>
+                  <span>R$ {((paymentData?.chargeAmount || 0) / 100).toFixed(2)}</span>
+                </div>
+              </div>
+
+              <p className="text-sm font-medium">Escolha como pagar:</p>
+
+              <Button
+                className="w-full justify-start gap-3"
+                variant="outline"
+                disabled={isPaymentProcessing}
+                onClick={() => {
+                  setIsPaymentProcessing(true);
+                  payExceedentsMutation.mutate({ pendingPaymentId: pendingPaymentId!, method: "pix" });
+                }}
+              >
+                <QrCode className="h-5 w-5" /> Pagar com PIX (instantaneo)
+              </Button>
+
+              <Button
+                className="w-full justify-start gap-3"
+                variant="outline"
+                disabled={isPaymentProcessing}
+                onClick={() => {
+                  setIsPaymentProcessing(true);
+                  payExceedentsMutation.mutate({ pendingPaymentId: pendingPaymentId!, method: "credit_card" });
+                }}
+              >
+                <CreditCard className="h-5 w-5" /> Pagar com Cartao
+              </Button>
+
+              {(paymentData?.creditBalance || 0) > 0 && (
+                <Button
+                  className="w-full justify-start gap-3"
+                  variant="outline"
+                  disabled={isPaymentProcessing || (paymentData?.creditBalance || 0) < (paymentData?.chargeAmount || 0)}
+                  onClick={() => {
+                    setIsPaymentProcessing(true);
+                    payExceedentsMutation.mutate({ pendingPaymentId: pendingPaymentId!, method: "credits" });
+                  }}
+                >
+                  <Wallet className="h-5 w-5" /> Usar creditos (saldo: R$ {((paymentData?.creditBalance || 0) / 100).toFixed(2)})
+                </Button>
+              )}
+
+              {isPaymentProcessing && (
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Processando...
+                </div>
+              )}
+            </div>
+          ) : (
+            /* PIX QR Code */
+            <div className="space-y-4 text-center">
+              <p className="text-sm font-medium">Escaneie o QR Code ou copie o codigo PIX:</p>
+
+              {pixData.pixQrCode && (
+                <div className="flex justify-center">
+                  <img src={`data:image/png;base64,${pixData.pixQrCode}`} alt="QR Code PIX" className="w-48 h-48" />
+                </div>
+              )}
+
+              {pixData.pixCopyPaste && (
+                <div className="flex gap-2">
+                  <Input value={pixData.pixCopyPaste} readOnly className="text-xs" />
+                  <Button size="icon" variant="outline" onClick={() => {
+                    navigator.clipboard.writeText(pixData.pixCopyPaste);
+                    alert("Codigo PIX copiado!");
+                  }}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Aguardando pagamento... (atualiza automaticamente)
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                O pagamento sera detectado automaticamente. Apos confirmado, os convites serao enviados.
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
