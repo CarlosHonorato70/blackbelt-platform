@@ -12,9 +12,10 @@ import {
   copsoqInvites,
 } from "../../drizzle/schema_nr01";
 import { subscriptions, plans, copsoqBillingEvents, tenantCredits, creditTransactions, pendingCopsoqPayments } from "../../drizzle/schema";
-import { sendBulkCopsoqInvites } from "../_core/email";
+import { sendBulkCopsoqInvites, sendEmail } from "../_core/email";
 import { log } from "../_core/logger";
 import { updateAsaasSubscriptionValue } from "./asaas";
+import { users } from "../../drizzle/schema";
 
 export const assessmentsRouter = router({
   // Criar nova avaliacao (somente consultor/admin)
@@ -352,6 +353,30 @@ export const assessmentsRouter = router({
           const excedentsAfter = Math.max(0, sentAfter - included);
           exceedentCount = excedentsAfter - excedentsBefore;
           chargeAmount = exceedentCount * pricePerInvite;
+        }
+      }
+
+      // Email alert at 80% of included invites
+      if (sub && included > 0) {
+        const sentBefore = sub.copsoqInvitesSent || 0;
+        const sentAfter = sentBefore + inviteCount;
+        const pctBefore = Math.round((sentBefore / included) * 100);
+        const pctAfter = Math.round((sentAfter / included) * 100);
+        if (pctBefore < 80 && pctAfter >= 80 && pctAfter < 100) {
+          try {
+            const [owner] = await db.select().from(users).where(eq(users.tenantId, ctx.tenantId!)).limit(1);
+            if (owner?.email) {
+              await sendEmail({
+                to: owner.email,
+                subject: "[BlackBelt] Voce atingiu 80% dos convites COPSOQ inclusos",
+                html: `<h2>Alerta de Uso — BlackBelt Platform</h2>
+                  <p>Voce utilizou <strong>${sentAfter} de ${included}</strong> convites COPSOQ inclusos no seu plano.</p>
+                  <p>Convites excedentes serao cobrados a <strong>R$ ${(pricePerInvite / 100).toFixed(2)}</strong> cada.</p>
+                  <p>Considere comprar creditos pre-pagos para evitar interrupcoes.</p>`,
+              });
+              log.info(`[Billing] 80% alert sent to ${owner.email}`);
+            }
+          } catch { /* don't fail on email error */ }
         }
       }
 

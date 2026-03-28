@@ -57,16 +57,10 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <>{children}</>;
   }
 
-  // Free tier: 1 empresa grátis — não exige assinatura
-  const companyCount = companies?.length ?? 0;
-  if (companyCount <= 1) {
-    return <>{children}</>;
-  }
-
   // Verificar se a rota atual é isenta de assinatura
   const isExempt = SUBSCRIPTION_EXEMPT_PATHS.some((p) => location.pathname.startsWith(p));
 
-  // Se tem mais de 1 empresa e não tem assinatura, redirecionar para pricing
+  // Todos os planos são pagos — sem plano gratuito
   if (!isExempt) {
     const status = user.subscriptionStatus;
     const hasActiveSubscription = status === "active" || status === "trialing";

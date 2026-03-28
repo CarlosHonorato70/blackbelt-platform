@@ -10,7 +10,10 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
-import { subscriptions, invoices, tenants } from "../../drizzle/schema";
+import { subscriptions, invoices, tenants, pendingCopsoqPayments, copsoqBillingEvents } from "../../drizzle/schema";
+import { copsoqAssessments, copsoqInvites } from "../../drizzle/schema_nr01";
+import { sendBulkCopsoqInvites } from "../_core/email";
+import crypto from "crypto";
 import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { log } from "../_core/logger";
@@ -470,6 +473,11 @@ export async function handleAsaasWebhook(body: any): Promise<{ received: boolean
               currentPeriodStart: now,
               currentPeriodEnd: periodEnd,
               cancelAtPeriodEnd: false,
+              // Reset COPSOQ counters on new billing cycle
+              copsoqInvitesSent: 0,
+              copsoqExtraCharges: 0,
+              totalPrice: sub.currentPrice,
+              cycleResetAt: now,
               updatedAt: now,
             })
             .where(eq(subscriptions.id, sub.id));
@@ -496,6 +504,60 @@ export async function handleAsaasWebhook(body: any): Promise<{ received: boolean
           });
 
           log.info(`[Asaas Webhook] Assinatura ativada: ${sub.id} (tenant: ${sub.tenantId})`);
+        }
+
+        // Check if this is a one-time payment for COPSOQ exceedents
+        if (payment.externalReference) {
+          const [pending] = await db.select()
+            .from(pendingCopsoqPayments)
+            .where(eq(pendingCopsoqPayments.id, payment.externalReference))
+            .limit(1);
+
+          if (pending && pending.paymentStatus !== "paid") {
+            await db.update(pendingCopsoqPayments)
+              .set({ paymentStatus: "paid", paidAt: new Date() })
+              .where(eq(pendingCopsoqPayments.id, pending.id));
+
+            // Release pending invites
+            try {
+              const invitees = typeof pending.invitees === "string" ? JSON.parse(pending.invitees) : pending.invitees;
+              const assessmentId = `copsoq_${Date.now()}_${nanoid(8)}`;
+              await db.insert(copsoqAssessments).values({
+                id: assessmentId, tenantId: pending.tenantId,
+                title: pending.assessmentTitle, assessmentDate: new Date(), status: "in_progress",
+              });
+
+              const expiresAt = new Date();
+              expiresAt.setDate(expiresAt.getDate() + 7);
+              const toSend = [];
+              for (const inv of invitees) {
+                const token = crypto.randomBytes(32).toString("hex");
+                const id = `invite_${Date.now()}_${nanoid(8)}`;
+                await db.insert(copsoqInvites).values({
+                  id, assessmentId, tenantId: pending.tenantId,
+                  respondentEmail: inv.email, respondentName: inv.name,
+                  respondentPosition: inv.position, sectorId: inv.sector,
+                  inviteToken: token, status: "pending", expiresAt,
+                });
+                toSend.push({ respondentEmail: inv.email, respondentName: inv.name,
+                  assessmentTitle: pending.assessmentTitle, inviteToken: token, expiresIn: 7, tenantId: pending.tenantId });
+              }
+              await sendBulkCopsoqInvites(toSend);
+
+              // Update subscription counters
+              if (sub) {
+                await db.update(subscriptions).set({
+                  copsoqInvitesSent: (sub.copsoqInvitesSent || 0) + pending.totalInvites,
+                  copsoqExtraCharges: (sub.copsoqExtraCharges || 0) + pending.chargeAmount,
+                  updatedAt: new Date(),
+                }).where(eq(subscriptions.id, sub.id));
+              }
+
+              log.info(`[Asaas Webhook] COPSOQ payment confirmed: ${pending.id}, ${toSend.length} invites released`);
+            } catch (err) {
+              log.error("[Asaas Webhook] Failed to release COPSOQ invites", { error: String(err) });
+            }
+          }
         }
         break;
       }

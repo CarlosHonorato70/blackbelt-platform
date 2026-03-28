@@ -7,7 +7,7 @@ import { nanoid } from "nanoid";
 import crypto from "crypto";
 import { getDb } from "../db";
 import { eq, and, sql, isNotNull } from "drizzle-orm";
-import { people, tenants } from "../../drizzle/schema";
+import { people, tenants, subscriptions, plans, tenantCredits, creditTransactions, copsoqBillingEvents, pendingCopsoqPayments } from "../../drizzle/schema";
 import {
   copsoqAssessments, copsoqResponses, copsoqReports, copsoqInvites,
   complianceChecklist, complianceMilestones, complianceCertificates,
@@ -105,9 +105,57 @@ async function executeCreateAssessmentWithInvites(
   companyName: string,
   peopleList: any[],
   db: any
-): Promise<{ success: boolean; assessmentId?: string; message: string }> {
-  const assessmentId = `copsoq_${Date.now()}_${nanoid(8)}`;
+): Promise<{ success: boolean; assessmentId?: string; message: string; blocked?: boolean; pendingPaymentId?: string; chargeAmount?: number }> {
+  const inviteCount = peopleList.length;
   const assessmentTitle = `Avaliação COPSOQ-II - ${companyName} ${new Date().getFullYear()}`;
+
+  // ========== BILLING CHECK ==========
+  const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.tenantId, tenantId)).limit(1);
+  if (sub) {
+    const [plan] = await db.select().from(plans).where(eq(plans.id, sub.planId)).limit(1);
+    const sentBefore = sub.copsoqInvitesSent || 0;
+    const sentAfter = sentBefore + inviteCount;
+    const included = plan?.copsoqInvitesIncluded || 0;
+    const pricePerInvite = plan?.pricePerCopsoqInvite || 0;
+
+    if (sentAfter > included && pricePerInvite > 0) {
+      const excedentsBefore = Math.max(0, sentBefore - included);
+      const excedentsAfter = Math.max(0, sentAfter - included);
+      const exceedentCount = excedentsAfter - excedentsBefore;
+      const chargeAmount = exceedentCount * pricePerInvite;
+
+      // Check credits
+      const [credits] = await db.select().from(tenantCredits).where(eq(tenantCredits.tenantId, tenantId)).limit(1);
+      const balance = credits?.balance || 0;
+
+      if (balance >= chargeAmount) {
+        // Deduct credits
+        await db.update(tenantCredits).set({ balance: balance - chargeAmount, updatedAt: new Date() }).where(eq(tenantCredits.tenantId, tenantId));
+        await db.insert(creditTransactions).values({
+          id: nanoid(), tenantId, type: "usage", amount: -chargeAmount,
+          description: `${exceedentCount} convites COPSOQ excedentes — ${assessmentTitle}`,
+        });
+      } else {
+        // BLOCKED — create pending payment
+        const pendingId = nanoid();
+        const invitees = peopleList.map(p => ({ email: p.email, name: p.name, position: p.position, sector: p.sectorId }));
+        await db.insert(pendingCopsoqPayments).values({
+          id: pendingId, tenantId, assessmentTitle,
+          invitees: JSON.stringify(invitees), totalInvites: inviteCount,
+          freeInvites: Math.max(0, inviteCount - exceedentCount),
+          exceedentCount, chargeAmount, paymentStatus: "pending",
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+        });
+
+        return {
+          success: false, blocked: true, pendingPaymentId: pendingId, chargeAmount,
+          message: `**Pagamento necessario!** ${exceedentCount} convite(s) excedente(s) ao plano. Valor: **R$ ${(chargeAmount / 100).toFixed(2)}**.\n\nAcesse a pagina de **Convites COPSOQ** para realizar o pagamento via PIX, cartao ou creditos. Apos o pagamento, os convites serao enviados automaticamente.`,
+        };
+      }
+    }
+  }
+
+  const assessmentId = `copsoq_${Date.now()}_${nanoid(8)}`;
 
   // 1. Create COPSOQ assessment
   await db.insert(copsoqAssessments).values({

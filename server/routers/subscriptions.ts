@@ -818,4 +818,43 @@ export const subscriptionsRouter = router({
         .limit(1);
       return { status: payment?.paymentStatus || "unknown" };
     }),
+
+  // Purchase credits via Asaas (PIX or card)
+  purchaseCredits: tenantProcedure
+    .input(z.object({
+      amount: z.number().min(1000), // min R$10
+      method: z.enum(["pix", "credit_card"]),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.tenantId, ctx.tenantId)).limit(1);
+      if (!sub?.asaasCustomerId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Sem cliente Asaas vinculado. Assine um plano primeiro." });
+      }
+
+      const charge = await createOneTimeCharge({
+        customerId: sub.asaasCustomerId,
+        value: input.amount / 100,
+        description: `Compra de creditos BlackBelt - R$ ${(input.amount / 100).toFixed(2)}`,
+        billingType: input.method === "pix" ? "PIX" : "CREDIT_CARD",
+        externalReference: `credits_${ctx.tenantId}_${Date.now()}`,
+      });
+
+      // Credits will be added when payment is confirmed via webhook
+      // For now, store a pending credit purchase
+      await db.insert(creditTransactions).values({
+        id: nanoid(), tenantId: ctx.tenantId, type: "purchase",
+        amount: input.amount, description: `Compra de creditos (aguardando pagamento)`,
+        referenceId: charge.id,
+      });
+
+      return {
+        asaasPaymentId: charge.id,
+        pixQrCode: charge.pixQrCode,
+        pixCopyPaste: charge.pixCopyPaste,
+        invoiceUrl: charge.invoiceUrl,
+      };
+    }),
 });
