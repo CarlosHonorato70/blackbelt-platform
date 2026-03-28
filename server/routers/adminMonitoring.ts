@@ -47,32 +47,52 @@ export async function runMonitoringCheck(): Promise<{
   // Database
   const dbConnected = await checkDbHealth();
 
-  // Error count (last 24h) — count lines in today's error log
+  // Error count (last 24h) — count JSON log entries with timestamp in last 24h
   let errors24h = 0;
   try {
     const logsDir = path.resolve("logs");
     if (fs.existsSync(logsDir)) {
       const files = fs.readdirSync(logsDir).filter(f => f.startsWith("error-"));
-      const now = Date.now();
+      const cutoff = new Date(Date.now() - 86400000);
       for (const file of files) {
         const stat = fs.statSync(path.join(logsDir, file));
-        if (now - stat.mtimeMs < 86400000) {
+        if (Date.now() - stat.mtimeMs < 86400000) {
           const content = fs.readFileSync(path.join(logsDir, file), "utf-8");
-          errors24h += content.split("\n").filter(l => l.trim()).length;
+          const lines = content.split("\n").filter(l => l.trim());
+          for (const line of lines) {
+            try {
+              const entry = JSON.parse(line);
+              if (entry.timestamp && new Date(entry.timestamp) > cutoff) {
+                errors24h++;
+              }
+            } catch { errors24h++; } // Count non-JSON lines too
+          }
         }
       }
     }
   } catch { /* ignore */ }
 
-  // Disk
+  // System RAM — use /proc/meminfo for accurate "available" (includes buff/cache)
   let totalGB = 0, freeGB = 0, usedPercent = 0;
   try {
+    const meminfo = fs.readFileSync("/proc/meminfo", "utf-8");
+    const getKB = (key: string) => {
+      const m = meminfo.match(new RegExp(`${key}:\\s+(\\d+)`));
+      return m ? parseInt(m[1], 10) : 0;
+    };
+    const totalKB = getKB("MemTotal");
+    const availKB = getKB("MemAvailable") || (getKB("MemFree") + getKB("Buffers") + getKB("Cached"));
+    totalGB = Math.round(totalKB / 1024 / 1024 * 10) / 10;
+    freeGB = Math.round(availKB / 1024 / 1024 * 10) / 10;
+    usedPercent = totalKB > 0 ? Math.round(((totalKB - availKB) / totalKB) * 100) : 0;
+  } catch {
+    // Fallback for non-Linux
     const total = os.totalmem();
     const free = os.freemem();
     totalGB = Math.round(total / 1024 / 1024 / 1024 * 10) / 10;
     freeGB = Math.round(free / 1024 / 1024 / 1024 * 10) / 10;
     usedPercent = Math.round(((total - free) / total) * 100);
-  } catch { /* ignore */ }
+  }
 
   // Last backup
   let lastBackup: { file: string; sizeMB: number; date: string } | null = null;
