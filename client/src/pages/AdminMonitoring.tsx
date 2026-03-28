@@ -93,6 +93,8 @@ export default function AdminMonitoring() {
 
   const historyQuery = (trpc as any).adminMonitoring.getHistory.useQuery({ limit: 20 });
 
+  const maintenanceQuery = (trpc as any).adminMonitoring.maintenanceHistory.useQuery({ limit: 10 });
+
   const runCheckMutation = (trpc as any).adminMonitoring.runCheck.useMutation({
     onSuccess: () => {
       statusQuery.refetch();
@@ -396,6 +398,52 @@ export default function AdminMonitoring() {
           )}
         </CardContent>
       </Card>
+      {/* Maintenance History */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <RefreshCw className="h-5 w-5" />
+            Manutencoes Automaticas
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(maintenanceQuery.data ?? []).length === 0 ? (
+            <p className="text-muted-foreground text-center py-4">Nenhuma manutencao registrada.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Resolucao</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(maintenanceQuery.data ?? []).map((m: any) => (
+                  <TableRow key={m.id}>
+                    <TableCell className="text-sm">
+                      {new Date(m.requestedAt).toLocaleString("pt-BR")}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{m.type}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={m.status === "completed" ? "default" : m.status === "pending" ? "secondary" : "destructive"}>
+                        {m.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm max-w-xs truncate">
+                      {m.resolution || "Aguardando..."}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Chat IA */}
       <Card>
         <CardHeader>

@@ -1161,3 +1161,28 @@ export const monitoringChecks = mysqlTable(
 
 export type MonitoringCheck = typeof monitoringChecks.$inferSelect;
 export type InsertMonitoringCheck = typeof monitoringChecks.$inferInsert;
+
+// ============================================================================
+// MAINTENANCE REQUESTS (Ponte Klinikos → Claude Code)
+// ============================================================================
+
+export const maintenanceRequests = mysqlTable(
+  "maintenance_requests",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    type: varchar("type", { length: 50 }).notNull(), // ram_high, db_down, errors_spike, disk_full, container_unhealthy
+    status: varchar("status", { length: 20 }).notNull(), // pending, in_progress, completed, failed
+    details: json("details").notNull(),
+    resolution: text("resolution"),
+    requestedAt: timestamp("requestedAt").defaultNow().notNull(),
+    completedAt: timestamp("completedAt"),
+  },
+  (table) => ({
+    statusIdx: index("idx_maintenance_status").on(table.status),
+    typeIdx: index("idx_maintenance_type").on(table.type),
+    requestedAtIdx: index("idx_maintenance_requested").on(table.requestedAt),
+  })
+);
+
+export type MaintenanceRequest = typeof maintenanceRequests.$inferSelect;
+export type InsertMaintenanceRequest = typeof maintenanceRequests.$inferInsert;

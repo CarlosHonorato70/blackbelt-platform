@@ -2,7 +2,8 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { adminProcedure, router } from "../_core/trpc";
 import { getDb, checkDbHealth } from "../db";
-import { monitoringChecks } from "../../drizzle/schema";
+import { monitoringChecks, maintenanceRequests } from "../../drizzle/schema";
+import { publicProcedure } from "../_core/trpc";
 import { agentConversations, agentMessages } from "../../drizzle/schema_agent";
 import { desc, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -177,6 +178,30 @@ export async function saveCheckAndAlert(result: Awaited<ReturnType<typeof runMon
       });
 
       log.warn(`[Monitoring] Alert sent: ${result.status}`, { problems });
+
+      // Create maintenance request for Claude Code to pick up
+      const maintenanceType = !result.database.connected ? "db_down"
+        : result.memory.memoryStatus === "critical" ? "ram_high"
+        : result.errors24h >= ERROR_CRIT_THRESHOLD ? "errors_spike"
+        : result.disk.usedPercent >= 90 ? "disk_full"
+        : "general";
+
+      // Avoid duplicates — only create if no pending request of same type
+      const existing = await db.select({ id: maintenanceRequests.id })
+        .from(maintenanceRequests)
+        .where(sql`${maintenanceRequests.status} = 'pending' AND ${maintenanceRequests.type} = ${maintenanceType}`)
+        .limit(1);
+
+      if (existing.length === 0) {
+        await db.insert(maintenanceRequests).values({
+          id: nanoid(),
+          type: maintenanceType,
+          status: "pending",
+          details: JSON.stringify({ problems, snapshot: result }),
+          requestedAt: new Date(),
+        });
+        log.info(`[Monitoring] Maintenance request created: ${maintenanceType}`);
+      }
     }
 
     // Clean old checks (keep last 500)
@@ -395,5 +420,63 @@ ${errorLines.length > 0 ? `\nUltimos erros:\n${errorLines.join("\n")}` : "Sem er
         userMessage: { id: userMsgId, role: "user", content: input.content },
         assistantMessage: { id: assistantMsgId, role: "assistant", content: assistantContent },
       };
+    }),
+
+  // ============================================
+  // MAINTENANCE BRIDGE (Klinikos → Claude Code)
+  // ============================================
+
+  pendingMaintenance: publicProcedure
+    .input(z.object({ token: z.string() }).optional())
+    .query(async ({ input }) => {
+      if (input?.token !== (process.env.MAINTENANCE_TOKEN || "klinikos-2026")) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid maintenance token" });
+      }
+      const db = await getDb();
+      if (!db) return [];
+      const rows = await db.select()
+        .from(maintenanceRequests)
+        .where(eq(maintenanceRequests.status, "pending"))
+        .orderBy(maintenanceRequests.requestedAt)
+        .limit(10);
+      return rows.map(r => ({
+        ...r,
+        details: typeof r.details === "string" ? JSON.parse(r.details) : r.details,
+      }));
+    }),
+
+  completeMaintenance: publicProcedure
+    .input(z.object({
+      token: z.string(),
+      id: z.string(),
+      resolution: z.string(),
+      status: z.enum(["completed", "failed"]).default("completed"),
+    }))
+    .mutation(async ({ input }) => {
+      if (input.token !== (process.env.MAINTENANCE_TOKEN || "klinikos-2026")) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid maintenance token" });
+      }
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.update(maintenanceRequests)
+        .set({ status: input.status, resolution: input.resolution, completedAt: new Date() })
+        .where(eq(maintenanceRequests.id, input.id));
+      log.info(`[Monitoring] Maintenance ${input.status}: ${input.id} — ${input.resolution}`);
+      return { success: true };
+    }),
+
+  maintenanceHistory: adminProcedure
+    .input(z.object({ limit: z.number().min(1).max(50).default(20) }).optional())
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [];
+      const rows = await db.select()
+        .from(maintenanceRequests)
+        .orderBy(desc(maintenanceRequests.requestedAt))
+        .limit(input?.limit ?? 20);
+      return rows.map(r => ({
+        ...r,
+        details: typeof r.details === "string" ? JSON.parse(r.details) : r.details,
+      }));
     }),
 });
