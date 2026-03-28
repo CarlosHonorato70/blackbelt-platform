@@ -249,7 +249,7 @@ export const adminMonitoringRouter = router({
       tenantId: ctx.user.tenantId,
       userId: ctx.user.id,
       companyId: "monitoring-agent",
-      title: "Agente de Monitoramento",
+      title: "Klinikos IA",
       phase: "monitoring",
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -321,7 +321,7 @@ export const adminMonitoringRouter = router({
       const uptimeH = Math.floor(status.app.uptime / 3600);
       const uptimeM = Math.floor((status.app.uptime % 3600) / 60);
 
-      const systemPrompt = `Voce e o Agente de Monitoramento da plataforma BlackBelt.
+      const systemPrompt = `Voce e o Klinikos IA, o agente inteligente de monitoramento da plataforma BlackBelt.
 Responda sempre em portugues de forma clara e direta.
 Voce tem acesso aos dados em tempo real da plataforma que sao fornecidos a cada mensagem.
 Ajude o admin a entender o estado do sistema, diagnosticar problemas e sugerir acoes.

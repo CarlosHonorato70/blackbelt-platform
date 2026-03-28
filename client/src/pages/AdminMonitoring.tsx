@@ -401,10 +401,10 @@ export default function AdminMonitoring() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
-            Agente de Monitoramento IA
+            Klinikos IA
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Converse com o agente para diagnosticar e entender o estado da plataforma
+            Converse com Klinikos para diagnosticar e entender o estado da plataforma
           </p>
         </CardHeader>
         <CardContent>
