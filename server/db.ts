@@ -79,6 +79,9 @@ export async function getDb() {
           waitForConnections: true,
           connectionLimit: process.env.NODE_ENV === "production" ? 50 : 10,
           queueLimit: 1000,
+          connectTimeout: 10_000,
+          enableKeepAlive: true,
+          keepAliveInitialDelay: 10_000,
           ...(needsSsl ? { ssl: { minVersion: 'TLSv1.2', rejectUnauthorized: true } } : {}),
         });
         _db = drizzle(_pool, { schema: fullSchema, mode: "default" });
@@ -99,6 +102,20 @@ export async function getDb() {
     }
   }
   return _db;
+}
+
+/** Fecha o pool de conexoes (chamado no graceful shutdown) */
+export async function closePool(): Promise<void> {
+  if (_pool) {
+    try {
+      await _pool.end();
+      log.info("[Database] Connection pool closed");
+    } catch (err) {
+      log.error("[Database] Error closing pool", { error: String(err) });
+    }
+    _pool = null;
+    _db = null;
+  }
 }
 
 /** Verifica se o banco de dados esta acessivel (para health check) */

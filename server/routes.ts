@@ -21,19 +21,24 @@ export function registerRoutes(app: Express) {
     const status = dbHealthy ? "ok" : "degraded";
     const httpCode = dbHealthy ? 200 : 503;
 
-    if (process.env.NODE_ENV === "production") {
-      res.status(httpCode).json({ status });
-    } else {
-      res.status(httpCode).json({
-        status,
+    const mem = process.memoryUsage();
+
+    res.status(httpCode).json({
+      status,
+      uptime: Math.floor(process.uptime()),
+      database: dbHealthy ? "connected" : "unavailable",
+      memory: {
+        heapUsedMB: Math.round(mem.heapUsed / 1024 / 1024),
+        heapTotalMB: Math.round(mem.heapTotal / 1024 / 1024),
+        rssMB: Math.round(mem.rss / 1024 / 1024),
+      },
+      ...(process.env.NODE_ENV !== "production" && {
         timestamp: new Date().toISOString(),
         service: "blackbelt-platform",
         version: "1.0.7",
         environment: process.env.NODE_ENV || "development",
-        uptime: process.uptime(),
-        database: dbHealthy ? "connected" : "unavailable",
-      });
-    }
+      }),
+    });
   });
 
   // ============================================

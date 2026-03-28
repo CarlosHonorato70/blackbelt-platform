@@ -14,6 +14,7 @@ import rateLimit from "express-rate-limit";
 import slowDown from "express-slow-down";
 import { ENV, logSecurityWarnings } from "./_core/env";
 import { log } from "./_core/logger";
+import { closePool } from "./db";
 
 // tRPC
 import * as trpcExpress from "@trpc/server/adapters/express";
@@ -266,20 +267,39 @@ app.use((req, res, next) => {
     log.info(`Ambiente: ${ENV.nodeEnv}`);
   });
 
-  // 6. GRACEFUL SHUTDOWN
+  // 6. HTTP TIMEOUTS
+  server.setTimeout(30_000);
+  server.keepAliveTimeout = 65_000; // > nginx default (60s)
+  server.headersTimeout = 66_000;   // > keepAliveTimeout
+
+  // 7. GRACEFUL SHUTDOWN
   const gracefulShutdown = (signal: string) => {
     log.info(`${signal} received, shutting down gracefully...`);
-    server.close(() => {
+    server.close(async () => {
       log.info("HTTP server closed");
+      await closePool();
       process.exit(0);
     });
     // Force exit after 30s
     setTimeout(() => {
       log.error("Forced shutdown after 30s timeout");
       process.exit(1);
-    }, 30000).unref();
+    }, 30_000).unref();
   };
 
   process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
   process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+
+  // 8. UNHANDLED ERRORS — log before crash
+  process.on("uncaughtException", (err) => {
+    log.error("[FATAL] Uncaught exception", { message: err.message, stack: err.stack });
+    if (process.env.SENTRY_DSN) Sentry.captureException(err);
+    gracefulShutdown("uncaughtException");
+  });
+
+  process.on("unhandledRejection", (reason) => {
+    const err = reason instanceof Error ? reason : new Error(String(reason));
+    log.error("[WARN] Unhandled promise rejection", { message: err.message, stack: err.stack });
+    if (process.env.SENTRY_DSN) Sentry.captureException(err);
+  });
 })();
