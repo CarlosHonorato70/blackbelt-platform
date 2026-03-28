@@ -92,13 +92,20 @@ services:
     command:
       - -c
       - |
-        apt-get update -qq && apt-get install -y -qq cron > /dev/null 2>&1
-        chmod +x /scripts/backup.sh
-        echo "0 3 * * * /scripts/backup.sh >> /var/log/backup.log 2>&1" | crontab -
-        echo "[$(date)] Backup cron scheduled: daily at 03:00"
         echo "[$(date)] Running initial backup..."
-        /scripts/backup.sh
-        cron -f
+        bash /scripts/backup.sh || echo "[$(date)] Initial backup failed (MySQL may still be starting)"
+        echo "[$(date)] Backup loop started: every 24h at ~03:00"
+        while true; do
+          # Sleep until 03:00 next day
+          NOW=$(date +%s)
+          TARGET=$(date -d "tomorrow 03:00" +%s 2>/dev/null || date -d "$(date -d '+1 day' +%Y-%m-%d) 03:00:00" +%s)
+          SLEEP=$((TARGET - NOW))
+          [ "$SLEEP" -le 0 ] && SLEEP=86400
+          echo "[$(date)] Next backup in ${SLEEP}s"
+          sleep "$SLEEP"
+          echo "[$(date)] Starting scheduled backup..."
+          bash /scripts/backup.sh || echo "[$(date)] Backup failed!"
+        done
     environment:
       MYSQL_HOST: mysql
       MYSQL_PORT: "3306"

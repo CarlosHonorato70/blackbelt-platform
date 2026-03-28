@@ -2,6 +2,7 @@ import { router, protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
 import { onboardingProgress, industryTemplates } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { nanoid } from "nanoid";
 
 const ONBOARDING_STEPS = [
   { id: "company", label: "Complete company profile", description: "Add your company information." },
@@ -30,6 +31,7 @@ export const onboardingRouter = router({
 
     if (progress.length === 0) {
       await db.insert(onboardingProgress).values({
+        id: nanoid(),
         tenantId,
         currentStep: 1,
         completedSteps: JSON.stringify([]),
