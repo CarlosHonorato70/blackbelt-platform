@@ -52,6 +52,24 @@ async function asaasRequest(path: string, options: RequestInit = {}) {
 }
 
 // ============================================
+// ============================================
+// HELPER: Atualizar valor da assinatura no Asaas (chamado pelo billing hook)
+// ============================================
+
+export async function updateAsaasSubscriptionValue(asaasSubscriptionId: string, newValueCentavos: number): Promise<boolean> {
+  if (!process.env.ASAAS_API_KEY || !asaasSubscriptionId) return false;
+  try {
+    await asaasRequest(`/subscriptions/${asaasSubscriptionId}`, {
+      method: "PUT",
+      body: JSON.stringify({ value: newValueCentavos / 100 }),
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ============================================
 // tRPC ROUTER
 // ============================================
 

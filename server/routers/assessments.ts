@@ -14,6 +14,7 @@ import {
 import { subscriptions, plans, copsoqBillingEvents } from "../../drizzle/schema";
 import { sendBulkCopsoqInvites } from "../_core/email";
 import { log } from "../_core/logger";
+import { updateAsaasSubscriptionValue } from "./asaas";
 
 export const assessmentsRouter = router({
   // Criar nova avaliacao (somente consultor/admin)
@@ -427,6 +428,11 @@ export const assessmentsRouter = router({
 
           if (newExtraCharges > 0) {
             log.info(`[Billing] COPSOQ charges: tenant=${ctx.tenantId} +${inviteCount} invites, extra=R$${(newExtraCharges / 100).toFixed(2)}, total=R$${(totalPrice / 100).toFixed(2)}`);
+
+            // Update Asaas subscription value if connected
+            if (sub.asaasSubscriptionId) {
+              await updateAsaasSubscriptionValue(sub.asaasSubscriptionId, totalPrice);
+            }
           }
         }
       } catch (err) {
