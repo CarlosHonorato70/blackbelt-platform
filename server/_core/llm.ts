@@ -305,11 +305,6 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   }
 
   payload.max_tokens = 32768;
-  if (!apiUrl.includes("openai.com")) {
-    payload.thinking = {
-      budget_tokens: 128,
-    };
-  }
 
   const normalizedResponseFormat = normalizeResponseFormat({
     responseFormat,
