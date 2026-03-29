@@ -52,6 +52,10 @@ import {
   invoices,
   subscriptions,
   onboardingProgress,
+  copsoqBillingEvents,
+  pendingCopsoqPayments,
+  creditTransactions,
+  tenantCredits,
 } from "../drizzle/schema";
 import {
   copsoqAssessments,
@@ -483,8 +487,17 @@ export async function deleteTenant(id: string) {
   await safeDelete(() => db.delete(sectors).where(eq(sectors.tenantId, id)), "sectors");
   await safeDelete(() => db.delete(tenantSettings).where(eq(tenantSettings.tenantId, id)), "tenantSettings");
 
-  // Desassociar users do tenant (não excluir users)
-  await safeDelete(() => db.update(users).set({ tenantId: null }).where(eq(users.tenantId, id)), "users-disassociate");
+  // Billing tables
+  await safeDelete(() => db.delete(copsoqBillingEvents).where(eq(copsoqBillingEvents.tenantId, id)), "copsoqBillingEvents");
+  await safeDelete(() => db.delete(pendingCopsoqPayments).where(eq(pendingCopsoqPayments.tenantId, id)), "pendingCopsoqPayments");
+  await safeDelete(() => db.delete(creditTransactions).where(eq(creditTransactions.tenantId, id)), "creditTransactions");
+  await safeDelete(() => db.delete(tenantCredits).where(eq(tenantCredits.tenantId, id)), "tenantCredits");
+
+  // Delete users associated with this tenant
+  await safeDelete(() => db.delete(loginAttempts).where(
+    sql`email IN (SELECT email FROM users WHERE tenantId = ${id})`
+  ), "loginAttempts-users");
+  await safeDelete(() => db.delete(users).where(eq(users.tenantId, id)), "users");
 
   // Finalmente, excluir o tenant
   await db.delete(tenants).where(eq(tenants.id, id));
