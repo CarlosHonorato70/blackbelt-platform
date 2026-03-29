@@ -36,59 +36,59 @@ const plans = [
     name: "Starter",
     badge: "CPF",
     price: "R$ 297",
-    period: "/mes",
-    description: "Para psicologos e consultores autonomos (CPF)",
+    period: "/mês",
+    description: "Para psicólogos e consultores autônomos (CPF)",
     extra: "20 convites COPSOQ inclusos + R$ 12/excedente",
     features: [
-      "Cadastro via CPF (pessoa fisica)",
-      "3 empresas/mes incluidas",
-      "20 convites COPSOQ inclusos/mes",
-      "SamurAI basico (cadastro + COPSOQ)",
+      "Cadastro via CPF (pessoa física)",
+      "3 empresas/mês incluídas",
+      "20 convites COPSOQ inclusos/mês",
+      "SamurAI básico (cadastro + COPSOQ)",
       "Relatórios padrão",
-      "Exportacao PDF",
+      "Exportação PDF",
       "Suporte por email",
     ],
-    cta: "Comecar Agora",
+    cta: "Começar Agora",
     popular: false,
   },
   {
     name: "Professional",
     badge: "CNPJ",
     price: "R$ 597",
-    period: "/mes",
+    period: "/mês",
     description: "Para consultorias em crescimento (CNPJ)",
     extra: "100 convites COPSOQ inclusos + R$ 10/excedente",
     features: [
-      "Cadastro via CNPJ (pessoa juridica)",
-      "10 empresas/mes incluidas",
-      "100 convites COPSOQ inclusos/mes",
+      "Cadastro via CNPJ (pessoa jurídica)",
+      "10 empresas/mês incluídas",
+      "100 convites COPSOQ inclusos/mês",
       "SamurAI completo (10 fases)",
-      "Propostas comerciais automaticas",
+      "Propostas comerciais automáticas",
       "PDF export ilimitado",
       "Benchmark setorial",
-      "Suporte prioritario",
+      "Suporte prioritário",
     ],
-    cta: "Comecar Agora",
+    cta: "Começar Agora",
     popular: true,
   },
   {
     name: "Enterprise",
     badge: "CNPJ",
     price: "R$ 997",
-    period: "/mes",
+    period: "/mês",
     description: "Para grandes consultorias e redes (CNPJ)",
     extra: "500 convites COPSOQ inclusos + R$ 8/excedente",
     features: [
-      "Cadastro via CNPJ (pessoa juridica)",
-      "30 empresas/mes incluidas",
-      "500 convites COPSOQ inclusos/mes",
+      "Cadastro via CNPJ (pessoa jurídica)",
+      "30 empresas/mês incluídas",
+      "500 convites COPSOQ inclusos/mês",
       "Tudo do Professional",
       "White-label (sua marca)",
       "API access",
       "Relatórios personalizados",
       "Suporte dedicado",
     ],
-    cta: "Comecar Agora",
+    cta: "Começar Agora",
     popular: false,
   },
 ];
@@ -111,7 +111,7 @@ const features = [
     icon: ShieldCheck,
     title: "Conformidade NR-01",
     description:
-      "Documentacao pronta para fiscalizacao conforme Portaria MTE 1.419/2024.",
+      "Documentação pronta para fiscalização conforme Portaria MTE 1.419/2024.",
   },
   {
     icon: BarChart3,
@@ -121,9 +121,9 @@ const features = [
   },
   {
     icon: FileText,
-    title: "PDF Export & Edicao",
+    title: "PDF Export & Edição",
     description:
-      "Edicao inline de propostas, relatorios e certificados com exportacao PDF.",
+      "Edição inline de propostas, relatórios e certificados com exportação PDF.",
   },
   {
     icon: Building2,
@@ -135,28 +135,28 @@ const features = [
     icon: Lock,
     title: "LGPD & Seguranca",
     description:
-      "2FA, RBAC, criptografia, anonimizacao e exportacao de dados do titular.",
+      "2FA, RBAC, criptografia, anonimização e exportação de dados do titular.",
   },
   {
     icon: Eye,
     title: "Canal de Denúncias",
     description:
-      "Canal anonimo integrado para relatos de riscos psicossociais.",
+      "Canal anônimo integrado para relatos de riscos psicossociais.",
   },
 ];
 
 /* ── SamurAI 10 Phases ── */
 const samuraiPhases = [
   { icon: Search, title: "Cadastro", desc: "CNPJ > dados automaticos da Receita Federal" },
-  { icon: Brain, title: "Diagnostico", desc: "Analise do porte, setor e riscos iniciais" },
+  { icon: Brain, title: "Diagnóstico", desc: "Análise do porte, setor e riscos iniciais" },
   { icon: ClipboardCheck, title: "Avaliação", desc: "COPSOQ-II automatizado para colaboradores" },
-  { icon: BarChart3, title: "Analise", desc: "Scores de risco por dimensao e setor" },
+  { icon: BarChart3, title: "Análise", desc: "Scores de risco por dimensão e setor" },
   { icon: FileCheck, title: "Inventário", desc: "Inventário de riscos psicossociais" },
   { icon: Target, title: "Plano de Ação", desc: "Intervencoes priorizadas com prazos" },
-  { icon: Users, title: "Treinamentos", desc: "Programas de capacitacao sugeridos" },
-  { icon: FileText, title: "Documentacao", desc: "PGR, PCMSO e laudos gerados" },
+  { icon: Users, title: "Treinamentos", desc: "Programas de capacitação sugeridos" },
+  { icon: FileText, title: "Documentação", desc: "PGR, PCMSO e laudos gerados" },
   { icon: Award, title: "Certificação", desc: "Certificado de conformidade NR-01" },
-  { icon: Bell, title: "Monitoramento", desc: "Alertas de prazos e reavaliacoes" },
+  { icon: Bell, title: "Monitoramento", desc: "Alertas de prazos e reavaliações" },
 ];
 
 /* ── Stats ── */
@@ -171,19 +171,19 @@ const stats = [
 const faqItems = [
   {
     q: "O que e a NR-01 e por que preciso me adequar?",
-    a: "A NR-01 (Portaria MTE 1.419/2024) exige que empresas identifiquem e gerenciem riscos psicossociais no ambiente de trabalho. O descumprimento pode gerar multas e interdicoes. Nossa plataforma automatiza todo o processo de conformidade.",
+    a: "A NR-01 (Portaria MTE 1.419/2024) exige que empresas identifiquem e gerenciem riscos psicossociais no ambiente de trabalho. O descumprimento pode gerar multas e interdições. Nossa plataforma automatiza todo o processo de conformidade.",
   },
   {
     q: "Como o SamurAI funciona?",
-    a: "O SamurAI e um agente de inteligencia artificial que recebe apenas o CNPJ da empresa e automatiza as 10 fases da conformidade NR-01: desde a busca de dados na Receita Federal ate a emissao do certificado e monitoramento continuo.",
+    a: "O SamurAI e um agente de inteligência artificial que recebe apenas o CNPJ da empresa e automatiza as 10 fases da conformidade NR-01: desde a busca de dados na Receita Federal até a emissão do certificado e monitoramento contínuo.",
   },
   {
     q: "Preciso ter conhecimento tecnico para usar a plataforma?",
-    a: "Nao. A plataforma foi projetada para consultores de SST e gestores de RH. O SamurAI guia todo o processo automaticamente. Voce so precisa revisar e aprovar os documentos gerados.",
+    a: "Não. A plataforma foi projetada para consultores de SST e gestores de RH. O SamurAI guia todo o processo automaticamente. Você só precisa revisar e aprovar os documentos gerados.",
   },
   {
     q: "Os dados dos colaboradores estao seguros?",
-    a: "Sim. Utilizamos criptografia, autenticacao em dois fatores (2FA), controle de acesso por perfil (RBAC), isolamento de dados por empresa e conformidade total com a LGPD, incluindo exportacao e exclusao de dados pessoais.",
+    a: "Sim. Utilizamos criptografia, autenticação em dois fatores (2FA), controle de acesso por perfil (RBAC), isolamento de dados por empresa e conformidade total com a LGPD, incluindo exportação e exclusão de dados pessoais.",
   },
   {
     q: "Posso usar minha propria marca (white-label)?",
@@ -199,7 +199,7 @@ export default function Landing() {
   usePageMeta({
     title: "Gestão de Riscos Psicossociais | SamurAI",
     description:
-      "Automatize a conformidade NR-01 com inteligencia artificial. SamurAI: do CNPJ ao certificado em minutos.",
+      "Automatize a conformidade NR-01 com inteligência artificial. SamurAI: do CNPJ ao certificado em minutos.",
   });
 
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -271,7 +271,7 @@ export default function Landing() {
             variant="outline"
           >
             <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-            Powered by SamurAI — Inteligencia Artificial
+            Powered by SamurAI — Inteligência Artificial
           </Badge>
           <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-6 leading-tight tracking-tight">
             Automatize a conformidade{" "}
@@ -285,11 +285,11 @@ export default function Landing() {
               NR-01
             </span>
             <br />
-            com Inteligencia Artificial
+            com Inteligência Artificial
           </h1>
           <p className="text-lg md:text-xl text-gray-400 mb-10 max-w-3xl mx-auto leading-relaxed">
             Do CNPJ ao certificado em minutos, não meses. O SamurAI automatiza as 10
-            fases da gestao de riscos psicossociais para consultores de SST e
+            fases da gestão de riscos psicossociais para consultores de SST e
             empresas.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -315,7 +315,7 @@ export default function Landing() {
             </a>
           </div>
           <p className="text-gray-500 text-sm mt-6">
-            Gestao de riscos psicossociais com IA. Planos a partir de R$ 297/mes.
+            Gestão de riscos psicossociais com IA. Planos a partir de R$ 297/mes.
           </p>
         </div>
       </section>
@@ -325,7 +325,7 @@ export default function Landing() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Voce ainda faz avaliacao psicossocial{" "}
+              Você ainda faz avaliação psicossocial{" "}
               <span className="text-red-500">manualmente?</span>
             </h2>
             <p className="text-gray-500 max-w-2xl mx-auto text-lg">
@@ -343,18 +343,18 @@ export default function Landing() {
               {
                 icon: Target,
                 title: "Erros humanos",
-                desc: "Calculos incorretos, dimensoes ignoradas e relatorios inconsistentes.",
+                desc: "Cálculos incorretos, dimensões ignoradas e relatórios inconsistentes.",
                 color: "#ef4444",
               },
               {
                 icon: Bell,
                 title: "Prazos estourados",
-                desc: "Sem controle de vencimentos, reavaliacoes e notificacoes automaticas.",
+                desc: "Sem controle de vencimentos, reavaliações e notificações automáticas.",
                 color: "#ef4444",
               },
               {
                 icon: FileText,
-                title: "Sem padronizacao",
+                title: "Sem padronização",
                 desc: "Cada consultor faz de um jeito. Sem processo, sem escala.",
                 color: "#ef4444",
               },
@@ -408,7 +408,7 @@ export default function Landing() {
             </h2>
             <p className="text-gray-400 max-w-2xl mx-auto text-lg">
               Insira o CNPJ e o SamurAI conduz todo o processo de conformidade NR-01
-              automaticamente. Do cadastro ao monitoramento continuo.
+              automaticamente. Do cadastro ao monitoramento contínuo.
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -520,7 +520,7 @@ export default function Landing() {
               { icon: TrendingUp, text: "Propostas comerciais com ROI" },
               { icon: Award, text: "Certificados de conformidade" },
               { icon: Users, text: "Convites em massa por email" },
-              { icon: Zap, text: "Alertas e notificacoes automaticas" },
+              { icon: Zap, text: "Alertas e notificações automáticas" },
               { icon: ShieldCheck, text: "2FA e autenticacao segura" },
             ].map((item) => (
               <div
@@ -540,7 +540,7 @@ export default function Landing() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-              Planos que cabem no seu negocio
+              Planos que cabem no seu negócio
             </h2>
             <p className="text-gray-500 text-lg">
               Escolha o plano ideal para sua consultoria. Convites COPSOQ inclusos em todos os planos.
@@ -711,7 +711,7 @@ export default function Landing() {
             <span style={{ color: "#c8a55a" }}>NR-01</span>?
           </h2>
           <p className="text-gray-400 mb-8 text-lg">
-            Comece a usar o SamurAI e transforme sua gestao de riscos psicossociais.
+            Comece a usar o SamurAI e transforme sua gestão de riscos psicossociais.
             Para adicionar mais empresas, escolha um plano.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -744,7 +744,7 @@ export default function Landing() {
                 </span>
               </div>
               <p className="text-sm max-w-xs leading-relaxed">
-                Plataforma SaaS para gestao de riscos psicossociais e conformidade
+                Plataforma SaaS para gestão de riscos psicossociais e conformidade
                 NR-01. Automatize com SamurAI.
               </p>
             </div>
