@@ -61,9 +61,11 @@ export async function runAllE2ETests(): Promise<{
       testTenantId = nanoid();
 
       // Create tenant
+      const testCnpj = `99.999.${String(Date.now()).slice(-3)}/${String(Date.now()).slice(-4)}-99`;
       await db.insert(tenants).values({
         id: testTenantId,
         name: `E2E Test Tenant ${Date.now()}`,
+        cnpj: testCnpj,
         tenantType: "consultant",
         status: "active",
         createdAt: new Date(),
