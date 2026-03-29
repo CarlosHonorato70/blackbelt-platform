@@ -392,7 +392,7 @@ export async function deleteTenant(id: string) {
 
     // COPSOQ
     await safeDelete(() => db.delete(nr01.copsoqReminders).where(
-      sql`inviteId IN (SELECT id FROM copsoq_invites WHERE assessmentId IN (SELECT id FROM copsoq_assessments WHERE tenantId = ${id}))`
+      sql`invite_id IN (SELECT id FROM copsoq_invites WHERE assessmentId IN (SELECT id FROM copsoq_assessments WHERE tenantId = ${id}))`
     ), "copsoqReminders");
     await safeDelete(() => db.delete(nr01.copsoqInvites).where(
       sql`assessmentId IN (SELECT id FROM copsoq_assessments WHERE tenantId = ${id})`
