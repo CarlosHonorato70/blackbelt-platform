@@ -16,6 +16,7 @@ import { ENV, logSecurityWarnings } from "./_core/env";
 import { log } from "./_core/logger";
 import { closePool } from "./db";
 import { runMonitoringCheck, saveCheckAndAlert } from "./routers/adminMonitoring";
+import { runAllE2ETests } from "./_core/e2eTests";
 
 // tRPC
 import * as trpcExpress from "@trpc/server/adapters/express";
@@ -289,6 +290,24 @@ app.use((req, res, next) => {
     }, MONITORING_INTERVAL);
 
     log.info("[Monitoring] Agent started: every 15 min");
+
+    // E2E tests every 6 hours
+    const E2E_INTERVAL = 6 * 60 * 60 * 1000;
+    setTimeout(async () => {
+      try {
+        const result = await runAllE2ETests();
+        log.info(`[E2E] Scheduled run: ${result.passedTests}/${result.totalTests} passed`);
+      } catch (err) { log.error("[E2E] Scheduled run failed", { error: String(err) }); }
+    }, 5 * 60 * 1000); // First run after 5 min
+
+    setInterval(async () => {
+      try {
+        const result = await runAllE2ETests();
+        log.info(`[E2E] Scheduled run: ${result.passedTests}/${result.totalTests} passed`);
+      } catch (err) { log.error("[E2E] Scheduled run failed", { error: String(err) }); }
+    }, E2E_INTERVAL);
+
+    log.info("[E2E] Scheduled: every 6 hours");
   }
 
   // 7. HTTP TIMEOUTS

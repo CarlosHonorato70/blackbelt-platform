@@ -95,6 +95,17 @@ export default function AdminMonitoring() {
 
   const maintenanceQuery = (trpc as any).adminMonitoring.maintenanceHistory.useQuery({ limit: 10 });
 
+  const [isRunningE2E, setIsRunningE2E] = useState(false);
+  const [e2eResults, setE2EResults] = useState<any>(null);
+
+  const runE2EMutation = (trpc as any).adminMonitoring.runE2ETests.useMutation({
+    onSuccess: (data: any) => {
+      setE2EResults(data);
+      setIsRunningE2E(false);
+    },
+    onError: () => setIsRunningE2E(false),
+  });
+
   const runCheckMutation = (trpc as any).adminMonitoring.runCheck.useMutation({
     onSuccess: () => {
       statusQuery.refetch();
@@ -398,6 +409,75 @@ export default function AdminMonitoring() {
           )}
         </CardContent>
       </Card>
+      {/* E2E Tests */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5" />
+              Testes E2E de Negocio
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Testa fluxos reais: registro, login, subscription, COPSOQ, billing
+            </p>
+          </div>
+          <Button
+            onClick={() => { setIsRunningE2E(true); runE2EMutation.mutate({}); }}
+            disabled={isRunningE2E}
+            variant="outline"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRunningE2E ? "animate-spin" : ""}`} />
+            {isRunningE2E ? "Rodando..." : "Rodar Testes"}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {e2eResults ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className={`h-3 w-3 rounded-full ${e2eResults.passed ? "bg-green-500" : "bg-red-500"}`} />
+                <span className="font-semibold">
+                  {e2eResults.passedTests}/{e2eResults.totalTests} testes passaram
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  ({e2eResults.duration}ms)
+                </span>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Teste</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Tempo</TableHead>
+                    <TableHead>Erro</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {e2eResults.results.map((t: any, i: number) => (
+                    <TableRow key={i}>
+                      <TableCell className="text-sm font-medium">{t.name}</TableCell>
+                      <TableCell>
+                        {t.passed
+                          ? <Badge variant="default">OK</Badge>
+                          : <Badge variant="destructive">FALHOU</Badge>}
+                      </TableCell>
+                      <TableCell className="text-sm">{t.duration}ms</TableCell>
+                      <TableCell className="text-sm text-red-600 max-w-xs truncate">
+                        {t.error || "-"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-4">
+              Clique em "Rodar Testes" para verificar os fluxos de negocio.
+              Testes rodam automaticamente a cada 6 horas.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Maintenance History */}
       <Card>
         <CardHeader>

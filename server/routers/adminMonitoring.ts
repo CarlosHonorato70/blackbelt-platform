@@ -10,6 +10,7 @@ import { nanoid } from "nanoid";
 import { log } from "../_core/logger";
 import { sendEmail } from "../_core/email";
 import { invokeLLM } from "../_core/llm";
+import { runAllE2ETests } from "../_core/e2eTests";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -479,4 +480,26 @@ ${errorLines.length > 0 ? `\nUltimos erros:\n${errorLines.join("\n")}` : "Sem er
         details: typeof r.details === "string" ? JSON.parse(r.details) : r.details,
       }));
     }),
+
+  // ============================================
+  // E2E TESTS — Testes de fluxo de negocio
+  // ============================================
+
+  runE2ETests: adminProcedure.mutation(async () => {
+    return runAllE2ETests();
+  }),
+
+  getE2EResults: adminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return [];
+    const rows = await db.select()
+      .from(monitoringChecks)
+      .where(sql`JSON_EXTRACT(details, '$.e2eTests') IS NOT NULL`)
+      .orderBy(desc(monitoringChecks.checkedAt))
+      .limit(10);
+    return rows.map(r => ({
+      ...r,
+      details: typeof r.details === "string" ? JSON.parse(r.details) : r.details,
+    }));
+  }),
 });
