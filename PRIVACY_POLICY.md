@@ -1,7 +1,7 @@
 # Política de Privacidade - Black Belt Platform
 
-**Última atualização:** 06 de Dezembro de 2024  
-**Versão:** 1.0.0
+**Última atualização:** 29 de Março de 2026
+**Versão:** 2.0.0
 
 ## 1. Introdução
 

@@ -1,7 +1,7 @@
 # Termos de Serviço - Black Belt Platform
 
-**Última atualização:** 06 de Dezembro de 2024  
-**Versão:** 1.0.0
+**Última atualização:** 29 de Março de 2026
+**Versão:** 2.0.0
 
 ## 1. Aceitação dos Termos
 
@@ -55,7 +55,7 @@ A Plataforma oferece os seguintes planos de assinatura:
 
 ### 3.3 Período de Teste
 
-- Novos usuários têm direito a cadastrar 1 empresa gratuitamente, sem limite de tempo
+- Todos os planos incluem uma cota de convites COPSOQ na mensalidade. Convites excedentes são cobrados sob demanda via PIX, cartão ou créditos pré-pagos
 - Não é necessário cartão de crédito para a empresa gratuita
 - Para adicionar mais empresas, o usuário deve assinar um dos planos disponíveis
 
