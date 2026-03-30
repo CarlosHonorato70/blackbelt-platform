@@ -1,5 +1,113 @@
 import nodemailer from "nodemailer";
 import { log } from "./logger";
+import { nanoid } from "nanoid";
+
+// ============================================================================
+// EMAIL QUEUE — Garantia de entrega com retry automático
+// ============================================================================
+
+const RETRY_DELAYS = [5 * 60 * 1000, 15 * 60 * 1000, 60 * 60 * 1000, 6 * 60 * 60 * 1000]; // 5min, 15min, 1h, 6h
+
+export async function queueEmail(options: SendEmailOptions): Promise<string> {
+  try {
+    const { getDb } = await import("../db");
+    const db = await getDb();
+    if (!db) {
+      log.warn("[EmailQueue] DB not available, sending directly");
+      await sendEmail(options);
+      return "direct";
+    }
+
+    const { emailQueue } = await import("../../drizzle/schema");
+    const id = nanoid();
+    await db.insert(emailQueue).values({
+      id,
+      to: options.to,
+      subject: options.subject,
+      html: options.html,
+      textContent: options.text || null,
+      status: "pending",
+      attempts: 0,
+      maxAttempts: 4,
+      nextRetryAt: new Date(),
+    });
+
+    log.info("[EmailQueue] Email queued", { id, to: options.to, subject: options.subject.substring(0, 50) });
+    return id;
+  } catch (err) {
+    log.error("[EmailQueue] Failed to queue, sending directly", { error: String(err) });
+    await sendEmail(options);
+    return "direct-fallback";
+  }
+}
+
+export async function processEmailQueue(): Promise<{ processed: number; sent: number; failed: number }> {
+  try {
+    const { getDb } = await import("../db");
+    const db = await getDb();
+    if (!db) return { processed: 0, sent: 0, failed: 0 };
+
+    const { emailQueue, maintenanceRequests } = await import("../../drizzle/schema");
+    const { eq, and, lte, sql } = await import("drizzle-orm");
+
+    const pending = await db.select().from(emailQueue)
+      .where(and(
+        sql`${emailQueue.status} IN ('pending', 'processing')`,
+        lte(emailQueue.nextRetryAt, new Date())
+      ))
+      .limit(10);
+
+    let sent = 0, failed = 0;
+
+    for (const email of pending) {
+      await db.update(emailQueue).set({ status: "processing" }).where(eq(emailQueue.id, email.id));
+
+      const success = await sendEmail({
+        to: email.to,
+        subject: email.subject,
+        html: email.html,
+        text: email.textContent || undefined,
+      });
+
+      if (success) {
+        await db.update(emailQueue)
+          .set({ status: "sent", sentAt: new Date(), attempts: email.attempts + 1 })
+          .where(eq(emailQueue.id, email.id));
+        sent++;
+      } else {
+        const newAttempts = email.attempts + 1;
+        if (newAttempts >= email.maxAttempts) {
+          await db.update(emailQueue)
+            .set({ status: "failed", attempts: newAttempts, lastError: "Max attempts reached" })
+            .where(eq(emailQueue.id, email.id));
+
+          // Create maintenance request for failed email
+          await db.insert(maintenanceRequests).values({
+            id: nanoid(),
+            type: "email_delivery_failure",
+            status: "pending",
+            details: JSON.stringify({ emailId: email.id, to: email.to, subject: email.subject, attempts: newAttempts }),
+            requestedAt: new Date(),
+          });
+
+          failed++;
+          log.error("[EmailQueue] Email permanently failed", { id: email.id, to: email.to });
+        } else {
+          const nextRetry = new Date(Date.now() + RETRY_DELAYS[newAttempts - 1]);
+          await db.update(emailQueue)
+            .set({ status: "pending", attempts: newAttempts, nextRetryAt: nextRetry, lastError: "Send failed, will retry" })
+            .where(eq(emailQueue.id, email.id));
+          log.warn("[EmailQueue] Will retry", { id: email.id, attempt: newAttempts, nextRetry: nextRetry.toISOString() });
+        }
+      }
+    }
+
+    return { processed: pending.length, sent, failed };
+  } catch (err) {
+    log.error("[EmailQueue] Worker error", { error: String(err) });
+    return { processed: 0, sent: 0, failed: 0 };
+  }
+}
 
 /** Escape HTML para prevenir injection em templates de email */
 function escapeHtml(str: string): string {

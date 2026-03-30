@@ -1277,3 +1277,29 @@ export const pendingCopsoqPayments = mysqlTable(
     statusIdx: index("idx_pending_copsoq_status").on(table.paymentStatus),
   })
 );
+
+// ============================================================================
+// EMAIL QUEUE — Fila robusta de emails com retry
+// ============================================================================
+
+export const emailQueue = mysqlTable(
+  "email_queue",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    to: varchar("to", { length: 320 }).notNull(),
+    subject: varchar("subject", { length: 500 }).notNull(),
+    html: text("html").notNull(),
+    textContent: text("textContent"),
+    status: varchar("status", { length: 20 }).default("pending").notNull(), // pending, processing, sent, failed
+    attempts: int("attempts").default(0).notNull(),
+    maxAttempts: int("maxAttempts").default(4).notNull(),
+    lastError: text("lastError"),
+    nextRetryAt: timestamp("nextRetryAt"),
+    sentAt: timestamp("sentAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    statusIdx: index("idx_email_queue_status").on(table.status),
+    nextRetryIdx: index("idx_email_queue_retry").on(table.nextRetryAt),
+  })
+);

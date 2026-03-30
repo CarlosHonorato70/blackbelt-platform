@@ -10,7 +10,7 @@ import bcrypt from "bcryptjs";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions, createSessionToken } from "../_core/cookies";
 import { ENV } from "../_core/env";
-import { sendEmail } from "../_core/email";
+import { sendEmail, queueEmail } from "../_core/email";
 import { eq } from "drizzle-orm";
 import { roles, userRoles, users, user2FA } from "../../drizzle/schema";
 import { getSubscriptionContext } from "../_core/subscriptionMiddleware";
@@ -84,7 +84,7 @@ async function sendVerificationEmail(email: string, name: string | null, token: 
   const frontendUrl = process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:5000";
   const verifyUrl = `${frontendUrl}/verify-email/${token}`;
 
-  await sendEmail({
+  await queueEmail({
     to: email,
     subject: "Verifique seu Email - Black Belt Platform",
     html: `

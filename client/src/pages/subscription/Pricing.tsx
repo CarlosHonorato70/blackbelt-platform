@@ -41,33 +41,33 @@ export default function Pricing() {
   // Features alinhadas com a Landing Page
   const planFeatures = {
     starter: [
-      "Cadastro via CPF (pessoa fisica)",
-      "3 empresas/mes incluidas",
-      "SamurAI basico (cadastro + COPSOQ)",
-      "Relatorios padrao",
-      "Exportacao PDF",
+      "Cadastro via CPF (pessoa física)",
+      "3 empresas/mês incluídas",
+      "20 convites COPSOQ inclusos/mês",
+      "SamurAI básico (cadastro + COPSOQ)",
+      "Relatórios padrão + Exportação PDF",
       "Suporte por email",
-      "R$ 97/empresa adicional no mes",
+      "R$ 12,00/convite COPSOQ excedente",
     ],
     pro: [
-      "Cadastro via CNPJ (pessoa juridica)",
-      "10 empresas/mes incluidas",
+      "Cadastro via CNPJ (pessoa jurídica)",
+      "10 empresas/mês incluídas",
+      "100 convites COPSOQ inclusos/mês",
       "SamurAI completo (10 fases NR-01)",
-      "Propostas comerciais automaticas",
-      "PDF export ilimitado",
-      "Benchmark setorial",
-      "Suporte prioritario",
-      "R$ 79/empresa adicional no mes",
+      "Propostas comerciais automáticas",
+      "Benchmark setorial + PDF ilimitado",
+      "Suporte prioritário",
+      "R$ 10,00/convite COPSOQ excedente",
     ],
     enterprise: [
-      "Cadastro via CNPJ (pessoa juridica)",
-      "30 empresas/mes incluidas",
+      "Cadastro via CNPJ (pessoa jurídica)",
+      "30 empresas/mês incluídas",
+      "500 convites COPSOQ inclusos/mês",
       "Tudo do Professional",
-      "White-label (sua marca)",
-      "API access",
-      "Relatorios personalizados",
+      "White-label (sua marca) + API access",
+      "Relatórios personalizados",
       "Suporte dedicado",
-      "R$ 59/empresa adicional no mes",
+      "R$ 8,00/convite COPSOQ excedente",
     ],
   };
 
@@ -95,7 +95,7 @@ export default function Pricing() {
         </div>
         <h1 className="text-4xl font-bold mb-4">Escolha o Plano Ideal</h1>
         <p className="text-xl text-muted-foreground mb-8">
-          Do CNPJ ao certificado NR-01 em minutos, nao meses. Gestao completa de riscos psicossociais com IA.
+          Gestão completa de riscos psicossociais com IA. Convites COPSOQ inclusos em todos os planos.
         </p>
 
         {/* Billing Cycle Toggle */}

@@ -17,6 +17,7 @@ import { log } from "./_core/logger";
 import { closePool } from "./db";
 import { runMonitoringCheck, saveCheckAndAlert } from "./routers/adminMonitoring";
 import { runAllE2ETests } from "./_core/e2eTests";
+import { processEmailQueue } from "./_core/email";
 
 // tRPC
 import * as trpcExpress from "@trpc/server/adapters/express";
@@ -308,6 +309,18 @@ app.use((req, res, next) => {
     }, E2E_INTERVAL);
 
     log.info("[E2E] Scheduled: every 6 hours");
+
+    // Email queue worker every 30 seconds
+    setInterval(async () => {
+      try {
+        const result = await processEmailQueue();
+        if (result.processed > 0) {
+          log.info(`[EmailQueue] Processed: ${result.sent} sent, ${result.failed} failed`);
+        }
+      } catch (err) { log.error("[EmailQueue] Worker error", { error: String(err) }); }
+    }, 30_000);
+
+    log.info("[EmailQueue] Worker started: every 30s");
   }
 
   // 7. HTTP TIMEOUTS
