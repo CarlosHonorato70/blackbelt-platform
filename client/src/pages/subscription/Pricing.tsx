@@ -92,7 +92,7 @@ export default function Pricing() {
       <div className="text-center mb-12">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 text-amber-400 text-sm font-medium mb-6">
           <Sparkles className="h-4 w-4" />
-          Powered by SamurAI — Inteligencia Artificial
+          Powered by SamurAI — Inteligência Artificial
         </div>
         <h1 className="text-4xl font-bold mb-4">Escolha o Plano Ideal</h1>
         <p className="text-xl text-muted-foreground mb-8">
@@ -136,7 +136,7 @@ export default function Pricing() {
 
       {/* Feature Comparison Table */}
       <div className="mb-16">
-        <h2 className="text-3xl font-bold text-center mb-8">Comparacao de Recursos</h2>
+        <h2 className="text-3xl font-bold text-center mb-8">Comparação de Recursos</h2>
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -167,19 +167,20 @@ export default function Pricing() {
                 <tbody>
                   {[
                     { name: "Tipo de Cadastro", starter: "CPF", pro: "CNPJ", enterprise: "CNPJ" },
-                    { name: "Empresas incluidas/mes", starter: "3", pro: "10", enterprise: "30" },
-                    { name: "Empresa adicional", starter: "R$ 97", pro: "R$ 79", enterprise: "R$ 59" },
+                    { name: "Empresas incluídas/mês", starter: "3", pro: "10", enterprise: "30" },
+                    { name: "Convites COPSOQ inclusos/mês", starter: "20", pro: "100", enterprise: "500" },
+                    { name: "Excedente por convite", starter: "R$ 12", pro: "R$ 10", enterprise: "R$ 8" },
                     { name: "SamurAI (Agente IA)", starter: "Completo (10 fases)", pro: "Completo (10 fases)", enterprise: "Completo (10 fases)" },
+                    { name: "Propostas Comerciais", starter: true, pro: true, enterprise: true },
                     { name: "COPSOQ-II", starter: true, pro: true, enterprise: true },
-                    { name: "Inventario de Riscos", starter: true, pro: true, enterprise: true },
-                    { name: "Plano de Acao", starter: true, pro: true, enterprise: true },
-                    { name: "Propostas Comerciais", starter: false, pro: true, enterprise: true },
+                    { name: "Inventário de Riscos", starter: true, pro: true, enterprise: true },
+                    { name: "Plano de Ação", starter: true, pro: true, enterprise: true },
                     { name: "Benchmark Setorial", starter: false, pro: true, enterprise: true },
-                    { name: "PDF Export", starter: "Limitado", pro: "Ilimitado", enterprise: "Ilimitado" },
+                    { name: "PDF Export", starter: true, pro: true, enterprise: true },
                     { name: "White-label", starter: false, pro: false, enterprise: true },
                     { name: "API Access", starter: false, pro: false, enterprise: true },
-                    { name: "Relatorios Personalizados", starter: false, pro: false, enterprise: true },
-                    { name: "Suporte", starter: "Email", pro: "Prioritario", enterprise: "Dedicado" },
+                    { name: "Relatórios Personalizados", starter: false, pro: false, enterprise: true },
+                    { name: "Suporte", starter: "Email", pro: "Prioritário", enterprise: "Dedicado" },
                   ].map((feature, index) => (
                     <tr key={index} className="border-b last:border-b-0">
                       <td className="p-4 font-medium">{feature.name}</td>
