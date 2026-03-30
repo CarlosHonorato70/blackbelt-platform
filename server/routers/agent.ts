@@ -1219,20 +1219,44 @@ async function generateFallbackResponse(
   async function getNextPhase(companyId: string): Promise<string> {
     const db2 = await getDb();
     if (!db2) return "unknown";
-    const { copsoqAssessments, copsoqReports, riskAssessments: riskAss, interventionPrograms: intProg, complianceCertificates: certs } = await import("../../drizzle/schema_nr01");
+    const { copsoqAssessments, copsoqReports, copsoqResponses, copsoqInvites, riskAssessments: riskAss, interventionPrograms: intProg, complianceCertificates: certs } = await import("../../drizzle/schema_nr01");
 
+    // Step 6: COPSOQ assessment exists?
     const [assessment] = await db2.select().from(copsoqAssessments).where(eq(copsoqAssessments.tenantId, companyId)).limit(1);
     if (!assessment) return "create_assessment";
 
+    // Step 7: Check COPSOQ responses
+    if (assessment.status === "in_progress") {
+      const invites = await db2.select({ id: copsoqInvites.id }).from(copsoqInvites)
+        .where(sql`assessmentId = ${assessment.id}`);
+      const responses = await db2.select({ id: copsoqResponses.id }).from(copsoqResponses)
+        .where(sql`assessmentId = ${assessment.id}`);
+      return "awaiting_responses:" + responses.length + ":" + invites.length;
+    }
+
+    // Step 8: Report and inventory
     const [report] = await db2.select().from(copsoqReports).where(eq(copsoqReports.tenantId, companyId)).limit(1);
     const [risk] = await db2.select().from(riskAss).where(eq(riskAss.tenantId, companyId)).limit(1);
     if (!report || !risk) return "generate_inventory";
 
+    // Step 9: Training
     const [training] = await db2.select().from(intProg).where(eq(intProg.tenantId, companyId)).limit(1);
     if (!training) return "create_training";
 
+    // Step 10: Certification
     const [cert] = await db2.select().from(certs).where(eq(certs.tenantId, companyId)).limit(1);
     if (!cert) return "complete_checklist";
+
+    // Step 11: Final proposal
+    const { proposals: proposalsTable } = await import("../../drizzle/schema");
+    const [finalProposal] = await db2.select().from(proposalsTable)
+      .where(and(eq(proposalsTable.tenantId, tenantId), eq(proposalsTable.proposalType, "final")))
+      .limit(1);
+    if (!finalProposal) return "generate_final_proposal";
+
+    // Step 12: Payment
+    if (finalProposal.status === "sent" || finalProposal.status === "pending_approval") return "awaiting_final_approval";
+    if (finalProposal.status === "approved" && finalProposal.paymentStatus !== "paid") return "awaiting_payment";
 
     return "completed";
   }
@@ -1959,20 +1983,92 @@ async function generateFallbackResponse(
         return { content: result.message, actions: [] };
       }
 
-      if (nextPhase === "complete_checklist") {
-        const result = await executeCompleteChecklist(existingCompany.id);
-        // After completing checklist, offer to generate final proposal
+      // Step 7: Awaiting COPSOQ responses
+      if (nextPhase.startsWith("awaiting_responses:")) {
+        const parts = nextPhase.split(":");
+        const responded = parseInt(parts[1] || "0");
+        const total = parseInt(parts[2] || "0");
+        if (responded === 0) {
+          return {
+            content: `⏳ **Aguardando respostas do COPSOQ-II**\n\n📊 Progresso: **${responded} de ${total}** colaboradores responderam.\n\nOs colaboradores receberam o questionário por email e têm 7 dias para responder.\n\nQuando houver respostas, diga **"continuar"** para verificar o progresso.`,
+            actions: [],
+          };
+        }
         return {
-          content: result.message + `\n\n✅ **Processo NR-01 concluido com sucesso!** Todas as fases técnicas foram finalizadas.\n\n` +
-            `**Próximo passo:** Gerar a **Proposta Comercial Final** com base nos serviços realizados e enviar para aprovação da empresa.`,
+          content: `📊 **Progresso do COPSOQ-II:** ${responded} de ${total} colaboradores responderam.\n\n${responded === total ? "✅ Todos responderam!" : "⚠️ Respostas parciais — os colaboradores não são obrigados a responder."}\n\nDeseja **gerar o relatório** com as ${responded} resposta(s) recebidas?`,
           actions: [
-            { type: "generate_final_proposal", label: "Gerar Proposta Final", params: { companyId: existingCompany.id } },
+            { type: "generate_inventory", label: "Gerar Relatório e Inventário", params: { companyId: existingCompany.id } },
           ],
         };
       }
 
+      if (nextPhase === "complete_checklist") {
+        const result = await executeCompleteChecklist(existingCompany.id);
+        // After completing checklist, AUTO-GENERATE final proposal (Step 11)
+        let finalContent = result.message;
+        try {
+          const hc = memory.headcount || 3;
+          const db2 = await getDb();
+          const fpData = await buildFinalProposalData(existingCompany.id, existingCompany.name, memory.cnpj ? formatCNPJ(memory.cnpj) : existingCompany.cnpj, hc, memory.sectorName);
+          if (fpData) {
+            const riskLevel = memory.highRisk ? "high" as const : "low" as const;
+            const initialProposal = generatePricingProposal({ name: existingCompany.name, cnpj: memory.cnpj ? formatCNPJ(memory.cnpj) : existingCompany.cnpj, headcount: hc, sector: memory.sector, sectorName: memory.sectorName, riskLevel });
+            const finalProposalMarkdown = generateFinalProposal(fpData, initialProposal);
+            const savedId = await saveFinalProposal(db2, tenantId, existingCompany.id, existingCompany.name, finalProposalMarkdown, initialProposal, fpData, hc);
+            if (savedId) {
+              finalContent += `\n\n✅ **Proposta Final gerada automaticamente!**\n\nRevise e envie para a empresa para aprovação.`;
+            }
+          }
+        } catch { /* continue without auto-generated proposal */ }
+
+        return {
+          content: finalContent,
+          actions: [
+            { type: "send_final_proposal_email", label: "Enviar Proposta Final por Email", params: { companyId: existingCompany.id } },
+            { type: "edit_final_proposal", label: "Editar Proposta Final", params: { companyId: existingCompany.id } },
+          ],
+        };
+      }
+
+      // Step 11: Generate final proposal (if not auto-generated)
+      if (nextPhase === "generate_final_proposal") {
+        try {
+          const hc = memory.headcount || 3;
+          const db2 = await getDb();
+          const fpData = await buildFinalProposalData(existingCompany.id, existingCompany.name, memory.cnpj ? formatCNPJ(memory.cnpj) : existingCompany.cnpj, hc, memory.sectorName);
+          if (fpData) {
+            const riskLevel = memory.highRisk ? "high" as const : "low" as const;
+            const initialProposal = generatePricingProposal({ name: existingCompany.name, cnpj: memory.cnpj ? formatCNPJ(memory.cnpj) : existingCompany.cnpj, headcount: hc, sector: memory.sector, sectorName: memory.sectorName, riskLevel });
+            const finalProposalMarkdown = generateFinalProposal(fpData, initialProposal);
+            await saveFinalProposal(db2, tenantId, existingCompany.id, existingCompany.name, finalProposalMarkdown, initialProposal, fpData, hc);
+            return {
+              content: `✅ **Proposta Final gerada!** Revise e envie para a empresa.`,
+              actions: [
+                { type: "send_final_proposal_email", label: "Enviar Proposta Final por Email", params: { companyId: existingCompany.id } },
+                { type: "edit_final_proposal", label: "Editar Proposta Final", params: { companyId: existingCompany.id } },
+              ],
+            };
+          }
+        } catch (err: any) {
+          return { content: `Erro ao gerar proposta final: ${err.message}`, actions: [] };
+        }
+      }
+
+      // Step 12: Awaiting final proposal approval
+      if (nextPhase === "awaiting_final_approval") {
+        return {
+          content: `⏳ **Aguardando aprovação da empresa.**\n\nA proposta final foi enviada por email. Quando a empresa aprovar, as instruções de pagamento serão enviadas automaticamente.\n\nDiga **"continuar"** para verificar o status.`,
+          actions: [],
+        };
+      }
+
+      // Step 12: Awaiting payment
+      if (nextPhase === "awaiting_payment") {
+        return await buildCompletedResponse(existingCompany, tenantId);
+      }
+
+      // Step 13: Completed
       if (nextPhase === "completed") {
-        // Check final proposal + payment status
         return await buildCompletedResponse(existingCompany, tenantId);
       }
     }
