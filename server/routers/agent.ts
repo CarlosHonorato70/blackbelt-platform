@@ -2493,32 +2493,14 @@ ${extractHeadcount(input.content) ? `Funcionários informados: ${extractHeadcoun
         })),
       ];
 
-      // Call LLM
+      // ALWAYS use programmatic flow (fallback) — it follows the exact 13-step flowchart
+      // LLM is NOT used for the NR-01 agent (it generates descriptive text instead of executing actions)
       let assistantContent = "";
       let actions: Array<{ type: string; label: string; params: Record<string, any> }> = [];
 
-      try {
-        const result = await invokeLLM({ messages: llmMessages });
-        const choice = result.choices[0];
-        if (choice?.message?.content) {
-          const rawContent = typeof choice.message.content === "string"
-            ? choice.message.content
-            : choice.message.content.map((c: any) => c.text || "").join("");
-
-          actions = parseActions(rawContent);
-          assistantContent = cleanContent(rawContent);
-        } else {
-          const fallback = await generateFallbackResponse(input.content, company, status, orderedHistory, ctx.tenantId!, ctx.user!.id);
-          assistantContent = fallback.content;
-          actions = fallback.actions;
-        }
-      } catch (error) {
-        log.error("Agent LLM error, using fallback with memory", { error: String(error) });
-        // Fallback WITH conversation memory
-        const fallback = await generateFallbackResponse(input.content, company, status, orderedHistory, ctx.tenantId!, ctx.user!.id);
-        assistantContent = fallback.content;
-        actions = fallback.actions;
-      }
+      const fallback = await generateFallbackResponse(input.content, company, status, orderedHistory, ctx.tenantId!, ctx.user!.id);
+      assistantContent = fallback.content;
+      actions = fallback.actions;
 
       // Save assistant message
       const assistantMsgId = nanoid();
