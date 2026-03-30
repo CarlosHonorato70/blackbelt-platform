@@ -2260,6 +2260,7 @@ export const agentRouter = router({
       const conditions = [
         eq(agentConversations.tenantId, ctx.tenantId!),
         eq(agentConversations.userId, ctx.user!.id),
+        sql`(${agentConversations.companyId} IS NULL OR ${agentConversations.companyId} NOT IN ('support', 'monitoring-agent'))`,
       ];
       if (input.companyId) {
         conditions.push(eq(agentConversations.companyId, input.companyId));
