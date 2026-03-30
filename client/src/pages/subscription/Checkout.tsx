@@ -130,6 +130,18 @@ export default function Checkout() {
     }
   };
 
+  // Poll subscription status after payment — redirect to dashboard when confirmed
+  const { data: subStatus } = (trpc as any).subscriptions.getStatus.useQuery(undefined, {
+    enabled: !!paymentResult,
+    refetchInterval: paymentResult ? 3000 : false,
+  });
+
+  useEffect(() => {
+    if (subStatus?.isActive && paymentResult) {
+      window.location.href = "/dashboard";
+    }
+  }, [subStatus, paymentResult]);
+
   const handleCopyPix = () => {
     if (paymentResult?.pixCopiaECola) {
       navigator.clipboard.writeText(paymentResult.pixCopiaECola);
