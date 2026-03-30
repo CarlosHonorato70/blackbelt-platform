@@ -123,17 +123,17 @@ export const subscriptionsRouter = router({
       .limit(1);
 
     if (!result) {
-      // Return a default active status when no subscription record exists
+      // No subscription — user needs to subscribe
       return {
-        status: "active" as const,
-        planName: "Padrão",
-        isActive: true,
+        status: "none" as const,
+        planName: null,
+        isActive: false,
         trialEnd: null,
         currentPeriodEnd: null,
         cancelAtPeriodEnd: false,
         limits: {
-          maxUsersPerTenant: 5,
-          maxStorageGB: 1,
+          maxUsersPerTenant: 0,
+          maxStorageGB: 0,
         },
       };
     }
