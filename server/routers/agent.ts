@@ -1558,6 +1558,33 @@ async function generateFallbackResponse(
   if (isContinue) {
     const db2 = await getDb();
 
+    // Check specifically for FINAL proposals awaiting approval — must check BEFORE pre-proposals
+    const [finalPropPending] = await db2.select().from(proposals)
+      .where(and(
+        eq(proposals.tenantId, tenantId),
+        eq(proposals.proposalType, "final"),
+        inArray(proposals.status, ["sent", "pending_approval", "draft"]),
+      ))
+      .orderBy(desc(proposals.createdAt))
+      .limit(1);
+
+    if (finalPropPending) {
+      if (finalPropPending.status === "sent" || finalPropPending.status === "pending_approval") {
+        return {
+          content: `⏳ **Aguardando aprovação da empresa.**\n\nA proposta final foi enviada para **${finalPropPending.contactEmail || "a empresa"}**.\n\nQuando a empresa aprovar, as instruções de pagamento serão enviadas automaticamente.\n\nDiga **"continuar"** para verificar o status novamente.`,
+          actions: [],
+        };
+      }
+      if (finalPropPending.status === "draft") {
+        return {
+          content: `✅ **Proposta Final gerada** mas ainda não enviada.\n\nEnvie para a empresa para aprovação.`,
+          actions: [
+            { type: "send_final_proposal_email", label: "Enviar Proposta Final por Email", params: { proposalId: finalPropPending.id, email: finalPropPending.contactEmail, companyId: finalPropPending.clientId } },
+          ],
+        };
+      }
+    }
+
     // Check if there's a pending_approval proposal
     const [pendingProposal] = await db2.select().from(proposals)
       .where(and(eq(proposals.tenantId, tenantId), inArray(proposals.status, ["pending", "pending_approval"])))
