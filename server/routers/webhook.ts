@@ -132,17 +132,29 @@ export const webhookRouter = router({
       try {
         const { nanoid: nanoidAlert } = await import("nanoid");
         const { agentAlerts } = await import("../../drizzle/schema_agent");
-        // Only create alert if no undismissed alert exists yet for this assessment
+        const { tenants } = await import("../../drizzle/schema");
+
+        // Resolve the consultant tenant: if this is a company tenant, use its parentTenantId
+        let consultantTenantId = input.tenantId;
+        const [companyTenant] = await db.select({ parentTenantId: tenants.parentTenantId })
+          .from(tenants)
+          .where(eq(tenants.id, input.tenantId))
+          .limit(1);
+        if (companyTenant?.parentTenantId) {
+          consultantTenantId = companyTenant.parentTenantId;
+        }
+
+        // Only create alert if no undismissed alert exists yet for this consultant
         const [existingAlert] = await db.select().from(agentAlerts)
           .where(and(
-            eq(agentAlerts.tenantId, input.tenantId),
+            eq(agentAlerts.tenantId, consultantTenantId),
             eq(agentAlerts.alertType, "copsoq_responses_ready" as any),
             eq(agentAlerts.dismissed, false)
           )).limit(1);
         if (!existingAlert) {
           await db.insert(agentAlerts).values({
             id: await nanoidAlert(),
-            tenantId: input.tenantId,
+            tenantId: consultantTenantId,
             alertType: "copsoq_responses_ready" as any,
             title: "Resposta COPSOQ recebida",
             message: `Nova resposta ao questionário COPSOQ-II recebida. O SamurAI pode gerar o inventário de riscos.`,
