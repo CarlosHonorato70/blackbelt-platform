@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { trpc } from "@/lib/trpc";
-import { Activity, Database, HardDrive, AlertTriangle, CheckCircle, XCircle, RefreshCw, Server, Clock, Send, Bot, User, MessageSquare, GitBranch, ShieldAlert } from "lucide-react";
+import { Activity, Database, HardDrive, AlertTriangle, CheckCircle, XCircle, RefreshCw, Server, Clock, Send, Bot, User, MessageSquare, GitBranch, ShieldAlert, Code2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import Markdown from "react-markdown";
@@ -91,6 +91,10 @@ export default function AdminMonitoring() {
 
   const flowHealthQuery = (trpc as any).adminMonitoring.getFlowHealth.useQuery(undefined, {
     refetchInterval: 60000,
+  });
+
+  const codeIntegrityQuery = (trpc as any).adminMonitoring.getCodeIntegrity.useQuery(undefined, {
+    refetchInterval: 120000,
   });
 
   const errorLogQuery = (trpc as any).adminMonitoring.getErrorLog.useQuery();
@@ -265,6 +269,119 @@ export default function AdminMonitoring() {
                 ))}
               </div>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Integridade do Codigo */}
+      {codeIntegrityQuery.data && (
+        <Card className={codeIntegrityQuery.data.status === "critical" ? "border-red-500 border-2" : codeIntegrityQuery.data.status === "warning" ? "border-yellow-500 border-2" : ""}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Code2 className="h-5 w-5 text-blue-500" />
+                Integridade do Codigo
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                E2E, erros, build, vulnerabilidades de dependencias
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-center">
+                <p className={`text-3xl font-bold ${codeIntegrityQuery.data.score >= 80 ? "text-green-600" : codeIntegrityQuery.data.score >= 50 ? "text-yellow-600" : "text-red-600"}`}>
+                  {codeIntegrityQuery.data.score}
+                </p>
+                <p className="text-xs text-muted-foreground">Score /100</p>
+              </div>
+              <StatusIcon status={codeIntegrityQuery.data.status} />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {/* E2E */}
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Testes E2E</p>
+                {codeIntegrityQuery.data.e2e.lastRun ? (
+                  <>
+                    <div className="flex items-center gap-1">
+                      {codeIntegrityQuery.data.e2e.status === "passing"
+                        ? <CheckCircle className="h-4 w-4 text-green-500" />
+                        : <XCircle className="h-4 w-4 text-red-500" />}
+                      <span className="font-bold text-sm">{codeIntegrityQuery.data.e2e.passed}/{codeIntegrityQuery.data.e2e.total}</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      {new Date(codeIntegrityQuery.data.e2e.lastRun).toLocaleString("pt-BR")}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Nenhum registrado</p>
+                )}
+              </div>
+              {/* Build */}
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Build Artifact</p>
+                <div className="flex items-center gap-1">
+                  {codeIntegrityQuery.data.buildArtifact.exists
+                    ? <CheckCircle className="h-4 w-4 text-green-500" />
+                    : <XCircle className="h-4 w-4 text-red-500" />}
+                  <span className="font-bold text-sm">{codeIntegrityQuery.data.buildArtifact.exists ? "Presente" : "Ausente"}</span>
+                </div>
+                {codeIntegrityQuery.data.buildArtifact.ageMins !== null && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    {codeIntegrityQuery.data.buildArtifact.ageMins < 60
+                      ? `${codeIntegrityQuery.data.buildArtifact.ageMins}min atras`
+                      : `${Math.round(codeIntegrityQuery.data.buildArtifact.ageMins / 60)}h atras`}
+                  </p>
+                )}
+              </div>
+              {/* Vulnerabilidades */}
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Vulnerabilidades</p>
+                <div className="flex items-center gap-1">
+                  {codeIntegrityQuery.data.auditIssues === 0
+                    ? <CheckCircle className="h-4 w-4 text-green-500" />
+                    : <AlertTriangle className="h-4 w-4 text-yellow-500" />}
+                  <span className="font-bold text-sm">{codeIntegrityQuery.data.auditIssues} alta/critica</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">npm audit</p>
+              </div>
+              {/* Erros recorrentes */}
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Erros Recorrentes</p>
+                <div className="flex items-center gap-1">
+                  {codeIntegrityQuery.data.errorPatterns.length === 0
+                    ? <CheckCircle className="h-4 w-4 text-green-500" />
+                    : <AlertTriangle className="h-4 w-4 text-yellow-500" />}
+                  <span className="font-bold text-sm">{codeIntegrityQuery.data.errorPatterns.length} padrao(oes)</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">ultimas 24h</p>
+              </div>
+            </div>
+
+            {/* Resumo */}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Resumo</p>
+              <div className="flex flex-wrap gap-2">
+                {codeIntegrityQuery.data.summary.map((s: string, i: number) => (
+                  <Badge key={i} variant="outline" className="text-xs">{s}</Badge>
+                ))}
+              </div>
+            </div>
+
+            {/* Padroes de erro */}
+            {codeIntegrityQuery.data.errorPatterns.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Padroes de Erro (24h)</p>
+                <div className="space-y-1">
+                  {codeIntegrityQuery.data.errorPatterns.map((e: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                      <span className="font-mono truncate max-w-xs">{e.message}</span>
+                      <Badge variant="secondary">{e.count}x</Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

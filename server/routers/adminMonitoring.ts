@@ -361,6 +361,131 @@ export async function runSamurAIHealthCheck(): Promise<{
   }
 }
 
+// ============================================================================
+// KLINIKOS — Code Integrity Check
+// Monitora: E2E tests, padrões de erro, dependências, estado do build
+// ============================================================================
+
+export async function runCodeIntegrityCheck(): Promise<{
+  score: number; // 0-100
+  status: "ok" | "warning" | "critical";
+  e2e: { lastRun: string | null; passed: number; total: number; status: string };
+  errorPatterns: Array<{ message: string; count: number }>;
+  buildArtifact: { exists: boolean; ageMins: number | null };
+  auditIssues: number;
+  summary: string[];
+}> {
+  const result = {
+    score: 100,
+    status: "ok" as "ok" | "warning" | "critical",
+    e2e: { lastRun: null as string | null, passed: 0, total: 0, status: "never_run" },
+    errorPatterns: [] as Array<{ message: string; count: number }>,
+    buildArtifact: { exists: false, ageMins: null as number | null },
+    auditIssues: 0,
+    summary: [] as string[],
+  };
+
+  // 1. Último resultado de E2E (da tabela monitoringChecks)
+  try {
+    const db = await getDb();
+    if (db) {
+      const rows = await db.select()
+        .from(monitoringChecks)
+        .where(sql`JSON_EXTRACT(details, '$.e2eTests') IS NOT NULL`)
+        .orderBy(desc(monitoringChecks.checkedAt))
+        .limit(1);
+      if (rows.length > 0) {
+        const d = typeof rows[0].details === "string" ? JSON.parse(rows[0].details) : rows[0].details;
+        const e2e = d?.e2eTests;
+        if (e2e) {
+          result.e2e = {
+            lastRun: rows[0].checkedAt?.toISOString() ?? null,
+            passed: e2e.passedTests ?? 0,
+            total: e2e.totalTests ?? 0,
+            status: e2e.passed ? "passing" : "failing",
+          };
+          if (!e2e.passed) {
+            result.score -= 30;
+            result.summary.push(`E2E: ${e2e.passedTests}/${e2e.totalTests} testes passaram`);
+          } else {
+            result.summary.push(`E2E: ${e2e.passedTests}/${e2e.totalTests} ✅`);
+          }
+        }
+      } else {
+        result.summary.push("E2E: nenhum teste registrado ainda");
+      }
+    }
+  } catch { /* ignore */ }
+
+  // 2. Padrões de erro nos logs (últimas 24h)
+  try {
+    const logsDir = path.resolve("logs");
+    const errorMap: Record<string, number> = {};
+    if (fs.existsSync(logsDir)) {
+      const files = fs.readdirSync(logsDir).filter(f => f.startsWith("error-")).sort().reverse();
+      const cutoff = Date.now() - 86400000;
+      for (const file of files.slice(0, 3)) {
+        const content = fs.readFileSync(path.join(logsDir, file), "utf-8");
+        for (const line of content.split("\n").filter(l => l.trim())) {
+          try {
+            const entry = JSON.parse(line);
+            if (entry.timestamp && new Date(entry.timestamp).getTime() > cutoff) {
+              const key = (entry.message || entry.msg || "unknown").slice(0, 80);
+              errorMap[key] = (errorMap[key] || 0) + 1;
+            }
+          } catch { /* skip */ }
+        }
+      }
+    }
+    result.errorPatterns = Object.entries(errorMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([message, count]) => ({ message, count }));
+    const totalErrors = Object.values(errorMap).reduce((a, b) => a + b, 0);
+    if (totalErrors >= 20) { result.score -= 20; result.summary.push(`${totalErrors} erros recorrentes em 24h`); }
+    else if (totalErrors >= 5) { result.score -= 10; result.summary.push(`${totalErrors} erros em 24h`); }
+    else { result.summary.push(`Erros 24h: ${totalErrors} ✅`); }
+  } catch { /* ignore */ }
+
+  // 3. Artefato de build (dist/index.js)
+  try {
+    const distFile = path.resolve("dist/index.js");
+    if (fs.existsSync(distFile)) {
+      const stat = fs.statSync(distFile);
+      const ageMins = Math.round((Date.now() - stat.mtimeMs) / 60000);
+      result.buildArtifact = { exists: true, ageMins };
+      result.summary.push(`Build: presente (${ageMins < 60 ? ageMins + "min atrás" : Math.round(ageMins / 60) + "h atrás"}) ✅`);
+    } else {
+      result.score -= 25;
+      result.buildArtifact = { exists: false, ageMins: null };
+      result.summary.push("Build: dist/index.js não encontrado ❌");
+    }
+  } catch { /* ignore */ }
+
+  // 4. npm audit (dependências com vulnerabilidades conhecidas)
+  try {
+    const { execSync } = await import("child_process");
+    const auditOutput = execSync("npm audit --json --omit=dev 2>/dev/null || true", { timeout: 15000 }).toString();
+    const audit = JSON.parse(auditOutput);
+    const high = (audit.metadata?.vulnerabilities?.high ?? 0) + (audit.metadata?.vulnerabilities?.critical ?? 0);
+    result.auditIssues = high;
+    if (high > 0) {
+      result.score -= Math.min(high * 5, 25);
+      result.summary.push(`Dependências: ${high} vulnerabilidade(s) alta/crítica ⚠️`);
+    } else {
+      result.summary.push("Dependências: sem vulnerabilidades críticas ✅");
+    }
+  } catch { result.summary.push("Dependências: auditoria não disponível"); }
+
+  // Score final → status
+  result.score = Math.max(0, result.score);
+  if (result.score < 50) result.status = "critical";
+  else if (result.score < 80) result.status = "warning";
+  else result.status = "ok";
+
+  return result;
+}
+
 export const adminMonitoringRouter = router({
 
   getStatus: adminProcedure.query(async () => {
@@ -416,6 +541,10 @@ export const adminMonitoringRouter = router({
 
   getFlowHealth: adminProcedure.query(async () => {
     return runSamurAIHealthCheck();
+  }),
+
+  getCodeIntegrity: adminProcedure.query(async () => {
+    return runCodeIntegrityCheck();
   }),
 
   // ============================================
@@ -507,18 +636,22 @@ export const adminMonitoringRouter = router({
         }
       } catch { /* ignore */ }
 
-      // 5. Get SamurAI flow health
-      const flowHealth = await runSamurAIHealthCheck();
+      // 5. Get SamurAI flow health + code integrity
+      const [flowHealth, codeIntegrity] = await Promise.all([
+        runSamurAIHealthCheck(),
+        runCodeIntegrityCheck(),
+      ]);
 
       // 6. Build LLM messages
       const uptimeH = Math.floor(status.app.uptime / 3600);
       const uptimeM = Math.floor((status.app.uptime % 3600) / 60);
 
       const systemPrompt = `Voce e o Klinikos IA, o agente de saude e integridade da plataforma BlackBelt.
-Suas responsabilidades sao tres:
+Suas responsabilidades sao quatro:
 1. SAUDE DA PLATAFORMA: memoria, banco de dados, erros, uptime, disco, backups.
 2. INTEGRIDADE DO FLUXO SAMURAI: monitorar as 18 etapas do processo NR-01 para cada empresa cliente. Detectar fluxos travados, fases sem avanco, inconsistencias de dados.
-3. INTEGRIDADE DE DADOS: verificar consistencia entre avaliacoes COPSOQ, inventarios de risco, planos de acao e certificados.
+3. INTEGRIDADE DO CODIGO: score calculado via testes E2E automatizados, padroes de erro nos logs, auditoria de dependencias npm e estado do artefato de build. Quando perguntado sobre integridade do codigo, use os dados em INTEGRIDADE_CODIGO abaixo.
+4. INTEGRIDADE DE DADOS: verificar consistencia entre avaliacoes COPSOQ, inventarios de risco, planos de acao e certificados.
 
 Fluxo SamurAI (18 etapas resumidas):
 Etapa 1-3: CNPJ → Receita Federal → Cadastro Empresa
@@ -555,10 +688,19 @@ ${flowHealth.stuckFlows.length > 0 ? `\nEMPRESAS COM FLUXO TRAVADO:\n${flowHealt
 - Planos de Acao: ${flowHealth.dataIntegrity.actionPlansTotal}
 - Certificados NR-01 emitidos: ${flowHealth.dataIntegrity.certificatesTotal}`;
 
+      const codeIntegrityContextMsg = `[INTEGRIDADE_CODIGO — ${new Date().toLocaleString("pt-BR")}]
+Score: ${codeIntegrity.score}/100 — Status: ${codeIntegrity.status.toUpperCase()}
+Testes E2E: ${codeIntegrity.e2e.lastRun ? `${codeIntegrity.e2e.passed}/${codeIntegrity.e2e.total} passaram | Ultimo: ${new Date(codeIntegrity.e2e.lastRun).toLocaleString("pt-BR")} | Status: ${codeIntegrity.e2e.status}` : "Nenhum teste E2E registrado ainda"}
+Artefato Build (dist/index.js): ${codeIntegrity.buildArtifact.exists ? `Presente (${codeIntegrity.buildArtifact.ageMins !== null ? codeIntegrity.buildArtifact.ageMins < 60 ? codeIntegrity.buildArtifact.ageMins + " min atras" : Math.round(codeIntegrity.buildArtifact.ageMins / 60) + "h atras" : "?"})` : "NAO ENCONTRADO"}
+Vulnerabilidades npm (alta+critica): ${codeIntegrity.auditIssues}
+${codeIntegrity.errorPatterns.length > 0 ? `Padroes de erro (24h):\n${codeIntegrity.errorPatterns.map(e => `  - "${e.message}" (${e.count}x)`).join("\n")}` : "Sem padroes de erro recorrentes."}
+Resumo: ${codeIntegrity.summary.join(" | ")}`;
+
       const llmMessages = [
         { role: "system" as const, content: systemPrompt },
         { role: "system" as const, content: contextMsg },
         { role: "system" as const, content: flowContextMsg },
+        { role: "system" as const, content: codeIntegrityContextMsg },
         ...history.map(m => ({
           role: m.role as "user" | "assistant",
           content: m.content,
