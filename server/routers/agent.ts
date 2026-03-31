@@ -1231,6 +1231,10 @@ async function generateFallbackResponse(
         .where(sql`assessmentId = ${assessment.id}`);
       const responses = await db2.select({ id: copsoqResponses.id }).from(copsoqResponses)
         .where(sql`assessmentId = ${assessment.id}`);
+      // If all respondents have answered, move directly to generate_inventory phase
+      if (responses.length > 0 && responses.length >= invites.length) {
+        return "generate_inventory";
+      }
       return "awaiting_responses:" + responses.length + ":" + invites.length;
     }
 
@@ -1467,6 +1471,37 @@ async function generateFallbackResponse(
       const { executeSendCopsoqInvites } = await import("../_ai/agentExecutor");
       const result = await executeSendCopsoqInvites(companyId, tenantId);
       return { content: result.message, actions: result.success ? [] : [] };
+    }
+    return { content: "Empresa não encontrada. Informe o CNPJ para continuar.", actions: [] };
+  }
+
+  // ── 0a3. Handle generate_inventory action (button click from awaiting_responses) ──
+  if (msg.startsWith("executar:generate_inventory") || msg.startsWith("executar: Gerar Relat") || msg.startsWith("executar: gerar relat")) {
+    let company = memory.cnpj ? await findCompanyByCNPJ() : null;
+    if (!company) {
+      const db2 = await getDb();
+      const [childTenant] = await db2.select().from(tenants)
+        .where(and(eq(tenants.parentTenantId, tenantId), eq(tenants.tenantType, "company")))
+        .orderBy(desc(tenants.createdAt)).limit(1);
+      if (childTenant) company = childTenant;
+    }
+    if (company) {
+      const db2 = await getDb();
+      const { copsoqAssessments: cAssessments } = await import("../../drizzle/schema_nr01");
+      const [latestAssessment] = await db2.select().from(cAssessments)
+        .where(eq(cAssessments.tenantId, company.id))
+        .orderBy(desc(cAssessments.createdAt)).limit(1);
+      if (latestAssessment) {
+        const result = await executeGenerateInventoryAndPlan(company.id, latestAssessment.id, company.name, memory.headcount || 4);
+        if (result.success) {
+          return {
+            content: result.message + `\n\n**Proxima etapa:** Criar programa de treinamento sobre riscos psicossociais.\nClique no botao abaixo ou diga **"sim"** para continuar.`,
+            actions: [{ type: "create_training", label: "Criar Programa de Treinamento", params: { companyId: company.id } }],
+          };
+        }
+        return { content: result.message, actions: [] };
+      }
+      return { content: "Nenhuma avaliação COPSOQ-II encontrada. Envie o questionário primeiro.", actions: [] };
     }
     return { content: "Empresa não encontrada. Informe o CNPJ para continuar.", actions: [] };
   }
