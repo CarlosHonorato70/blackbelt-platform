@@ -2831,8 +2831,35 @@ ${extractHeadcount(input.content) ? `Funcionários informados: ${extractHeadcoun
   getStatus: tenantProcedure
     .input(z.object({ companyId: z.string().optional() }))
     .query(async ({ ctx, input }) => {
-      const targetTenantId = input.companyId || ctx.tenantId!;
+      let targetTenantId = input.companyId || ctx.tenantId!;
       try {
+        // If no companyId specified and user is a consultant, auto-find most recent active company
+        if (!input.companyId) {
+          const db = await getDb();
+          if (db) {
+            const { tenants: tenantsTable } = await import("../../drizzle/schema");
+            const childTenants = await db.select({ id: tenantsTable.id })
+              .from(tenantsTable)
+              .where(
+                and(
+                  eq(tenantsTable.parentTenantId, ctx.tenantId!),
+                  eq(tenantsTable.tenantType, "company")
+                )
+              )
+              .limit(20);
+            if (childTenants.length > 0) {
+              // Find the child tenant with the most recent COPSOQ activity
+              const { copsoqAssessments: ca } = await import("../../drizzle/schema_nr01");
+              const [latestAssessment] = await db.select({ tenantId: ca.tenantId })
+                .from(ca)
+                .where(inArray(ca.tenantId, childTenants.map(t => t.id)))
+                .orderBy(desc(ca.createdAt))
+                .limit(1);
+              if (latestAssessment) targetTenantId = latestAssessment.tenantId;
+              else targetTenantId = childTenants[0].id; // fallback to first child
+            }
+          }
+        }
         return await getNR01Status(targetTenantId);
       } catch {
         return null;

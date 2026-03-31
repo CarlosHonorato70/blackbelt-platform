@@ -204,8 +204,13 @@ function AgentChatPage() {
     onError: () => setIsTyping(false),
   });
 
-  // Dismiss alert
-  const dismissAlert = trpc.agent.dismissAlert.useMutation();
+  // Dismiss alert — invalida cache imediatamente para o painel atualizar
+  const utils = trpc.useUtils();
+  const dismissAlert = trpc.agent.dismissAlert.useMutation({
+    onSuccess: () => {
+      utils.agent.getAlerts.invalidate();
+    },
+  });
 
   // New conversation
   const newConversation = trpc.agent.newConversation.useMutation({

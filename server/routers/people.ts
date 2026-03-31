@@ -1,20 +1,40 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { eq } from "drizzle-orm";
 import { router, tenantProcedure, permittedProcedure } from "../_core/trpc";
 import * as db from "../db";
+import { getDb } from "../db";
+import { tenants } from "../../drizzle/schema";
 
 export const peopleRouter = router({
-  // Listar colaboradores de um tenant
+  // Listar colaboradores de um tenant (ou empresa cliente do consultor)
   list: tenantProcedure
     .input(
       z.object({
         sectorId: z.string().optional(),
         search: z.string().optional(),
         employmentType: z.enum(["own", "outsourced"]).optional(),
+        companyTenantId: z.string().optional(), // consultor pode ver empresa cliente
       }).optional()
     )
     .query(async ({ ctx, input }) => {
-      const people = await db.listPeople(ctx.tenantId!, input || {});
+      let targetTenantId = ctx.tenantId!;
+
+      // Se companyTenantId fornecido, validar que o consultor tem acesso
+      if (input?.companyTenantId) {
+        const drizzle = await getDb();
+        if (drizzle) {
+          const [company] = await drizzle.select({ parentTenantId: tenants.parentTenantId })
+            .from(tenants)
+            .where(eq(tenants.id, input.companyTenantId))
+            .limit(1);
+          if (company?.parentTenantId === ctx.tenantId!) {
+            targetTenantId = input.companyTenantId;
+          }
+        }
+      }
+
+      const people = await db.listPeople(targetTenantId, input || {});
 
       await db.createAuditLog({
         tenantId: ctx.tenantId!,
