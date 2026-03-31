@@ -30,14 +30,14 @@ async function seedServices() {
   const pool = mysql.createPool({ uri: dbUrl, connectionLimit: 3 });
   const db = drizzle(pool);
 
-  // Find admin tenant
-  const [adminTenant] = await db.select({ id: tenants.id, name: tenants.name, tenantType: (tenants as any).tenantType })
+  // Find admin tenant by tenantType (more robust than CNPJ)
+  const [adminTenant] = await db.select({ id: tenants.id, name: tenants.name })
     .from(tenants)
-    .where(eq(tenants.cnpj, "00.000.000/0001-00"))
+    .where(eq((tenants as any).tenantType, "admin"))
     .limit(1);
 
   if (!adminTenant) {
-    console.error("Admin tenant not found. Run seed.ts first.");
+    console.error("Admin tenant not found (tenantType='admin'). Check DB or run seed.ts first.");
     process.exit(1);
   }
 
