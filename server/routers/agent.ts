@@ -2492,6 +2492,29 @@ async function generateFallbackResponse(
 
   // ── 5. We have CNPJ in memory but no headcount yet ──
   if (memory.cnpj && !memory.headcount) {
+    // If company already exists with an active NR-01 flow, skip headcount prompt
+    const existingForPhase5 = await findCompanyByCNPJ();
+    if (existingForPhase5) {
+      const phase5Check = await getNextPhase(existingForPhase5.id);
+      if (phase5Check !== "unknown") {
+        if (phase5Check === "completed" || phase5Check === "awaiting_payment" || phase5Check === "awaiting_final_approval") {
+          return await buildCompletedResponse(existingForPhase5, tenantId);
+        }
+        const phaseLabels5: Record<string, string> = {
+          create_assessment: "Criar Avaliação COPSOQ-II",
+          awaiting_responses: "Aguardando Respostas COPSOQ-II",
+          generate_inventory: "Gerar Inventário de Riscos",
+          create_training: "Criar Treinamento",
+          complete_checklist: "Completar Checklist",
+          generate_final_proposal: "Gerar Proposta Final",
+        };
+        return {
+          content: `O fluxo NR-01 de **${existingForPhase5.name}** já está em andamento.\n\n**Próxima etapa:** ${phaseLabels5[phase5Check] || phase5Check}\n\nDiga **"continuar"** para prosseguir.`,
+          actions: [],
+        };
+      }
+    }
+
     const numberMatch = userMessage.match(/^(\d+)$/);
     if (numberMatch) {
       const hc = parseInt(numberMatch[1]);
