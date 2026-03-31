@@ -26,6 +26,8 @@ import { toast } from "sonner";
 
 export default function RiskAssessmentForm() {
   const { selectedTenant } = useTenant();
+  const { data: user } = trpc.auth.me.useQuery();
+  const effectiveId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     title: "",
@@ -64,7 +66,7 @@ export default function RiskAssessmentForm() {
     },
   });
 
-  if (!selectedTenant) {
+  if (!effectiveId) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-12">
@@ -94,15 +96,12 @@ export default function RiskAssessmentForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const tenantId =
-      typeof selectedTenant === "string"
-        ? selectedTenant
-        : selectedTenant?.id;
-
-    if (!tenantId) {
+    if (!effectiveId) {
       toast.error("Selecione uma empresa primeiro");
       return;
     }
+
+    const tenantId = effectiveId;
 
     // Build description from risk factors + control measures
     const descriptionParts = [

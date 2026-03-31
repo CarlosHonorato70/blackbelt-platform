@@ -14,6 +14,10 @@ import rateLimit from "express-rate-limit";
 import slowDown from "express-slow-down";
 import { ENV, logSecurityWarnings } from "./_core/env";
 import { log } from "./_core/logger";
+import { closePool } from "./db";
+import { runMonitoringCheck, saveCheckAndAlert } from "./routers/adminMonitoring";
+import { runAllE2ETests } from "./_core/e2eTests";
+import { processEmailQueue } from "./_core/email";
 
 // tRPC
 import * as trpcExpress from "@trpc/server/adapters/express";
@@ -127,7 +131,7 @@ app.use(
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === "production" ? 100 : 2000,
+  max: process.env.NODE_ENV === "production" ? 1000 : 2000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Muitas requisicoes, tente novamente mais tarde." },
@@ -266,20 +270,92 @@ app.use((req, res, next) => {
     log.info(`Ambiente: ${ENV.nodeEnv}`);
   });
 
-  // 6. GRACEFUL SHUTDOWN
+  // 6. MONITORING AGENT (every 15 min)
+  if (isProduction) {
+    const MONITORING_INTERVAL = 15 * 60 * 1000;
+    // First check after 2 min (let the app warm up)
+    setTimeout(async () => {
+      try {
+        const result = await runMonitoringCheck();
+        await saveCheckAndAlert(result);
+        log.info(`[Monitoring] Initial check: ${result.status}`);
+      } catch (err) { log.error("[Monitoring] Initial check failed", { error: String(err) }); }
+    }, 2 * 60 * 1000);
+
+    setInterval(async () => {
+      try {
+        const result = await runMonitoringCheck();
+        await saveCheckAndAlert(result);
+        log.info(`[Monitoring] Check: ${result.status} | heap=${result.memory.heapPercent}% | errors=${result.errors24h}`);
+      } catch (err) { log.error("[Monitoring] Check failed", { error: String(err) }); }
+    }, MONITORING_INTERVAL);
+
+    log.info("[Monitoring] Agent started: every 15 min");
+
+    // E2E tests every 6 hours
+    const E2E_INTERVAL = 6 * 60 * 60 * 1000;
+    setTimeout(async () => {
+      try {
+        const result = await runAllE2ETests();
+        log.info(`[E2E] Scheduled run: ${result.passedTests}/${result.totalTests} passed`);
+      } catch (err) { log.error("[E2E] Scheduled run failed", { error: String(err) }); }
+    }, 5 * 60 * 1000); // First run after 5 min
+
+    setInterval(async () => {
+      try {
+        const result = await runAllE2ETests();
+        log.info(`[E2E] Scheduled run: ${result.passedTests}/${result.totalTests} passed`);
+      } catch (err) { log.error("[E2E] Scheduled run failed", { error: String(err) }); }
+    }, E2E_INTERVAL);
+
+    log.info("[E2E] Scheduled: every 6 hours");
+
+    // Email queue worker every 30 seconds
+    setInterval(async () => {
+      try {
+        const result = await processEmailQueue();
+        if (result.processed > 0) {
+          log.info(`[EmailQueue] Processed: ${result.sent} sent, ${result.failed} failed`);
+        }
+      } catch (err) { log.error("[EmailQueue] Worker error", { error: String(err) }); }
+    }, 30_000);
+
+    log.info("[EmailQueue] Worker started: every 30s");
+  }
+
+  // 7. HTTP TIMEOUTS
+  server.setTimeout(30_000);
+  server.keepAliveTimeout = 65_000; // > nginx default (60s)
+  server.headersTimeout = 66_000;   // > keepAliveTimeout
+
+  // 7. GRACEFUL SHUTDOWN
   const gracefulShutdown = (signal: string) => {
     log.info(`${signal} received, shutting down gracefully...`);
-    server.close(() => {
+    server.close(async () => {
       log.info("HTTP server closed");
+      await closePool();
       process.exit(0);
     });
     // Force exit after 30s
     setTimeout(() => {
       log.error("Forced shutdown after 30s timeout");
       process.exit(1);
-    }, 30000).unref();
+    }, 30_000).unref();
   };
 
   process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
   process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+
+  // 8. UNHANDLED ERRORS — log before crash
+  process.on("uncaughtException", (err) => {
+    log.error("[FATAL] Uncaught exception", { message: err.message, stack: err.stack });
+    if (process.env.SENTRY_DSN) Sentry.captureException(err);
+    gracefulShutdown("uncaughtException");
+  });
+
+  process.on("unhandledRejection", (reason) => {
+    const err = reason instanceof Error ? reason : new Error(String(reason));
+    log.error("[WARN] Unhandled promise rejection", { message: err.message, stack: err.stack });
+    if (process.env.SENTRY_DSN) Sentry.captureException(err);
+  });
 })();

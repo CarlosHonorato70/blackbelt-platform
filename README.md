@@ -26,33 +26,32 @@ A plataforma é **multi-tenant**, **type-safe**, e construída com as melhores p
 
 ## 💎 Planos e Preços
 
-A Black Belt Platform oferece três planos para atender desde pequenas empresas até grandes corporações:
+Modelo híbrido: mensalidade fixa + cobrança por convite COPSOQ excedente.
 
-### 🎯 Starter - R$ 99/mês
-Ideal para pequenas empresas e consultores independentes
-- 1 empresa
-- Até 5 usuários
-- 1 GB de armazenamento
-- Relatórios básicos
+### 🎯 Starter - R$ 297/mês
+Para psicólogos e consultores autônomos (CPF)
+- 3 empresas/mês incluídas
+- 20 convites COPSOQ inclusos + R$ 12/excedente
+- SamurAI básico (cadastro + COPSOQ)
+- Relatórios padrão + Exportação PDF
 - Suporte por email
 
-### 🚀 Pro - R$ 399/mês
-Para consultorias e empresas médias
-- Até 10 empresas
-- Até 50 usuários por empresa
-- 10 GB de armazenamento
-- Relatórios avançados + API
+### 🚀 Professional - R$ 597/mês
+Para consultorias em crescimento (CNPJ)
+- 10 empresas/mês incluídas
+- 100 convites COPSOQ inclusos + R$ 10/excedente
+- SamurAI completo (10 fases)
+- Propostas comerciais automáticas + Benchmark setorial
 - Suporte prioritário
 
-### 🏆 Enterprise - Customizado
-Para grandes corporações e holdings
-- Empresas ilimitadas
-- Usuários ilimitados
-- Armazenamento ilimitado
-- White-label + Webhooks
-- SLA 99.9% + Suporte dedicado
+### 🏆 Enterprise - R$ 997/mês
+Para grandes consultorias e redes (CNPJ)
+- 30 empresas/mês incluídas
+- 500 convites COPSOQ inclusos + R$ 8/excedente
+- Tudo do Professional + White-label + API access
+- Relatórios personalizados + Suporte dedicado
 
-**🎁 Teste Grátis:** 14 dias para Starter/Pro, 30 dias para Enterprise
+**💳 Pagamento:** PIX, cartão de crédito ou créditos pré-pagos via Asaas
 
 📖 **Veja detalhes completos em:** [PRICING.md](PRICING.md)
 

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { Shield } from "lucide-react";
 
 export default function Login() {
   usePageMeta({ title: "Entrar", description: "Acesse sua conta Black Belt Consultoria" });
@@ -16,13 +17,24 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // 2FA state
+  const [showTwoFactor, setShowTwoFactor] = useState(false);
+  const [twoFactorToken, setTwoFactorToken] = useState("");
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+
   const loginMutation = trpc.auth.login.useMutation({
-    onSuccess: () => {
+    onSuccess: (data: any) => {
+      if (data.requires2FA) {
+        setTwoFactorToken(data.twoFactorToken);
+        setShowTwoFactor(true);
+        setError("");
+        return;
+      }
       toast.success("Login realizado com sucesso!");
-      window.location.href = "/dashboard";
+      window.location.href = data.role === "admin" ? "/admin" : "/dashboard";
     },
     onError: (error: any) => {
-      setError("Email ou senha inválidos");
+      setError(error.message || "Email ou senha inválidos");
     },
   });
 
@@ -36,11 +48,21 @@ export default function Login() {
     },
   });
 
+  const verify2FAMutation = (trpc as any).auth.verify2FA.useMutation({
+    onSuccess: () => {
+      toast.success("Login realizado com sucesso!");
+      window.location.href = "/dashboard";
+    },
+    onError: (err: any) => {
+      setError(err.message || "Codigo de verificacao inválido");
+    },
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-    
+
     try {
       if (mode === "login") {
         await loginMutation.mutateAsync({ email, password });
@@ -48,14 +70,111 @@ export default function Login() {
         await registerMutation.mutateAsync({ email, password, name });
       }
     } catch (err) {
-      // Erro já tratado
+      // Erro ja tratado
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handle2FASubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    try {
+      await verify2FAMutation.mutateAsync({
+        token: twoFactorToken,
+        code: twoFactorCode,
+      });
+    } catch (err) {
+      // Erro ja tratado
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 2FA verification screen
+  if (showTwoFactor) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center p-4"
+        style={{
+          background: 'linear-gradient(180deg, #4C1D95 0%, #5B21B6 50%, #6D28D9 100%)'
+        }}
+      >
+        <div className="w-full max-w-md">
+          <div
+            className="rounded-2xl shadow-2xl p-10"
+            style={{ backgroundColor: '#E9E3F0' }}
+          >
+            <div className="flex flex-col items-center mb-6">
+              <Shield className="h-12 w-12 text-purple-600 mb-3" />
+              <h1 className="text-2xl font-bold text-gray-800 text-center">
+                Verificacao em 2 Etapas
+              </h1>
+              <p className="text-sm text-gray-600 text-center mt-2">
+                Digite o código do seu app autenticador ou um código de backup
+              </p>
+            </div>
+
+            {error && (
+              <p className="text-red-600 text-sm text-center mb-6 font-medium">
+                {error}
+              </p>
+            )}
+
+            <form onSubmit={handle2FASubmit} className="space-y-4">
+              <Input
+                type="text"
+                placeholder="Código de 6 dígitos ou código de backup"
+                value={twoFactorCode}
+                onChange={e => setTwoFactorCode(e.target.value)}
+                required
+                disabled={isLoading}
+                className="h-12 rounded-lg border-gray-300 bg-white text-center text-lg tracking-widest"
+                maxLength={12}
+                autoFocus
+              />
+
+              <Button
+                type="submit"
+                className="w-full h-12 text-white font-semibold rounded-lg shadow-md hover:opacity-90"
+                style={{ backgroundColor: '#7C3AED' }}
+                disabled={isLoading}
+              >
+                {isLoading ? "Verificando..." : "Verificar"}
+              </Button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowTwoFactor(false);
+                  setTwoFactorToken("");
+                  setTwoFactorCode("");
+                  setError("");
+                }}
+                className="text-sm text-gray-700"
+                disabled={isLoading}
+              >
+                Voltar ao login
+              </button>
+            </div>
+
+            <div className="mt-6 text-center text-xs text-gray-500 space-x-3">
+              <Link to="/terms" className="hover:text-gray-700 underline">Termos de Uso</Link>
+              <span>|</span>
+              <Link to="/privacy" className="hover:text-gray-700 underline">Política de Privacidade</Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div 
+    <div
       className="min-h-screen flex items-center justify-center p-4"
       style={{
         background: 'linear-gradient(180deg, #4C1D95 0%, #5B21B6 50%, #6D28D9 100%)'
@@ -63,11 +182,11 @@ export default function Login() {
     >
       <div className="w-full max-w-md">
         {/* Card - Fundo Lavanda/Cinza Claro EXATO DA IMAGEM */}
-        <div 
+        <div
           className="rounded-2xl shadow-2xl p-10"
           style={{ backgroundColor: '#E9E3F0' }}
         >
-          {/* Título */}
+          {/* Titulo */}
           <h1 className="text-2xl font-bold text-gray-800 text-center mb-2">
             {mode === "login" ? "Faça login na sua conta" : "Crie sua conta"}
           </h1>
@@ -79,7 +198,7 @@ export default function Login() {
             </p>
           )}
 
-          {/* Formulário */}
+          {/* Formulario */}
           <form onSubmit={handleSubmit} className="space-y-4 mt-6">
             {mode === "register" && (
               <Input
@@ -140,7 +259,7 @@ export default function Login() {
                 </>
               ) : (
                 <>
-                  Já tem conta? <span className="font-bold">Faça login</span>
+                  Ja tem conta? <span className="font-bold">Faça login</span>
                 </>
               )}
             </button>

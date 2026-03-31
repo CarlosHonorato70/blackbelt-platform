@@ -15,12 +15,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -37,7 +31,6 @@ import {
   Copy,
   Loader2,
   Mail,
-  MoreVertical,
   Plus,
   Trash2,
   CheckCircle2,
@@ -418,44 +411,21 @@ export default function UserInvites() {
                             </p>
                           </div>
 
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  copyToClipboard(invite.token, invite.id)
-                                }
-                              >
-                                <Copy className="h-4 w-4 mr-2" />
-                                {copiedInvite === invite.id
-                                  ? "Copiado!"
-                                  : "Copiar Link"}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  resendMutation.mutate({ id: invite.id })
-                                }
-                              >
-                                <Mail className="h-4 w-4 mr-2" />
-                                Reenviar Convite
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={() => {
-                                  if (window.confirm(`Tem certeza que deseja cancelar o convite para ${invite.email}?`)) {
-                                    cancelMutation.mutate({ id: invite.id });
-                                  }
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Cancelar Convite
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => copyToClipboard(invite.token, invite.id)} title={copiedInvite === invite.id ? "Copiado!" : "Copiar Link"}>
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => resendMutation.mutate({ id: invite.id })} title="Reenviar Convite">
+                              <Mail className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => {
+                              if (window.confirm(`Tem certeza que deseja cancelar o convite para ${invite.email}?`)) {
+                                cancelMutation.mutate({ id: invite.id });
+                              }
+                            }} title="Cancelar Convite">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}

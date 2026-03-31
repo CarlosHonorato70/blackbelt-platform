@@ -3,31 +3,70 @@ import { z } from "zod";
 import { nanoid } from "nanoid";
 import { publicProcedure, protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { userInvites } from "../../drizzle/schema";
-import { eq, and, desc, isNull } from "drizzle-orm";
+import * as dbOps from "../db";
+import { userInvites, users } from "../../drizzle/schema";
+import { eq, and, desc, isNull, sql } from "drizzle-orm";
+import { getSubscriptionContext } from "../_core/subscriptionMiddleware";
+
+/**
+ * Verifica se o usuário pode gerenciar convites para o tenantId dado.
+ * Admin: qualquer tenant. Consultor: próprio tenant ou empresas-filhas. Empresa: não pode.
+ */
+async function assertCanManageInvites(ctx: any, targetTenantId?: string | null) {
+  if (ctx.user?.role === "admin") return;
+
+  const userTenantId = ctx.user?.tenantId;
+  if (!userTenantId) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
+  }
+
+  // Verificar se o usuário é consultor
+  const ownTenant = await dbOps.getTenant(userTenantId);
+  if (!ownTenant || ownTenant.tenantType !== "consultant") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Apenas administradores e consultores podem gerenciar convites" });
+  }
+
+  // Consultor pode convidar para seu próprio tenant
+  if (!targetTenantId || targetTenantId === userTenantId) return;
+
+  // Consultor pode convidar para empresas-filhas
+  const targetTenant = await dbOps.getTenant(targetTenantId);
+  if (!targetTenant || targetTenant.parentTenantId !== userTenantId) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado a este tenant" });
+  }
+}
 
 export const userInvitesRouter = router({
-  // Listar convites
+  // Listar convites (escopo por tenant do usuario)
   list: protectedProcedure
     .input(
       z.object({
-        tenantId: z.string().optional(),
         status: z.string().optional(),
         limit: z.number().default(50),
         offset: z.number().default(0),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
+      const isAdmin = ctx.user?.role === "admin";
       const conditions = [];
 
-      if (input.tenantId !== undefined) {
-        if (input.tenantId === "") {
-          conditions.push(isNull(userInvites.tenantId));
+      // Admin ve todos; outros veem apenas do proprio tenant (+ filhas se consultor)
+      if (!isAdmin && ctx.user?.tenantId) {
+        const ownTenant = await dbOps.getTenant(ctx.user.tenantId);
+        if (ownTenant?.tenantType === "consultant") {
+          const allTenants = await dbOps.listTenants({});
+          const childIds = allTenants
+            .filter((t: any) => t.parentTenantId === ctx.user!.tenantId)
+            .map((t: any) => t.id);
+          const allowedIds = [ctx.user.tenantId, ...childIds];
+          conditions.push(
+            sql`${userInvites.tenantId} IN (${sql.join(allowedIds.map(id => sql`${id}`), sql`, `)})`
+          );
         } else {
-          conditions.push(eq(userInvites.tenantId, input.tenantId));
+          conditions.push(eq(userInvites.tenantId, ctx.user.tenantId));
         }
       }
 
@@ -49,14 +88,14 @@ export const userInvitesRouter = router({
       return invites;
     }),
 
-  // Obter convite por ID
+  // Obter convite por ID (com verificacao de tenant)
   get: protectedProcedure
     .input(
       z.object({
         id: z.string(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -72,6 +111,9 @@ export const userInvitesRouter = router({
       if (!invite) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Invite not found" });
       }
+
+      // Verificar acesso ao convite
+      await assertCanManageInvites(ctx, invite.tenantId);
 
       return invite;
     }),
@@ -117,8 +159,8 @@ export const userInvitesRouter = router({
       return invite;
     }),
 
-  // Criar novo convite
-  create: adminProcedure
+  // Criar novo convite (admin ou consultor para próprio tenant/empresas-filhas)
+  create: protectedProcedure
     .input(
       z.object({
         tenantId: z.string().optional(),
@@ -129,12 +171,43 @@ export const userInvitesRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      await assertCanManageInvites(ctx, input.tenantId);
+
       const db = await getDb();
       if (!db)
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Database not available",
         });
+
+      // Verificar limite de usuários do plano
+      const targetTenantId = input.tenantId || ctx.user?.tenantId;
+      if (targetTenantId) {
+        // Buscar contexto de assinatura (do tenant ou do pai)
+        let subCtx = await getSubscriptionContext(targetTenantId);
+        if (!subCtx) {
+          const tenant = await dbOps.getTenant(targetTenantId);
+          if (tenant?.parentTenantId) {
+            subCtx = await getSubscriptionContext(tenant.parentTenantId);
+          }
+        }
+        if (subCtx && subCtx.isActive) {
+          const maxUsers = subCtx.plan.maxUsersPerTenant;
+          if (maxUsers > 0) {
+            const [countResult] = await db
+              .select({ count: sql<number>`count(*)` })
+              .from(users)
+              .where(eq(users.tenantId, targetTenantId));
+            const currentUsers = countResult?.count ?? 0;
+            if (currentUsers >= maxUsers) {
+              throw new TRPCError({
+                code: "FORBIDDEN",
+                message: `Limite de ${maxUsers} usuário(s) atingido neste tenant. Faça upgrade do plano para adicionar mais usuários.`,
+              });
+            }
+          }
+        }
+      }
 
       const id = nanoid();
       const token = nanoid(32);
@@ -220,20 +293,25 @@ export const userInvitesRouter = router({
       };
     }),
 
-  // Cancelar convite
-  cancel: adminProcedure
+  // Cancelar convite (admin ou consultor dono)
+  cancel: protectedProcedure
     .input(
       z.object({
         id: z.string(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Database not available",
         });
+
+      const [invite] = await db.select().from(userInvites).where(eq(userInvites.id, input.id));
+      if (!invite) throw new TRPCError({ code: "NOT_FOUND", message: "Convite não encontrado" });
+
+      await assertCanManageInvites(ctx, invite.tenantId);
 
       await db
         .update(userInvites)
@@ -243,15 +321,15 @@ export const userInvitesRouter = router({
       return { success: true };
     }),
 
-  // Reenviar convite
-  resend: adminProcedure
+  // Reenviar convite (admin ou consultor dono)
+  resend: protectedProcedure
     .input(
       z.object({
         id: z.string(),
         expiresInDays: z.number().default(7),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -267,6 +345,8 @@ export const userInvitesRouter = router({
       if (!invite) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Invite not found" });
       }
+
+      await assertCanManageInvites(ctx, invite.tenantId);
 
       // Gerar novo token e nova data de expiração
       const newToken = nanoid(32);
@@ -289,20 +369,25 @@ export const userInvitesRouter = router({
       };
     }),
 
-  // Deletar convite
-  delete: adminProcedure
+  // Deletar convite (admin ou consultor dono)
+  delete: protectedProcedure
     .input(
       z.object({
         id: z.string(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Database not available",
         });
+
+      const [invite] = await db.select().from(userInvites).where(eq(userInvites.id, input.id));
+      if (!invite) throw new TRPCError({ code: "NOT_FOUND", message: "Convite não encontrado" });
+
+      await assertCanManageInvites(ctx, invite.tenantId);
 
       await db.delete(userInvites).where(eq(userInvites.id, input.id));
 

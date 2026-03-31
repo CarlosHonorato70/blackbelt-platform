@@ -1,4 +1,5 @@
 import { useState } from "react";
+import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +63,7 @@ export default function AdminSubscriptions() {
   };
 
   return (
+    <DashboardLayout>
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Gerenciar Assinaturas</h1>
@@ -228,5 +230,6 @@ export default function AdminSubscriptions() {
         </DialogContent>
       </Dialog>
     </div>
+    </DashboardLayout>
   );
 }

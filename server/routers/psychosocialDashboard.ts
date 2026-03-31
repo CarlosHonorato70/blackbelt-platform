@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { tenantProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   copsoqReports,
@@ -12,12 +12,13 @@ import {
   actionPlans,
 } from "../../drizzle/schema_nr01";
 import { eq, and, desc, sql } from "drizzle-orm";
+import { nanoid } from "nanoid";
 
 export const psychosocialDashboardRouter = router({
   // Resumo geral do dashboard psicossocial
-  getSummary: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .query(async ({ input }) => {
+  getSummary: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -29,7 +30,7 @@ export const psychosocialDashboardRouter = router({
       const [latestReport] = await db
         .select()
         .from(copsoqReports)
-        .where(eq(copsoqReports.tenantId, input.tenantId))
+        .where(eq(copsoqReports.tenantId, ctx.tenantId!))
         .orderBy(desc(copsoqReports.generatedAt))
         .limit(1);
 
@@ -90,21 +91,21 @@ export const psychosocialDashboardRouter = router({
     }),
 
   // Tendências ao longo do tempo
-  getTrends: publicProcedure
+  getTrends: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
         periods: z.number().default(6),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
       const reports = await db
         .select()
         .from(copsoqReports)
-        .where(eq(copsoqReports.tenantId, input.tenantId))
+        .where(eq(copsoqReports.tenantId, ctx.tenantId!))
         .orderBy(desc(copsoqReports.generatedAt))
         .limit(input.periods);
 
@@ -130,9 +131,9 @@ export const psychosocialDashboardRouter = router({
     }),
 
   // Comparação por setor
-  getSectorComparison: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .query(async ({ input }) => {
+  getSectorComparison: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
@@ -147,7 +148,7 @@ export const psychosocialDashboardRouter = router({
           copsoqAssessments,
           eq(copsoqReports.assessmentId, copsoqAssessments.id)
         )
-        .where(eq(copsoqReports.tenantId, input.tenantId))
+        .where(eq(copsoqReports.tenantId, ctx.tenantId!))
         .orderBy(desc(copsoqReports.generatedAt));
 
       // Agrupar por setor
@@ -190,16 +191,16 @@ export const psychosocialDashboardRouter = router({
     }),
 
   // Alertas de dimensões críticas
-  getAlerts: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .query(async ({ input }) => {
+  getAlerts: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
       const [latestReport] = await db
         .select()
         .from(copsoqReports)
-        .where(eq(copsoqReports.tenantId, input.tenantId))
+        .where(eq(copsoqReports.tenantId, ctx.tenantId!))
         .orderBy(desc(copsoqReports.generatedAt))
         .limit(1);
 
@@ -232,16 +233,16 @@ export const psychosocialDashboardRouter = router({
     }),
 
   // Tendências históricas com deltas entre avaliações
-  getHistoricalTrends: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .query(async ({ input }) => {
+  getHistoricalTrends: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
       const reports = await db
         .select()
         .from(copsoqReports)
-        .where(eq(copsoqReports.tenantId, input.tenantId))
+        .where(eq(copsoqReports.tenantId, ctx.tenantId!))
         .orderBy(copsoqReports.generatedAt);
 
       const dimensionKeys = [
@@ -296,9 +297,9 @@ export const psychosocialDashboardRouter = router({
     }),
 
   // Relatório executivo consolidado
-  getExecutiveReport: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .query(async ({ input }) => {
+  getExecutiveReport: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -310,7 +311,7 @@ export const psychosocialDashboardRouter = router({
       const [latestReport] = await db
         .select()
         .from(copsoqReports)
-        .where(eq(copsoqReports.tenantId, input.tenantId))
+        .where(eq(copsoqReports.tenantId, ctx.tenantId!))
         .orderBy(desc(copsoqReports.generatedAt))
         .limit(1);
 
@@ -318,7 +319,7 @@ export const psychosocialDashboardRouter = router({
       const [latestIndicator] = await db
         .select()
         .from(mentalHealthIndicators)
-        .where(eq(mentalHealthIndicators.tenantId, input.tenantId))
+        .where(eq(mentalHealthIndicators.tenantId, ctx.tenantId!))
         .orderBy(desc(mentalHealthIndicators.createdAt))
         .limit(1);
 
@@ -329,7 +330,7 @@ export const psychosocialDashboardRouter = router({
           completed: sql<number>`SUM(CASE WHEN ${riskAssessments.status} = 'completed' THEN 1 ELSE 0 END)`,
         })
         .from(riskAssessments)
-        .where(eq(riskAssessments.tenantId, input.tenantId));
+        .where(eq(riskAssessments.tenantId, ctx.tenantId!));
 
       // Taxa de conclusão de planos de ação
       const actionPlanCounts = await db
@@ -338,7 +339,7 @@ export const psychosocialDashboardRouter = router({
           completed: sql<number>`SUM(CASE WHEN ${actionPlans.status} = 'completed' THEN 1 ELSE 0 END)`,
         })
         .from(actionPlans)
-        .where(eq(actionPlans.tenantId, input.tenantId));
+        .where(eq(actionPlans.tenantId, ctx.tenantId!));
 
       const apTotal = actionPlanCounts[0]?.total || 0;
       const apCompleted = actionPlanCounts[0]?.completed || 0;
@@ -371,5 +372,63 @@ export const psychosocialDashboardRouter = router({
           completionRate: actionPlanCompletionRate,
         },
       };
+    }),
+
+  // Criar/atualizar indicadores de saúde mental
+  updateIndicators: tenantProcedure
+    .input(
+      z.object({
+        tenantId: z.string().optional(),
+        sectorId: z.string().optional(),
+        period: z.string(),
+        absenteeismRate: z.number().optional(),
+        turnoverRate: z.number().optional(),
+        burnoutCases: z.number().optional(),
+        stressLevel: z.number().optional(),
+        engagementScore: z.number().optional(),
+        satisfactionScore: z.number().optional(),
+        incidentsReported: z.number().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
+
+      const { tenantId, sectorId, period, ...scores } = input;
+
+      // Verificar se já existe indicador para este tenant+period
+      const [existing] = await db
+        .select()
+        .from(mentalHealthIndicators)
+        .where(
+          and(
+            eq(mentalHealthIndicators.tenantId, ctx.tenantId!),
+            eq(mentalHealthIndicators.period, period)
+          )
+        )
+        .limit(1);
+
+      if (existing) {
+        await db
+          .update(mentalHealthIndicators)
+          .set(scores)
+          .where(eq(mentalHealthIndicators.id, existing.id));
+        return { id: existing.id, updated: true };
+      }
+
+      const id = nanoid();
+      await db.insert(mentalHealthIndicators).values({
+        id,
+        tenantId: ctx.tenantId!,
+        sectorId: sectorId || null,
+        period,
+        ...scores,
+      });
+
+      return { id, updated: false };
     }),
 });

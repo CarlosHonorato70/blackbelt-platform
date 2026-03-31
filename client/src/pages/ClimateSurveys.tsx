@@ -44,7 +44,7 @@ const TYPE_CONFIG: Record<string, { label: string; variant: "default" | "seconda
 
 const QUESTIONS_PLACEHOLDER = `[
   {
-    "text": "Como voce avalia o clima organizacional?",
+    "text": "Como você avalia o clima organizacional?",
     "type": "scale",
     "options": [1, 2, 3, 4, 5]
   },

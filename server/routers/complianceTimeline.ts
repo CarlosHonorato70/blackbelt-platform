@@ -1,34 +1,33 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { publicProcedure, router } from "../_core/trpc";
-import { requireActiveSubscription } from "../_core/subscriptionMiddleware";
+import { tenantProcedure, adminProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { complianceMilestones } from "../../drizzle/schema_nr01";
 import { eq, and, desc, sql } from "drizzle-orm";
 
 export const complianceTimelineRouter = router({
   // Listar milestones do tenant
-  list: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .query(async ({ input }) => {
+  list: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
       const milestones = await db
         .select()
         .from(complianceMilestones)
-        .where(eq(complianceMilestones.tenantId, input.tenantId))
+        .where(eq(complianceMilestones.tenantId, ctx.tenantId!))
         .orderBy(complianceMilestones.order);
 
       return milestones;
     }),
 
   // Criar milestone
-  create: publicProcedure
+  create: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
         title: z.string(),
         description: z.string().optional(),
         category: z.enum([
@@ -44,8 +43,7 @@ export const complianceTimelineRouter = router({
         order: z.number().optional(),
       })
     )
-    .mutation(async ({ input }) => {
-      await requireActiveSubscription(input.tenantId);
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -57,7 +55,7 @@ export const complianceTimelineRouter = router({
 
       await db.insert(complianceMilestones).values({
         id,
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         title: input.title,
         description: input.description || null,
         category: input.category,
@@ -73,7 +71,7 @@ export const complianceTimelineRouter = router({
     }),
 
   // Atualizar milestone
-  update: publicProcedure
+  update: tenantProcedure
     .input(
       z.object({
         id: z.string(),
@@ -86,7 +84,7 @@ export const complianceTimelineRouter = router({
         completedDate: z.coerce.date().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -112,15 +110,15 @@ export const complianceTimelineRouter = router({
       await db
         .update(complianceMilestones)
         .set(updateData)
-        .where(eq(complianceMilestones.id, id));
+        .where(and(eq(complianceMilestones.id, id), eq(complianceMilestones.tenantId, ctx.tenantId!)));
 
       return { success: true };
     }),
 
   // Deletar milestone
-  delete: publicProcedure
+  delete: tenantProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -130,15 +128,15 @@ export const complianceTimelineRouter = router({
 
       await db
         .delete(complianceMilestones)
-        .where(eq(complianceMilestones.id, input.id));
+        .where(and(eq(complianceMilestones.id, input.id), eq(complianceMilestones.tenantId, ctx.tenantId!)));
 
       return { success: true };
     }),
 
   // Obter progresso geral
-  getProgress: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .query(async ({ input }) => {
+  getProgress: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -149,7 +147,7 @@ export const complianceTimelineRouter = router({
       const milestones = await db
         .select()
         .from(complianceMilestones)
-        .where(eq(complianceMilestones.tenantId, input.tenantId));
+        .where(eq(complianceMilestones.tenantId, ctx.tenantId!));
 
       const total = milestones.length;
       const completed = milestones.filter((m) => m.status === "completed").length;
@@ -167,10 +165,9 @@ export const complianceTimelineRouter = router({
     }),
 
   // Criar milestones padrão NR-01
-  seedDefaults: publicProcedure
+  seedDefaults: adminProcedure
     .input(z.object({ tenantId: z.string() }))
-    .mutation(async ({ input }) => {
-      await requireActiveSubscription(input.tenantId);
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({

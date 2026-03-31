@@ -1019,6 +1019,7 @@ export async function generateGenericReportPdf(
       size: "A4",
       layout: data.landscape ? "landscape" : "portrait",
       margins: { top: 40, bottom: 50, left: 50, right: 50 },
+      bufferPages: true,
       info: {
         Title: metadata?.title || data.reportTitle,
         Subject: metadata?.subject || "Relatório NR-01",
@@ -1070,7 +1071,11 @@ export async function generateGenericReportPdf(
     }
 
     // ── Render sections ─────────────────────────────────────────────────
+    const leftMargin = 50;
     for (const section of data.sections) {
+      // Reset x position to left margin before every section
+      doc.x = leftMargin;
+
       // Page break check
       if (doc.y > (data.landscape ? 480 : 700)) {
         doc.addPage();
@@ -1078,17 +1083,17 @@ export async function generateGenericReportPdf(
 
       switch (section.type) {
         case "title":
-          doc.fontSize(12).fillColor(primaryColor).text(section.content || "", { align: "left" });
+          doc.fontSize(12).fillColor(primaryColor).text(section.content || "", leftMargin, doc.y, { width: pageWidth });
           doc.moveDown(0.4);
           break;
 
         case "subtitle":
-          doc.fontSize(10).fillColor(primaryColor).text(section.content || "", { align: "left" });
+          doc.fontSize(10).fillColor(primaryColor).text(section.content || "", leftMargin, doc.y, { width: pageWidth });
           doc.moveDown(0.3);
           break;
 
         case "text":
-          doc.fontSize(9).fillColor("#000000").text(section.content || "", { align: "justify" });
+          doc.fontSize(9).fillColor("#000000").text(section.content || "", leftMargin, doc.y, { width: pageWidth, align: "justify" });
           doc.moveDown(0.5);
           break;
 
@@ -1097,7 +1102,7 @@ export async function generateGenericReportPdf(
           break;
 
         case "divider":
-          doc.moveTo(50, doc.y).lineTo(50 + pageWidth, doc.y).lineWidth(0.5).strokeColor("#e5e7eb").stroke();
+          doc.moveTo(leftMargin, doc.y).lineTo(leftMargin + pageWidth, doc.y).lineWidth(0.5).strokeColor("#e5e7eb").stroke();
           doc.moveDown(0.5);
           break;
 
@@ -1128,6 +1133,7 @@ export async function generateGenericReportPdf(
               });
             });
 
+            doc.x = leftMargin;
             doc.y = kpiY + 60;
             doc.moveDown(0.3);
           }
@@ -1193,6 +1199,7 @@ export async function generateGenericReportPdf(
               y += rowH;
             });
 
+            doc.x = leftMargin;
             doc.y = y + 5;
           }
           break;
@@ -1201,7 +1208,7 @@ export async function generateGenericReportPdf(
           if (section.items) {
             section.items.forEach((item) => {
               if (doc.y > (data.landscape ? 490 : 710)) doc.addPage();
-              doc.fontSize(8).fillColor("#000000").text(`  •  ${item}`, { indent: 10 });
+              doc.fontSize(8).fillColor("#000000").text(`  •  ${item}`, leftMargin + 10, doc.y, { width: pageWidth - 20 });
               doc.moveDown(0.2);
             });
             doc.moveDown(0.3);

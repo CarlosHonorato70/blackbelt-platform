@@ -1,8 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { publicProcedure, router } from "../_core/trpc";
-import { requireActiveSubscription } from "../_core/subscriptionMiddleware";
+import { tenantProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   riskAssessments,
@@ -14,23 +13,23 @@ import {
 import { eq, and, desc, isNull } from "drizzle-orm";
 
 export const riskAssessmentsRouter = router({
-  // Listar avaliações por tenant
-  list: publicProcedure
+  // Listar avaliações por tenant (autenticado + escopo)
+  list: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(), // ignorado — usa ctx.tenantId
         limit: z.number().default(50),
         offset: z.number().default(0),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
       const assessments = await db
         .select()
         .from(riskAssessments)
-        .where(eq(riskAssessments.tenantId, input.tenantId))
+        .where(eq(riskAssessments.tenantId, ctx.tenantId!))
         .orderBy(desc(riskAssessments.createdAt))
         .limit(input.limit)
         .offset(input.offset);
@@ -38,15 +37,15 @@ export const riskAssessmentsRouter = router({
       return assessments;
     }),
 
-  // Obter avaliação por ID
-  get: publicProcedure
+  // Obter avaliação por ID (com verificação de tenant)
+  get: tenantProcedure
     .input(
       z.object({
         id: z.string(),
-        tenantId: z.string(),
+        tenantId: z.string().optional(), // ignorado — usa ctx.tenantId
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -60,7 +59,7 @@ export const riskAssessmentsRouter = router({
         .where(
           and(
             eq(riskAssessments.id, input.id),
-            eq(riskAssessments.tenantId, input.tenantId)
+            eq(riskAssessments.tenantId, ctx.tenantId!)
           )
         );
 
@@ -84,10 +83,10 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Criar nova avaliação
-  create: publicProcedure
+  create: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(), // ignorado — usa ctx.tenantId
         sectorId: z.string().optional(),
         title: z.string(),
         description: z.string().optional(),
@@ -96,8 +95,7 @@ export const riskAssessmentsRouter = router({
         methodology: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
-      await requireActiveSubscription(input.tenantId);
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -109,7 +107,7 @@ export const riskAssessmentsRouter = router({
 
       await db.insert(riskAssessments).values({
         id,
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         sectorId: input.sectorId || null,
         title: input.title,
         description: input.description || null,
@@ -125,15 +123,20 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Atualizar avaliação
-  update: publicProcedure
+  update: tenantProcedure
     .input(
       z.object({
         id: z.string(),
-        tenantId: z.string(),
-      }).passthrough()
+        title: z.string().optional(),
+        description: z.string().optional(),
+        assessmentDate: z.coerce.date().optional(),
+        assessor: z.string().optional(),
+        status: z.string().optional(),
+        methodology: z.string().optional(),
+        sectorId: z.string().optional(),
+      })
     )
-    .mutation(async ({ input }) => {
-      await requireActiveSubscription(input.tenantId);
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -141,7 +144,7 @@ export const riskAssessmentsRouter = router({
           message: "Database not available",
         });
 
-      const { id, tenantId, ...updates } = input;
+      const { id, ...updates } = input;
 
       await db
         .update(riskAssessments)
@@ -152,7 +155,7 @@ export const riskAssessmentsRouter = router({
         .where(
           and(
             eq(riskAssessments.id, id),
-            eq(riskAssessments.tenantId, tenantId)
+            eq(riskAssessments.tenantId, ctx.tenantId!)
           )
         );
 
@@ -160,20 +163,35 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Deletar avaliação
-  delete: publicProcedure
+  delete: tenantProcedure
     .input(
       z.object({
         id: z.string(),
-        tenantId: z.string(),
+        tenantId: z.string().optional(), // ignorado — usa ctx.tenantId
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Database not available",
         });
+
+      // Verificar que pertence ao tenant
+      const [assessment] = await db
+        .select()
+        .from(riskAssessments)
+        .where(
+          and(
+            eq(riskAssessments.id, input.id),
+            eq(riskAssessments.tenantId, ctx.tenantId!)
+          )
+        );
+
+      if (!assessment) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Assessment not found" });
+      }
 
       // Primeiro deletar itens relacionados
       await db
@@ -183,18 +201,13 @@ export const riskAssessmentsRouter = router({
       // Depois deletar a avaliação
       await db
         .delete(riskAssessments)
-        .where(
-          and(
-            eq(riskAssessments.id, input.id),
-            eq(riskAssessments.tenantId, input.tenantId)
-          )
-        );
+        .where(eq(riskAssessments.id, input.id));
 
       return { success: true };
     }),
 
-  // Adicionar item de risco à avaliação
-  addItem: publicProcedure
+  // Adicionar item de risco à avaliação (verifica que assessment pertence ao tenant)
+  addItem: tenantProcedure
     .input(
       z.object({
         assessmentId: z.string(),
@@ -206,13 +219,28 @@ export const riskAssessmentsRouter = router({
         observations: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Database not available",
         });
+
+      // Verificar que a avaliação pertence ao tenant
+      const [assessment] = await db
+        .select()
+        .from(riskAssessments)
+        .where(
+          and(
+            eq(riskAssessments.id, input.assessmentId),
+            eq(riskAssessments.tenantId, ctx.tenantId!)
+          )
+        );
+
+      if (!assessment) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Assessment not found or access denied" });
+      }
 
       const id = nanoid();
 
@@ -251,10 +279,136 @@ export const riskAssessmentsRouter = router({
       return { id, riskLevel };
     }),
 
-  // Listar categorias de risco
-  listCategories: publicProcedure
+  // Atualizar item de risco (com verificação de tenant via assessment)
+  updateItem: tenantProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        assessmentId: z.string(),
+        riskFactorId: z.string().optional(),
+        severity: z.enum(["low", "medium", "high", "critical"]).optional(),
+        probability: z.enum(["rare", "unlikely", "possible", "likely", "certain"]).optional(),
+        affectedPopulation: z.number().optional(),
+        currentControls: z.string().optional(),
+        observations: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
+
+      // Verificar que a avaliação pertence ao tenant
+      const [assessment] = await db
+        .select()
+        .from(riskAssessments)
+        .where(
+          and(
+            eq(riskAssessments.id, input.assessmentId),
+            eq(riskAssessments.tenantId, ctx.tenantId!)
+          )
+        );
+
+      if (!assessment) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Assessment not found or access denied" });
+      }
+
+      const updateData: any = {};
+      if (input.riskFactorId !== undefined) updateData.riskFactorId = input.riskFactorId;
+      if (input.severity !== undefined) updateData.severity = input.severity;
+      if (input.probability !== undefined) updateData.probability = input.probability;
+      if (input.affectedPopulation !== undefined) updateData.affectedPopulation = input.affectedPopulation;
+      if (input.currentControls !== undefined) updateData.currentControls = input.currentControls;
+      if (input.observations !== undefined) updateData.observations = input.observations;
+
+      // Recalcular nível de risco se severity ou probability mudaram
+      if (input.severity || input.probability) {
+        // Buscar item atual para pegar valores existentes
+        const [currentItem] = await db
+          .select()
+          .from(riskAssessmentItems)
+          .where(eq(riskAssessmentItems.id, input.id));
+
+        if (currentItem) {
+          const sev = input.severity || currentItem.severity;
+          const prob = input.probability || currentItem.probability;
+          const severityScore = { low: 1, medium: 2, high: 3, critical: 4 }[sev];
+          const probabilityScore = { rare: 1, unlikely: 2, possible: 3, likely: 4, certain: 5 }[prob];
+          const riskScore = severityScore * probabilityScore;
+
+          let riskLevel: "low" | "medium" | "high" | "critical";
+          if (riskScore <= 4) riskLevel = "low";
+          else if (riskScore <= 8) riskLevel = "medium";
+          else if (riskScore <= 12) riskLevel = "high";
+          else riskLevel = "critical";
+
+          updateData.riskLevel = riskLevel;
+        }
+      }
+
+      await db
+        .update(riskAssessmentItems)
+        .set(updateData)
+        .where(
+          and(
+            eq(riskAssessmentItems.id, input.id),
+            eq(riskAssessmentItems.assessmentId, input.assessmentId)
+          )
+        );
+
+      return { success: true };
+    }),
+
+  // Deletar item de risco (com verificação de tenant via assessment)
+  deleteItem: tenantProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        assessmentId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
+
+      // Verificar que a avaliação pertence ao tenant
+      const [assessment] = await db
+        .select()
+        .from(riskAssessments)
+        .where(
+          and(
+            eq(riskAssessments.id, input.assessmentId),
+            eq(riskAssessments.tenantId, ctx.tenantId!)
+          )
+        );
+
+      if (!assessment) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Assessment not found or access denied" });
+      }
+
+      await db
+        .delete(riskAssessmentItems)
+        .where(
+          and(
+            eq(riskAssessmentItems.id, input.id),
+            eq(riskAssessmentItems.assessmentId, input.assessmentId)
+          )
+        );
+
+      return { success: true };
+    }),
+
+  // Listar categorias de risco (dados de referência - apenas autenticado)
+  listCategories: protectedProcedure
     .input(z.object({}))
-    .query(async ({ input }) => {
+    .query(async () => {
       const db = await getDb();
       if (!db) return [];
 
@@ -266,8 +420,8 @@ export const riskAssessmentsRouter = router({
       return categories;
     }),
 
-  // Listar fatores de risco por categoria
-  listFactors: publicProcedure
+  // Listar fatores de risco por categoria (dados de referência - apenas autenticado)
+  listFactors: protectedProcedure
     .input(
       z.object({
         categoryId: z.string().optional(),
@@ -290,18 +444,18 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Listar planos de ação por tenant
-  listActionPlans: publicProcedure
+  listActionPlans: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(), // ignorado — usa ctx.tenantId
         assessmentItemId: z.string().optional(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
-      const conditions = [eq(actionPlans.tenantId, input.tenantId)];
+      const conditions = [eq(actionPlans.tenantId, ctx.tenantId!)];
 
       if (input.assessmentItemId) {
         conditions.push(
@@ -319,10 +473,10 @@ export const riskAssessmentsRouter = router({
     }),
 
   // Criar plano de ação
-  createActionPlan: publicProcedure
+  createActionPlan: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(), // ignorado — usa ctx.tenantId
         assessmentItemId: z.string().optional(),
         title: z.string(),
         description: z.string().optional(),
@@ -333,8 +487,7 @@ export const riskAssessmentsRouter = router({
         budget: z.number().optional(),
       })
     )
-    .mutation(async ({ input }) => {
-      await requireActiveSubscription(input.tenantId);
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -346,7 +499,7 @@ export const riskAssessmentsRouter = router({
 
       await db.insert(actionPlans).values({
         id,
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         assessmentItemId: input.assessmentItemId || null,
         title: input.title,
         description: input.description || null,
@@ -363,8 +516,8 @@ export const riskAssessmentsRouter = router({
       return { id };
     }),
 
-  // Atualizar plano de ação
-  updateActionPlan: publicProcedure
+  // Atualizar plano de ação (com verificação de tenant)
+  updateActionPlan: tenantProcedure
     .input(
       z.object({
         id: z.string(),
@@ -377,7 +530,7 @@ export const riskAssessmentsRouter = router({
         budget: z.number().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -399,15 +552,17 @@ export const riskAssessmentsRouter = router({
       if (data.deadline !== undefined) updateData.deadline = data.deadline;
       if (data.budget !== undefined) updateData.budget = data.budget;
 
-      await db.update(actionPlans).set(updateData).where(eq(actionPlans.id, id));
+      await db.update(actionPlans).set(updateData).where(
+        and(eq(actionPlans.id, id), eq(actionPlans.tenantId, ctx.tenantId!))
+      );
 
       return { success: true };
     }),
 
-  // Deletar plano de ação
-  deleteActionPlan: publicProcedure
+  // Deletar plano de ação (com verificação de tenant)
+  deleteActionPlan: tenantProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -415,7 +570,9 @@ export const riskAssessmentsRouter = router({
           message: "Database not available",
         });
 
-      await db.delete(actionPlans).where(eq(actionPlans.id, input.id));
+      await db.delete(actionPlans).where(
+        and(eq(actionPlans.id, input.id), eq(actionPlans.tenantId, ctx.tenantId!))
+      );
       return { success: true };
     }),
 });

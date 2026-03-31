@@ -45,13 +45,15 @@ type DialogMode = "closed" | "create" | "edit" | "delete";
 
 export default function Sectors() {
   const { selectedTenant } = useTenant();
+  const { data: user } = trpc.auth.me.useQuery();
+  const effectiveId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
   const [dialogMode, setDialogMode] = useState<DialogMode>("closed");
   const [selectedSectorId, setSelectedSectorId] = useState<string | null>(null);
 
   const utils = trpc.useUtils();
   const { data: sectors, isLoading } = trpc.sectors.list.useQuery(
     undefined,
-    { enabled: !!selectedTenant }
+    { enabled: !!effectiveId }
   );
 
   const createMutation = trpc.sectors.create.useMutation({
@@ -91,7 +93,7 @@ export default function Sectors() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedTenant) {
+    if (!effectiveId) {
       toast.error("Selecione uma empresa primeiro");
       return;
     }
@@ -106,7 +108,7 @@ export default function Sectors() {
 
   const handleEditSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedTenant || !selectedSectorId) return;
+    if (!effectiveId || !selectedSectorId) return;
 
     const formData = new FormData(e.currentTarget);
     updateMutation.mutate({
@@ -119,7 +121,7 @@ export default function Sectors() {
 
   const selectedSector = sectors?.find(s => s.id === selectedSectorId);
 
-  if (!selectedTenant) {
+  if (!effectiveId) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-12">
@@ -142,7 +144,7 @@ export default function Sectors() {
             <h1 className="text-3xl font-bold tracking-tight">Setores</h1>
             <p className="text-muted-foreground">
               Gerencie os setores de{" "}
-              <span className="font-semibold">{selectedTenant.name}</span>
+              <span className="font-semibold">{typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.name ?? "sua empresa"}</span>
             </p>
           </div>
 
@@ -227,7 +229,7 @@ export default function Sectors() {
                   Nenhum setor cadastrado
                 </h3>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Comece criando o primeiro setor para {selectedTenant.name}
+                  Comece criando o primeiro setor para {typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.name ?? "sua empresa"}
                 </p>
               </div>
             )}
@@ -253,7 +255,7 @@ export default function Sectors() {
                 </DialogTitle>
                 <DialogDescription>
                   {dialogMode === "create"
-                    ? `Cadastre um novo setor para ${selectedTenant.name}`
+                    ? `Cadastre um novo setor para ${typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.name ?? "sua empresa"}`
                     : `Atualize os dados do setor ${selectedSector?.name}`}
                 </DialogDescription>
               </DialogHeader>

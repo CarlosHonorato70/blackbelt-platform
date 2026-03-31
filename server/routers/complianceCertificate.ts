@@ -1,8 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { publicProcedure, router } from "../_core/trpc";
-import { requireActiveSubscription } from "../_core/subscriptionMiddleware";
+import { publicProcedure, tenantProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   complianceCertificates,
@@ -12,31 +11,30 @@ import { eq, and, desc, sql } from "drizzle-orm";
 
 export const complianceCertificateRouter = router({
   // Listar certificados do tenant
-  list: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .query(async ({ input }) => {
+  list: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
       const certificates = await db
         .select()
         .from(complianceCertificates)
-        .where(eq(complianceCertificates.tenantId, input.tenantId))
+        .where(eq(complianceCertificates.tenantId, ctx.tenantId!))
         .orderBy(desc(complianceCertificates.issuedAt));
 
       return certificates;
     }),
 
   // Emitir certificado de conformidade
-  issue: publicProcedure
+  issue: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
         issuedBy: z.string(),
       })
     )
-    .mutation(async ({ input }) => {
-      await requireActiveSubscription(input.tenantId);
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -48,7 +46,7 @@ export const complianceCertificateRouter = router({
       const items = await db
         .select()
         .from(complianceChecklist)
-        .where(eq(complianceChecklist.tenantId, input.tenantId));
+        .where(eq(complianceChecklist.tenantId, ctx.tenantId!));
 
       if (items.length === 0) {
         throw new TRPCError({
@@ -87,7 +85,7 @@ export const complianceCertificateRouter = router({
 
       await db.insert(complianceCertificates).values({
         id,
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         certificateNumber,
         issuedAt,
         validUntil,
@@ -144,9 +142,9 @@ export const complianceCertificateRouter = router({
     }),
 
   // Revogar certificado
-  revoke: publicProcedure
+  revoke: tenantProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -157,7 +155,7 @@ export const complianceCertificateRouter = router({
       await db
         .update(complianceCertificates)
         .set({ status: "revoked" })
-        .where(eq(complianceCertificates.id, input.id));
+        .where(and(eq(complianceCertificates.id, input.id), eq(complianceCertificates.tenantId, ctx.tenantId!)));
 
       return { success: true };
     }),

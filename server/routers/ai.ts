@@ -21,10 +21,11 @@ import {
   riskAssessmentItems,
   actionPlans,
 } from "../../drizzle/schema_nr01";
-import { generateAiReport } from "../_ai/reports";
+import { generateAiReport, generateFallbackAnalysis } from "../_ai/reports";
 import { generateRiskInventory } from "../_ai/riskInventoryGenerator";
 import { generateActionPlan } from "../_ai/actionPlanGenerator";
 import type { CopsoqAnalysisResult } from "../_ai/nlp";
+import { log } from "../_core/logger";
 
 export const aiRouter = router({
   /**
@@ -67,19 +68,58 @@ export const aiRouter = router({
           });
         }
 
-        // Erros de configuracao (API key, etc.)
-        if (message.includes("OPENAI_API_KEY")) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Servico de IA nao configurado. Contate o administrador.",
+        // Erros de configuracao (API key) ou LLM → fallback rule-based
+        if (
+          message.includes("OPENAI_API_KEY") ||
+          message.includes("NLP:") ||
+          message.includes("LLM")
+        ) {
+          log.info("AI Router: AI unavailable, generating rule-based fallback", {
+            reason: message,
+            assessmentId: input.assessmentId,
           });
-        }
 
-        // Erros de LLM (falha na chamada, formato invalido)
-        if (message.includes("NLP:") || message.includes("LLM")) {
+          try {
+            // Fetch the existing report to generate fallback
+            const db = await getDb();
+            if (!db) throw new Error("DB unavailable");
+
+            const [report] = await db
+              .select()
+              .from(copsoqReports)
+              .where(
+                eq(copsoqReports.tenantId, ctx.tenantId!)
+              )
+              .orderBy(desc(copsoqReports.generatedAt))
+              .limit(1);
+
+            if (report) {
+              const fallback = generateFallbackAnalysis(report as Record<string, unknown>);
+
+              // Save to database
+              await db
+                .update(copsoqReports)
+                .set({
+                  aiAnalysis: fallback,
+                  aiGeneratedAt: new Date(),
+                  aiModel: "rule-based",
+                })
+                .where(eq(copsoqReports.id, report.id));
+
+              return {
+                reportId: report.id,
+                analysis: fallback,
+              };
+            }
+          } catch (fallbackError) {
+            log.error("AI Router: Fallback also failed", {
+              error: String(fallbackError),
+            });
+          }
+
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message: "Erro ao processar analise de IA. Tente novamente.",
+            message: "Servico de IA nao configurado e fallback falhou. Contate o administrador.",
           });
         }
 

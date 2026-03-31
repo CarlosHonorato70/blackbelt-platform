@@ -10,7 +10,6 @@ services:
     env_file: .env.production
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=mysql://blackbelt:${MYSQL_PASSWORD:-blackbelt_secret}@mysql:3306/blackbelt
     expose:
       - "5000"
     depends_on:
@@ -18,10 +17,18 @@ services:
         condition: service_healthy
     volumes:
       - app_logs:/app/logs
+      - backup_data:/backups:ro
     networks:
       - blackbelt-net
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 256M
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/api/health"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -48,6 +55,14 @@ services:
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
       --default-authentication-plugin=mysql_native_password
+      --max-connections=100
+      --innodb-buffer-pool-size=536870912
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root_secret}"]
       interval: 10s
@@ -78,13 +93,10 @@ services:
     command:
       - -c
       - |
-        apt-get update -qq && apt-get install -y -qq cron > /dev/null 2>&1
-        chmod +x /scripts/backup.sh
-        echo "0 3 * * * /scripts/backup.sh >> /var/log/backup.log 2>&1" | crontab -
-        echo "[$(date)] Backup cron scheduled: daily at 03:00"
-        echo "[$(date)] Running initial backup..."
-        /scripts/backup.sh
-        cron -f
+        echo "[`date`] Running initial backup..."
+        bash /scripts/backup.sh || echo "[`date`] Initial backup failed"
+        echo "[`date`] Backup loop: every 24h"
+        while true; do sleep 86400; echo "[`date`] Starting scheduled backup..."; bash /scripts/backup.sh || echo "[`date`] Backup failed!"; done
     environment:
       MYSQL_HOST: mysql
       MYSQL_PORT: "3306"

@@ -60,7 +60,8 @@ export default function DeadlineAlerts() {
   usePageMeta({ title: "Alertas de Prazos" });
   const { exportPdf, isExporting } = usePdfExport();
   const { selectedTenant } = useTenant();
-  const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const { data: user } = trpc.auth.me.useQuery();
+  const tenantId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
   const [activeTab, setActiveTab] = useState<"upcoming" | "all">("upcoming");
 
   const allAlertsQuery = trpc.deadlineAlerts.list.useQuery(

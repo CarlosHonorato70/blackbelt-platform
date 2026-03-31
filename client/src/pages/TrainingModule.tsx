@@ -1,4 +1,5 @@
 import { useState } from "react";
+import DOMPurify from "dompurify";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,10 +21,11 @@ import {
 
 function simpleMarkdown(text: string): string {
   if (!text) return "";
-  return text
+  const html = text
     .replace(/## (.+)/g, "<h2 class='text-xl font-semibold mt-4 mb-2'>$1</h2>")
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\n/g, "<br />");
+  return DOMPurify.sanitize(html);
 }
 
 export default function TrainingModule() {
@@ -55,7 +57,7 @@ export default function TrainingModule() {
         <div className="p-6">
           <Card>
             <CardContent className="p-6 text-center text-muted-foreground">
-              Modulo nao encontrado.
+              Módulo não encontrado.
             </CardContent>
           </Card>
         </div>
@@ -227,7 +229,7 @@ export default function TrainingModule() {
                 {currentModule?.completed ? (
                   <>
                     <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Modulo Concluido
+                    Módulo Concluído
                   </>
                 ) : (
                   "Concluir Modulo"

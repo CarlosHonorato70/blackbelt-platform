@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { publicProcedure, router } from "../_core/trpc";
+import { tenantProcedure, adminProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   deadlineAlerts,
@@ -12,18 +12,18 @@ import { eq, and, desc, sql } from "drizzle-orm";
 
 export const deadlineAlertsRouter = router({
   // Listar alertas por tenant
-  list: publicProcedure
+  list: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
         status: z.enum(["pending", "sent", "acknowledged", "expired"]).optional(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
-      const conditions = [eq(deadlineAlerts.tenantId, input.tenantId)];
+      const conditions = [eq(deadlineAlerts.tenantId, ctx.tenantId!)];
 
       if (input.status) {
         conditions.push(eq(deadlineAlerts.status, input.status));
@@ -39,10 +39,10 @@ export const deadlineAlertsRouter = router({
     }),
 
   // Criar alerta
-  create: publicProcedure
+  create: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
         userId: z.string().optional(),
         entityType: z.string(),
         entityId: z.string(),
@@ -51,7 +51,7 @@ export const deadlineAlertsRouter = router({
         channel: z.enum(["email", "in_app", "both"]).optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -63,7 +63,7 @@ export const deadlineAlertsRouter = router({
 
       await db.insert(deadlineAlerts).values({
         id,
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         userId: input.userId || null,
         entityType: input.entityType,
         entityId: input.entityId,
@@ -78,9 +78,9 @@ export const deadlineAlertsRouter = router({
     }),
 
   // Reconhecer alerta
-  acknowledge: publicProcedure
+  acknowledge: tenantProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -94,20 +94,20 @@ export const deadlineAlertsRouter = router({
           status: "acknowledged",
           acknowledgedAt: new Date(),
         })
-        .where(eq(deadlineAlerts.id, input.id));
+        .where(and(eq(deadlineAlerts.id, input.id), eq(deadlineAlerts.tenantId, ctx.tenantId!)));
 
       return { success: true };
     }),
 
   // Obter alertas próximos (dentro de N dias)
-  getUpcoming: publicProcedure
+  getUpcoming: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
         days: z.number().default(30),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
@@ -120,7 +120,7 @@ export const deadlineAlertsRouter = router({
         .from(deadlineAlerts)
         .where(
           and(
-            eq(deadlineAlerts.tenantId, input.tenantId),
+            eq(deadlineAlerts.tenantId, ctx.tenantId!),
             eq(deadlineAlerts.status, "pending"),
             sql`${deadlineAlerts.alertDate} >= ${now}`,
             sql`${deadlineAlerts.alertDate} <= ${futureDate}`
@@ -132,13 +132,13 @@ export const deadlineAlertsRouter = router({
     }),
 
   // Gerar alertas automaticamente a partir de planos de ação e marcos de conformidade
-  autoGenerate: publicProcedure
+  autoGenerate: adminProcedure
     .input(
       z.object({
         tenantId: z.string(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({

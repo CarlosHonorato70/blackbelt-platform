@@ -220,8 +220,8 @@ const resolveApiUrl = () =>
     : "https://forge.manus.im/v1/chat/completions";
 
 const assertApiKey = () => {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY is not configured");
+  if (!process.env.ANTHROPIC_API_KEY && !process.env.OPENAI_API_KEY) {
+    throw new Error("No LLM API key configured (ANTHROPIC_API_KEY or OPENAI_API_KEY)");
   }
 };
 
@@ -270,8 +270,69 @@ const normalizeResponseFormat = ({
   };
 };
 
+async function invokeAnthropic(params: InvokeParams): Promise<InvokeResult> {
+  const { messages } = params;
+  const normalized = messages.map(normalizeMessage);
+
+  // Extract system messages into a single system string
+  const systemMsgs = normalized.filter((m: any) => m.role === "system");
+  const nonSystemMsgs = normalized.filter((m: any) => m.role !== "system");
+  const systemText = systemMsgs.map((m: any) =>
+    typeof m.content === "string" ? m.content : m.content?.map((c: any) => c.text || "").join("\n")
+  ).join("\n\n");
+
+  // Map messages to Anthropic format
+  const anthropicMessages = nonSystemMsgs.map((m: any) => ({
+    role: m.role === "assistant" ? "assistant" : "user",
+    content: typeof m.content === "string" ? m.content : m.content?.map((c: any) => c.text || "").join("\n"),
+  }));
+
+  const payload: Record<string, unknown> = {
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 4096,
+    messages: anthropicMessages,
+  };
+  if (systemText) payload.system = systemText;
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": process.env.ANTHROPIC_API_KEY!,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`);
+  }
+
+  const data = await response.json() as any;
+  const text = data.content?.map((c: any) => c.text || "").join("") || "";
+
+  // Convert to InvokeResult format for compatibility
+  return {
+    choices: [{
+      message: { role: "assistant", content: text },
+      finish_reason: data.stop_reason || "stop",
+    }],
+    usage: data.usage ? {
+      prompt_tokens: data.usage.input_tokens,
+      completion_tokens: data.usage.output_tokens,
+      total_tokens: (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0),
+    } : undefined,
+  } as InvokeResult;
+}
+
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   assertApiKey();
+
+  // Use Anthropic Claude as primary LLM
+  if (process.env.ANTHROPIC_API_KEY) {
+    return invokeAnthropic(params);
+  }
 
   const {
     messages,
@@ -284,8 +345,11 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     response_format,
   } = params;
 
+  const apiUrl = resolveApiUrl();
+  const model = apiUrl.includes("openai.com") ? "gpt-4o-mini" : "gemini-2.5-flash";
+
   const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
+    model,
     messages: messages.map(normalizeMessage),
   };
 
@@ -302,9 +366,6 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   }
 
   payload.max_tokens = 32768;
-  payload.thinking = {
-    budget_tokens: 128,
-  };
 
   const normalizedResponseFormat = normalizeResponseFormat({
     responseFormat,
@@ -317,7 +378,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.response_format = normalizedResponseFormat;
   }
 
-  const response = await fetch(resolveApiUrl(), {
+  const response = await fetch(apiUrl, {
     method: "POST",
     headers: {
       "content-type": "application/json",

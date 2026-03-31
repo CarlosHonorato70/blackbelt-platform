@@ -38,7 +38,7 @@ import { usePdfExport } from "@/hooks/usePdfExport";
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   planned: { label: "Planejado", variant: "secondary" },
   active: { label: "Em Andamento", variant: "default" },
-  completed: { label: "Concluido", variant: "outline" },
+  completed: { label: "Concluído", variant: "outline" },
   cancelled: { label: "Cancelado", variant: "destructive" },
 };
 
@@ -52,7 +52,8 @@ export default function TrainingPrograms() {
   usePageMeta({ title: "Programas de Treinamento" });
   const { exportPdf, isExporting } = usePdfExport();
   const { selectedTenant } = useTenant();
-  const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const { data: user } = trpc.auth.me.useQuery();
+  const tenantId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
   const navigate = useNavigate();
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -227,7 +228,7 @@ export default function TrainingPrograms() {
                   id="title"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  placeholder="Gestao de Riscos Psicossociais"
+                  placeholder="Gestão de Riscos Psicossociais"
                 />
               </div>
               <div>

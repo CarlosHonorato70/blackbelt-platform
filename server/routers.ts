@@ -24,8 +24,7 @@ import { authLocalRouter } from "./routers/auth-local";
 import { assessmentsRouter } from "./routers/assessments";
 import { webhookRouter } from "./routers/webhook";
 import { subscriptionsRouter } from "./routers/subscriptions";
-import { stripeRouter } from "./routers/stripe";
-import { mercadoPagoRouter } from "./routers/mercadopago";
+import { asaasRouter } from "./routers/asaas";
 import { pdfExportsRouter } from "./routers/pdfExports";
 import { brandingRouter } from "./routers/branding";
 import { webhooksRouter } from "./routers/webhooksManagement";
@@ -54,6 +53,9 @@ import { ergonomicAssessmentsRouter } from "./routers/ergonomicAssessments";
 import { esocialExportRouter } from "./routers/esocialExport";
 import { nr01PdfExportRouter } from "./routers/nr01PdfExport";
 import { companiesRouter } from "./routers/companies";
+import { agentRouter } from "./routers/agent";
+import { supportAgentRouter } from "./routers/supportAgent";
+import { adminMonitoringRouter } from "./routers/adminMonitoring";
 
 
 export const appRouter = router({
@@ -91,8 +93,7 @@ export const appRouter = router({
 
   // Routers de monetização
   subscriptions: subscriptionsRouter,
-  stripe: stripeRouter,
-  mercadoPago: mercadoPagoRouter,
+  asaas: asaasRouter,
   pdfExports: pdfExportsRouter,
 
   // Phase 5: White-Label (Enterprise)
@@ -143,6 +144,15 @@ export const appRouter = router({
 
   // Gerenciamento de empresas (consultores)
   companies: companiesRouter,
+
+  // Agente IA NR-01
+  agent: agentRouter,
+
+  // Agente de Suporte IA
+  supportAgent: supportAgentRouter,
+
+  // Monitoramento (Admin Master)
+  adminMonitoring: adminMonitoringRouter,
 });
 
 export type AppRouter = typeof appRouter;

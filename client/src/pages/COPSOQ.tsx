@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -21,15 +21,20 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth.tsx";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { useTenant } from "@/contexts/TenantContext";
 import copsoqData from "../../../server/data/copsoq-76-questions.json";
 
 export default function COPSOQ() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const params = useParams();
+  const { selectedTenant } = useTenant();
+  const { data: meData } = trpc.auth.me.useQuery();
+  const effectiveId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || meData?.tenantId;
   const [activeTab, setActiveTab] = useState("form");
   const [currentSection, setCurrentSection] = useState(0);
-  const [assessmentId, setAssessmentId] = useState<string | null>(null);
+  const [assessmentId, setAssessmentId] = useState<string | null>(params.assessmentId ?? null);
   const [personId, setPersonId] = useState("");
   const [respondentName, setRespondentName] = useState("");
   const [respondentRole, setRespondentRole] = useState("");
@@ -43,6 +48,21 @@ export default function COPSOQ() {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const submitResponseMutation = trpc.assessments.submitResponse.useMutation();
+
+  // Auto-select latest assessment if none set
+  const { data: assessmentsList = [] } = trpc.assessments.list.useQuery(
+    undefined,
+    { enabled: !!effectiveId }
+  );
+
+  useEffect(() => {
+    if (!assessmentId && assessmentsList.length > 0) {
+      const sorted = [...assessmentsList].sort(
+        (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setAssessmentId(sorted[0].id);
+    }
+  }, [assessmentsList, assessmentId]);
 
   const questions = copsoqData.questions;
   const sections = useMemo(() => {
@@ -544,7 +564,7 @@ export default function COPSOQ() {
           </Card>
 
           <div className="flex gap-2">
-            <Button className="flex-1">Exportar Relatório PDF</Button>
+            <Button className="flex-1" disabled={!effectiveId} onClick={() => { if (effectiveId) window.open(`/api/pdf/copsoq/${effectiveId}`, "_blank"); }}>Exportar Relatório PDF</Button>
             <Button
               variant="outline"
               className="flex-1"

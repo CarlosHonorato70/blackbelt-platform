@@ -32,6 +32,8 @@ export const seedPlans = [
     hasSLA: false,
     slaUptime: null,
     trialDays: 14,
+    pricePerCopsoqInvite: 1000, // R$ 10,00 por convite excedente
+    copsoqInvitesIncluded: 20,  // 20 convites inclusos
     isActive: true,
     isPublic: true,
     sortOrder: 1,
@@ -56,6 +58,8 @@ export const seedPlans = [
     hasSLA: true,
     slaUptime: 990, // 99.0%
     trialDays: 14,
+    pricePerCopsoqInvite: 800, // R$ 8,00 por convite excedente
+    copsoqInvitesIncluded: 100, // 100 convites inclusos
     isActive: true,
     isPublic: true,
     sortOrder: 2,
@@ -68,10 +72,10 @@ export const seedPlans = [
       "Para grandes corporações. Recursos ilimitados, white-label, webhooks e SLA garantido.",
     monthlyPrice: 0, // Customizado
     yearlyPrice: 0, // Customizado
-    maxTenants: -1, // Ilimitado
-    maxUsersPerTenant: -1, // Ilimitado
-    maxStorageGB: -1, // Ilimitado
-    maxApiRequestsPerDay: -1, // Ilimitado
+    maxTenants: 100, // Até 100 empresas (negociável por contrato)
+    maxUsersPerTenant: 500, // Até 500 usuários por empresa
+    maxStorageGB: 100, // 100 GB
+    maxApiRequestsPerDay: 100000, // 100k requisições/dia
     hasAdvancedReports: true,
     hasApiAccess: true,
     hasWebhooks: true,
@@ -80,6 +84,8 @@ export const seedPlans = [
     hasSLA: true,
     slaUptime: 999, // 99.9%
     trialDays: 30,
+    pricePerCopsoqInvite: 500, // R$ 5,00 por convite excedente
+    copsoqInvitesIncluded: 500, // 500 convites inclusos
     isActive: true,
     isPublic: true,
     sortOrder: 3,

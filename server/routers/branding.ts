@@ -19,6 +19,37 @@ import { log } from "../_core/logger";
 
 export const brandingRouter = router({
   /**
+   * Get current branding configuration (alias for getBranding)
+   */
+  get: tenantProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    }
+
+    const tenant = await db.query.tenants.findFirst({
+      where: eq(tenants.id, ctx.tenantId),
+      columns: {
+        logoUrl: true,
+        faviconUrl: true,
+        primaryColor: true,
+        secondaryColor: true,
+        customDomain: true,
+        customDomainVerified: true,
+        emailSenderName: true,
+        emailSenderEmail: true,
+        whiteLabelEnabled: true,
+      },
+    });
+
+    if (!tenant) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Tenant not found" });
+    }
+
+    return tenant;
+  }),
+
+  /**
    * Get current branding configuration
    */
   getBranding: tenantProcedure.query(async ({ ctx }) => {

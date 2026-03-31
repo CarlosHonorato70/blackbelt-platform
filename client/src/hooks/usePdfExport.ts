@@ -34,9 +34,10 @@ export function usePdfExport() {
         URL.revokeObjectURL(url);
         toast({ title: "PDF exportado com sucesso!" });
       } catch (err: any) {
+        console.error("PDF export error:", err);
         toast({
           title: "Erro ao exportar PDF",
-          description: err?.message || "Tente novamente",
+          description: err?.message || "Falha na exportação. Tente novamente.",
           variant: "destructive",
         });
       } finally {

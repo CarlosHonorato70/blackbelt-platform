@@ -10,11 +10,15 @@ import bcrypt from "bcryptjs";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions, createSessionToken } from "../_core/cookies";
 import { ENV } from "../_core/env";
-import { sendEmail } from "../_core/email";
+import { sendEmail, queueEmail } from "../_core/email";
 import { eq } from "drizzle-orm";
-import { roles, userRoles, users } from "../../drizzle/schema";
+import { roles, userRoles, users, user2FA } from "../../drizzle/schema";
 import { getSubscriptionContext } from "../_core/subscriptionMiddleware";
 import { ensureTenantForUser } from "../_core/tenantHelpers";
+import { verifyTOTP } from "../_core/totp";
+
+// 2FA temporary token expiry (5 minutes)
+const TWO_FA_TOKEN_EXPIRY_MS = 5 * 60 * 1000;
 
 // Password reset token helpers (HMAC-signed, no DB needed)
 const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
@@ -80,7 +84,7 @@ async function sendVerificationEmail(email: string, name: string | null, token: 
   const frontendUrl = process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:5000";
   const verifyUrl = `${frontendUrl}/verify-email/${token}`;
 
-  await sendEmail({
+  await queueEmail({
     to: email,
     subject: "Verifique seu Email - Black Belt Platform",
     html: `
@@ -106,6 +110,7 @@ async function sendVerificationEmail(email: string, name: string | null, token: 
 
 // Track used password reset tokens to prevent reuse
 const usedResetTokens = new Set<string>();
+const forgotPasswordRateLimit = new Map<string, number[]>();
 
 export const authLocalRouter = router({
   register: publicProcedure
@@ -113,7 +118,11 @@ export const authLocalRouter = router({
       z.object({
         name: z.string().min(2, "Nome deve ter no minimo 2 caracteres"),
         email: z.string().email("Email invalido"),
-        password: z.string().min(8, "Senha deve ter no minimo 8 caracteres"),
+        password: z.string()
+          .min(8, "Senha deve ter no minimo 8 caracteres")
+          .regex(/[A-Z]/, "Senha deve conter pelo menos 1 letra maiuscula")
+          .regex(/[0-9]/, "Senha deve conter pelo menos 1 numero")
+          .regex(/[^A-Za-z0-9]/, "Senha deve conter pelo menos 1 caractere especial"),
         tenantId: z.string().optional(),
       })
     )
@@ -122,11 +131,11 @@ export const authLocalRouter = router({
       if (existing) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: "Email ja cadastrado",
+          message: "Verifique seu email para continuar",
         });
       }
 
-      const passwordHash = await bcrypt.hash(input.password, 10);
+      const passwordHash = await bcrypt.hash(input.password, 12);
       const userId = nanoid();
 
       // Auto-create tenant for new user if none provided
@@ -249,12 +258,29 @@ export const authLocalRouter = router({
         lastSignedIn: new Date(),
       });
 
-      // Cria token de sessao OPACO e ASSINADO com expiracao
+      // ── 2FA check ──────────────────────────────────────────────────
+      const drizzleDb = await getDb();
+      if (!drizzleDb) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      }
+      const [twoFA] = await drizzleDb
+        .select()
+        .from(user2FA)
+        .where(eq(user2FA.userId, user.id))
+        .limit(1);
+
+      if (twoFA?.enabled) {
+        // Create temporary 2FA token instead of session cookie
+        const twoFactorToken = createHmacToken(user.id, "-2fa", TWO_FA_TOKEN_EXPIRY_MS);
+        return { success: true, requires2FA: true, twoFactorToken };
+      }
+
+      // No 2FA — create session cookie normally
       const sessionToken = createSessionToken(user.id);
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.cookie(COOKIE_NAME, sessionToken, cookieOptions);
 
-      return { success: true };
+      return { success: true, role: user.role || "user" };
     }),
 
   me: publicProcedure.query(async ({ ctx }) => {
@@ -265,6 +291,15 @@ export const authLocalRouter = router({
     if (ctx.user.tenantId) {
       const subCtx = await getSubscriptionContext(ctx.user.tenantId);
       subscriptionStatus = subCtx?.subscription?.status ?? null;
+
+      // Se empresa-filha sem assinatura própria, herdar do tenant pai (consultor)
+      if (!subscriptionStatus) {
+        const tenant = await db.getTenant(ctx.user.tenantId);
+        if (tenant?.parentTenantId) {
+          const parentSubCtx = await getSubscriptionContext(tenant.parentTenantId);
+          subscriptionStatus = parentSubCtx?.subscription?.status ?? null;
+        }
+      }
     }
 
     return {
@@ -287,18 +322,40 @@ export const authLocalRouter = router({
   forgotPassword: publicProcedure
     .input(z.object({ email: z.string().email() }))
     .mutation(async ({ input }) => {
+      // Rate limiting: max 3 requests per email per 15 minutes
+      const rateLimitKey = `forgot:${input.email.toLowerCase()}`;
+      const now = Date.now();
+      const windowMs = 15 * 60 * 1000;
+      if (!forgotPasswordRateLimit.has(rateLimitKey)) {
+        forgotPasswordRateLimit.set(rateLimitKey, []);
+      }
+      const attempts = forgotPasswordRateLimit.get(rateLimitKey)!.filter(t => now - t < windowMs);
+      if (attempts.length >= 3) {
+        return { success: true }; // Silent rate limit (don't reveal to attacker)
+      }
+      attempts.push(now);
+      forgotPasswordRateLimit.set(rateLimitKey, attempts);
+
       // Always return success to prevent email enumeration
       const user = await db.getUserByEmail(input.email);
-      if (!user || !user.passwordHash) {
+      if (!user) {
         return { success: true };
       }
 
       const resetToken = createResetToken(user.id);
-      const frontendUrl =
-        process.env.VITE_FRONTEND_URL || "http://localhost:5000";
+      // Prioridade: FRONTEND_URL env > VITE_FRONTEND_URL env > fallback localhost
+      const frontendUrl = (
+        process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:5000"
+      ).replace(/\/$/, ""); // Remove trailing slash
       const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
 
-      await sendEmail({
+      log.info("Password reset requested", {
+        email: input.email,
+        frontendUrlBase: frontendUrl,
+        userId: user.id,
+      });
+
+      const emailSent = await sendEmail({
         to: input.email,
         subject: "Recuperação de Senha - Black Belt Platform",
         html: `
@@ -321,6 +378,15 @@ export const authLocalRouter = router({
         text: `Recuperação de Senha\n\nAcesse o link para redefinir sua senha: ${resetUrl}\n\nEste link expira em 1 hora.`,
       });
 
+      if (!emailSent) {
+        log.error("Password reset email failed to send", { email: input.email });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Não foi possível enviar o email de recuperação. Tente novamente em alguns minutos.",
+        });
+      }
+
+      log.info("Password reset email sent successfully", { email: input.email });
       return { success: true };
     }),
 
@@ -328,7 +394,11 @@ export const authLocalRouter = router({
     .input(
       z.object({
         token: z.string(),
-        password: z.string().min(8, "Senha deve ter no mínimo 8 caracteres"),
+        password: z.string()
+          .min(8, "Senha deve ter no minimo 8 caracteres")
+          .regex(/[A-Z]/, "Senha deve conter pelo menos 1 letra maiuscula")
+          .regex(/[0-9]/, "Senha deve conter pelo menos 1 numero")
+          .regex(/[^A-Za-z0-9]/, "Senha deve conter pelo menos 1 caractere especial"),
       })
     )
     .mutation(async ({ input }) => {
@@ -366,7 +436,7 @@ export const authLocalRouter = router({
         usedResetTokens.clear();
       }
 
-      const passwordHash = await bcrypt.hash(input.password, 10);
+      const passwordHash = await bcrypt.hash(input.password, 12);
       await db.upsertUser({
         id: result.userId,
         passwordHash,
@@ -427,4 +497,96 @@ export const authLocalRouter = router({
 
     return { success: true };
   }),
+
+  /**
+   * Verify 2FA code after login (public — user has no session yet)
+   */
+  verify2FA: publicProcedure
+    .input(
+      z.object({
+        token: z.string(),
+        code: z.string().min(6).max(12),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      // Verify temporary 2FA token
+      const result = verifyHmacToken(input.token, "-2fa");
+      if (!result) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Token 2FA invalido ou expirado. Faca login novamente.",
+        });
+      }
+
+      const userId = result.userId;
+
+      // Get user's 2FA record
+      const drizzleDb = await getDb();
+      if (!drizzleDb) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      }
+      const [twoFA] = await drizzleDb
+        .select()
+        .from(user2FA)
+        .where(eq(user2FA.userId, userId))
+        .limit(1);
+
+      if (!twoFA?.enabled) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "2FA nao esta ativado para este usuario.",
+        });
+      }
+
+      let isValid = false;
+
+      // Try TOTP code (6 digits)
+      if (input.code.length === 6 && /^\d{6}$/.test(input.code)) {
+        isValid = verifyTOTP(twoFA.secret, input.code);
+      }
+
+      // Try backup code (format XXXXX-XXXXX)
+      if (!isValid && input.code.includes("-")) {
+        let backupCodes: string[];
+        try {
+          backupCodes = JSON.parse(twoFA.backupCodes as string) as string[];
+        } catch {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Erro ao processar códigos de backup. Contate o suporte.",
+          });
+        }
+        const normalizedCode = input.code.toUpperCase().trim();
+        for (let i = 0; i < backupCodes.length; i++) {
+          const match = await bcrypt.compare(normalizedCode, backupCodes[i]);
+          if (match) {
+            isValid = true;
+            // Remove used backup code
+            backupCodes.splice(i, 1);
+            await drizzleDb
+              .update(user2FA)
+              .set({
+                backupCodes: JSON.stringify(backupCodes),
+                updatedAt: new Date(),
+              })
+              .where(eq(user2FA.userId, userId));
+            break;
+          }
+        }
+      }
+
+      if (!isValid) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Codigo de verificacao invalido.",
+        });
+      }
+
+      // Code verified — create session cookie
+      const sessionToken = createSessionToken(userId);
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.cookie(COOKIE_NAME, sessionToken, cookieOptions);
+
+      return { success: true };
+    }),
 });

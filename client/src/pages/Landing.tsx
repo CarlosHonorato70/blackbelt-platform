@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   ShieldCheck,
   BarChart3,
@@ -11,139 +12,234 @@ import {
   Building2,
   Lock,
   Zap,
+  Bot,
+  Search,
+  Brain,
+  Target,
+  Award,
+  Bell,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  FileCheck,
+  Globe,
+  Sparkles,
+  TrendingUp,
+  Eye,
 } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { useState } from "react";
 
+/* ── Pricing Plans ── */
 const plans = [
   {
     name: "Starter",
-    price: "R$ 99",
+    badge: "CPF",
+    price: "R$ 297",
     period: "/mês",
-    description: "Para consultores individuais e pequenas equipes",
+    description: "Para psicólogos e consultores autônomos (CPF)",
+    extra: "20 convites COPSOQ inclusos + R$ 12/excedente",
     features: [
-      "1 empresa",
-      "Até 5 usuários",
-      "Avaliações NR-01 ilimitadas",
-      "Relatórios básicos",
-      "Exportação PDF/Excel",
+      "Cadastro via CPF (pessoa física)",
+      "3 empresas/mês incluídas",
+      "20 convites COPSOQ inclusos/mês",
+      "SamurAI completo (10 fases NR-01)",
+      "Propostas comerciais automáticas",
+      "Relatórios padrão + Exportação PDF",
       "Suporte por email",
     ],
-    cta: "Começar Grátis",
+    cta: "Começar Agora",
     popular: false,
   },
   {
-    name: "Pro",
-    price: "R$ 399",
+    name: "Professional",
+    badge: "CNPJ",
+    price: "R$ 597",
     period: "/mês",
-    description: "Para consultorias em crescimento",
+    description: "Para consultorias em crescimento (CNPJ)",
+    extra: "100 convites COPSOQ inclusos + R$ 10/excedente",
     features: [
-      "Até 10 empresas",
-      "Até 50 usuários por empresa",
-      "Relatórios avançados",
-      "API de integração",
+      "Cadastro via CNPJ (pessoa jurídica)",
+      "10 empresas/mês incluídas",
+      "100 convites COPSOQ inclusos/mês",
+      "SamurAI completo (10 fases)",
+      "Propostas comerciais automáticas",
+      "PDF export ilimitado",
+      "Benchmark setorial",
       "Suporte prioritário",
-      "SLA 99.0%",
     ],
-    cta: "Começar Grátis",
+    cta: "Começar Agora",
     popular: true,
   },
   {
     name: "Enterprise",
-    price: "Sob consulta",
-    period: "",
-    description: "Para grandes organizações",
+    badge: "CNPJ",
+    price: "R$ 997",
+    period: "/mês",
+    description: "Para grandes consultorias e redes (CNPJ)",
+    extra: "500 convites COPSOQ inclusos + R$ 8/excedente",
     features: [
-      "Empresas ilimitadas",
-      "Usuários ilimitados",
-      "White-label",
-      "Webhooks + API completa",
-      "Suporte dedicado 24/7",
-      "SLA 99.9%",
+      "Cadastro via CNPJ (pessoa jurídica)",
+      "30 empresas/mês incluídas",
+      "500 convites COPSOQ inclusos/mês",
+      "Tudo do Professional",
+      "White-label (sua marca)",
+      "API access",
+      "Relatórios personalizados",
+      "Suporte dedicado",
     ],
-    cta: "Falar com Vendas",
+    cta: "Começar Agora",
     popular: false,
   },
 ];
 
+/* ── Features Grid ── */
 const features = [
   {
-    icon: ClipboardCheck,
-    title: "Avaliações COPSOQ-II",
+    icon: Bot,
+    title: "SamurAI Agent",
     description:
-      "Questionário de 76 questões com cálculo automático de 12 dimensões de risco psicossocial.",
+      "Agente de IA que automatiza todo o ciclo NR-01: do CNPJ ao certificado.",
+  },
+  {
+    icon: ClipboardCheck,
+    title: "COPSOQ-II Completo",
+    description:
+      "76 questoes, 12 dimensoes de risco psicossocial com calculo automatico.",
   },
   {
     icon: ShieldCheck,
     title: "Conformidade NR-01",
     description:
-      "Atenda à Portaria MTE nº 1.419/2024 com relatórios e documentação prontos para fiscalização.",
+      "Documentação pronta para fiscalização conforme Portaria MTE 1.419/2024.",
   },
   {
     icon: BarChart3,
-    title: "Analytics em Tempo Real",
+    title: "Benchmark Setorial",
     description:
-      "Dashboards executivos com indicadores de risco, taxas de resposta e evolução temporal.",
+      "Compare resultados entre empresas e setores para insights estrategicos.",
   },
   {
-    icon: Users,
-    title: "Convites em Massa",
+    icon: FileText,
+    title: "PDF Export & Edição",
     description:
-      "Envie questionários por email para centenas de colaboradores com rastreamento automático.",
+      "Edição inline de propostas, relatórios e certificados com exportação PDF.",
   },
   {
     icon: Building2,
     title: "Multi-Tenant",
     description:
-      "Gerencie múltiplas empresas clientes com isolamento total de dados e branding personalizado.",
-  },
-  {
-    icon: FileText,
-    title: "Planos de Ação",
-    description:
-      "Crie e acompanhe planos de intervenção com prazos, responsáveis e status de execução.",
+      "Gerencie multiplas empresas com isolamento total de dados e white-label.",
   },
   {
     icon: Lock,
-    title: "LGPD Compliant",
+    title: "LGPD & Seguranca",
     description:
-      "Dados criptografados, anonimização de respostas e exportação para atender direitos do titular.",
+      "2FA, RBAC, criptografia, anonimização e exportação de dados do titular.",
   },
   {
-    icon: Zap,
-    title: "Precificação Inteligente",
+    icon: Eye,
+    title: "Canal de Denúncias",
     description:
-      "Calcule propostas comerciais automaticamente com base em parâmetros configuráveis.",
+      "Canal anônimo integrado para relatos de riscos psicossociais.",
+  },
+];
+
+/* ── SamurAI 10 Phases ── */
+const samuraiPhases = [
+  { icon: Search, title: "Cadastro", desc: "CNPJ > dados automaticos da Receita Federal" },
+  { icon: Brain, title: "Diagnóstico", desc: "Análise do porte, setor e riscos iniciais" },
+  { icon: ClipboardCheck, title: "Avaliação", desc: "COPSOQ-II automatizado para colaboradores" },
+  { icon: BarChart3, title: "Análise", desc: "Scores de risco por dimensão e setor" },
+  { icon: FileCheck, title: "Inventário", desc: "Inventário de riscos psicossociais" },
+  { icon: Target, title: "Plano de Ação", desc: "Intervencoes priorizadas com prazos" },
+  { icon: Users, title: "Treinamentos", desc: "Programas de capacitação sugeridos" },
+  { icon: FileText, title: "Documentação", desc: "PGR, PCMSO e laudos gerados" },
+  { icon: Award, title: "Certificação", desc: "Certificado de conformidade NR-01" },
+  { icon: Bell, title: "Monitoramento", desc: "Alertas de prazos e reavaliações" },
+];
+
+/* ── Stats ── */
+const stats = [
+  { value: "10", label: "Fases automatizadas" },
+  { value: "76", label: "Questoes COPSOQ-II" },
+  { value: "12", label: "Dimensoes avaliadas" },
+  { value: "100%", label: "Digital e seguro" },
+];
+
+/* ── FAQ ── */
+const faqItems = [
+  {
+    q: "O que e a NR-01 e por que preciso me adequar?",
+    a: "A NR-01 (Portaria MTE 1.419/2024) exige que empresas identifiquem e gerenciem riscos psicossociais no ambiente de trabalho. O descumprimento pode gerar multas e interdições. Nossa plataforma automatiza todo o processo de conformidade.",
+  },
+  {
+    q: "Como o SamurAI funciona?",
+    a: "O SamurAI e um agente de inteligência artificial que recebe apenas o CNPJ da empresa e automatiza as 10 fases da conformidade NR-01: desde a busca de dados na Receita Federal até a emissão do certificado e monitoramento contínuo.",
+  },
+  {
+    q: "Preciso ter conhecimento tecnico para usar a plataforma?",
+    a: "Não. A plataforma foi projetada para consultores de SST e gestores de RH. O SamurAI guia todo o processo automaticamente. Você só precisa revisar e aprovar os documentos gerados.",
+  },
+  {
+    q: "Os dados dos colaboradores estao seguros?",
+    a: "Sim. Utilizamos criptografia, autenticação em dois fatores (2FA), controle de acesso por perfil (RBAC), isolamento de dados por empresa e conformidade total com a LGPD, incluindo exportação e exclusão de dados pessoais.",
+  },
+  {
+    q: "Posso usar minha propria marca (white-label)?",
+    a: "Sim! No plano Enterprise, você pode personalizar a plataforma com sua marca, logo e cores. Seus clientes verao apenas a identidade visual da sua consultoria.",
+  },
+  {
+    q: "Qual o formato do questionario utilizado?",
+    a: "Utilizamos o COPSOQ-II (Copenhagen Psychosocial Questionnaire), padrao internacional com 76 questoes distribuidas em 12 dimensoes psicossociais. Os colaboradores respondem pelo celular ou computador.",
   },
 ];
 
 export default function Landing() {
   usePageMeta({
-    title: "Gestao de Riscos Psicossociais",
-    description: "Plataforma NR-01 para gestao de riscos psicossociais. Avaliacao COPSOQ-II, relatorios automaticos e conformidade trabalhista.",
+    title: "Gestão de Riscos Psicossociais | SamurAI",
+    description:
+      "Automatize a conformidade NR-01 com inteligência artificial. SamurAI: do CNPJ ao certificado em minutos.",
   });
+
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Navbar */}
-      <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b">
+      {/* ══════════ Navbar ══════════ */}
+      <nav className="sticky top-0 z-50 bg-gray-950/95 backdrop-blur border-b border-gray-800">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="Logo" className="w-8 h-8 rounded" />
-            <span className="font-bold text-lg text-gray-900">
-              Black Belt Platform
+            <span className="font-bold text-lg text-white">
+              BlackBelt Consultoria
             </span>
+          </div>
+          <div className="hidden md:flex items-center gap-6 text-sm text-gray-300">
+            <a href="#samurai" className="hover:text-amber-400 transition-colors">
+              SamurAI
+            </a>
+            <a href="#features" className="hover:text-amber-400 transition-colors">
+              Funcionalidades
+            </a>
+            <a href="#pricing" className="hover:text-amber-400 transition-colors">
+              Planos
+            </a>
+            <a href="#faq" className="hover:text-amber-400 transition-colors">
+              FAQ
+            </a>
           </div>
           <div className="flex items-center gap-3">
             <Link to="/login">
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white hover:bg-gray-800">
                 Entrar
               </Button>
             </Link>
             <Link to="/register">
               <Button
                 size="sm"
-                className="text-white"
-                style={{ backgroundColor: "#7C3AED" }}
+                className="font-semibold text-gray-900 hover:opacity-90"
+                style={{ backgroundColor: "#c8a55a" }}
               >
                 Criar Conta
               </Button>
@@ -152,189 +248,398 @@ export default function Landing() {
         </div>
       </nav>
 
-      {/* Hero */}
+      {/* ══════════ Hero ══════════ */}
       <section
-        className="relative py-24 px-4"
+        className="relative py-24 md:py-32 px-4 overflow-hidden"
         style={{
           background:
-            "linear-gradient(180deg, #4C1D95 0%, #5B21B6 50%, #6D28D9 100%)",
+            "linear-gradient(160deg, #0a0a0a 0%, #1a1a2e 40%, #16213e 70%, #0f3460 100%)",
         }}
       >
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
-            Gestão de Riscos Psicossociais
+        {/* Subtle grid overlay */}
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(200,165,90,1) 1px, transparent 1px), linear-gradient(90deg, rgba(200,165,90,1) 1px, transparent 1px)",
+            backgroundSize: "60px 60px",
+          }}
+        />
+        <div className="relative max-w-5xl mx-auto text-center">
+          <Badge
+            className="mb-6 text-xs font-medium px-4 py-1.5 border-amber-500/30 text-amber-300 bg-amber-500/10"
+            variant="outline"
+          >
+            <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+            Powered by SamurAI — Inteligência Artificial
+          </Badge>
+          <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-6 leading-tight tracking-tight">
+            Automatize a conformidade{" "}
+            <span
+              className="bg-clip-text text-transparent"
+              style={{
+                backgroundImage:
+                  "linear-gradient(135deg, #c8a55a 0%, #f0d78c 50%, #c8a55a 100%)",
+              }}
+            >
+              NR-01
+            </span>
             <br />
-            <span style={{ color: "#c8a55a" }}>NR-01 em Conformidade</span>
+            com Inteligência Artificial
           </h1>
-          <p className="text-lg md:text-xl text-purple-100 mb-8 max-w-2xl mx-auto">
-            Plataforma completa para consultores e empresas atenderem à Portaria
-            MTE nº 1.419/2024. Avaliações COPSOQ-II, relatórios automáticos e
-            planos de ação — tudo em um só lugar.
+          <p className="text-lg md:text-xl text-gray-400 mb-10 max-w-3xl mx-auto leading-relaxed">
+            Do CNPJ ao certificado em minutos, não meses. O SamurAI automatiza as 10
+            fases da gestão de riscos psicossociais para consultores de SST e
+            empresas.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/register">
               <Button
                 size="lg"
-                className="text-lg px-8 h-12 font-semibold"
-                style={{ backgroundColor: "#c8a55a", color: "#1F2937" }}
+                className="text-lg px-10 h-14 font-bold shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 transition-all hover:scale-[1.02]"
+                style={{ backgroundColor: "#c8a55a", color: "#1a1a2e" }}
               >
-                Teste Grátis por 14 Dias
+                Comece Agora
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>
-            <a href="#pricing">
+            <a href="#samurai">
               <Button
                 variant="outline"
                 size="lg"
-                className="text-lg px-8 h-12 border-white/30 text-white hover:bg-white/10"
+                className="text-lg px-10 h-14 border-gray-600 text-gray-300 hover:bg-white/5 hover:border-gray-400"
               >
-                Ver Planos
+                <Bot className="w-5 h-5 mr-2" />
+                Conhecer o SamurAI
               </Button>
             </a>
           </div>
-          <p className="text-purple-200 text-sm mt-4">
-            Sem cartão de crédito. Cancele quando quiser.
+          <p className="text-gray-500 text-sm mt-6">
+            Gestão de riscos psicossociais com IA. Planos a partir de R$ 297/mes.
           </p>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="py-20 px-4 bg-gray-50" id="features">
-        <div className="max-w-6xl mx-auto">
+      {/* ══════════ Pain Points ══════════ */}
+      <section className="py-20 px-4 bg-gray-50">
+        <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">
-              Tudo o que você precisa para a NR-01
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Você ainda faz avaliação psicossocial{" "}
+              <span className="text-red-500">manualmente?</span>
             </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Da aplicação do questionário COPSOQ-II até a geração de relatórios
-              de conformidade — automatize todo o processo.
+            <p className="text-gray-500 max-w-2xl mx-auto text-lg">
+              Consultores perdem semanas em processos que o SamurAI resolve em minutos.
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                icon: Clock,
+                title: "Semanas perdidas",
+                desc: "Coleta manual de dados, planilhas e documentos que ninguem le.",
+                color: "#ef4444",
+              },
+              {
+                icon: Target,
+                title: "Erros humanos",
+                desc: "Cálculos incorretos, dimensões ignoradas e relatórios inconsistentes.",
+                color: "#ef4444",
+              },
+              {
+                icon: Bell,
+                title: "Prazos estourados",
+                desc: "Sem controle de vencimentos, reavaliações e notificações automáticas.",
+                color: "#ef4444",
+              },
+              {
+                icon: FileText,
+                title: "Sem padronização",
+                desc: "Cada consultor faz de um jeito. Sem processo, sem escala.",
+                color: "#ef4444",
+              },
+            ].map((item) => (
+              <div
+                key={item.title}
+                className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm"
+              >
+                <div
+                  className="w-12 h-12 rounded-lg flex items-center justify-center mb-4"
+                  style={{ backgroundColor: `${item.color}10` }}
+                >
+                  <item.icon className="w-6 h-6" style={{ color: item.color }} />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-2">{item.title}</h3>
+                <p className="text-sm text-gray-500">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+          <div className="text-center mt-10">
+            <a href="#samurai">
+              <Button
+                variant="link"
+                className="text-base font-semibold"
+                style={{ color: "#c8a55a" }}
+              >
+                Veja como o SamurAI resolve tudo isso
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════ SamurAI — 10 Phases ══════════ */}
+      <section className="py-20 px-4" id="samurai" style={{ background: "#0a0a0a" }}>
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <Badge
+              className="mb-4 text-xs font-medium px-3 py-1 border-amber-500/30 text-amber-400 bg-amber-500/10"
+              variant="outline"
+            >
+              <Bot className="w-3.5 h-3.5 mr-1.5" />
+              Agente de IA
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              SamurAI:{" "}
+              <span style={{ color: "#c8a55a" }}>
+                10 fases, 1 clique
+              </span>
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+              Insira o CNPJ e o SamurAI conduz todo o processo de conformidade NR-01
+              automaticamente. Do cadastro ao monitoramento contínuo.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {samuraiPhases.map((phase, i) => (
+              <div
+                key={phase.title}
+                className="relative bg-gray-900/80 border border-gray-800 rounded-xl p-5 hover:border-amber-500/40 transition-all group"
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-gray-900 flex-shrink-0"
+                    style={{ backgroundColor: "#c8a55a" }}
+                  >
+                    {i + 1}
+                  </div>
+                  <phase.icon className="w-5 h-5 text-gray-500 group-hover:text-amber-400 transition-colors" />
+                </div>
+                <h3 className="font-semibold text-white text-sm mb-1">
+                  {phase.title}
+                </h3>
+                <p className="text-xs text-gray-500">{phase.desc}</p>
+              </div>
+            ))}
+          </div>
+          <div className="text-center mt-12">
+            <Link to="/register">
+              <Button
+                size="lg"
+                className="text-base px-8 h-12 font-bold hover:scale-[1.02] transition-transform"
+                style={{ backgroundColor: "#c8a55a", color: "#1a1a2e" }}
+              >
+                Conhecer o SamurAI
+                <Sparkles className="w-5 h-5 ml-2" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════ Stats ══════════ */}
+      <section
+        className="py-14 px-4 border-y border-gray-200"
+        style={{ background: "linear-gradient(180deg, #fefdf8 0%, #fff 100%)" }}
+      >
+        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
+          {stats.map((s) => (
+            <div key={s.label} className="text-center">
+              <div
+                className="text-4xl md:text-5xl font-extrabold mb-1"
+                style={{ color: "#c8a55a" }}
+              >
+                {s.value}
+              </div>
+              <div className="text-sm text-gray-500 font-medium">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ══════════ Features Grid ══════════ */}
+      <section className="py-20 px-4 bg-white" id="features">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+              Tudo que você precisa para a NR-01
+            </h2>
+            <p className="text-gray-500 max-w-2xl mx-auto text-lg">
+              Plataforma completa com 48+ paginas, 9 modulos e automacao de ponta a ponta.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
             {features.map((feature) => (
               <div
                 key={feature.title}
-                className="bg-white rounded-xl p-6 shadow-sm border hover:shadow-md transition-shadow"
+                className="bg-gray-50 rounded-xl p-6 border border-gray-100 hover:shadow-lg hover:border-amber-200 transition-all group"
               >
-                <feature.icon
-                  className="w-10 h-10 mb-4"
-                  style={{ color: "#7C3AED" }}
-                />
+                <div
+                  className="w-11 h-11 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"
+                  style={{ backgroundColor: "rgba(200,165,90,0.1)" }}
+                >
+                  <feature.icon
+                    className="w-5 h-5"
+                    style={{ color: "#c8a55a" }}
+                  />
+                </div>
                 <h3 className="font-semibold text-gray-900 mb-2">
                   {feature.title}
                 </h3>
-                <p className="text-sm text-gray-600">{feature.description}</p>
+                <p className="text-sm text-gray-500 leading-relaxed">
+                  {feature.description}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="py-20 px-4">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-gray-900 text-center mb-14">
-            Como funciona
-          </h2>
-          <div className="grid md:grid-cols-3 gap-8">
+      {/* ══════════ More Platform Capabilities ══════════ */}
+      <section className="py-16 px-4 bg-gray-50">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+              E muito mais...
+            </h2>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              {
-                step: "1",
-                title: "Configure",
-                desc: "Cadastre sua empresa, setores e colaboradores em minutos.",
-              },
-              {
-                step: "2",
-                title: "Aplique",
-                desc: "Envie o questionário COPSOQ-II por email. Colaboradores respondem pelo celular.",
-              },
-              {
-                step: "3",
-                title: "Atue",
-                desc: "Receba relatórios automáticos com scores de risco e planos de ação sugeridos.",
-              },
+              { icon: Globe, text: "Integracao eSocial" },
+              { icon: TrendingUp, text: "Propostas comerciais com ROI" },
+              { icon: Award, text: "Certificados de conformidade" },
+              { icon: Users, text: "Convites em massa por email" },
+              { icon: Zap, text: "Alertas e notificações automáticas" },
+              { icon: ShieldCheck, text: "2FA e autenticacao segura" },
             ].map((item) => (
-              <div key={item.step} className="text-center">
-                <div
-                  className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-bold mx-auto mb-4"
-                  style={{ backgroundColor: "#7C3AED" }}
-                >
-                  {item.step}
-                </div>
-                <h3 className="font-semibold text-lg text-gray-900 mb-2">
-                  {item.title}
-                </h3>
-                <p className="text-gray-600 text-sm">{item.desc}</p>
+              <div
+                key={item.text}
+                className="flex items-center gap-3 bg-white rounded-lg p-4 border border-gray-100"
+              >
+                <item.icon className="w-5 h-5 flex-shrink-0" style={{ color: "#c8a55a" }} />
+                <span className="text-sm font-medium text-gray-700">{item.text}</span>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Pricing */}
-      <section className="py-20 px-4 bg-gray-50" id="pricing">
+      {/* ══════════ Pricing ══════════ */}
+      <section className="py-20 px-4 bg-white" id="pricing">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">Planos</h2>
-            <p className="text-gray-600">
-              14 dias grátis em todos os planos. Sem compromisso.
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+              Planos que cabem no seu negócio
+            </h2>
+            <p className="text-gray-500 text-lg">
+              Escolha o plano ideal para sua consultoria. Convites COPSOQ inclusos em todos os planos.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {plans.map((plan) => (
               <div
                 key={plan.name}
-                className={`bg-white rounded-xl p-8 border-2 relative ${
+                className={`rounded-2xl p-8 relative transition-all ${
                   plan.popular
-                    ? "border-purple-500 shadow-lg"
-                    : "border-gray-200"
+                    ? "bg-gray-950 text-white shadow-2xl shadow-gray-950/20 scale-[1.02] border-2 border-amber-500/50"
+                    : "bg-white border-2 border-gray-200 hover:border-gray-300"
                 }`}
               >
                 {plan.popular && (
                   <div
-                    className="absolute -top-3 left-1/2 -translate-x-1/2 text-white text-xs font-bold px-3 py-1 rounded-full"
-                    style={{ backgroundColor: "#7C3AED" }}
+                    className="absolute -top-3.5 left-1/2 -translate-x-1/2 text-xs font-bold px-4 py-1 rounded-full text-gray-900"
+                    style={{ backgroundColor: "#c8a55a" }}
                   >
                     MAIS POPULAR
                   </div>
                 )}
-                <h3 className="text-xl font-bold text-gray-900 mb-1">
+                <h3
+                  className={`text-xl font-bold mb-1 ${
+                    plan.popular ? "text-white" : "text-gray-900"
+                  }`}
+                >
                   {plan.name}
+                  {" "}
+                  <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${
+                    plan.badge === "CPF"
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-amber-100 text-amber-700"
+                  }`}>
+                    {plan.badge}
+                  </span>
                 </h3>
-                <p className="text-sm text-gray-500 mb-4">
+                <p
+                  className={`text-sm mb-5 ${
+                    plan.popular ? "text-gray-400" : "text-gray-500"
+                  }`}
+                >
                   {plan.description}
                 </p>
-                <div className="mb-6">
-                  <span className="text-3xl font-bold text-gray-900">
+                <div className="mb-1">
+                  <span
+                    className={`text-4xl font-extrabold ${
+                      plan.popular ? "text-white" : "text-gray-900"
+                    }`}
+                  >
                     {plan.price}
                   </span>
-                  <span className="text-gray-500">{plan.period}</span>
+                  <span
+                    className={`text-base ${
+                      plan.popular ? "text-gray-400" : "text-gray-500"
+                    }`}
+                  >
+                    {plan.period}
+                  </span>
                 </div>
+                <p
+                  className={`text-xs mb-6 ${
+                    plan.popular ? "text-gray-500" : "text-gray-400"
+                  }`}
+                >
+                  {plan.extra}
+                </p>
                 <ul className="space-y-3 mb-8">
                   {plan.features.map((feature) => (
-                    <li
-                      key={feature}
-                      className="flex items-start gap-2 text-sm"
-                    >
+                    <li key={feature} className="flex items-start gap-2.5 text-sm">
                       <CheckCircle
                         className="w-4 h-4 mt-0.5 flex-shrink-0"
-                        style={{ color: "#7C3AED" }}
+                        style={{ color: plan.popular ? "#c8a55a" : "#22c55e" }}
                       />
-                      <span className="text-gray-700">{feature}</span>
+                      <span
+                        className={
+                          plan.popular ? "text-gray-300" : "text-gray-600"
+                        }
+                      >
+                        {feature}
+                      </span>
                     </li>
                   ))}
                 </ul>
                 <Link to="/register">
                   <Button
-                    className={`w-full h-11 font-semibold ${
-                      plan.popular ? "text-white" : ""
+                    className={`w-full h-12 font-bold text-base transition-all hover:scale-[1.02] ${
+                      plan.popular ? "text-gray-900" : ""
                     }`}
                     variant={plan.popular ? "default" : "outline"}
                     style={
-                      plan.popular ? { backgroundColor: "#7C3AED" } : undefined
+                      plan.popular
+                        ? { backgroundColor: "#c8a55a" }
+                        : undefined
                     }
                   >
                     {plan.cta}
+                    <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </Link>
               </div>
@@ -343,48 +648,104 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section
-        className="py-16 px-4"
-        style={{
-          background:
-            "linear-gradient(135deg, #4C1D95 0%, #6D28D9 100%)",
-        }}
-      >
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">
-            Pronto para adequar sua empresa à NR-01?
-          </h2>
-          <p className="text-purple-100 mb-8">
-            Comece agora mesmo com 14 dias grátis. Nenhum cartão de crédito
-            necessário.
-          </p>
-          <Link to="/register">
-            <Button
-              size="lg"
-              className="text-lg px-10 h-12 font-semibold"
-              style={{ backgroundColor: "#c8a55a", color: "#1F2937" }}
-            >
-              Criar Conta Grátis
-            </Button>
-          </Link>
+      {/* ══════════ FAQ ══════════ */}
+      <section className="py-20 px-4 bg-gray-50" id="faq">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+              Perguntas Frequentes
+            </h2>
+            <p className="text-gray-500 text-lg">
+              Tudo que você precisa saber sobre a plataforma e a NR-01.
+            </p>
+          </div>
+          <div className="space-y-3">
+            {faqItems.map((item, i) => (
+              <div
+                key={i}
+                className="bg-white border border-gray-200 rounded-xl overflow-hidden"
+              >
+                <button
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="w-full flex items-center justify-between px-6 py-5 text-left hover:bg-gray-50 transition-colors"
+                >
+                  <span className="font-semibold text-gray-900 pr-4">
+                    {item.q}
+                  </span>
+                  {openFaq === i ? (
+                    <ChevronUp className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                  )}
+                </button>
+                {openFaq === i && (
+                  <div className="px-6 pb-5 text-gray-600 text-sm leading-relaxed border-t border-gray-100 pt-4">
+                    {item.a}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-gray-400 py-12 px-4">
+      {/* ══════════ Final CTA ══════════ */}
+      <section
+        className="py-20 px-4 relative overflow-hidden"
+        style={{
+          background:
+            "linear-gradient(160deg, #0a0a0a 0%, #1a1a2e 50%, #0f3460 100%)",
+        }}
+      >
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(200,165,90,1) 1px, transparent 1px), linear-gradient(90deg, rgba(200,165,90,1) 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
+        <div className="relative max-w-3xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            Pronto para automatizar a{" "}
+            <span style={{ color: "#c8a55a" }}>NR-01</span>?
+          </h2>
+          <p className="text-gray-400 mb-8 text-lg">
+            Comece a usar o SamurAI e transforme sua gestão de riscos psicossociais.
+            Para adicionar mais empresas, escolha um plano.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link to="/register">
+              <Button
+                size="lg"
+                className="text-lg px-10 h-14 font-bold shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 transition-all hover:scale-[1.02]"
+                style={{ backgroundColor: "#c8a55a", color: "#1a1a2e" }}
+              >
+                Comece Agora
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            </Link>
+          </div>
+          <p className="text-gray-500 text-sm mt-6">
+            Sem cartao de credito. Sem limite de tempo. Suporte incluso.
+          </p>
+        </div>
+      </section>
+
+      {/* ══════════ Footer ══════════ */}
+      <footer className="bg-gray-950 text-gray-400 py-12 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start gap-8">
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <img src="/logo.png" alt="Logo" className="w-6 h-6 rounded" />
                 <span className="font-bold text-white">
-                  Black Belt Platform
+                  BlackBelt Consultoria
                 </span>
               </div>
-              <p className="text-sm max-w-xs">
-                Gestão completa de riscos psicossociais e conformidade NR-01
-                para consultores e empresas.
+              <p className="text-sm max-w-xs leading-relaxed">
+                Plataforma SaaS para gestão de riscos psicossociais e conformidade
+                NR-01. Automatize com SamurAI.
               </p>
             </div>
             <div className="flex gap-12">
@@ -394,13 +755,23 @@ export default function Landing() {
                 </h4>
                 <ul className="space-y-2 text-sm">
                   <li>
-                    <a href="#features" className="hover:text-white">
+                    <a href="#samurai" className="hover:text-amber-400 transition-colors">
+                      SamurAI
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#features" className="hover:text-amber-400 transition-colors">
                       Funcionalidades
                     </a>
                   </li>
                   <li>
-                    <a href="#pricing" className="hover:text-white">
+                    <a href="#pricing" className="hover:text-amber-400 transition-colors">
                       Planos
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#faq" className="hover:text-amber-400 transition-colors">
+                      FAQ
                     </a>
                   </li>
                 </ul>
@@ -409,17 +780,17 @@ export default function Landing() {
                 <h4 className="font-semibold text-white text-sm mb-3">Legal</h4>
                 <ul className="space-y-2 text-sm">
                   <li>
-                    <Link to="/terms" className="hover:text-white">
+                    <Link to="/terms" className="hover:text-amber-400 transition-colors">
                       Termos de Uso
                     </Link>
                   </li>
                   <li>
-                    <Link to="/privacy" className="hover:text-white">
-                      Política de Privacidade
+                    <Link to="/privacy" className="hover:text-amber-400 transition-colors">
+                      Politica de Privacidade
                     </Link>
                   </li>
                   <li>
-                    <Link to="/lgpd" className="hover:text-white">
+                    <Link to="/lgpd" className="hover:text-amber-400 transition-colors">
                       LGPD - Direitos do Titular
                     </Link>
                   </li>
@@ -431,12 +802,12 @@ export default function Landing() {
                 </h4>
                 <ul className="space-y-2 text-sm">
                   <li>
-                    <Link to="/login" className="hover:text-white">
+                    <Link to="/login" className="hover:text-amber-400 transition-colors">
                       Entrar
                     </Link>
                   </li>
                   <li>
-                    <Link to="/register" className="hover:text-white">
+                    <Link to="/register" className="hover:text-amber-400 transition-colors">
                       Criar Conta
                     </Link>
                   </li>
@@ -444,8 +815,8 @@ export default function Landing() {
               </div>
             </div>
           </div>
-          <div className="border-t border-gray-800 mt-8 pt-6 text-center text-xs">
-            &copy; {new Date().getFullYear()} Black Belt Consultoria. Todos os
+          <div className="border-t border-gray-800 mt-8 pt-6 text-center text-xs text-gray-500">
+            &copy; {new Date().getFullYear()} BlackBelt Consultoria. Todos os
             direitos reservados.
           </div>
         </div>

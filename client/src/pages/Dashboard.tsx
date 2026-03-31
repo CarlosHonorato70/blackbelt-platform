@@ -15,15 +15,20 @@ import {
   CheckCircle2,
   AlertTriangle,
   BarChart3,
+  Receipt,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function Dashboard() {
   usePageMeta({ title: "Painel" });
   const { selectedTenant } = useTenant();
-  const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const { data: user } = trpc.auth.me.useQuery();
+  const effectiveId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
+  const tenantId = effectiveId;
 
-  if (!selectedTenant) {
+  if (!effectiveId) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-12">
@@ -53,17 +58,23 @@ export default function Dashboard() {
     { enabled: !!tenantId }
   );
 
-  const assessmentCount = riskAssessments.length;
-  const completedCount = riskAssessments.filter(a => a.status === "completed" || a.status === "reviewed").length;
+  const { data: billingStatus } = (trpc as any).subscriptions.getStatus.useQuery(
+    undefined,
+    { enabled: !!tenantId }
+  );
+
+  const copsoqTotal = copsoqAssessments.length;
+  const copsoqCompleted = copsoqAssessments.filter((a: any) => a.status === "completed" || a.status === "closed").length;
+  const copsoqPending = copsoqAssessments.filter((a: any) => a.status === "active" || a.status === "in_progress").length;
   const actionPlanCount = actionPlans.length;
   const completedPlans = actionPlans.filter((p: any) => p.status === "completed").length;
   const complianceRate = actionPlanCount > 0 ? Math.round((completedPlans / actionPlanCount) * 100) : 0;
 
   const metrics = [
     {
-      title: "Avaliações Realizadas",
-      value: String(assessmentCount),
-      description: `${completedCount} concluída(s)`,
+      title: "Avaliações COPSOQ-II",
+      value: String(copsoqTotal),
+      description: `${copsoqCompleted} concluída(s)`,
       icon: CheckCircle2,
       color: "text-blue-600",
       bgColor: "bg-blue-50",
@@ -86,7 +97,7 @@ export default function Dashboard() {
     },
     {
       title: "Avaliações Pendentes",
-      value: String(riskAssessments.filter(a => a.status === "draft" || a.status === "in_progress").length),
+      value: String(copsoqPending),
       description: "Aguardando conclusão",
       icon: Users,
       color: "text-purple-600",
@@ -94,14 +105,8 @@ export default function Dashboard() {
     },
   ];
 
-  // Risk levels from assessments (extracted from description if stored)
-  const totalAssessments = assessmentCount || 1;
-  const risksByLevel = [
-    { level: "Crítico", count: riskAssessments.filter(a => a.status === "reviewed").length, percentage: Math.round((riskAssessments.filter(a => a.status === "reviewed").length / totalAssessments) * 100), color: "bg-red-500" },
-    { level: "Alto", count: riskAssessments.filter(a => a.status === "completed").length, percentage: Math.round((riskAssessments.filter(a => a.status === "completed").length / totalAssessments) * 100), color: "bg-orange-500" },
-    { level: "Médio", count: riskAssessments.filter(a => a.status === "in_progress").length, percentage: Math.round((riskAssessments.filter(a => a.status === "in_progress").length / totalAssessments) * 100), color: "bg-yellow-500" },
-    { level: "Baixo", count: riskAssessments.filter(a => a.status === "draft").length, percentage: Math.round((riskAssessments.filter(a => a.status === "draft").length / totalAssessments) * 100), color: "bg-green-500" },
-  ];
+  // Risk levels — no real risk-level data available at top level; show empty state
+  const risksByLevel: { level: string; count: number; percentage: number; color: string }[] = [];
 
   // Categories from action plan types
   const categoryMap: Record<string, string> = {
@@ -156,6 +161,54 @@ export default function Dashboard() {
           })}
         </div>
 
+        {/* Billing Card — COPSOQ Usage */}
+        {billingStatus?.billing && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Receipt className="h-5 w-5" />
+                  Uso de Convites COPSOQ
+                </CardTitle>
+                <CardDescription>
+                  Plano {billingStatus.planDisplayName || billingStatus.planName} — {billingStatus.billing.copsoqInvitesIncluded} convites inclusos
+                </CardDescription>
+              </div>
+              <Badge variant={billingStatus.billing.copsoqExtraCharges > 0 ? "destructive" : "default"}>
+                {billingStatus.billing.copsoqExtraCharges > 0
+                  ? `R$ ${(billingStatus.billing.copsoqExtraCharges / 100).toFixed(2)} excedente`
+                  : "Dentro do plano"}
+              </Badge>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between text-sm">
+                <span>Convites enviados</span>
+                <span className="font-semibold">
+                  {billingStatus.billing.copsoqInvitesSent} / {billingStatus.billing.copsoqInvitesIncluded}
+                </span>
+              </div>
+              <Progress
+                value={Math.min(
+                  (billingStatus.billing.copsoqInvitesSent / Math.max(billingStatus.billing.copsoqInvitesIncluded, 1)) * 100,
+                  100
+                )}
+                className="h-2"
+              />
+              {billingStatus.billing.copsoqInvitesSent > billingStatus.billing.copsoqInvitesIncluded && (
+                <p className="text-xs text-muted-foreground">
+                  {billingStatus.billing.copsoqInvitesSent - billingStatus.billing.copsoqInvitesIncluded} convite(s) excedente(s) x R$ {(billingStatus.billing.pricePerCopsoqInvite / 100).toFixed(2)} = R$ {(billingStatus.billing.copsoqExtraCharges / 100).toFixed(2)}
+                </p>
+              )}
+              <div className="flex justify-between text-sm pt-2 border-t">
+                <span>Total este ciclo</span>
+                <span className="font-bold">
+                  R$ {(billingStatus.billing.totalPrice / 100).toFixed(2)}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
@@ -165,22 +218,31 @@ export default function Dashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {risksByLevel.map(risk => (
-                <div key={risk.level} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{risk.level}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {risk.count} ({risk.percentage}%)
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full ${risk.color}`}
-                      style={{ width: `${risk.percentage}%` }}
-                    />
-                  </div>
+              {risksByLevel.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                  <BarChart3 className="h-8 w-8 text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    Sem dados de risco disponíveis. Execute o inventário de riscos para classificar os níveis.
+                  </p>
                 </div>
-              ))}
+              ) : (
+                risksByLevel.map(risk => (
+                  <div key={risk.level} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{risk.level}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {risk.count} ({risk.percentage}%)
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full ${risk.color}`}
+                        style={{ width: `${risk.percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
 
@@ -286,7 +348,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {(() => {
-              const hasAssessments = completedCount > 0;
+              const hasAssessments = copsoqCompleted > 0 || riskAssessments.filter(a => a.status === "completed" || a.status === "reviewed").length > 0;
               const hasPlans = actionPlanCount > 0;
               const plansComplete = hasPlans && completedPlans === actionPlanCount;
               const plansPartial = hasPlans && completedPlans > 0 && completedPlans < actionPlanCount;

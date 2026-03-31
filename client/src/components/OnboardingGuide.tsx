@@ -7,7 +7,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  AlertCircle,
   ArrowRight,
   Building2,
   CheckCircle2,
@@ -15,14 +14,16 @@ import {
   ChevronRight,
   FileText,
   Lock,
-  Mail,
   Users,
   X,
-  Eye,
-  Download,
-  Bell,
+  Shield,
+  Brain,
+  ListChecks,
+  UserCog,
+  Briefcase,
 } from "lucide-react";
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 
 interface OnboardingStep {
   id: number;
@@ -32,186 +33,178 @@ interface OnboardingStep {
   details: string[];
   actionText?: string;
   actionUrl?: string;
+  phase: "consultant" | "company";
 }
 
 const onboardingSteps: OnboardingStep[] = [
+  // ── FASE 1: Configuração da Consultoria ──
   {
     id: 1,
-    title: "Bem-vindo à Black Belt Consultoria",
+    title: "Bem-vindo à Plataforma Black Belt",
     description:
-      "Plataforma de Gestão de Riscos Psicossociais e Desenvolvimento Humano",
+      "Vamos configurar sua consultoria em poucos passos. Primeiro, configure seu perfil e depois gerencie suas empresas clientes.",
     icon: <Building2 className="h-12 w-12 text-yellow-600" />,
     details: [
-      "Gestão completa de riscos psicossociais conforme NR-01",
-      "Avaliações estruturadas de fatores de risco",
-      "Relatórios de compliance e planos de ação",
-      "Gestão de colaboradores e setores",
+      "Fase 1: Configure sua consultoria (perfil, segurança, plano)",
+      "Fase 2: Gerencie empresas clientes (setores, colaboradores, avaliações)",
+      "Use o Fluxo Guiado para acompanhar o progresso de cada empresa",
+      "Ao final, exporte os 17 PDFs entregáveis para seu cliente",
     ],
+    phase: "consultant",
   },
   {
     id: 2,
-    title: "Selecionando uma Empresa",
+    title: "Seu Perfil e Plano",
     description:
-      "O primeiro passo é escolher a empresa com a qual você vai trabalhar",
-    icon: <Building2 className="h-12 w-12 text-blue-600" />,
+      "Complete os dados da sua consultoria e escolha seu plano",
+    icon: <UserCog className="h-12 w-12 text-blue-600" />,
     details: [
-      "Clique no botão 'Empresa selecionada' no sidebar esquerdo",
-      "Um modal abrirá mostrando todas as empresas disponíveis",
-      "Selecione a empresa desejada (ela ficará com checkmark verde)",
-      "Clique em 'Confirmar Seleção' para confirmar",
-      "Todas as páginas filtrarão dados dessa empresa automaticamente",
+      "Verifique seus dados de login e perfil",
+      "Escolha o plano adequado (Starter, Pro ou Enterprise)",
+      "O plano define a quantidade de empresas clientes e recursos disponíveis",
+      "Convites COPSOQ inclusos em todos os planos",
     ],
-    actionText: "Ver seletor de empresa",
+    actionText: "Ver Meu Plano",
+    actionUrl: "/subscription/pricing",
+    phase: "consultant",
   },
   {
     id: 3,
-    title: "Dashboard - Visão Geral",
-    description: "Acompanhe indicadores e métricas da sua empresa",
-    icon: <AlertCircle className="h-12 w-12 text-green-600" />,
+    title: "Segurança da Conta",
+    description:
+      "Proteja sua conta com autenticação de dois fatores",
+    icon: <Lock className="h-12 w-12 text-indigo-600" />,
     details: [
-      "Visualize o número de empresas atendidas",
-      "Acompanhe total de colaboradores cadastrados",
-      "Veja quantidade de avaliações NR-01 realizadas",
-      "Monitore programas ativos em andamento",
-      "Gráficos de riscos por setor",
-      "Indicadores de saúde mental e conformidade",
+      "Ative a autenticação de dois fatores (2FA) para maior segurança",
+      "Configure notificações de segurança",
+      "Sua conta de consultor tem acesso a dados sensíveis dos clientes",
+      "A segurança dos dados é fundamental para a conformidade LGPD",
     ],
-    actionText: "Ir para Dashboard",
-    actionUrl: "/dashboard",
+    actionText: "Configurar Segurança",
+    actionUrl: "/security-dashboard",
+    phase: "consultant",
   },
+
+  // ── FASE 2: Configuração da Empresa Cliente ──
   {
     id: 4,
-    title: "Gestão de Setores",
-    description: "Organize sua empresa em setores para melhor gestão de riscos",
-    icon: <Users className="h-12 w-12 text-purple-600" />,
+    title: "Cadastrar Empresa Cliente",
+    description:
+      "Registre a empresa que contratou seus serviços de consultoria",
+    icon: <Briefcase className="h-12 w-12 text-emerald-600" />,
     details: [
-      "Crie setores para cada departamento ou área",
-      "Defina gestor responsável por cada setor",
-      "Adicione descrição e características do setor",
-      "Filtre dados por setor nas avaliações",
-      "Acompanhe riscos específicos de cada setor",
+      "Acesse 'Minhas Empresas' no menu lateral",
+      "Clique em 'Nova Empresa' e preencha os dados (CNPJ, razão social, contato)",
+      "A empresa aparecerá na lista para seleção",
+      "Selecione a empresa para começar a trabalhar nela",
+      "Use a barra de seleção no sidebar para alternar entre empresas",
     ],
-    actionText: "Gerenciar Setores",
-    actionUrl: "/sectors",
+    actionText: "Minhas Empresas",
+    actionUrl: "/companies",
+    phase: "company",
   },
   {
     id: 5,
-    title: "Gestão de Colaboradores",
-    description: "Cadastre e gerencie os colaboradores da sua empresa",
-    icon: <Users className="h-12 w-12 text-cyan-600" />,
+    title: "Criar Setores da Empresa",
+    description:
+      "Organize a empresa cliente em setores/departamentos",
+    icon: <Building2 className="h-12 w-12 text-purple-600" />,
     details: [
-      "Adicione novos colaboradores com cargo e setor",
-      "Registre e-mail e telefone para contato",
-      "Defina tipo de vínculo (próprio, terceirizado, etc)",
-      "Acompanhe histórico de cada colaborador",
-      "Integre com avaliações de riscos psicossociais",
+      "Selecione a empresa cliente no sidebar",
+      "Acesse 'Setores' e crie os departamentos da empresa",
+      "Defina nome, descrição, turno e responsável de cada setor",
+      "Os setores serão usados para vincular colaboradores e segmentar avaliações",
+      "Exemplo: Produção, Administrativo, RH, Logística",
     ],
-    actionText: "Gerenciar Colaboradores",
-    actionUrl: "/people",
+    actionText: "Gerenciar Setores",
+    actionUrl: "/sectors",
+    phase: "company",
   },
   {
     id: 6,
-    title: "Avaliações NR-01",
-    description: "Realize avaliações completas de riscos psicossociais",
-    icon: <FileText className="h-12 w-12 text-orange-600" />,
+    title: "Cadastrar Colaboradores",
+    description:
+      "Adicione os colaboradores da empresa cliente",
+    icon: <Users className="h-12 w-12 text-cyan-600" />,
     details: [
-      "Crie novas avaliações de riscos psicossociais",
-      "Identifique fatores de risco conforme guia MTE",
-      "Avalie gravidade e probabilidade de cada risco",
-      "Defina medidas de controle e mitigação",
-      "Gere relatórios em PDF para documentação",
-      "Acompanhe histórico de avaliações",
+      "Acesse 'Colaboradores' e adicione cada pessoa",
+      "Vincule ao setor correspondente",
+      "Informe cargo, e-mail e telefone",
+      "O e-mail é necessário para enviar o questionário COPSOQ-II",
+      "Você pode importar colaboradores em massa via planilha Excel",
     ],
-    actionText: "Criar Avaliação",
-    actionUrl: "/risk-assessments/new",
+    actionText: "Gerenciar Colaboradores",
+    actionUrl: "/people",
+    phase: "company",
   },
   {
     id: 7,
-    title: "Relatórios de Compliance",
-    description: "Gere relatórios de conformidade com a NR-01",
-    icon: <FileText className="h-12 w-12 text-red-600" />,
+    title: "Aplicar COPSOQ-II",
+    description:
+      "O questionário COPSOQ-II é o eixo central de toda a avaliação",
+    icon: <Brain className="h-12 w-12 text-orange-600" />,
     details: [
-      "Visualize checklist de conformidade NR-01",
-      "Acompanhe itens conformes e não conformes",
-      "Crie planos de ação integrados",
-      "Defina prazos para implementação de medidas",
-      "Exporte relatórios em múltiplos formatos",
+      "Acesse 'COPSOQ-II' e crie uma nova avaliação",
+      "Use 'Enviar Convites' para convidar os colaboradores por e-mail",
+      "Cada colaborador recebe um link único para responder (sem login)",
+      "São 76 questões em 6 seções, avaliando 12 dimensões psicossociais",
+      "Acompanhe respostas em tempo real via 'Rastreamento'",
+      "Ao concluir, gere o relatório COPSOQ com análise automática",
     ],
-    actionText: "Ver Relatórios",
-    actionUrl: "/compliance-reports",
+    actionText: "Criar Avaliação COPSOQ",
+    actionUrl: "/copsoq",
+    phase: "company",
   },
   {
     id: 8,
-    title: "Sistema de Convites",
-    description: "Convide colaboradores para usar a plataforma",
-    icon: <Mail className="h-12 w-12 text-pink-600" />,
+    title: "Avaliação de Riscos e Planos de Ação",
+    description:
+      "Registre os riscos identificados e defina ações corretivas",
+    icon: <Shield className="h-12 w-12 text-red-600" />,
     details: [
-      "Envie convites por e-mail para novos usuários",
-      "Gerencie convites pendentes",
-      "Acompanhe aceites e rejeições",
-      "Resende convites se necessário",
-      "Controle acesso de usuários",
+      "Crie avaliação de riscos baseada nos resultados do COPSOQ-II",
+      "Classifique cada risco por severidade e probabilidade",
+      "Defina medidas de controle existentes e recomendadas",
+      "Crie planos de ação com prazos e responsáveis",
+      "A matriz de risco mostra uma visão consolidada",
     ],
-    actionText: "Gerenciar Convites",
-    actionUrl: "/user-invites",
+    actionText: "Criar Avaliação de Risco",
+    actionUrl: "/risk-assessments",
+    phase: "company",
   },
   {
     id: 9,
-    title: "Perfis e Permissões",
-    description: "Configure papéis e permissões de acesso",
-    icon: <Lock className="h-12 w-12 text-indigo-600" />,
+    title: "Checklist NR-01 e Cronograma",
+    description:
+      "Verifique conformidade e configure o cronograma de implementação",
+    icon: <FileText className="h-12 w-12 text-teal-600" />,
     details: [
-      "Crie roles customizadas para sua organização",
-      "Defina permissões granulares por função",
-      "Atribua roles a colaboradores",
-      "Controle acesso a funcionalidades específicas",
-      "Acompanhe mudanças de perfil em auditoria",
+      "O checklist NR-01 tem 22 requisitos obrigatórios pré-carregados",
+      "Marque cada requisito como: Conforme, Parcial, Não Conforme",
+      "Configure o cronograma com datas-alvo para cada etapa",
+      "Quando o score atingir 80%, emita o Certificado de Conformidade",
+      "Gere o laudo técnico com os dados do profissional responsável",
     ],
-    actionText: "Gerenciar Perfis",
-    actionUrl: "/roles-permissions",
+    actionText: "Ver Checklist",
+    actionUrl: "/compliance-checklist",
+    phase: "company",
   },
   {
     id: 10,
-    title: "Auditoria Visual",
-    description: "Acompanhe todas as ações realizadas na plataforma",
-    icon: <Eye className="h-12 w-12 text-slate-600" />,
+    title: "Fluxo Guiado e Entregáveis",
+    description:
+      "Use o fluxo guiado para acompanhar o progresso e exportar os PDFs",
+    icon: <ListChecks className="h-12 w-12 text-yellow-600" />,
     details: [
-      "Visualize log completo de todas as ações",
-      "Filtre por usuário, ação e data",
-      "Veja detalhes de mudanças antes e depois",
-      "Acompanhe IP e navegador de cada ação",
-      "Exporte logs para análise externa",
+      "Acesse 'Fluxo Guiado' no menu para ver todas as etapas",
+      "O sistema verifica automaticamente quais etapas foram concluídas",
+      "Na última etapa, exporte todos os 17 PDFs de uma vez",
+      "Os PDFs incluem: Dashboard, Matriz de Risco, PCMSO, Laudo, Certificado...",
+      "Entregue os PDFs ao cliente como documentação oficial da consultoria",
     ],
-    actionText: "Ver Auditoria",
-    actionUrl: "/audit-logs",
-  },
-  {
-    id: 11,
-    title: "Exportação de Dados (LGPD)",
-    description: "Gerencie direitos do titular de dados conforme LGPD",
-    icon: <Download className="h-12 w-12 text-teal-600" />,
-    details: [
-      "Crie solicitações de exportação de dados",
-      "Implemente direito ao esquecimento",
-      "Retifique dados incorretos",
-      "Exporte em múltiplos formatos (JSON, Excel, PDF)",
-      "Acompanhe status de solicitações",
-    ],
-    actionText: "Gerenciar Exportação",
-    actionUrl: "/data-export",
-  },
-  {
-    id: 12,
-    title: "Notificações",
-    description: "Receba notificações de ações importantes",
-    icon: <Bell className="h-12 w-12 text-amber-600" />,
-    details: [
-      "Centro de notificações no header da aplicação",
-      "Receba alertas de avaliações completas",
-      "Notificações de convites aceitos",
-      "Alertas de solicitações DSR processadas",
-      "Marque como lido ou delete notificações",
-    ],
+    actionText: "Abrir Fluxo Guiado",
+    actionUrl: "/guided-workflow",
+    phase: "company",
   },
 ];
 
@@ -224,6 +217,9 @@ export function OnboardingGuide({ open, onOpenChange }: OnboardingGuideProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const step = onboardingSteps[currentStep];
   const progress = ((currentStep + 1) / onboardingSteps.length) * 100;
+
+  const consultantSteps = onboardingSteps.filter(s => s.phase === "consultant");
+  const companySteps = onboardingSteps.filter(s => s.phase === "company");
 
   const handleNext = () => {
     if (currentStep < onboardingSteps.length - 1) {
@@ -241,8 +237,8 @@ export function OnboardingGuide({ open, onOpenChange }: OnboardingGuideProps) {
     onOpenChange(false);
   };
 
-  const handleGoToStep = (stepId: number) => {
-    setCurrentStep(stepId - 1);
+  const handleGoToStep = (stepIndex: number) => {
+    setCurrentStep(stepIndex);
   };
 
   const handleAction = () => {
@@ -254,10 +250,24 @@ export function OnboardingGuide({ open, onOpenChange }: OnboardingGuideProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-96 overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Badge
+                  variant="outline"
+                  className={
+                    step.phase === "consultant"
+                      ? "border-blue-300 text-blue-700 bg-blue-50"
+                      : "border-emerald-300 text-emerald-700 bg-emerald-50"
+                  }
+                >
+                  {step.phase === "consultant"
+                    ? "Fase 1: Sua Consultoria"
+                    : "Fase 2: Empresa Cliente"}
+                </Badge>
+              </div>
               <DialogTitle className="text-2xl">{step.title}</DialogTitle>
               <DialogDescription className="mt-2">
                 {step.description}
@@ -290,6 +300,23 @@ export function OnboardingGuide({ open, onOpenChange }: OnboardingGuideProps) {
                 className="bg-yellow-600 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${progress}%` }}
               />
+            </div>
+            {/* Phase indicator dots */}
+            <div className="flex gap-1 justify-center">
+              {onboardingSteps.map((s, index) => (
+                <button
+                  key={s.id}
+                  onClick={() => handleGoToStep(index)}
+                  className={`w-2.5 h-2.5 rounded-full transition-all ${
+                    index === currentStep
+                      ? "bg-yellow-600 scale-125"
+                      : s.phase === "consultant"
+                        ? "bg-blue-200 hover:bg-blue-400"
+                        : "bg-emerald-200 hover:bg-emerald-400"
+                  }`}
+                  title={s.title}
+                />
+              ))}
             </div>
           </div>
 
@@ -329,20 +356,6 @@ export function OnboardingGuide({ open, onOpenChange }: OnboardingGuideProps) {
               Anterior
             </Button>
 
-            <div className="flex gap-1 flex-wrap justify-center">
-              {onboardingSteps.map((s, index) => (
-                <Button
-                  key={s.id}
-                  variant={index === currentStep ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleGoToStep(s.id)}
-                  className="w-8 h-8 p-0"
-                >
-                  {index + 1}
-                </Button>
-              ))}
-            </div>
-
             <Button
               onClick={handleNext}
               disabled={currentStep === onboardingSteps.length - 1}
@@ -357,11 +370,11 @@ export function OnboardingGuide({ open, onOpenChange }: OnboardingGuideProps) {
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
               <CheckCircle2 className="h-8 w-8 text-green-600 mx-auto mb-2" />
               <p className="font-semibold text-green-900">
-                Parabéns! Você completou o guia de onboarding.
+                Pronto! Agora acesse o Fluxo Guiado.
               </p>
               <p className="text-sm text-green-800 mt-1">
-                Agora você está pronto para usar a plataforma Black Belt
-                Consultoria!
+                O Fluxo Guiado acompanha o progresso de cada empresa e permite
+                exportar todos os PDFs entregáveis.
               </p>
             </div>
           )}

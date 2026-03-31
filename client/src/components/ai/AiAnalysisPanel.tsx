@@ -25,6 +25,8 @@ import {
   AlertTriangle,
   Sparkles,
   FileText,
+  Info,
+  Cpu,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -143,6 +145,8 @@ export default function AiAnalysisPanel({
     );
   }
 
+  const isRuleBased = analysis?.metadata?.model === "rule-based";
+
   // Exibir analise completa
   return (
     <div className="space-y-4">
@@ -154,13 +158,22 @@ export default function AiAnalysisPanel({
               <CheckCircle2 className="w-5 h-5 text-green-600" />
               Etapa 1: Análise COPSOQ-II
             </CardTitle>
-            <Badge variant="outline" className="bg-purple-50 text-purple-700">
-              <Sparkles className="w-3 h-3 mr-1" />
-              Gerado por IA
-            </Badge>
+            {isRuleBased ? (
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                <Cpu className="w-3 h-3 mr-1" />
+                Análise Automatizada
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="bg-purple-50 text-purple-700">
+                <Sparkles className="w-3 h-3 mr-1" />
+                Gerado por IA
+              </Badge>
+            )}
           </div>
           <CardDescription>
-            Análise gerada automaticamente a partir das respostas da avaliação
+            {isRuleBased
+              ? "Análise gerada por regras automáticas. Configure a chave de IA para uma análise mais detalhada."
+              : "Análise gerada automaticamente a partir das respostas da avaliação"}
           </CardDescription>
         </CardHeader>
       </Card>

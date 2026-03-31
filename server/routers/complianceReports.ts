@@ -1,29 +1,28 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { publicProcedure, router } from "../_core/trpc";
-import { requireActiveSubscription } from "../_core/subscriptionMiddleware";
+import { tenantProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { complianceDocuments } from "../../drizzle/schema_nr01";
 import { eq, and, desc } from "drizzle-orm";
 
 export const complianceReportsRouter = router({
   // Listar documentos de compliance
-  list: publicProcedure
+  list: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
         documentType: z.string().optional(),
         status: z.string().optional(),
         limit: z.number().default(50),
         offset: z.number().default(0),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
-      const conditions = [eq(complianceDocuments.tenantId, input.tenantId)];
+      const conditions = [eq(complianceDocuments.tenantId, ctx.tenantId!)];
 
       if (input.documentType) {
         conditions.push(
@@ -47,14 +46,14 @@ export const complianceReportsRouter = router({
     }),
 
   // Obter documento por ID
-  get: publicProcedure
+  get: tenantProcedure
     .input(
       z.object({
         id: z.string(),
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -68,7 +67,7 @@ export const complianceReportsRouter = router({
         .where(
           and(
             eq(complianceDocuments.id, input.id),
-            eq(complianceDocuments.tenantId, input.tenantId)
+            eq(complianceDocuments.tenantId, ctx.tenantId!)
           )
         );
 
@@ -83,23 +82,22 @@ export const complianceReportsRouter = router({
     }),
 
   // Criar novo documento
-  create: publicProcedure
+  create: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
         documentType: z.string(),
         title: z.string(),
         description: z.string().optional(),
         fileUrl: z.string().optional(),
         version: z.string(),
-        validFrom: z.date(),
-        validUntil: z.date().optional(),
+        validFrom: z.coerce.date(),
+        validUntil: z.coerce.date().optional(),
         signedBy: z.string().optional(),
-        signedAt: z.date().optional(),
+        signedAt: z.coerce.date().optional(),
       })
     )
-    .mutation(async ({ input }) => {
-      await requireActiveSubscription(input.tenantId);
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -111,7 +109,7 @@ export const complianceReportsRouter = router({
 
       await db.insert(complianceDocuments).values({
         id,
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         documentType: input.documentType as any,
         title: input.title,
         description: input.description || null,
@@ -130,14 +128,14 @@ export const complianceReportsRouter = router({
     }),
 
   // Atualizar documento
-  update: publicProcedure
+  update: tenantProcedure
     .input(
       z.object({
         id: z.string(),
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
       }).passthrough()
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -156,7 +154,7 @@ export const complianceReportsRouter = router({
         .where(
           and(
             eq(complianceDocuments.id, id),
-            eq(complianceDocuments.tenantId, tenantId)
+            eq(complianceDocuments.tenantId, ctx.tenantId!)
           )
         );
 
@@ -164,14 +162,14 @@ export const complianceReportsRouter = router({
     }),
 
   // Deletar documento
-  delete: publicProcedure
+  delete: tenantProcedure
     .input(
       z.object({
         id: z.string(),
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -184,7 +182,7 @@ export const complianceReportsRouter = router({
         .where(
           and(
             eq(complianceDocuments.id, input.id),
-            eq(complianceDocuments.tenantId, input.tenantId)
+            eq(complianceDocuments.tenantId, ctx.tenantId!)
           )
         );
 
@@ -192,16 +190,15 @@ export const complianceReportsRouter = router({
     }),
 
   // Assinar documento
-  sign: publicProcedure
+  sign: tenantProcedure
     .input(
       z.object({
         id: z.string(),
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
         signedBy: z.string(),
       })
     )
-    .mutation(async ({ input }) => {
-      await requireActiveSubscription(input.tenantId);
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -220,7 +217,7 @@ export const complianceReportsRouter = router({
         .where(
           and(
             eq(complianceDocuments.id, input.id),
-            eq(complianceDocuments.tenantId, input.tenantId)
+            eq(complianceDocuments.tenantId, ctx.tenantId!)
           )
         );
 
@@ -228,14 +225,14 @@ export const complianceReportsRouter = router({
     }),
 
   // Arquivar documento
-  archive: publicProcedure
+  archive: tenantProcedure
     .input(
       z.object({
         id: z.string(),
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -252,7 +249,7 @@ export const complianceReportsRouter = router({
         .where(
           and(
             eq(complianceDocuments.id, input.id),
-            eq(complianceDocuments.tenantId, input.tenantId)
+            eq(complianceDocuments.tenantId, ctx.tenantId!)
           )
         );
 

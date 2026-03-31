@@ -15,12 +15,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useTenant } from "@/contexts/TenantContext";
 import { trpc } from "@/lib/trpc";
 import {
@@ -29,7 +23,6 @@ import {
   Download,
   Eye,
   FileText,
-  MoreVertical,
   Plus,
   AlertTriangle,
 } from "lucide-react";
@@ -40,12 +33,15 @@ import {
   generateComplianceReport,
   exportToPDF,
 } from "@/lib/exportUtils";
+import { toast } from "sonner";
 
 export default function ComplianceReports() {
   const { selectedTenant } = useTenant();
+  const { data: user } = trpc.auth.me.useQuery();
+  const effectiveId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
 
-  if (!selectedTenant) {
+  if (!effectiveId) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-12">
@@ -59,7 +55,7 @@ export default function ComplianceReports() {
     );
   }
 
-  const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const tenantId = effectiveId;
 
   const { data: complianceDocs = [] } = trpc.complianceReports.list.useQuery(
     { tenantId: tenantId ?? "" },
@@ -284,58 +280,17 @@ export default function ComplianceReports() {
                         {report.status}
                       </span>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => setSelectedReport(report.id)}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          Visualizar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            const reportText = generateComplianceReport([
-                              report,
-                            ]);
-                            exportToPDF(
-                              reportText,
-                              `compliance_${report.id}_${new Date().toISOString().split("T")[0]}.txt`
-                            );
-                          }}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Exportar Texto
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            exportToJSON(
-                              [report],
-                              `compliance_${report.id}_${new Date().toISOString().split("T")[0]}.json`
-                            );
-                          }}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Exportar JSON
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            exportToExcel(
-                              [report],
-                              `compliance_${report.id}_${new Date().toISOString().split("T")[0]}.xlsx`,
-                              "Compliance"
-                            );
-                          }}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Exportar Excel
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedReport(report.id)} title="Visualizar">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                        const reportText = generateComplianceReport([report]);
+                        exportToPDF(reportText, `compliance_${report.id}_${new Date().toISOString().split("T")[0]}.txt`);
+                      }} title="Exportar Texto">
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -458,15 +413,18 @@ export default function ComplianceReports() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-3">
-                <Button className="w-full justify-start" variant="outline">
+                <Button className="w-full justify-start" variant="outline" onClick={() => {
+                  const reportText = generateComplianceReport(reports);
+                  exportToPDF(reportText, `compliance_completo_${new Date().toISOString().split("T")[0]}.txt`);
+                }}>
                   <FileText className="h-4 w-4 mr-2" />
                   Exportar como PDF
                 </Button>
-                <Button className="w-full justify-start" variant="outline">
+                <Button className="w-full justify-start" variant="outline" onClick={() => toast.info("Formato em desenvolvimento. Use PDF.")}>
                   <FileText className="h-4 w-4 mr-2" />
                   Exportar como Excel
                 </Button>
-                <Button className="w-full justify-start" variant="outline">
+                <Button className="w-full justify-start" variant="outline" onClick={() => toast.info("Formato em desenvolvimento. Use PDF.")}>
                   <FileText className="h-4 w-4 mr-2" />
                   Exportar como Word
                 </Button>

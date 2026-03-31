@@ -1,7 +1,8 @@
 /**
  * PRICING PAGE
- * 
+ *
  * Página pública de pricing mostrando todos os planos disponíveis
+ * Alinhada com a Landing Page (CPF/CNPJ, SamurAI)
  */
 
 import { useState } from "react";
@@ -11,7 +12,7 @@ import { PricingCard } from "@/components/subscription/PricingCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Check, X } from "lucide-react";
+import { Loader2, Check, X, Sparkles, Shield, Building2 } from "lucide-react";
 
 export default function Pricing() {
   const navigate = useNavigate();
@@ -19,14 +20,13 @@ export default function Pricing() {
 
   // Buscar planos públicos
   const { data: plans, isLoading } = trpc.subscriptions.listPublicPlans.useQuery();
-  
+
   // Buscar assinatura atual (se estiver logado)
   const { data: currentSubscription } = trpc.subscriptions.getCurrentSubscription.useQuery(undefined, {
     retry: false,
   });
 
   const handleSelectPlan = (planId: string) => {
-    // Redirecionar para checkout
     navigate(`/subscription/checkout?plan=${planId}&cycle=${billingCycle}`);
   };
 
@@ -38,51 +38,65 @@ export default function Pricing() {
     );
   }
 
-  // Mapear features dos planos
+  // Features alinhadas com a Landing Page
   const planFeatures = {
     starter: [
-      "1 empresa",
-      "Até 5 usuários",
-      "1 GB de armazenamento",
-      "Avaliações de risco ilimitadas",
-      "Relatórios básicos",
+      "Cadastro via CPF (pessoa física)",
+      "3 empresas/mês incluídas",
+      "20 convites COPSOQ inclusos/mês",
+      "SamurAI completo (10 fases NR-01)",
+      "Propostas comerciais automáticas",
+      "Relatórios padrão + Exportação PDF",
       "Suporte por email",
-      "14 dias de teste grátis",
+      "R$ 12,00/convite COPSOQ excedente",
     ],
     pro: [
-      "Até 10 empresas",
-      "Até 50 usuários por empresa",
-      "10 GB de armazenamento",
-      "Avaliações de risco ilimitadas",
-      "Relatórios avançados com insights",
-      "API de integração",
-      "Exportação de dados",
-      "Suporte prioritário por email e chat",
-      "14 dias de teste grátis",
+      "Cadastro via CNPJ (pessoa jurídica)",
+      "10 empresas/mês incluídas",
+      "100 convites COPSOQ inclusos/mês",
+      "SamurAI completo (10 fases NR-01)",
+      "Propostas comerciais automáticas",
+      "Benchmark setorial + PDF ilimitado",
+      "Suporte prioritário",
+      "R$ 10,00/convite COPSOQ excedente",
     ],
     enterprise: [
-      "Empresas ilimitadas",
-      "Usuários ilimitados",
-      "Armazenamento ilimitado",
-      "Avaliações de risco ilimitadas",
-      "Relatórios avançados personalizados",
-      "API completa + Webhooks",
-      "White-label (marca própria)",
-      "Domínio personalizado",
-      "SLA 99.9% de uptime",
-      "Suporte dedicado 24/7",
-      "Gerente de conta dedicado",
-      "30 dias de teste grátis",
+      "Cadastro via CNPJ (pessoa jurídica)",
+      "30 empresas/mês incluídas",
+      "500 convites COPSOQ inclusos/mês",
+      "Tudo do Professional",
+      "White-label (sua marca) + API access",
+      "Relatórios personalizados",
+      "Suporte dedicado",
+      "R$ 8,00/convite COPSOQ excedente",
     ],
+  };
+
+  // Map plan names to match database (starter, pro/professional, enterprise)
+  const getPlanFeatures = (planName: string) => {
+    const key = planName.toLowerCase();
+    if (key.includes("starter")) return planFeatures.starter;
+    if (key.includes("pro")) return planFeatures.pro;
+    if (key.includes("enterprise")) return planFeatures.enterprise;
+    return planFeatures.starter;
+  };
+
+  const getPlanPopular = (planName: string) => {
+    const key = planName.toLowerCase();
+    return key.includes("pro");
   };
 
   return (
     <div className="container mx-auto py-12 px-4">
       {/* Header */}
       <div className="text-center mb-12">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 text-amber-400 text-sm font-medium mb-6">
+          <Sparkles className="h-4 w-4" />
+          Powered by SamurAI — Inteligência Artificial
+        </div>
         <h1 className="text-4xl font-bold mb-4">Escolha o Plano Ideal</h1>
         <p className="text-xl text-muted-foreground mb-8">
-          Gestão completa de riscos psicossociais e precificação inteligente
+          Gestão completa de riscos psicossociais com IA. Convites COPSOQ inclusos em todos os planos.
         </p>
 
         {/* Billing Cycle Toggle */}
@@ -112,8 +126,8 @@ export default function Pricing() {
             monthlyPrice={plan.monthlyPrice}
             yearlyPrice={plan.yearlyPrice}
             billingCycle={billingCycle}
-            features={planFeatures[plan.name as keyof typeof planFeatures] || []}
-            isPopular={plan.name === "pro"}
+            features={getPlanFeatures(plan.name)}
+            isPopular={getPlanPopular(plan.name)}
             isCurrentPlan={currentSubscription?.planId === plan.id}
             onSelect={() => handleSelectPlan(plan.id)}
           />
@@ -130,24 +144,43 @@ export default function Pricing() {
                 <thead>
                   <tr className="border-b">
                     <th className="text-left p-4 font-semibold">Recurso</th>
-                    <th className="text-center p-4 font-semibold">Starter</th>
-                    <th className="text-center p-4 font-semibold">Pro</th>
-                    <th className="text-center p-4 font-semibold">Enterprise</th>
+                    <th className="text-center p-4 font-semibold">
+                      <div className="flex flex-col items-center gap-1">
+                        <span>Starter</span>
+                        <span className="text-xs text-muted-foreground font-normal">CPF</span>
+                      </div>
+                    </th>
+                    <th className="text-center p-4 font-semibold">
+                      <div className="flex flex-col items-center gap-1">
+                        <span>Professional</span>
+                        <span className="text-xs text-amber-500 font-normal">CNPJ — Popular</span>
+                      </div>
+                    </th>
+                    <th className="text-center p-4 font-semibold">
+                      <div className="flex flex-col items-center gap-1">
+                        <span>Enterprise</span>
+                        <span className="text-xs text-muted-foreground font-normal">CNPJ</span>
+                      </div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    { name: "Empresas", starter: "1", pro: "10", enterprise: "Ilimitadas" },
-                    { name: "Usuários", starter: "5", pro: "50/empresa", enterprise: "Ilimitados" },
-                    { name: "Armazenamento", starter: "1 GB", pro: "10 GB", enterprise: "Ilimitado" },
-                    { name: "Avaliações de Risco", starter: true, pro: true, enterprise: true },
-                    { name: "Relatórios Básicos", starter: true, pro: true, enterprise: true },
-                    { name: "Relatórios Avançados", starter: false, pro: true, enterprise: true },
-                    { name: "API de Integração", starter: false, pro: true, enterprise: true },
-                    { name: "Webhooks", starter: false, pro: false, enterprise: true },
+                    { name: "Tipo de Cadastro", starter: "CPF", pro: "CNPJ", enterprise: "CNPJ" },
+                    { name: "Empresas incluídas/mês", starter: "3", pro: "10", enterprise: "30" },
+                    { name: "Convites COPSOQ inclusos/mês", starter: "20", pro: "100", enterprise: "500" },
+                    { name: "Excedente por convite", starter: "R$ 12", pro: "R$ 10", enterprise: "R$ 8" },
+                    { name: "SamurAI (Agente IA)", starter: "Completo (10 fases)", pro: "Completo (10 fases)", enterprise: "Completo (10 fases)" },
+                    { name: "Propostas Comerciais", starter: true, pro: true, enterprise: true },
+                    { name: "COPSOQ-II", starter: true, pro: true, enterprise: true },
+                    { name: "Inventário de Riscos", starter: true, pro: true, enterprise: true },
+                    { name: "Plano de Ação", starter: true, pro: true, enterprise: true },
+                    { name: "Benchmark Setorial", starter: false, pro: true, enterprise: true },
+                    { name: "PDF Export", starter: true, pro: true, enterprise: true },
                     { name: "White-label", starter: false, pro: false, enterprise: true },
-                    { name: "SLA", starter: "Melhor esforço", pro: "99.0%", enterprise: "99.9%" },
-                    { name: "Suporte", starter: "Email", pro: "Email + Chat", enterprise: "Dedicado 24/7" },
+                    { name: "API Access", starter: false, pro: false, enterprise: true },
+                    { name: "Relatórios Personalizados", starter: false, pro: false, enterprise: true },
+                    { name: "Suporte", starter: "Email", pro: "Prioritário", enterprise: "Dedicado" },
                   ].map((feature, index) => (
                     <tr key={index} className="border-b last:border-b-0">
                       <td className="p-4 font-medium">{feature.name}</td>
@@ -199,24 +232,24 @@ export default function Pricing() {
         <div className="space-y-4">
           {[
             {
+              q: "Qual a diferenca entre CPF e CNPJ?",
+              a: "O plano Starter (CPF) e para psicologos e consultores autonomos que atuam como pessoa fisica. Os planos Professional e Enterprise (CNPJ) sao para consultorias formalizadas como pessoa juridica, com mais recursos e melhor custo por empresa.",
+            },
+            {
+              q: "O que e o SamurAI?",
+              a: "O SamurAI e nosso agente de inteligencia artificial que automatiza as 10 fases da gestao de riscos psicossociais (NR-01). Ele faz desde o cadastro da empresa ate a emissao do certificado de conformidade, gerando todos os documentos necessarios.",
+            },
+            {
               q: "Posso mudar de plano a qualquer momento?",
-              a: "Sim! Você pode fazer upgrade ou downgrade do seu plano a qualquer momento. O ajuste será proporcional ao tempo restante.",
+              a: "Sim! Voce pode fazer upgrade ou downgrade do seu plano a qualquer momento. O ajuste sera proporcional ao tempo restante.",
             },
             {
-              q: "O que acontece após o período de teste?",
-              a: "Após o período de teste (14 ou 30 dias), você será cobrado automaticamente conforme o plano escolhido. Você pode cancelar a qualquer momento durante o trial sem custo.",
+              q: "Como funciona a empresa adicional?",
+              a: "Cada plano inclui um numero de empresas por mes. Se precisar atender mais empresas, basta pagar o valor adicional por empresa conforme seu plano.",
             },
             {
-              q: "Como funcionam os descontos anuais?",
-              a: "Ao escolher o pagamento anual, você recebe 17% de desconto em relação ao pagamento mensal. É como ganhar 2 meses grátis!",
-            },
-            {
-              q: "Posso cancelar minha assinatura?",
-              a: "Sim, você pode cancelar sua assinatura a qualquer momento. Após o cancelamento, você continuará tendo acesso até o final do período pago.",
-            },
-            {
-              q: "Quais métodos de pagamento são aceitos?",
-              a: "Aceitamos cartões de crédito via Stripe (internacional) e Mercado Pago (Brasil). Para planos Enterprise, também aceitamos boleto e transferência bancária.",
+              q: "Quais metodos de pagamento sao aceitos?",
+              a: "Aceitamos cartoes de credito via Stripe e Mercado Pago (PIX, boleto). Para planos Enterprise, tambem aceitamos transferencia bancaria.",
             },
           ].map((faq, index) => (
             <Card key={index}>
@@ -237,7 +270,7 @@ export default function Pricing() {
           <CardHeader>
             <CardTitle className="text-2xl">Precisa de um Plano Personalizado?</CardTitle>
             <CardDescription className="text-primary-foreground/80">
-              Para grandes empresas ou necessidades específicas, entre em contato
+              Para grandes consultorias ou necessidades especificas, entre em contato
             </CardDescription>
           </CardHeader>
           <CardContent>

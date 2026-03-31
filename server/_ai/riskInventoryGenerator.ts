@@ -82,15 +82,15 @@ function formatScoresForPrompt(report: Record<string, unknown>): string {
     averageDemandScore: "Demandas Quantitativas",
     averageControlScore: "Controle sobre o Trabalho",
     averageSupportScore: "Suporte Social",
-    averageLeadershipScore: "Lideranca",
+    averageLeadershipScore: "Liderança",
     averageCommunityScore: "Comunidade no Trabalho",
     averageMeaningScore: "Significado do Trabalho",
-    averageTrustScore: "Confianca",
-    averageJusticeScore: "Justica",
-    averageInsecurityScore: "Inseguranca no Trabalho",
-    averageMentalHealthScore: "Saude Mental",
+    averageTrustScore: "Confiança",
+    averageJusticeScore: "Justiça",
+    averageInsecurityScore: "Insegurança no Trabalho",
+    averageMentalHealthScore: "Saúde Mental",
     averageBurnoutScore: "Burnout",
-    averageViolenceScore: "Violencia e Assedio",
+    averageViolenceScore: "Violência e Assédio",
   };
 
   return Object.entries(dimensionColumns)
@@ -173,23 +173,23 @@ export async function generateRiskInventory(
     .limit(1);
 
   if (!report) {
-    throw new Error("Report COPSOQ-II nao encontrado. Gere o relatorio base primeiro.");
+    throw new Error("Report COPSOQ-II não encontrado. Gere o relatório base primeiro.");
   }
 
   const aiAnalysis = report.aiAnalysis as CopsoqAnalysisResult | null;
   if (!aiAnalysis) {
-    throw new Error("Analise de IA nao encontrada. Execute ai.analyzeCopsoq primeiro.");
+    throw new Error("Análise de IA não encontrada. Execute ai.analyzeCopsoq primeiro.");
   }
 
   // 4. Montar prompt do usuario
   const scoresText = formatScoresForPrompt(report as Record<string, unknown>);
   const analysisText = formatAiAnalysisForPrompt(aiAnalysis);
 
-  const userPrompt = `## Dados para Geracao do Inventario de Riscos
+  const userPrompt = `## Dados para Geração do Inventário de Riscos
 
 **Empresa:** ${tenantName}
 **Setor:** ${sectorName || "Geral"}
-**Trabalhadores expostos:** ${workerCount || report.totalRespondents || "Nao informado"}
+**Trabalhadores expostos:** ${workerCount || report.totalRespondents || "Não informado"}
 **Avaliacao:** ${assessment.title}
 
 ### Scores COPSOQ-II (medias por dimensao)
@@ -250,11 +250,11 @@ Gere o inventario de riscos psicossociais para esta organizacao, seguindo o cata
     log.error("RiskInventory: Failed to parse LLM response", {
       content: rawContent.substring(0, 500),
     });
-    throw new Error("RiskInventory: Resposta do LLM nao e JSON valido");
+    throw new Error("RiskInventory: Resposta do LLM não é JSON válido");
   }
 
   if (!Array.isArray(parsed.items) || parsed.items.length === 0) {
-    throw new Error("RiskInventory: LLM nao gerou itens de inventario");
+    throw new Error("RiskInventory: LLM não gerou itens de inventário");
   }
 
   // 7. Persistir — criar riskAssessment
@@ -263,7 +263,7 @@ Gere o inventario de riscos psicossociais para esta organizacao, seguindo o cata
     id: riskAssessmentId,
     tenantId,
     sectorId: assessment.sectorId,
-    title: `Inventario de Riscos Psicossociais — ${sectorName || "Geral"} (IA)`,
+    title: `Inventário de Riscos Psicossociais — ${sectorName || "Geral"} (IA)`,
     description: parsed.companyContext,
     assessmentDate: new Date(),
     assessor: "IA — Gemini 2.5 Flash",
@@ -297,7 +297,7 @@ Gere o inventario de riscos psicossociais para esta organizacao, seguindo o cata
     id: compDocId,
     tenantId,
     documentType: "inventory",
-    title: `Inventario de Riscos Psicossociais — ${sectorName || "Geral"}`,
+    title: `Inventário de Riscos Psicossociais — ${sectorName || "Geral"}`,
     description: `Gerado automaticamente por IA a partir da avaliacao COPSOQ-II "${assessment.title}". ${parsed.items.length} riscos identificados.`,
     version: "1.0",
     validFrom: new Date(),

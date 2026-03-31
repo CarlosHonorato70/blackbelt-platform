@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { publicProcedure, router, protectedProcedure, tenantProcedure } from "../_core/trpc";
+import { tenantProcedure, router, protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
 import * as db from "../db";
 import {
@@ -10,8 +10,11 @@ import {
   pricingParameters,
   proposals,
   proposalItems,
+  proposalPayments,
+  tenants,
 } from "../../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
+import { log } from "../_core/logger";
 
 export const pricingRouter = router({
   // ============================================================================
@@ -19,22 +22,22 @@ export const pricingRouter = router({
   // ============================================================================
 
   clients: router({
-    list: publicProcedure
+    list: tenantProcedure
       .input(
         z.object({
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
           limit: z.number().default(50),
           offset: z.number().default(0),
-        })
+        }).optional().default({})
       )
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) return [];
 
         const clientsList = await db
           .select()
           .from(clients)
-          .where(eq(clients.tenantId, input.tenantId))
+          .where(eq(clients.tenantId, ctx.tenantId!))
           .orderBy(desc(clients.createdAt))
           .limit(input.limit)
           .offset(input.offset);
@@ -42,14 +45,14 @@ export const pricingRouter = router({
         return clientsList;
       }),
 
-    get: publicProcedure
+    get: tenantProcedure
       .input(
         z.object({
           id: z.string(),
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         })
       )
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -61,7 +64,7 @@ export const pricingRouter = router({
           .select()
           .from(clients)
           .where(
-            and(eq(clients.id, input.id), eq(clients.tenantId, input.tenantId))
+            and(eq(clients.id, input.id), eq(clients.tenantId, ctx.tenantId!))
           );
 
         if (!client) {
@@ -74,10 +77,10 @@ export const pricingRouter = router({
         return client;
       }),
 
-    create: publicProcedure
+    create: tenantProcedure
       .input(
         z.object({
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
           name: z.string(),
           cnpj: z.string().optional(),
           industry: z.string().optional(),
@@ -94,7 +97,7 @@ export const pricingRouter = router({
           zipCode: z.string().optional(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -106,7 +109,7 @@ export const pricingRouter = router({
 
         await db.insert(clients).values({
           id,
-          tenantId: input.tenantId,
+          tenantId: ctx.tenantId!,
           name: input.name,
           cnpj: input.cnpj || null,
           industry: input.industry || null,
@@ -129,14 +132,14 @@ export const pricingRouter = router({
         return { id };
       }),
 
-    update: publicProcedure
+    update: tenantProcedure
       .input(
         z.object({
           id: z.string(),
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         }).passthrough()
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -157,14 +160,14 @@ export const pricingRouter = router({
         return { success: true };
       }),
 
-    delete: publicProcedure
+    delete: tenantProcedure
       .input(
         z.object({
           id: z.string(),
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -175,7 +178,7 @@ export const pricingRouter = router({
         await db
           .delete(clients)
           .where(
-            and(eq(clients.id, input.id), eq(clients.tenantId, input.tenantId))
+            and(eq(clients.id, input.id), eq(clients.tenantId, ctx.tenantId!))
           );
 
         return { success: true };
@@ -187,20 +190,58 @@ export const pricingRouter = router({
   // ============================================================================
 
   services: router({
-    list: publicProcedure
+    list: tenantProcedure
       .input(
         z.object({
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
           category: z.string().optional(),
           limit: z.number().default(50),
           offset: z.number().default(0),
         })
       )
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) return [];
 
-        const conditions = [eq(services.tenantId, input.tenantId)];
+        const tenantId = ctx.tenantId!;
+
+        // Auto-seed: if consultant has no services, copy from admin as starting template
+        if (!input.category && input.offset === 0) {
+          const [countResult] = await db.select({ count: services.id }).from(services)
+            .where(eq(services.tenantId, tenantId)).limit(1);
+          if (!countResult) {
+            try {
+              const [adminTenant] = await db.select({ id: tenants.id }).from(tenants)
+                .where(eq(tenants.tenantType, "admin")).limit(1);
+              if (adminTenant) {
+                const adminServices = await db.select().from(services)
+                  .where(eq(services.tenantId, adminTenant.id));
+                if (adminServices.length > 0) {
+                  for (const svc of adminServices) {
+                    await db.insert(services).values({
+                      id: nanoid(),
+                      tenantId,
+                      name: svc.name,
+                      description: svc.description,
+                      category: svc.category,
+                      unit: svc.unit,
+                      minPrice: svc.minPrice,
+                      maxPrice: svc.maxPrice,
+                      isActive: svc.isActive,
+                      createdAt: new Date(),
+                      updatedAt: new Date(),
+                    });
+                  }
+                  log.info(`[Pricing] Auto-seeded ${adminServices.length} services from admin to tenant ${tenantId}`);
+                }
+              }
+            } catch (e: any) {
+              log.warn(`[Pricing] Auto-seed failed: ${e.message}`);
+            }
+          }
+        }
+
+        const conditions = [eq(services.tenantId, tenantId)];
 
         if (input.category) {
           conditions.push(eq(services.category, input.category));
@@ -217,14 +258,14 @@ export const pricingRouter = router({
         return servicesList;
       }),
 
-    get: publicProcedure
+    get: tenantProcedure
       .input(
         z.object({
           id: z.string(),
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         })
       )
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -238,7 +279,7 @@ export const pricingRouter = router({
           .where(
             and(
               eq(services.id, input.id),
-              eq(services.tenantId, input.tenantId)
+              eq(services.tenantId, ctx.tenantId!)
             )
           );
 
@@ -252,10 +293,10 @@ export const pricingRouter = router({
         return service;
       }),
 
-    create: publicProcedure
+    create: tenantProcedure
       .input(
         z.object({
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
           name: z.string(),
           description: z.string().optional(),
           category: z.string(),
@@ -264,7 +305,7 @@ export const pricingRouter = router({
           maxPrice: z.number(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -276,7 +317,7 @@ export const pricingRouter = router({
 
         await db.insert(services).values({
           id,
-          tenantId: input.tenantId,
+          tenantId: ctx.tenantId!,
           name: input.name,
           description: input.description || null,
           category: input.category,
@@ -291,14 +332,14 @@ export const pricingRouter = router({
         return { id };
       }),
 
-    update: publicProcedure
+    update: tenantProcedure
       .input(
         z.object({
           id: z.string(),
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         }).passthrough()
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -319,14 +360,14 @@ export const pricingRouter = router({
         return { success: true };
       }),
 
-    delete: publicProcedure
+    delete: tenantProcedure
       .input(
         z.object({
           id: z.string(),
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -339,7 +380,7 @@ export const pricingRouter = router({
           .where(
             and(
               eq(services.id, input.id),
-              eq(services.tenantId, input.tenantId)
+              eq(services.tenantId, ctx.tenantId!)
             )
           );
 
@@ -352,28 +393,65 @@ export const pricingRouter = router({
   // ============================================================================
 
   parameters: router({
-    get: publicProcedure
+    get: tenantProcedure
       .input(
         z.object({
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         })
       )
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) return null;
+
+        const tenantId = ctx.tenantId!;
 
         const [params] = await db
           .select()
           .from(pricingParameters)
-          .where(eq(pricingParameters.tenantId, input.tenantId));
+          .where(eq(pricingParameters.tenantId, tenantId));
 
-        return params || null;
+        if (params) return params;
+
+        // Auto-seed: copy pricing parameters from admin as starting template
+        try {
+          const [adminTenant] = await db.select({ id: tenants.id }).from(tenants)
+            .where(eq(tenants.tenantType, "admin")).limit(1);
+          if (adminTenant) {
+            const [adminParams] = await db.select().from(pricingParameters)
+              .where(eq(pricingParameters.tenantId, adminTenant.id));
+            if (adminParams) {
+              const newId = nanoid();
+              await db.insert(pricingParameters).values({
+                id: newId,
+                tenantId,
+                monthlyFixedCost: adminParams.monthlyFixedCost,
+                laborCost: adminParams.laborCost,
+                productiveHoursPerMonth: adminParams.productiveHoursPerMonth,
+                defaultTaxRegime: adminParams.defaultTaxRegime,
+                volumeDiscounts: adminParams.volumeDiscounts,
+                riskAdjustment: adminParams.riskAdjustment,
+                seniorityAdjustment: adminParams.seniorityAdjustment,
+                taxRates: adminParams.taxRates,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              });
+              log.info(`[Pricing] Auto-seeded pricing parameters from admin to tenant ${tenantId}`);
+              const [newParams] = await db.select().from(pricingParameters)
+                .where(eq(pricingParameters.tenantId, tenantId));
+              return newParams || null;
+            }
+          }
+        } catch (e: any) {
+          log.warn(`[Pricing] Auto-seed parameters failed: ${e.message}`);
+        }
+
+        return null;
       }),
 
-    upsert: publicProcedure
+    upsert: tenantProcedure
       .input(
         z.object({
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
           monthlyFixedCost: z.number(),
           laborCost: z.number(),
           productiveHoursPerMonth: z.number(),
@@ -384,7 +462,7 @@ export const pricingRouter = router({
           taxRates: z.any().optional(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -395,7 +473,7 @@ export const pricingRouter = router({
         const existing = await db
           .select()
           .from(pricingParameters)
-          .where(eq(pricingParameters.tenantId, input.tenantId));
+          .where(eq(pricingParameters.tenantId, ctx.tenantId!));
 
         if (existing.length > 0) {
           // Update
@@ -412,13 +490,13 @@ export const pricingRouter = router({
               taxRates: input.taxRates || null,
               updatedAt: new Date(),
             })
-            .where(eq(pricingParameters.tenantId, input.tenantId));
+            .where(eq(pricingParameters.tenantId, ctx.tenantId!));
         } else {
           // Insert
           const id = nanoid();
           await db.insert(pricingParameters).values({
             id,
-            tenantId: input.tenantId,
+            tenantId: ctx.tenantId!,
             monthlyFixedCost: input.monthlyFixedCost,
             laborCost: input.laborCost,
             productiveHoursPerMonth: input.productiveHoursPerMonth,
@@ -441,21 +519,21 @@ export const pricingRouter = router({
   // ============================================================================
 
   proposals: router({
-    list: publicProcedure
+    list: tenantProcedure
       .input(
         z.object({
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
           clientId: z.string().optional(),
           status: z.string().optional(),
           limit: z.number().default(50),
           offset: z.number().default(0),
         })
       )
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) return [];
 
-        const conditions = [eq(proposals.tenantId, input.tenantId)];
+        const conditions = [eq(proposals.tenantId, ctx.tenantId!)];
 
         if (input.clientId) {
           conditions.push(eq(proposals.clientId, input.clientId));
@@ -476,14 +554,14 @@ export const pricingRouter = router({
         return proposalsList;
       }),
 
-    get: publicProcedure
+    get: tenantProcedure
       .input(
         z.object({
           id: z.string(),
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         })
       )
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -497,7 +575,7 @@ export const pricingRouter = router({
           .where(
             and(
               eq(proposals.id, input.id),
-              eq(proposals.tenantId, input.tenantId)
+              eq(proposals.tenantId, ctx.tenantId!)
             )
           );
 
@@ -520,10 +598,10 @@ export const pricingRouter = router({
         };
       }),
 
-    create: publicProcedure
+    create: tenantProcedure
       .input(
         z.object({
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
           clientId: z.string(),
           title: z.string(),
           description: z.string().optional(),
@@ -539,7 +617,7 @@ export const pricingRouter = router({
           ),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -569,7 +647,7 @@ export const pricingRouter = router({
         // Criar proposta
         await db.insert(proposals).values({
           id,
-          tenantId: input.tenantId,
+          tenantId: ctx.tenantId!,
           clientId: input.clientId,
           title: input.title,
           description: input.description || null,
@@ -606,14 +684,14 @@ export const pricingRouter = router({
         return { id };
       }),
 
-    update: publicProcedure
+    update: tenantProcedure
       .input(
         z.object({
           id: z.string(),
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         }).passthrough()
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -634,14 +712,14 @@ export const pricingRouter = router({
         return { success: true };
       }),
 
-    delete: publicProcedure
+    delete: tenantProcedure
       .input(
         z.object({
           id: z.string(),
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -660,7 +738,7 @@ export const pricingRouter = router({
           .where(
             and(
               eq(proposals.id, input.id),
-              eq(proposals.tenantId, input.tenantId)
+              eq(proposals.tenantId, ctx.tenantId!)
             )
           );
 
@@ -673,13 +751,13 @@ export const pricingRouter = router({
   // ============================================================================
 
   calculate: router({
-    servicePrice: publicProcedure
+    servicePrice: tenantProcedure
       .input(
         z.object({
-          tenantId: z.string(),
+          tenantId: z.string().optional(),
         }).passthrough()
       )
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
           throw new TRPCError({
@@ -690,7 +768,7 @@ export const pricingRouter = router({
         const [params] = await db
           .select()
           .from(pricingParameters)
-          .where(eq(pricingParameters.tenantId, input.tenantId));
+          .where(eq(pricingParameters.tenantId, ctx.tenantId!));
 
         if (!params) {
           throw new TRPCError({
@@ -919,7 +997,10 @@ export const proposalsRouter = router({
   list: tenantProcedure
     .input(z.object({ clientId: z.string().optional() }))
     .query(async ({ ctx, input }) => {
-      return await db.listProposals(ctx.tenantId!, input.clientId);
+      // Proposals belong to the consultant, not the company
+      // When impersonating, use originalTenantId to show consultant's proposals
+      const effectiveTenantId = (ctx as any).originalTenantId || ctx.tenantId!;
+      return await db.listProposals(effectiveTenantId, input.clientId);
     }),
 
   create: tenantProcedure
@@ -966,7 +1047,7 @@ export const proposalsRouter = router({
         title: z.string().optional(),
         description: z.string().optional(),
         status: z
-          .enum(["draft", "sent", "accepted", "rejected", "expired"])
+          .enum(["draft", "pending", "sent", "accepted", "approved", "rejected", "expired"])
           .optional(),
         subtotal: z.number().int().optional(),
         discount: z.number().int().optional(),
@@ -1020,6 +1101,184 @@ export const proposalsRouter = router({
       if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
       await db.deleteProposalItem(input.itemId);
       return { success: true };
+    }),
+
+  // ============================================================================
+  // PAGAMENTOS
+  // ============================================================================
+
+  getPayments: tenantProcedure
+    .input(z.object({ proposalId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
+
+      // Verify proposal belongs to this tenant
+      const proposal = await db.getProposal(input.proposalId);
+      if (!proposal || proposal.tenantId !== ctx.tenantId!) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
+      }
+
+      const database = await getDb();
+      if (!database) return [];
+
+      const payments = await database
+        .select()
+        .from(proposalPayments)
+        .where(eq(proposalPayments.proposalId, input.proposalId))
+        .orderBy(proposalPayments.installment);
+
+      return payments;
+    }),
+
+  confirmPayment: tenantProcedure
+    .input(
+      z.object({
+        paymentId: z.string(),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
+
+      const database = await getDb();
+      if (!database) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Find the payment
+      const [payment] = await database
+        .select()
+        .from(proposalPayments)
+        .where(eq(proposalPayments.id, input.paymentId));
+
+      if (!payment) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Pagamento não encontrado" });
+      }
+
+      // Verify proposal belongs to this tenant
+      const proposal = await db.getProposal(payment.proposalId);
+      if (!proposal || proposal.tenantId !== ctx.tenantId!) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
+      }
+
+      // Mark payment as paid
+      await database
+        .update(proposalPayments)
+        .set({
+          status: "paid",
+          paidAt: new Date(),
+          paidBy: ctx.user.id,
+          notes: input.notes || null,
+        })
+        .where(eq(proposalPayments.id, input.paymentId));
+
+      // Check all payments for this proposal to update proposal paymentStatus
+      const allPayments = await database
+        .select()
+        .from(proposalPayments)
+        .where(eq(proposalPayments.proposalId, payment.proposalId));
+
+      // Count: the one we just updated is now paid
+      const paidCount = allPayments.filter(
+        (p) => p.status === "paid" || p.id === input.paymentId
+      ).length;
+      const totalCount = allPayments.length;
+
+      let newPaymentStatus: string;
+      if (paidCount >= totalCount) {
+        newPaymentStatus = "paid";
+      } else if (paidCount > 0) {
+        newPaymentStatus = "partial";
+      } else {
+        newPaymentStatus = "pending";
+      }
+
+      await database
+        .update(proposals)
+        .set({ paymentStatus: newPaymentStatus, updatedAt: new Date() })
+        .where(eq(proposals.id, payment.proposalId));
+
+      log.info(`[Payment] Confirmed payment ${input.paymentId} for proposal ${payment.proposalId} (${paidCount}/${totalCount})`);
+
+      return { success: true, paymentStatus: newPaymentStatus };
+    }),
+
+  getPaymentSettings: tenantProcedure
+    .query(async ({ ctx }) => {
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
+
+      const paymentPix = await db.getTenantSetting(ctx.tenantId!, "payment_pix");
+      const paymentBank = await db.getTenantSetting(ctx.tenantId!, "payment_bank");
+      const paymentInstructions = await db.getTenantSetting(ctx.tenantId!, "payment_instructions");
+
+      return {
+        paymentPix: paymentPix?.settingValue || "",
+        paymentBank: paymentBank?.settingValue || "",
+        paymentInstructions: paymentInstructions?.settingValue || "",
+      };
+    }),
+
+  savePaymentSettings: tenantProcedure
+    .input(
+      z.object({
+        paymentPix: z.string().optional(),
+        paymentBank: z.string().optional(),
+        paymentInstructions: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
+
+      if (input.paymentPix !== undefined) {
+        await db.setTenantSetting(ctx.tenantId!, "payment_pix", input.paymentPix);
+      }
+      if (input.paymentBank !== undefined) {
+        await db.setTenantSetting(ctx.tenantId!, "payment_bank", input.paymentBank);
+      }
+      if (input.paymentInstructions !== undefined) {
+        await db.setTenantSetting(ctx.tenantId!, "payment_instructions", input.paymentInstructions);
+      }
+
+      log.info(`[Payment] Settings saved for tenant ${ctx.tenantId}`);
+
+      return { success: true };
+    }),
+
+  // Check if company tenant has a paid final proposal (for menu visibility)
+  getPaymentStatus: protectedProcedure
+    .query(async ({ ctx }) => {
+      const database = await getDb();
+      if (!database) return { paid: false };
+
+      const tenantId = ctx.user?.tenantId;
+      if (!tenantId) return { paid: false };
+
+      // Find any approved + paid final proposal where this company is the target
+      const result = await database.select({
+        paymentStatus: proposals.paymentStatus,
+        status: proposals.status,
+      }).from(proposals)
+        .where(and(
+          eq(proposals.paymentStatus, "paid"),
+          eq(proposals.status, "approved"),
+        ))
+        .limit(10);
+
+      // Check if any of these proposals are linked to this company's tenant
+      // via client → tenant relationship or direct tenantId match
+      if (result.length > 0) return { paid: true };
+
+      // Also check via clients table
+      const { clients } = await import("../../drizzle/schema");
+      const [client] = await database.select().from(clients).where(eq(clients.tenantId, tenantId)).limit(1);
+      if (client) {
+        const [paidProposal] = await database.select({ id: proposals.id }).from(proposals)
+          .where(and(
+            eq(proposals.clientId, client.id),
+            eq(proposals.paymentStatus, "paid"),
+          )).limit(1);
+        if (paidProposal) return { paid: true };
+      }
+
+      return { paid: false };
     }),
 });
 

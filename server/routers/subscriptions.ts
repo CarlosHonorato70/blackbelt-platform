@@ -16,12 +16,153 @@ import {
   planFeatures,
   invoices,
   tenants,
+  tenantCredits,
+  creditTransactions,
+  pendingCopsoqPayments,
 } from "../../drizzle/schema";
+import { copsoqAssessments, copsoqInvites } from "../../drizzle/schema_nr01";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import crypto from "crypto";
 import { ensureTenantForUser } from "../_core/tenantHelpers";
+import { sendBulkCopsoqInvites } from "../_core/email";
+import { log } from "../_core/logger";
+import { createOneTimeCharge } from "./asaas";
+
+// Helper: libera convites pendentes após pagamento confirmado
+async function releasePendingInvites(db: any, payment: any) {
+  try {
+    const invitees = typeof payment.invitees === "string" ? JSON.parse(payment.invitees) : payment.invitees;
+
+    const assessmentId = `copsoq_${Date.now()}_${nanoid(8)}`;
+    await db.insert(copsoqAssessments).values({
+      id: assessmentId,
+      tenantId: payment.tenantId,
+      title: payment.assessmentTitle,
+      assessmentDate: new Date(),
+      status: "in_progress",
+    });
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    const invitesToSend = [];
+    for (const invitee of invitees) {
+      const inviteToken = crypto.randomBytes(32).toString("hex");
+      const inviteId = `invite_${Date.now()}_${nanoid(8)}`;
+
+      await db.insert(copsoqInvites).values({
+        id: inviteId,
+        assessmentId,
+        tenantId: payment.tenantId,
+        respondentEmail: invitee.email,
+        respondentName: invitee.name,
+        respondentPosition: invitee.position,
+        sectorId: invitee.sector,
+        inviteToken,
+        status: "pending",
+        expiresAt,
+      });
+
+      invitesToSend.push({
+        respondentEmail: invitee.email,
+        respondentName: invitee.name,
+        assessmentTitle: payment.assessmentTitle,
+        inviteToken,
+        expiresIn: 7,
+        tenantId: payment.tenantId,
+      });
+    }
+
+    const result = await sendBulkCopsoqInvites(invitesToSend);
+
+    for (const invitee of invitees) {
+      await db.update(copsoqInvites)
+        .set({ status: "sent", sentAt: new Date() })
+        .where(eq(copsoqInvites.respondentEmail, invitee.email));
+    }
+
+    // Update subscription counters
+    const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.tenantId, payment.tenantId)).limit(1);
+    if (sub) {
+      await db.update(subscriptions)
+        .set({
+          copsoqInvitesSent: (sub.copsoqInvitesSent || 0) + payment.totalInvites,
+          copsoqExtraCharges: (sub.copsoqExtraCharges || 0) + payment.chargeAmount,
+          totalPrice: (sub.currentPrice || 0) + (sub.copsoqExtraCharges || 0) + payment.chargeAmount,
+          updatedAt: new Date(),
+        })
+        .where(eq(subscriptions.id, sub.id));
+    }
+
+    log.info(`[Billing] Payment confirmed, ${invitesToSend.length} invites released for tenant ${payment.tenantId}`);
+    return result;
+  } catch (err) {
+    log.error("[Billing] Failed to release pending invites", { error: String(err) });
+    throw err;
+  }
+}
 
 export const subscriptionsRouter = router({
+  /**
+   * Get subscription status for the current tenant
+   * Returns plan name, status, and basic limits
+   */
+  getStatus: tenantProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+    const [result] = await db
+      .select({
+        subscription: subscriptions,
+        plan: plans,
+      })
+      .from(subscriptions)
+      .innerJoin(plans, eq(subscriptions.planId, plans.id))
+      .where(eq(subscriptions.tenantId, ctx.tenantId))
+      .limit(1);
+
+    if (!result) {
+      // No subscription — user needs to subscribe
+      return {
+        status: "none" as const,
+        planName: null,
+        isActive: false,
+        trialEnd: null,
+        currentPeriodEnd: null,
+        cancelAtPeriodEnd: false,
+        limits: {
+          maxUsersPerTenant: 0,
+          maxStorageGB: 0,
+        },
+      };
+    }
+
+    const isActive = result.subscription.status === "active" || result.subscription.status === "trialing";
+
+    return {
+      status: result.subscription.status,
+      planName: result.plan.name,
+      planDisplayName: result.plan.displayName,
+      isActive,
+      trialEnd: result.subscription.trialEnd,
+      currentPeriodEnd: result.subscription.currentPeriodEnd,
+      cancelAtPeriodEnd: result.subscription.cancelAtPeriodEnd,
+      limits: {
+        maxUsersPerTenant: result.plan.maxUsersPerTenant,
+        maxStorageGB: result.plan.maxStorageGB,
+      },
+      billing: {
+        monthlyPrice: result.plan.monthlyPrice,
+        copsoqInvitesSent: result.subscription.copsoqInvitesSent || 0,
+        copsoqInvitesIncluded: result.plan.copsoqInvitesIncluded || 0,
+        pricePerCopsoqInvite: result.plan.pricePerCopsoqInvite || 0,
+        copsoqExtraCharges: result.subscription.copsoqExtraCharges || 0,
+        totalPrice: result.subscription.totalPrice || result.subscription.currentPrice,
+      },
+    };
+  }),
+
   // ============================================================================
   // PLANOS PÚBLICOS
   // ============================================================================
@@ -518,5 +659,202 @@ export const subscriptionsRouter = router({
       }
 
       return invoice;
+    }),
+
+  // ============================================================================
+  // CRÉDITOS PRÉ-PAGOS
+  // ============================================================================
+
+  getCreditBalance: tenantProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) return { balance: 0 };
+    const [credits] = await db.select().from(tenantCredits).where(eq(tenantCredits.tenantId, ctx.tenantId)).limit(1);
+    return { balance: credits?.balance || 0 };
+  }),
+
+  getCreditHistory: tenantProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) return [];
+    return db.select().from(creditTransactions)
+      .where(eq(creditTransactions.tenantId, ctx.tenantId))
+      .orderBy(desc(creditTransactions.createdAt))
+      .limit(50);
+  }),
+
+  // ============================================================================
+  // PAGAMENTO DE EXCEDENTES COPSOQ
+  // ============================================================================
+
+  getPendingPayment: tenantProcedure
+    .input(z.object({ paymentId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const [payment] = await db.select()
+        .from(pendingCopsoqPayments)
+        .where(and(eq(pendingCopsoqPayments.id, input.paymentId), eq(pendingCopsoqPayments.tenantId, ctx.tenantId)))
+        .limit(1);
+      if (!payment) throw new TRPCError({ code: "NOT_FOUND" });
+      return payment;
+    }),
+
+  payExceedents: tenantProcedure
+    .input(z.object({
+      pendingPaymentId: z.string(),
+      method: z.enum(["pix", "credit_card", "credits"]),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      const [payment] = await db.select()
+        .from(pendingCopsoqPayments)
+        .where(and(eq(pendingCopsoqPayments.id, input.pendingPaymentId), eq(pendingCopsoqPayments.tenantId, ctx.tenantId)))
+        .limit(1);
+
+      if (!payment) throw new TRPCError({ code: "NOT_FOUND", message: "Pagamento pendente nao encontrado" });
+      if (payment.paymentStatus === "paid") throw new TRPCError({ code: "BAD_REQUEST", message: "Pagamento ja realizado" });
+
+      if (input.method === "credits") {
+        // Pay with credits
+        const [credits] = await db.select().from(tenantCredits).where(eq(tenantCredits.tenantId, ctx.tenantId)).limit(1);
+        const balance = credits?.balance || 0;
+
+        if (balance < payment.chargeAmount) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: `Saldo insuficiente. Tem R$ ${(balance / 100).toFixed(2)}, precisa R$ ${(payment.chargeAmount / 100).toFixed(2)}` });
+        }
+
+        await db.update(tenantCredits)
+          .set({ balance: balance - payment.chargeAmount, updatedAt: new Date() })
+          .where(eq(tenantCredits.tenantId, ctx.tenantId));
+
+        await db.insert(creditTransactions).values({
+          id: nanoid(), tenantId: ctx.tenantId, type: "usage",
+          amount: -payment.chargeAmount,
+          description: `${payment.exceedentCount} convites COPSOQ excedentes`,
+          referenceId: payment.id,
+        });
+
+        await db.update(pendingCopsoqPayments)
+          .set({ paymentStatus: "paid", paymentMethod: "credits", paidAt: new Date() })
+          .where(eq(pendingCopsoqPayments.id, payment.id));
+
+        // Release invites
+        await releasePendingInvites(db, payment);
+
+        return { success: true, method: "credits" };
+      }
+
+      // PIX or credit_card via Asaas
+      const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.tenantId, ctx.tenantId)).limit(1);
+      const asaasCustomerId = sub?.asaasCustomerId;
+
+      if (!asaasCustomerId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Sem cliente Asaas vinculado. Assine um plano primeiro." });
+      }
+
+      const charge = await createOneTimeCharge({
+        customerId: asaasCustomerId,
+        value: payment.chargeAmount / 100,
+        description: `${payment.exceedentCount} convites COPSOQ excedentes — ${payment.assessmentTitle}`,
+        billingType: input.method === "pix" ? "PIX" : "CREDIT_CARD",
+        externalReference: payment.id,
+      });
+
+      await db.update(pendingCopsoqPayments)
+        .set({
+          asaasPaymentId: charge.id,
+          paymentMethod: input.method,
+          pixQrCode: charge.pixQrCode || null,
+          pixCopyPaste: charge.pixCopyPaste || null,
+        })
+        .where(eq(pendingCopsoqPayments.id, payment.id));
+
+      return {
+        success: true,
+        method: input.method,
+        asaasPaymentId: charge.id,
+        pixQrCode: charge.pixQrCode,
+        pixCopyPaste: charge.pixCopyPaste,
+        invoiceUrl: charge.invoiceUrl,
+      };
+    }),
+
+  // Called by Asaas webhook when payment is confirmed
+  confirmExceedentPayment: publicProcedure
+    .input(z.object({ pendingPaymentId: z.string(), token: z.string() }))
+    .mutation(async ({ input }) => {
+      if (input.token !== (process.env.MAINTENANCE_TOKEN || "klinikos-2026")) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      const [payment] = await db.select()
+        .from(pendingCopsoqPayments)
+        .where(eq(pendingCopsoqPayments.id, input.pendingPaymentId))
+        .limit(1);
+
+      if (!payment || payment.paymentStatus === "paid") return { success: false };
+
+      await db.update(pendingCopsoqPayments)
+        .set({ paymentStatus: "paid", paidAt: new Date() })
+        .where(eq(pendingCopsoqPayments.id, payment.id));
+
+      await releasePendingInvites(db, payment);
+
+      return { success: true };
+    }),
+
+  // Check if a pending payment was completed (polling from frontend)
+  checkPaymentStatus: tenantProcedure
+    .input(z.object({ pendingPaymentId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) return { status: "unknown" };
+      const [payment] = await db.select()
+        .from(pendingCopsoqPayments)
+        .where(and(eq(pendingCopsoqPayments.id, input.pendingPaymentId), eq(pendingCopsoqPayments.tenantId, ctx.tenantId)))
+        .limit(1);
+      return { status: payment?.paymentStatus || "unknown" };
+    }),
+
+  // Purchase credits via Asaas (PIX or card)
+  purchaseCredits: tenantProcedure
+    .input(z.object({
+      amount: z.number().min(1000), // min R$10
+      method: z.enum(["pix", "credit_card"]),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.tenantId, ctx.tenantId)).limit(1);
+      if (!sub?.asaasCustomerId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Sem cliente Asaas vinculado. Assine um plano primeiro." });
+      }
+
+      const charge = await createOneTimeCharge({
+        customerId: sub.asaasCustomerId,
+        value: input.amount / 100,
+        description: `Compra de creditos BlackBelt - R$ ${(input.amount / 100).toFixed(2)}`,
+        billingType: input.method === "pix" ? "PIX" : "CREDIT_CARD",
+        externalReference: `credits_${ctx.tenantId}_${Date.now()}`,
+      });
+
+      // Credits will be added when payment is confirmed via webhook
+      // For now, store a pending credit purchase
+      await db.insert(creditTransactions).values({
+        id: nanoid(), tenantId: ctx.tenantId, type: "purchase",
+        amount: input.amount, description: `Compra de creditos (aguardando pagamento)`,
+        referenceId: charge.id,
+      });
+
+      return {
+        asaasPaymentId: charge.id,
+        pixQrCode: charge.pixQrCode,
+        pixCopyPaste: charge.pixCopyPaste,
+        invoiceUrl: charge.invoiceUrl,
+      };
     }),
 });

@@ -8,4 +8,4 @@ Disallow: /subscription/checkout
 Disallow: /subscription/success
 Disallow: /subscription/failure
 
-Sitemap: https://www.blackbeltconsultoria.com/sitemap.xml
+Sitemap: https://blackbeltconsultoria.com/sitemap.xml

@@ -3,372 +3,315 @@ import DashboardLayout from "@/components/DashboardLayout";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import {
-  Activity,
-  Award,
   Building2,
-  FileText,
-  Heart,
-  HelpCircle,
-  Shield,
-  TrendingUp,
   Users,
+  Shield,
+  Brain,
+  ClipboardList,
+  GraduationCap,
+  Target,
+  ChevronRight,
+  Plus,
+  ArrowRight,
 } from "lucide-react";
-import { OnboardingGuide } from "@/components/OnboardingGuide";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useImpersonation } from "@/contexts/ImpersonationContext";
+import { useTenant } from "@/contexts/TenantContext";
 
 export default function Home() {
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const { user } = useAuth();
-  const { data: tenants } = trpc.tenants.list.useQuery(undefined, {
-    enabled: user?.role === "admin",
+  const navigate = useNavigate();
+  const { isImpersonating } = useImpersonation();
+  const { selectedTenant } = useTenant();
+
+  // Dados do tenant
+  const { data: tenantInfo } = trpc.companies.getMyTenantInfo.useQuery(undefined, {
+    retry: false,
+    enabled: !!user,
   });
 
-  const stats = [
-    {
-      title: "Empresas Atendidas",
-      value: tenants?.length || 0,
-      icon: Building2,
-      description: "Clientes ativos na plataforma",
-      visible: user?.role === "admin",
-      color: "text-primary",
-      bgIcon: "bg-primary/10",
-    },
-    {
-      title: "Colaboradores",
-      value: "-",
-      icon: Users,
-      description: "Total de colaboradores cadastrados",
-      visible: true,
-      color: "text-emerald-600",
-      bgIcon: "bg-emerald-50",
-    },
-    {
-      title: "Avaliações NR-01",
-      value: "-",
-      icon: Shield,
-      description: "Avaliações de riscos psicossociais",
-      visible: true,
-      color: "text-gold",
-      bgIcon: "bg-gold-light",
-    },
-    {
-      title: "Programas Ativos",
-      value: "-",
-      icon: Activity,
-      description: "Treinamentos e mentorias em andamento",
-      visible: true,
-      color: "text-sky-600",
-      bgIcon: "bg-sky-50",
-    },
-  ];
+  const isAdmin = user?.role === "admin";
+  const isConsultant = isAdmin || tenantInfo?.tenantType === "consultant";
+  const isCompanyUser = tenantInfo?.tenantType === "company";
 
-  const services = [
-    {
-      icon: Shield,
-      title: "Gestão de Riscos Psicossociais (NR-01)",
-      description:
-        "Avaliação completa dos fatores de risco psicossociais conforme Portaria MTE nº 1.419/2024. Identificação, avaliação e controle de riscos relacionados ao trabalho.",
-      features: [
-        "Inventário de riscos",
-        "Matriz de probabilidade x gravidade",
-        "Plano de ação integrado",
-        "Compliance legal",
-      ],
-    },
-    {
-      icon: Heart,
-      title: "Programas de Resiliência e Alta Performance",
-      description:
-        "Metodologias exclusivas baseadas na experiência de Carlos Honorato (20 anos PRF/Exército + 9.000 atendimentos) e Thyberê Mendes (gestão ágil + artes marciais).",
-      features: [
-        "Método Black Belt de Resiliência",
-        "Desenvolvimento de liderança",
-        "Gestão de estresse",
-        "Mentalidade de campeão",
-      ],
-    },
-    {
-      icon: TrendingUp,
-      title: "Desenvolvimento de Lideranças",
-      description:
-        "Capacitação de gestores com disciplina tática, visão estratégica e inteligência emocional para ambientes de alta pressão e competitividade.",
-      features: [
-        "Mentorias personalizadas",
-        "Workshops imersivos",
-        "Gestão de conflitos",
-        "Comunicação assertiva",
-      ],
-    },
-    {
-      icon: Award,
-      title: "Transformação Cultural Organizacional",
-      description:
-        "Não apenas compliance, mas transformação profunda da cultura organizacional focada em alta performance, bem-estar e engajamento.",
-      features: [
-        "Diagnóstico organizacional",
-        "Clima e cultura",
-        "Indicadores de saúde mental",
-        "Acompanhamento contínuo",
-      ],
-    },
-  ];
+  // Dados para consultor: lista de empresas
+  const { data: companiesData } = trpc.companies.list.useQuery({}, {
+    retry: false,
+    enabled: isConsultant && !isAdmin,
+  });
+
+  // Dados para admin: todos tenants
+  const { data: tenantsData } = trpc.tenants.list.useQuery(undefined, {
+    enabled: isAdmin,
+  });
+
+  // Dados contextuais (empresa selecionada ou própria)
+  const { data: peopleData } = trpc.people.list.useQuery({}, {
+    retry: false,
+    enabled: !!user,
+  });
+
+  const { data: assessmentsData } = trpc.assessments.list.useQuery(undefined, {
+    retry: false,
+    enabled: !!user,
+  });
+
+  const { data: riskData } = trpc.riskAssessments.list.useQuery({}, {
+    retry: false,
+    enabled: !!user,
+  });
+
+  const { data: trainingData } = trpc.training.listPrograms.useQuery(undefined, {
+    retry: false,
+    enabled: !!user,
+  });
+
+  const companies = companiesData?.companies ?? [];
+  const totalCompanies = companiesData?.total ?? 0;
+  const totalPeople = Array.isArray(peopleData) ? peopleData.length : 0;
+  const totalAssessments = Array.isArray(assessmentsData) ? assessmentsData.length : 0;
+  const totalRisks = Array.isArray(riskData) ? riskData.length : 0;
+  const totalTraining = Array.isArray(trainingData) ? trainingData.length : 0;
+
+  // Contexto: empresa selecionada ou visão geral
+  const contextLabel = isImpersonating && selectedTenant
+    ? selectedTenant.name
+    : isCompanyUser
+    ? tenantInfo?.name || "Minha Empresa"
+    : "Visão Geral";
 
   return (
     <DashboardLayout>
-      <div className="space-y-8">
+      <div className="space-y-6">
         {/* Header */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold tracking-tight text-foreground">
-                Black Belt{" "}
-                <span className="text-gold">Consultoria</span>
-              </h1>
-              <div className="h-1 w-24 bg-gradient-to-r from-primary to-[#c8a55a] rounded-full mt-2" />
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Bem-vindo(a), <span className="text-[#c8a55a]">{user?.name?.split(" ")[0]}</span>
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {isAdmin ? "Administrador Master" : isConsultant ? "Consultoria" : "Empresa"} • {contextLabel}
+          </p>
+          {isImpersonating && selectedTenant && (
+            <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-md text-xs text-amber-700">
+              <Building2 className="h-3 w-3" />
+              Visualizando dados de: <strong>{selectedTenant.name}</strong>
             </div>
-            <Button
-              onClick={() => setShowOnboarding(true)}
-              variant="outline"
-              className="gap-2 border-[#c8a55a]/30 hover:border-[#c8a55a] hover:bg-[#c8a55a]/5"
-            >
-              <HelpCircle className="h-4 w-4 text-gold" />
-              Guia
-            </Button>
-          </div>
-          <p className="text-lg text-muted-foreground">
-            Plataforma de Gestão de Riscos Psicossociais e Desenvolvimento
-            Humano
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Bem-vindo(a), <span className="font-semibold text-foreground">{user?.name}</span> •{" "}
-            {user?.role === "admin" ? "Administrador" : "Usuário"}
-          </p>
+          )}
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {stats
-            .filter(stat => stat.visible)
-            .map(stat => (
-              <Card key={stat.title} className="border-l-4 border-l-[#c8a55a] hover:shadow-md transition-shadow">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    {stat.title}
-                  </CardTitle>
-                  <div className={`p-2 rounded-lg ${stat.bgIcon}`}>
-                    <stat.icon className={`h-4 w-4 ${stat.color}`} />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-foreground">{stat.value}</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {stat.description}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+          {/* Empresas — só consultor/admin */}
+          {isConsultant && (
+            <Card className="border-l-4 border-l-[#c8a55a] hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/companies")}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xs font-medium text-muted-foreground">Empresas</CardTitle>
+                <div className="p-1.5 rounded-lg bg-[#c8a55a]/10">
+                  <Building2 className="h-4 w-4 text-[#c8a55a]" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{isAdmin ? (tenantsData?.length ?? 0) : totalCompanies}</div>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  {isAdmin ? "tenants cadastrados" : "empresas gerenciadas"}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Colaboradores */}
+          <Card className="border-l-4 border-l-emerald-500 hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/people")}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Colaboradores</CardTitle>
+              <div className="p-1.5 rounded-lg bg-emerald-50">
+                <Users className="h-4 w-4 text-emerald-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalPeople}</div>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                {isImpersonating ? "nesta empresa" : "cadastrados"}
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Avaliações COPSOQ */}
+          <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/copsoq/analytics")}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Avaliações COPSOQ</CardTitle>
+              <div className="p-1.5 rounded-lg bg-blue-50">
+                <ClipboardList className="h-4 w-4 text-blue-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalAssessments}</div>
+              <p className="text-[10px] text-muted-foreground mt-1">questionários aplicados</p>
+            </CardContent>
+          </Card>
+
+          {/* Inventários de Risco */}
+          <Card className="border-l-4 border-l-orange-500 hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/risk-assessments")}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Inventários de Risco</CardTitle>
+              <div className="p-1.5 rounded-lg bg-orange-50">
+                <Target className="h-4 w-4 text-orange-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalRisks}</div>
+              <p className="text-[10px] text-muted-foreground mt-1">avaliações de risco</p>
+            </CardContent>
+          </Card>
+
+          {/* Treinamentos — se não mostrou Empresas, mostra este */}
+          {!isConsultant && (
+            <Card className="border-l-4 border-l-purple-500 hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/training")}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xs font-medium text-muted-foreground">Treinamentos</CardTitle>
+                <div className="p-1.5 rounded-lg bg-purple-50">
+                  <GraduationCap className="h-4 w-4 text-purple-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalTraining}</div>
+                <p className="text-[10px] text-muted-foreground mt-1">programas ativos</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
-        {/* Services Overview */}
-        <div>
-          <div className="flex items-center gap-3 mb-4">
-            <h2 className="text-2xl font-bold text-foreground">Nossos Serviços</h2>
-            <div className="h-px flex-1 bg-gradient-to-r from-[#c8a55a]/40 to-transparent" />
-          </div>
-          <div className="grid gap-6 md:grid-cols-2">
-            {services.map(service => (
-              <Card
-                key={service.title}
-                className="hover:shadow-lg transition-all hover:border-[#c8a55a]/30 group"
+        {/* Ações Rápidas — Consultor */}
+        {isConsultant && (
+          <div>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Ações Rápidas</h2>
+            <div className="grid gap-3 grid-cols-1 md:grid-cols-3">
+              <Button
+                variant="outline"
+                className="h-auto py-4 justify-start gap-3 border-[#c8a55a]/20 hover:border-[#c8a55a] hover:bg-[#c8a55a]/5"
+                onClick={() => navigate("/agent")}
               >
-                <CardHeader>
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-[#c8a55a]/10 transition-colors">
-                      <service.icon className="h-6 w-6 text-primary group-hover:text-gold transition-colors" />
-                    </div>
-                    <div className="flex-1">
-                      <CardTitle className="text-lg">{service.title}</CardTitle>
-                      <CardDescription className="mt-2">
-                        {service.description}
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {service.features.map(feature => (
-                      <li
-                        key={feature}
-                        className="flex items-center gap-2 text-sm"
-                      >
-                        <div className="h-1.5 w-1.5 rounded-full bg-[#c8a55a]" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            ))}
+                <div className="p-2 rounded-lg bg-[#c8a55a]/10">
+                  <Brain className="h-5 w-5 text-[#c8a55a]" />
+                </div>
+                <div className="text-left">
+                  <div className="font-medium text-sm">SamurAI</div>
+                  <div className="text-xs text-muted-foreground">Agente de IA para NR-01</div>
+                </div>
+                <ArrowRight className="h-4 w-4 ml-auto text-muted-foreground" />
+              </Button>
+
+              <Button
+                variant="outline"
+                className="h-auto py-4 justify-start gap-3 hover:border-emerald-400 hover:bg-emerald-50"
+                onClick={() => navigate("/companies")}
+              >
+                <div className="p-2 rounded-lg bg-emerald-50">
+                  <Plus className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div className="text-left">
+                  <div className="font-medium text-sm">Nova Empresa</div>
+                  <div className="text-xs text-muted-foreground">Cadastrar empresa cliente</div>
+                </div>
+                <ArrowRight className="h-4 w-4 ml-auto text-muted-foreground" />
+              </Button>
+
+              <Button
+                variant="outline"
+                className="h-auto py-4 justify-start gap-3 hover:border-blue-400 hover:bg-blue-50"
+                onClick={() => navigate("/executive-dashboard")}
+              >
+                <div className="p-2 rounded-lg bg-blue-50">
+                  <Shield className="h-5 w-5 text-blue-600" />
+                </div>
+                <div className="text-left">
+                  <div className="font-medium text-sm">Dashboard Executivo</div>
+                  <div className="text-xs text-muted-foreground">Visão consolidada</div>
+                </div>
+                <ArrowRight className="h-4 w-4 ml-auto text-muted-foreground" />
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Compliance Info */}
-        <Card className="border-primary/20 bg-primary/5">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <FileText className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <CardTitle>
-                  Conformidade NR-01 (Portaria MTE nº 1.419/2024)
-                </CardTitle>
-                <CardDescription>
-                  Vigência a partir de 26/05/2025
-                </CardDescription>
-              </div>
+        {/* Lista de Empresas — Consultor */}
+        {isConsultant && !isAdmin && companies.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Minhas Empresas</h2>
+              <Button variant="ghost" size="sm" className="text-xs gap-1" onClick={() => navigate("/companies")}>
+                Ver todas <ChevronRight className="h-3 w-3" />
+              </Button>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="prose prose-sm max-w-none">
-              <p className="text-sm text-muted-foreground">
-                A nova redação da NR-01 inclui expressamente os{" "}
-                <strong className="text-foreground">
-                  fatores de risco psicossociais relacionados ao trabalho
-                </strong>{" "}
-                no Gerenciamento de Riscos Ocupacionais (GRO). Nossa plataforma
-                oferece ferramentas completas para:
-              </p>
-              <div className="grid md:grid-cols-3 gap-4 mt-4">
-                <div className="flex items-start gap-2 p-3 bg-background rounded-lg">
-                  <Shield className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-sm text-foreground">
-                      Identificação
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Mapeamento completo de riscos psicossociais
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2 p-3 bg-background rounded-lg">
-                  <TrendingUp className="h-5 w-5 text-gold mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-sm text-foreground">
-                      Avaliação
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Análise de gravidade e probabilidade
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2 p-3 bg-background rounded-lg">
-                  <Activity className="h-5 w-5 text-emerald-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-sm text-foreground">
-                      Controle
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Planos de ação e acompanhamento
-                    </p>
-                  </div>
-                </div>
-              </div>
+            <div className="grid gap-2">
+              {companies.slice(0, 5).map((company: any) => (
+                <Card
+                  key={company.id}
+                  className="hover:shadow-md transition-all cursor-pointer hover:border-[#c8a55a]/30"
+                  onClick={() => navigate("/companies")}
+                >
+                  <CardContent className="flex items-center gap-4 py-3 px-4">
+                    <div className="p-2 rounded-lg bg-slate-100">
+                      <Building2 className="h-4 w-4 text-slate-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{company.name}</p>
+                      <p className="text-xs text-muted-foreground">{company.cnpj}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                        company.status === "active"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-slate-100 text-slate-600"
+                      }`}>
+                        {company.status === "active" ? "Ativa" : company.status}
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        )}
 
-        {/* Founder Philosophy */}
-        <Card className="bg-gradient-to-br from-[#0f1a2e] to-[#1e3a5f] text-white border-[#c8a55a]/20">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-[#c8a55a]/20 rounded-lg">
-                <Award className="h-6 w-6 text-[#c8a55a]" />
-              </div>
-              <div>
-                <CardTitle className="text-white">
-                  Filosofia Black Belt
-                </CardTitle>
-                <CardDescription className="text-slate-300">
-                  Baseada na experiência e legado dos fundadores
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <h4 className="font-semibold text-[#c8a55a]">
-                  Carlos Honorato
-                </h4>
-                <ul className="space-y-1.5 text-sm text-slate-300">
-                  <li className="flex items-center gap-2">
-                    <div className="h-1 w-1 rounded-full bg-[#c8a55a]" />
-                    20 anos de experiência PRF e Exército
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="h-1 w-1 rounded-full bg-[#c8a55a]" />
-                    Mais de 9.000 atendimentos clínicos
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="h-1 w-1 rounded-full bg-[#c8a55a]" />
-                    Faixa preta 4º grau em Jiu-Jitsu
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="h-1 w-1 rounded-full bg-[#c8a55a]" />
-                    Campeão mundial de artes marciais
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="h-1 w-1 rounded-full bg-[#c8a55a]" />
-                    Especialista em psicanálise e hipnose clínica
-                  </li>
-                </ul>
-              </div>
-              <div className="space-y-2">
-                <h4 className="font-semibold text-[#c8a55a]">Thyberê Mendes</h4>
-                <ul className="space-y-1.5 text-sm text-slate-300">
-                  <li className="flex items-center gap-2">
-                    <div className="h-1 w-1 rounded-full bg-[#c8a55a]" />
-                    Gestão ágil e otimização de processos
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="h-1 w-1 rounded-full bg-[#c8a55a]" />
-                    Alta performance em artes marciais
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="h-1 w-1 rounded-full bg-[#c8a55a]" />
-                    Análise de requisitos complexos
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="h-1 w-1 rounded-full bg-[#c8a55a]" />
-                    Desenvolvimento de equipes de elite
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="h-1 w-1 rounded-full bg-[#c8a55a]" />
-                    Mentalidade de campeão aplicada ao corporativo
-                  </li>
-                </ul>
-              </div>
-            </div>
-            <div className="pt-4 border-t border-[#c8a55a]/20">
-              <p className="text-sm text-slate-300 italic">
-                "A maestria (o Black Belt) se alcança através de técnica
-                apurada, disciplina rigorosa e uma busca incansável por ir além
-                do óbvio e reinventar."
+        {/* Info NR-01 — Empresa */}
+        {isCompanyUser && (
+          <Card className="border-[#c8a55a]/20 bg-gradient-to-br from-[#0f1a2e] to-[#1e3a5f] text-white">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Shield className="h-5 w-5 text-[#c8a55a]" />
+                Conformidade NR-01
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-slate-300">
+                A NR-01 exige que sua empresa identifique, avalie e controle os
+                <strong className="text-white"> fatores de risco psicossociais</strong> relacionados ao trabalho.
               </p>
-            </div>
-          </CardContent>
-        </Card>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="text-center p-3 bg-white/5 rounded-lg">
+                  <div className="text-xl font-bold text-[#c8a55a]">{totalAssessments}</div>
+                  <div className="text-[10px] text-slate-400">Avaliações</div>
+                </div>
+                <div className="text-center p-3 bg-white/5 rounded-lg">
+                  <div className="text-xl font-bold text-[#c8a55a]">{totalRisks}</div>
+                  <div className="text-[10px] text-slate-400">Riscos Mapeados</div>
+                </div>
+                <div className="text-center p-3 bg-white/5 rounded-lg">
+                  <div className="text-xl font-bold text-[#c8a55a]">{totalTraining}</div>
+                  <div className="text-[10px] text-slate-400">Treinamentos</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
-
-      <OnboardingGuide open={showOnboarding} onOpenChange={setShowOnboarding} />
     </DashboardLayout>
   );
 }

@@ -456,6 +456,7 @@ export const proposals = mysqlTable(
     title: varchar("title", { length: 255 }).notNull(),
     description: text("description"),
     status: varchar("status", { length: 30 }).default("draft").notNull(),
+    proposalType: varchar("proposalType", { length: 30 }).default("pre_proposal").notNull(),
     subtotal: int("subtotal").notNull(),
     discount: int("discount").default(0).notNull(),
     discountPercent: int("discountPercent").default(0).notNull(),
@@ -466,6 +467,12 @@ export const proposals = mysqlTable(
     generatedAt: timestamp("generatedAt").defaultNow().notNull(),
     sentAt: timestamp("sentAt"),
     respondedAt: timestamp("respondedAt"),
+    approvalToken: varchar("approvalToken", { length: 255 }),
+    contactEmail: varchar("contactEmail", { length: 320 }),
+    approvedAt: timestamp("approvedAt"),
+    rejectedAt: timestamp("rejectedAt"),
+    paymentStatus: varchar("paymentStatus", { length: 20 }),
+    paymentNotes: text("paymentNotes"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
@@ -473,11 +480,37 @@ export const proposals = mysqlTable(
     tenantClientIdx: index("idx_proposal_tenant_client").on(table.tenantId, table.clientId),
     statusIdx: index("idx_proposal_status").on(table.status),
     dateIdx: index("idx_proposal_date").on(table.generatedAt),
+    tokenIdx: index("idx_proposal_token").on(table.approvalToken),
   })
 );
 
 export type Proposal = typeof proposals.$inferSelect;
 export type InsertProposal = typeof proposals.$inferInsert;
+
+// ============================================================================
+// PRECIFICACAO: Parcelas de Pagamento
+// ============================================================================
+
+export const proposalPayments = mysqlTable(
+  "proposal_payments",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    proposalId: varchar("proposalId", { length: 64 }).notNull(),
+    installment: int("installment").notNull(),
+    percentage: int("percentage").notNull(),
+    amount: int("amount").notNull(),
+    status: varchar("status", { length: 20 }).default("pending").notNull(),
+    paidAt: timestamp("paidAt"),
+    paidBy: varchar("paidBy", { length: 64 }),
+    notes: text("notes"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    proposalIdx: index("idx_payment_proposal").on(table.proposalId),
+  })
+);
+
+export type ProposalPayment = typeof proposalPayments.$inferSelect;
 
 // ============================================================================
 // PRECIFICACAO: Itens das Propostas
@@ -555,6 +588,8 @@ export const plans = mysqlTable(
     hasSLA: boolean("hasSLA").default(false).notNull(),
     slaUptime: int("slaUptime"),
     trialDays: int("trialDays").default(14).notNull(),
+    pricePerCopsoqInvite: int("pricePerCopsoqInvite").default(0).notNull(),
+    copsoqInvitesIncluded: int("copsoqInvitesIncluded").default(0).notNull(),
     isActive: boolean("isActive").default(true).notNull(),
     isPublic: boolean("isPublic").default(true).notNull(),
     sortOrder: int("sortOrder").default(0).notNull(),
@@ -591,7 +626,13 @@ export const subscriptions = mysqlTable(
     stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
     stripeCustomerId: varchar("stripeCustomerId", { length: 255 }),
     mercadoPagoSubscriptionId: varchar("mercadoPagoSubscriptionId", { length: 255 }),
+    asaasSubscriptionId: varchar("asaasSubscriptionId", { length: 255 }),
+    asaasCustomerId: varchar("asaasCustomerId", { length: 255 }),
     currentPrice: int("currentPrice").notNull(),
+    copsoqInvitesSent: int("copsoqInvitesSent").default(0).notNull(),
+    copsoqExtraCharges: int("copsoqExtraCharges").default(0).notNull(),
+    totalPrice: int("totalPrice").default(0).notNull(),
+    cycleResetAt: timestamp("cycleResetAt"),
     autoRenew: boolean("autoRenew").default(true).notNull(),
     cancelAtPeriodEnd: boolean("cancelAtPeriodEnd").default(false).notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -620,6 +661,7 @@ export const invoices = mysqlTable(
     subscriptionId: varchar("subscriptionId", { length: 64 }).notNull(),
     stripeInvoiceId: varchar("stripeInvoiceId", { length: 255 }),
     mercadoPagoInvoiceId: varchar("mercadoPagoInvoiceId", { length: 255 }),
+    asaasPaymentId: varchar("asaasPaymentId", { length: 255 }),
     subtotal: int("subtotal").notNull(),
     discount: int("discount").default(0).notNull(),
     tax: int("tax").default(0).notNull(),
@@ -1103,3 +1145,161 @@ export const ticketMessages = mysqlTable(
 
 export type TicketMessage = typeof ticketMessages.$inferSelect;
 export type InsertTicketMessage = typeof ticketMessages.$inferInsert;
+
+// ============================================================================
+// MONITORING CHECKS
+// ============================================================================
+
+export const monitoringChecks = mysqlTable(
+  "monitoring_checks",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    status: varchar("status", { length: 20 }).notNull(), // ok, warning, critical
+    details: json("details").notNull(),
+    alertSent: boolean("alertSent").default(false).notNull(),
+    checkedAt: timestamp("checkedAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    statusIdx: index("idx_monitoring_status").on(table.status),
+    checkedAtIdx: index("idx_monitoring_checked").on(table.checkedAt),
+  })
+);
+
+export type MonitoringCheck = typeof monitoringChecks.$inferSelect;
+export type InsertMonitoringCheck = typeof monitoringChecks.$inferInsert;
+
+// ============================================================================
+// MAINTENANCE REQUESTS (Ponte Klinikos → Claude Code)
+// ============================================================================
+
+export const maintenanceRequests = mysqlTable(
+  "maintenance_requests",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    type: varchar("type", { length: 50 }).notNull(), // ram_high, db_down, errors_spike, disk_full, container_unhealthy
+    status: varchar("status", { length: 20 }).notNull(), // pending, in_progress, completed, failed
+    details: json("details").notNull(),
+    resolution: text("resolution"),
+    requestedAt: timestamp("requestedAt").defaultNow().notNull(),
+    completedAt: timestamp("completedAt"),
+  },
+  (table) => ({
+    statusIdx: index("idx_maintenance_status").on(table.status),
+    typeIdx: index("idx_maintenance_type").on(table.type),
+    requestedAtIdx: index("idx_maintenance_requested").on(table.requestedAt),
+  })
+);
+
+export type MaintenanceRequest = typeof maintenanceRequests.$inferSelect;
+export type InsertMaintenanceRequest = typeof maintenanceRequests.$inferInsert;
+
+// ============================================================================
+// BILLING: Eventos de Cobrança por Convite COPSOQ
+// ============================================================================
+
+export const copsoqBillingEvents = mysqlTable(
+  "copsoq_billing_events",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+    subscriptionId: varchar("subscriptionId", { length: 64 }).notNull(),
+    inviteId: varchar("inviteId", { length: 64 }),
+    invitesSentBefore: int("invitesSentBefore").notNull(),
+    invitesSentAfter: int("invitesSentAfter").notNull(),
+    chargeAmount: int("chargeAmount").default(0).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    tenantIdx: index("idx_copsoq_billing_tenant").on(table.tenantId),
+    subIdx: index("idx_copsoq_billing_sub").on(table.subscriptionId),
+  })
+);
+
+export type CopsoqBillingEvent = typeof copsoqBillingEvents.$inferSelect;
+export type InsertCopsoqBillingEvent = typeof copsoqBillingEvents.$inferInsert;
+
+// ============================================================================
+// BILLING: Créditos Pré-Pagos
+// ============================================================================
+
+export const tenantCredits = mysqlTable(
+  "tenant_credits",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull().unique(),
+    balance: int("balance").default(0).notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  }
+);
+
+export const creditTransactions = mysqlTable(
+  "credit_transactions",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+    type: varchar("type", { length: 20 }).notNull(), // purchase, usage, refund
+    amount: int("amount").notNull(), // positive = credit, negative = debit
+    description: text("description"),
+    referenceId: varchar("referenceId", { length: 64 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    tenantIdx: index("idx_credit_tx_tenant").on(table.tenantId),
+  })
+);
+
+// ============================================================================
+// BILLING: Pagamentos Pendentes de Convites COPSOQ
+// ============================================================================
+
+export const pendingCopsoqPayments = mysqlTable(
+  "pending_copsoq_payments",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+    assessmentTitle: varchar("assessmentTitle", { length: 255 }).notNull(),
+    invitees: json("invitees").notNull(),
+    totalInvites: int("totalInvites").notNull(),
+    freeInvites: int("freeInvites").notNull(),
+    exceedentCount: int("exceedentCount").notNull(),
+    chargeAmount: int("chargeAmount").notNull(), // centavos
+    asaasPaymentId: varchar("asaasPaymentId", { length: 255 }),
+    paymentStatus: varchar("paymentStatus", { length: 20 }).default("pending").notNull(),
+    paymentMethod: varchar("paymentMethod", { length: 20 }),
+    pixQrCode: text("pixQrCode"),
+    pixCopyPaste: text("pixCopyPaste"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    paidAt: timestamp("paidAt"),
+    expiresAt: timestamp("expiresAt"),
+  },
+  (table) => ({
+    tenantIdx: index("idx_pending_copsoq_tenant").on(table.tenantId),
+    statusIdx: index("idx_pending_copsoq_status").on(table.paymentStatus),
+  })
+);
+
+// ============================================================================
+// EMAIL QUEUE — Fila robusta de emails com retry
+// ============================================================================
+
+export const emailQueue = mysqlTable(
+  "email_queue",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    to: varchar("to", { length: 320 }).notNull(),
+    subject: varchar("subject", { length: 500 }).notNull(),
+    html: text("html").notNull(),
+    textContent: text("textContent"),
+    status: varchar("status", { length: 20 }).default("pending").notNull(), // pending, processing, sent, failed
+    attempts: int("attempts").default(0).notNull(),
+    maxAttempts: int("maxAttempts").default(4).notNull(),
+    lastError: text("lastError"),
+    nextRetryAt: timestamp("nextRetryAt"),
+    sentAt: timestamp("sentAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    statusIdx: index("idx_email_queue_status").on(table.status),
+    nextRetryIdx: index("idx_email_queue_retry").on(table.nextRetryAt),
+  })
+);

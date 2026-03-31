@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { TRPCProvider } from "./lib/trpc-provider";
-import { AuthProvider } from "./_core/hooks/useAuth";
+import { AuthProvider, useAuth } from "./_core/hooks/useAuth";
 import { TenantProvider } from "./contexts/TenantContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ImpersonationProvider } from "./contexts/ImpersonationContext";
@@ -45,12 +45,17 @@ const Help = lazy(() => import("./pages/Help"));
 const SupportTickets = lazy(() => import("./pages/SupportTickets"));
 const AdminSubscriptions = lazy(() => import("./pages/AdminSubscriptions"));
 const AdminSupportTickets = lazy(() => import("./pages/AdminSupportTickets"));
+const AdminDsrManagement = lazy(() => import("./pages/AdminDsrManagement"));
 const AdminMetricsDashboard = lazy(() => import("./pages/AdminMetricsDashboard"));
+const AdminMonitoring = lazy(() => import("./pages/AdminMonitoring"));
 const CopsoqRespond = lazy(() => import("./pages/CopsoqRespond"));
+const ComplaintPublic = lazy(() => import("./pages/ComplaintPublic"));
+const ComplaintTrack = lazy(() => import("./pages/ComplaintTrack"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const ProposalResult = lazy(() => import("./pages/ProposalResult"));
 const Landing = lazy(() => import("./pages/Landing"));
 const LGPD = lazy(() => import("./pages/LGPD"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
@@ -81,6 +86,9 @@ const ErgonomicAssessments = lazy(() => import("./pages/ErgonomicAssessments"));
 const ErgonomicAssessmentForm = lazy(() => import("./pages/ErgonomicAssessmentForm"));
 const EsocialExport = lazy(() => import("./pages/EsocialExport"));
 const Companies = lazy(() => import("./pages/Companies"));
+const GuidedWorkflow = lazy(() => import("./pages/GuidedWorkflow"));
+const AgentChat = lazy(() => import("./pages/AgentChat"));
+const SupportChat = lazy(() => import("./pages/SupportChat"));
 
 // Subscription pages
 const Pricing = lazy(() => import("./pages/subscription/Pricing"));
@@ -98,6 +106,10 @@ function PageLoader() {
       </div>
     </div>
   );
+}
+
+function SmartLanding() {
+  return <Landing />;
 }
 
 function ProtectedPage({ children }: { children: React.ReactNode }) {
@@ -118,20 +130,26 @@ export default function App() {
             <ImpersonationBanner />
             <TenantProvider>
               <Routes>
-                {/* Landing page publica */}
-                <Route path="/" element={<Suspense fallback={<PageLoader />}><Landing /></Suspense>} />
+                {/* Landing page publica — redireciona para /home se logado */}
+                <Route path="/" element={<Suspense fallback={<PageLoader />}><SmartLanding /></Suspense>} />
 
                 {/* Rotas publicas */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/copsoq/respond/:token" element={<Suspense fallback={<PageLoader />}><CopsoqRespond /></Suspense>} />
+                <Route path="/denuncia/consulta" element={<Suspense fallback={<PageLoader />}><ComplaintTrack /></Suspense>} />
+                <Route path="/denuncia/:tenantId" element={<Suspense fallback={<PageLoader />}><ComplaintPublic /></Suspense>} />
                 <Route path="/survey/respond/:token" element={<Suspense fallback={<PageLoader />}><ClimateSurveyRespond /></Suspense>} />
                 <Route path="/forgot-password" element={<Suspense fallback={<PageLoader />}><ForgotPassword /></Suspense>} />
                 <Route path="/reset-password/:token" element={<Suspense fallback={<PageLoader />}><ResetPassword /></Suspense>} />
+                <Route path="/verify-email" element={<Suspense fallback={<PageLoader />}><VerifyEmail /></Suspense>} />
                 <Route path="/verify-email/:token" element={<Suspense fallback={<PageLoader />}><VerifyEmail /></Suspense>} />
                 <Route path="/terms" element={<Suspense fallback={<PageLoader />}><TermsOfService /></Suspense>} />
                 <Route path="/privacy" element={<Suspense fallback={<PageLoader />}><PrivacyPolicy /></Suspense>} />
                 <Route path="/lgpd" element={<Suspense fallback={<PageLoader />}><LGPD /></Suspense>} />
+                <Route path="/proposal/result" element={<Suspense fallback={<PageLoader />}><ProposalResult /></Suspense>} />
+                <Route path="/proposal/approve/:token" element={<Suspense fallback={<PageLoader />}><ProposalResult /></Suspense>} />
+                <Route path="/proposal/reject/:token" element={<Suspense fallback={<PageLoader />}><ProposalResult /></Suspense>} />
 
                 {/* Dashboard principal */}
                 <Route path="/home" element={<ProtectedPage><Home /></ProtectedPage>} />
@@ -182,10 +200,13 @@ export default function App() {
                 <Route path="/anonymous-report" element={<ProtectedPage><AnonymousReport /></ProtectedPage>} />
                 <Route path="/anonymous-report/track" element={<ProtectedPage><AnonymousReportTrack /></ProtectedPage>} />
                 <Route path="/report-management" element={<ProtectedPage><ReportManagement /></ProtectedPage>} />
+                <Route path="/complaints" element={<ProtectedPage><ReportManagement /></ProtectedPage>} />
+                <Route path="/guided-workflow" element={<ProtectedPage><GuidedWorkflow /></ProtectedPage>} />
                 <Route path="/deadline-alerts" element={<ProtectedPage><DeadlineAlerts /></ProtectedPage>} />
                 <Route path="/ergonomic-assessments" element={<ProtectedPage><ErgonomicAssessments /></ProtectedPage>} />
                 <Route path="/ergonomic-assessments/:id" element={<ProtectedPage><ErgonomicAssessmentForm /></ProtectedPage>} />
                 <Route path="/esocial-export" element={<ProtectedPage><EsocialExport /></ProtectedPage>} />
+                <Route path="/agent" element={<ProtectedPage><AgentChat /></ProtectedPage>} />
 
                 {/* Comercial */}
                 <Route path="/pricing-parameters" element={<ProtectedPage><PricingParameters /></ProtectedPage>} />
@@ -202,6 +223,7 @@ export default function App() {
                 <Route path="/branding-settings" element={<ProtectedPage><BrandingSettings /></ProtectedPage>} />
                 <Route path="/test-dashboard" element={<ProtectedPage><TestDashboard /></ProtectedPage>} />
                 <Route path="/help" element={<ProtectedPage><Help /></ProtectedPage>} />
+                <Route path="/support-chat" element={<ProtectedPage><SupportChat /></ProtectedPage>} />
 
                 {/* Subscription */}
                 <Route path="/subscription" element={<ProtectedPage><SubscriptionDashboard /></ProtectedPage>} />
@@ -214,9 +236,12 @@ export default function App() {
                 <Route path="/support" element={<ProtectedPage><SupportTickets /></ProtectedPage>} />
 
                 {/* Admin Operations */}
+                <Route path="/admin" element={<ProtectedPage><AdminMetricsDashboard /></ProtectedPage>} />
                 <Route path="/admin/metrics" element={<ProtectedPage><AdminMetricsDashboard /></ProtectedPage>} />
                 <Route path="/admin/subscriptions" element={<ProtectedPage><AdminSubscriptions /></ProtectedPage>} />
                 <Route path="/admin/support" element={<ProtectedPage><AdminSupportTickets /></ProtectedPage>} />
+                <Route path="/admin/dsr" element={<ProtectedPage><AdminDsrManagement /></ProtectedPage>} />
+                <Route path="/admin/monitoring" element={<ProtectedPage><AdminMonitoring /></ProtectedPage>} />
 
                 {/* Catch-all */}
                 <Route path="*" element={<Suspense fallback={<PageLoader />}><NotFound /></Suspense>} />

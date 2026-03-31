@@ -1,26 +1,25 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { publicProcedure, router } from "../_core/trpc";
-import { requireActiveSubscription } from "../_core/subscriptionMiddleware";
+import { tenantProcedure, adminProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { complianceChecklist } from "../../drizzle/schema_nr01";
 import { eq, and, desc, sql } from "drizzle-orm";
 
 export const complianceChecklistRouter = router({
   // Listar itens do checklist
-  list: publicProcedure
+  list: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
         category: z.string().optional(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
-      const conditions = [eq(complianceChecklist.tenantId, input.tenantId)];
+      const conditions = [eq(complianceChecklist.tenantId, ctx.tenantId!)];
 
       if (input.category) {
         conditions.push(eq(complianceChecklist.category, input.category));
@@ -36,7 +35,7 @@ export const complianceChecklistRouter = router({
     }),
 
   // Atualizar status de item do checklist
-  updateStatus: publicProcedure
+  updateStatus: tenantProcedure
     .input(
       z.object({
         id: z.string(),
@@ -46,7 +45,7 @@ export const complianceChecklistRouter = router({
         verifiedBy: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -67,15 +66,15 @@ export const complianceChecklistRouter = router({
       await db
         .update(complianceChecklist)
         .set(updateData)
-        .where(eq(complianceChecklist.id, input.id));
+        .where(and(eq(complianceChecklist.id, input.id), eq(complianceChecklist.tenantId, ctx.tenantId!)));
 
       return { success: true };
     }),
 
   // Obter score de conformidade
-  getComplianceScore: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .query(async ({ input }) => {
+  getComplianceScore: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -86,7 +85,7 @@ export const complianceChecklistRouter = router({
       const items = await db
         .select()
         .from(complianceChecklist)
-        .where(eq(complianceChecklist.tenantId, input.tenantId));
+        .where(eq(complianceChecklist.tenantId, ctx.tenantId!));
 
       const total = items.length;
       const compliant = items.filter((i) => i.status === "compliant").length;
@@ -104,10 +103,9 @@ export const complianceChecklistRouter = router({
     }),
 
   // Criar requisitos NR-01 padrão
-  seedNr01Requirements: publicProcedure
+  seedNr01Requirements: adminProcedure
     .input(z.object({ tenantId: z.string() }))
-    .mutation(async ({ input }) => {
-      await requireActiveSubscription(input.tenantId);
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -183,9 +181,9 @@ export const complianceChecklistRouter = router({
     }),
 
   // Exportar dados do checklist para geração de PDF
-  exportPdf: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .mutation(async ({ input }) => {
+  exportPdf: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -196,7 +194,7 @@ export const complianceChecklistRouter = router({
       const items = await db
         .select()
         .from(complianceChecklist)
-        .where(eq(complianceChecklist.tenantId, input.tenantId))
+        .where(eq(complianceChecklist.tenantId, ctx.tenantId!))
         .orderBy(complianceChecklist.requirementCode);
 
       // Agrupar por categoria
@@ -219,7 +217,7 @@ export const complianceChecklistRouter = router({
 
       return {
         generatedAt: new Date(),
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         summary: { total, compliant, partial, nonCompliant: total - compliant - partial - notApplicable, notApplicable, scorePercent },
         categories: grouped,
       };

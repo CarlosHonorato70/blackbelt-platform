@@ -21,7 +21,8 @@ import { usePdfExport } from "@/hooks/usePdfExport";
 export default function ComplianceCertificate() {
   usePageMeta({ title: "Certificado de Conformidade" });
   const { selectedTenant } = useTenant();
-  const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const { data: user } = trpc.auth.me.useQuery();
+  const tenantId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
   const { exportPdf, isExporting } = usePdfExport();
 
   if (!tenantId) {
@@ -53,7 +54,9 @@ export default function ComplianceCertificate() {
   const latestCertificate = certificates.length > 0 ? certificates[0] : null;
 
   function handleDownloadPdf() {
-    toast.info("PDF em desenvolvimento");
+    if (tenantId) {
+      window.open(`/api/pdf/certificado/${tenantId}`, "_blank");
+    }
   }
 
   function isValid(cert: any): boolean {

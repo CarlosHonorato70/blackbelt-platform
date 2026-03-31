@@ -37,13 +37,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
       refetch();
-      navigate("/login", { replace: true });
+      navigate("/", { replace: true });
     },
     onError: (err: { message: string }) => {
       console.error("[Auth] Erro ao fazer logout:", err.message);
       // Mesmo se o logout falhar no servidor, limpar estado local
       refetch();
-      navigate("/login", { replace: true });
+      navigate("/", { replace: true });
     },
   });
 

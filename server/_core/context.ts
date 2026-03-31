@@ -35,11 +35,20 @@ export async function createContext({ req, res }: { req: Request; res: Response 
   // Impersonacao: admin pode impersonar qualquer tenant,
   // consultor pode impersonar suas próprias empresas
   let isImpersonating = false;
+  let originalTenantId: string | null = user?.tenantId ?? null;
   if (user) {
     const impersonateTenantId = req.headers["x-impersonate-tenant"] as string | undefined;
     if (impersonateTenantId) {
       const tenant = await db.getTenant(impersonateTenantId);
       if (tenant) {
+        // Validate target tenant is active before allowing impersonation
+        if (tenant.status !== "active") {
+          log.warn("Impersonation attempt for inactive tenant", {
+            userId: user.id,
+            targetTenantId: impersonateTenantId,
+            tenantStatus: tenant.status,
+          });
+        } else {
         let allowed = false;
 
         if (user.role === "admin") {
@@ -51,6 +60,7 @@ export async function createContext({ req, res }: { req: Request; res: Response 
         }
 
         if (allowed) {
+          originalTenantId = user.tenantId ?? null; // preservar tenant original antes de sobrescrever
           user = { ...user, tenantId: impersonateTenantId };
           isImpersonating = true;
 
@@ -76,6 +86,7 @@ export async function createContext({ req, res }: { req: Request; res: Response 
             targetTenantId: impersonateTenantId,
           });
         }
+        } // close else (active tenant check)
       } else {
         log.warn("Impersonation attempt for non-existent tenant", {
           userId: user.id,
@@ -90,6 +101,7 @@ export async function createContext({ req, res }: { req: Request; res: Response 
     res,
     user,
     isImpersonating,
+    originalTenantId,
   };
 }
 

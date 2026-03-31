@@ -20,7 +20,7 @@ function parseDbUrl(url: string) {
 }
 
 export default defineConfig({
-  schema: ["./drizzle/schema.ts", "./drizzle/schema_nr01.ts"],
+  schema: ["./drizzle/schema.ts", "./drizzle/schema_nr01.ts", "./drizzle/schema_agent.ts"],
   out: "./drizzle",
   dialect: "mysql",
   dbCredentials: needsSsl

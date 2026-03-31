@@ -28,9 +28,16 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth.tsx";
+import { useNavigate } from "react-router-dom";
+import { useTenant } from "@/contexts/TenantContext";
+import { toast } from "sonner";
 
 export default function AssessmentHistory() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { selectedTenant } = useTenant();
+  const { data: meData } = trpc.auth.me.useQuery();
+  const effectiveId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || meData?.tenantId;
   const [selectedAssessment, setSelectedAssessment] = useState<string | null>(
     null
   );
@@ -93,8 +100,8 @@ export default function AssessmentHistory() {
               onChange={e => setSearchTerm(e.target.value)}
               className="flex-1"
             />
-            <Button variant="outline">Filtrar</Button>
-            <Button>Nova Avaliação</Button>
+            <Button variant="outline" onClick={() => toast.info("Filtros aplicados ao campo de busca")}>Filtrar</Button>
+            <Button onClick={() => navigate("/risk-assessments/new")}>Nova Avaliação</Button>
           </div>
         </CardContent>
       </Card>
@@ -158,11 +165,11 @@ export default function AssessmentHistory() {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); navigate(`/assessments/${assessment.id}`); }}>
                           <Eye className="w-4 h-4 mr-2" />
                           Visualizar
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); window.open(`/api/pdf/inventario/${effectiveId}`, "_blank"); }}>
                           <Download className="w-4 h-4 mr-2" />
                           PDF
                         </Button>
@@ -194,7 +201,7 @@ export default function AssessmentHistory() {
                         Concluída
                       </Badge>
                     </div>
-                    <Button size="sm" variant="outline">
+                    <Button size="sm" variant="outline" onClick={() => window.open(`/api/pdf/inventario/${effectiveId}`, "_blank")}>
                       <Download className="w-4 h-4 mr-2" />
                       Relatório
                     </Button>
@@ -223,7 +230,7 @@ export default function AssessmentHistory() {
                         Em Andamento
                       </Badge>
                     </div>
-                    <Button size="sm">Continuar</Button>
+                    <Button size="sm" onClick={() => navigate(`/copsoq/${assessment.id}`)}>Continuar</Button>
                   </div>
                 </CardContent>
               </Card>
@@ -249,7 +256,7 @@ export default function AssessmentHistory() {
                         Rascunho
                       </Badge>
                     </div>
-                    <Button size="sm">Editar</Button>
+                    <Button size="sm" onClick={() => navigate(`/copsoq/${assessment.id}`)}>Editar</Button>
                   </div>
                 </CardContent>
               </Card>

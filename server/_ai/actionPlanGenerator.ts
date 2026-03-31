@@ -172,7 +172,7 @@ export async function generateActionPlan(
     .limit(1);
 
   if (!report) {
-    throw new Error("Report COPSOQ-II nao encontrado.");
+    throw new Error("Report COPSOQ-II não encontrado.");
   }
 
   const aiAnalysis = report.aiAnalysis as CopsoqAnalysisResult | null;
@@ -212,15 +212,15 @@ export async function generateActionPlan(
     ? `Resumo: ${aiAnalysis.executiveSummary}\n\nRecomendacoes IA:\n${aiAnalysis.recommendations
         ?.map((r) => `- [P${r.priority}] ${r.title}: ${r.description}`)
         .join("\n") || "(sem recomendacoes)"}`
-    : "(Analise IA nao disponivel)";
+    : "(Análise IA não disponível)";
 
-  const userPrompt = `## Dados para Geracao do Plano de Acao
+  const userPrompt = `## Dados para Geração do Plano de Ação
 
 **Empresa:** ${tenantName}
 **Setor:** ${sectorName || "Geral"}
 **Avaliacao:** ${assessment.title}
 
-### Inventario de Riscos Psicossociais (${inventoryItems.length} itens)
+### Inventário de Riscos Psicossociais (${inventoryItems.length} itens)
 
 ${inventoryText}
 
@@ -282,11 +282,11 @@ Gere o plano de acao completo para mitigacao dos riscos psicossociais identifica
     log.error("ActionPlan: Failed to parse LLM response", {
       content: rawContent.substring(0, 500),
     });
-    throw new Error("ActionPlan: Resposta do LLM nao e JSON valido");
+    throw new Error("ActionPlan: Resposta do LLM não é JSON válido");
   }
 
   if (!Array.isArray(parsed.actions) || parsed.actions.length === 0) {
-    throw new Error("ActionPlan: LLM nao gerou acoes");
+    throw new Error("ActionPlan: LLM não gerou ações");
   }
 
   // 8. Persistir — acoes especificas

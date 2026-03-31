@@ -56,6 +56,8 @@ import * as XLSX from "xlsx";
 export default function AssessmentAnalytics() {
   const { user } = useAuth();
   const { selectedTenant } = useTenant();
+  const { data: meData } = trpc.auth.me.useQuery();
+  const effectiveId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || meData?.tenantId;
   const navigate = useNavigate();
 
   const assessmentsQuery = trpc.assessments.list.useQuery(
@@ -176,7 +178,7 @@ export default function AssessmentAnalytics() {
     });
 
   const handleCreateActionPlan = () => {
-    if (!selectedTenant) {
+    if (!effectiveId) {
       toast.error("Selecione uma empresa primeiro");
       return;
     }
@@ -186,7 +188,7 @@ export default function AssessmentAnalytics() {
     }
 
     createActionPlanMutation.mutate({
-      tenantId: selectedTenant.id,
+      tenantId: effectiveId,
       title: actionPlanForm.title,
       description: actionPlanForm.description || undefined,
       actionType: actionPlanForm.actionType,
@@ -530,7 +532,7 @@ export default function AssessmentAnalytics() {
               />
             )}
 
-            {/* Etapa 2: Inventario de Riscos */}
+            {/* Etapa 2: Inventário de Riscos */}
             {firstAssessmentId && (
               <AiInventoryPanel
                 assessmentId={firstAssessmentId}
@@ -539,7 +541,7 @@ export default function AssessmentAnalytics() {
               />
             )}
 
-            {/* Etapa 3: Plano de Acao */}
+            {/* Etapa 3: Plano de Ação */}
             {firstAssessmentId && (
               <AiActionPlanPanel
                 assessmentId={firstAssessmentId}
@@ -626,9 +628,6 @@ export default function AssessmentAnalytics() {
         <Button className="flex-1" onClick={handleExportReport}>
           <Download className="w-4 h-4 mr-2" />
           Exportar Relatório Executivo
-        </Button>
-        <Button variant="outline" className="flex-1">
-          Compartilhar com Gestores
         </Button>
       </div>
 

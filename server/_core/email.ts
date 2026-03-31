@@ -1,5 +1,123 @@
 import nodemailer from "nodemailer";
 import { log } from "./logger";
+import { nanoid } from "nanoid";
+
+// ============================================================================
+// EMAIL QUEUE — Garantia de entrega com retry automático
+// ============================================================================
+
+const RETRY_DELAYS = [5 * 60 * 1000, 15 * 60 * 1000, 60 * 60 * 1000, 6 * 60 * 60 * 1000]; // 5min, 15min, 1h, 6h
+
+export async function queueEmail(options: SendEmailOptions): Promise<string> {
+  try {
+    const { getDb } = await import("../db");
+    const db = await getDb();
+    if (!db) {
+      log.warn("[EmailQueue] DB not available, sending directly");
+      await sendEmail(options);
+      return "direct";
+    }
+
+    const { emailQueue } = await import("../../drizzle/schema");
+    const id = nanoid();
+    await db.insert(emailQueue).values({
+      id,
+      to: options.to,
+      subject: options.subject,
+      html: options.html,
+      textContent: options.text || null,
+      status: "pending",
+      attempts: 0,
+      maxAttempts: 4,
+      nextRetryAt: new Date(),
+    });
+
+    log.info("[EmailQueue] Email queued", { id, to: options.to, subject: options.subject.substring(0, 50) });
+    return id;
+  } catch (err) {
+    log.error("[EmailQueue] Failed to queue, sending directly", { error: String(err) });
+    await sendEmail(options);
+    return "direct-fallback";
+  }
+}
+
+export async function processEmailQueue(): Promise<{ processed: number; sent: number; failed: number }> {
+  try {
+    const { getDb } = await import("../db");
+    const db = await getDb();
+    if (!db) return { processed: 0, sent: 0, failed: 0 };
+
+    const { emailQueue, maintenanceRequests } = await import("../../drizzle/schema");
+    const { eq, and, lte, sql } = await import("drizzle-orm");
+
+    const pending = await db.select().from(emailQueue)
+      .where(and(
+        sql`${emailQueue.status} IN ('pending', 'processing')`,
+        lte(emailQueue.nextRetryAt, new Date())
+      ))
+      .limit(10);
+
+    let sent = 0, failed = 0;
+
+    for (const email of pending) {
+      await db.update(emailQueue).set({ status: "processing" }).where(eq(emailQueue.id, email.id));
+
+      const success = await sendEmail({
+        to: email.to,
+        subject: email.subject,
+        html: email.html,
+        text: email.textContent || undefined,
+      });
+
+      if (success) {
+        await db.update(emailQueue)
+          .set({ status: "sent", sentAt: new Date(), attempts: email.attempts + 1 })
+          .where(eq(emailQueue.id, email.id));
+        sent++;
+      } else {
+        const newAttempts = email.attempts + 1;
+        if (newAttempts >= email.maxAttempts) {
+          await db.update(emailQueue)
+            .set({ status: "failed", attempts: newAttempts, lastError: "Max attempts reached" })
+            .where(eq(emailQueue.id, email.id));
+
+          // Create maintenance request for failed email
+          await db.insert(maintenanceRequests).values({
+            id: nanoid(),
+            type: "email_delivery_failure",
+            status: "pending",
+            details: JSON.stringify({ emailId: email.id, to: email.to, subject: email.subject, attempts: newAttempts }),
+            requestedAt: new Date(),
+          });
+
+          failed++;
+          log.error("[EmailQueue] Email permanently failed", { id: email.id, to: email.to });
+        } else {
+          const nextRetry = new Date(Date.now() + RETRY_DELAYS[newAttempts - 1]);
+          await db.update(emailQueue)
+            .set({ status: "pending", attempts: newAttempts, nextRetryAt: nextRetry, lastError: "Send failed, will retry" })
+            .where(eq(emailQueue.id, email.id));
+          log.warn("[EmailQueue] Will retry", { id: email.id, attempt: newAttempts, nextRetry: nextRetry.toISOString() });
+        }
+      }
+    }
+
+    return { processed: pending.length, sent, failed };
+  } catch (err) {
+    log.error("[EmailQueue] Worker error", { error: String(err) });
+    return { processed: 0, sent: 0, failed: 0 };
+  }
+}
+
+/** Escape HTML para prevenir injection em templates de email */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
 // Configuração do transporte de email (usando variáveis de ambiente)
 const transporter = nodemailer.createTransport({
@@ -22,16 +140,70 @@ export interface SendEmailOptions {
   text?: string;
 }
 
-// Retry delays for transient SMTP failures (exponential backoff)
-const EMAIL_RETRY_DELAYS = [2000, 5000, 15000]; // 2s, 5s, 15s
+// Retry delays for transient SMTP failures (shorter backoff to stay within Nginx timeout)
+const EMAIL_RETRY_DELAYS = [1000, 3000, 5000]; // 1s, 3s, 5s
 
 /**
  * Envia um email usando o transporte configurado.
  * Retenta até 3 vezes com backoff exponencial em caso de falha transitória.
  */
+/**
+ * Send email via Brevo HTTP API (primary) — avoids SMTP port blocking on cloud providers.
+ */
+async function sendViaBrevoApi(options: SendEmailOptions): Promise<boolean> {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) return false;
+
+  const fromEmail = process.env.SMTP_FROM || "contato@blackbeltconsultoria.com";
+  const fromName = "Black Belt Consultoria";
+
+  const body = JSON.stringify({
+    sender: { name: fromName, email: fromEmail },
+    to: [{ email: options.to }],
+    subject: options.subject,
+    htmlContent: options.html,
+    textContent: options.text || undefined,
+  });
+
+  try {
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "api-key": apiKey,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body,
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (res.ok) {
+      log.info("Email sent via Brevo API", { to: options.to, status: res.status });
+      return true;
+    }
+
+    const errBody = await res.text();
+    log.warn("Brevo API failed", { status: res.status, body: errBody.substring(0, 200), to: options.to });
+    return false;
+  } catch (err) {
+    log.warn("Brevo API error", { error: err instanceof Error ? err.message : String(err), to: options.to });
+    return false;
+  }
+}
+
 export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
+  if (!process.env.SMTP_USER && !process.env.BREVO_API_KEY && !process.env.SMTP_PASSWORD) {
+    log.warn("Email credentials not configured, skipping email send");
+    return false;
+  }
+
+  // Try Brevo HTTP API first (works on cloud providers that block SMTP ports)
+  const apiResult = await sendViaBrevoApi(options);
+  if (apiResult) return true;
+
+  // Fallback to SMTP
   if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
-    log.warn("SMTP credentials not configured, skipping email send");
+    log.warn("SMTP credentials not configured and Brevo API failed");
     return false;
   }
 
@@ -48,7 +220,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
       });
 
       if (attempt > 1) {
-        log.info("Email sent successfully after retry", { attempt, to: options.to });
+        log.info("Email sent successfully via SMTP after retry", { attempt, to: options.to });
       }
       return true;
     } catch (error) {
@@ -56,13 +228,13 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
 
       if (attempt < maxAttempts) {
         const delay = EMAIL_RETRY_DELAYS[attempt - 1];
-        log.warn(`Email send failed (attempt ${attempt}/${maxAttempts}), retrying in ${delay}ms...`, {
+        log.warn(`SMTP send failed (attempt ${attempt}/${maxAttempts}), retrying in ${delay}ms...`, {
           error: errorMsg,
           to: options.to,
         });
         await new Promise((r) => setTimeout(r, delay));
       } else {
-        log.error(`Email send failed after ${maxAttempts} attempts`, {
+        log.error(`Email send failed after ${maxAttempts} attempts (SMTP + API)`, {
           error: errorMsg,
           to: options.to,
           subject: options.subject,
@@ -84,6 +256,7 @@ export async function sendCopsoqInvite(params: {
   assessmentTitle: string;
   inviteToken: string;
   expiresIn: number; // dias
+  tenantId?: string;
 }): Promise<boolean> {
   const {
     respondentEmail,
@@ -91,9 +264,10 @@ export async function sendCopsoqInvite(params: {
     assessmentTitle,
     inviteToken,
     expiresIn,
+    tenantId,
   } = params;
 
-  const inviteUrl = `${process.env.VITE_FRONTEND_URL || "http://localhost:3000"}/copsoq/respond/${inviteToken}`;
+  const inviteUrl = `${process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:3000"}/copsoq/respond/${inviteToken}`;
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -108,7 +282,7 @@ export async function sendCopsoqInvite(params: {
         </p>
 
         <p style="margin: 0 0 20px 0; font-size: 14px; color: #666;">
-          Você foi convidado para participar da avaliação de riscos psicossociais <strong>"${assessmentTitle}"</strong>.
+          Você foi convidado para participar da avaliação de riscos psicossociais <strong>"${escapeHtml(assessmentTitle)}"</strong>.
         </p>
 
         <p style="margin: 0 0 20px 0; font-size: 14px; color: #666;">
@@ -136,6 +310,20 @@ export async function sendCopsoqInvite(params: {
         </p>
       </div>
 
+      <div style="background: #fffbeb; padding: 20px; border: 1px solid #fbbf24; border-top: none;">
+        <table style="width: 100%;"><tr>
+          <td style="width: 40px; vertical-align: top; padding-right: 12px;">
+            <div style="width: 36px; height: 36px; background: #f59e0b; border-radius: 50%; text-align: center; line-height: 36px; color: white; font-size: 18px;">&#128737;</div>
+          </td>
+          <td>
+            <p style="margin: 0 0 4px 0; font-weight: bold; color: #92400e; font-size: 14px;">Canal de Denúncia Confidencial</p>
+            <p style="margin: 0 0 10px 0; color: #78350f; font-size: 12px;">Se você presenciou ou sofreu assédio, discriminação, violência ou outra situação inadequada, utilize nosso canal seguro.</p>
+            <a href="${process.env.FRONTEND_URL || "http://localhost:3000"}/denuncia/${tenantId || inviteToken}" style="background: #d97706; color: white; padding: 8px 20px; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block;">Fazer Denúncia Anônima</a>
+            <p style="margin: 8px 0 0 0; font-size: 11px; color: #a16207;">Sua identidade será totalmente preservada. Protegido pela LGPD.</p>
+          </td>
+        </tr></table>
+      </div>
+
       <div style="background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; font-size: 12px; color: #666; text-align: center;">
         <p style="margin: 0;">
           Black Belt Consultoria | Plataforma de Gestão de Riscos Psicossociais
@@ -148,12 +336,14 @@ export async function sendCopsoqInvite(params: {
     to: respondentEmail,
     subject: `Convite para Avaliação: ${assessmentTitle}`,
     html,
-    text: `Você foi convidado para responder a avaliação "${assessmentTitle}". Acesse: ${inviteUrl}`,
+    text: `Você foi convidado para responder a avaliação "${escapeHtml(assessmentTitle)}". Acesse: ${inviteUrl}`,
   });
 }
 
 /**
- * Envia email em lote para múltiplos respondentes
+ * Envia email em lote para múltiplos respondentes.
+ * Processa em lotes de 5 com 500ms entre lotes para evitar rate limiting
+ * e manter o tempo total dentro do timeout do Nginx (300s).
  */
 export async function sendBulkCopsoqInvites(
   invites: Array<{
@@ -162,20 +352,31 @@ export async function sendBulkCopsoqInvites(
     assessmentTitle: string;
     inviteToken: string;
     expiresIn: number;
+    tenantId?: string;
   }>
 ): Promise<{ success: number; failed: number }> {
   let success = 0;
   let failed = 0;
 
-  for (const invite of invites) {
-    const result = await sendCopsoqInvite(invite);
-    if (result) {
-      success++;
-    } else {
-      failed++;
+  const BATCH_SIZE = 5;
+  for (let i = 0; i < invites.length; i += BATCH_SIZE) {
+    const batch = invites.slice(i, i + BATCH_SIZE);
+    const results = await Promise.allSettled(
+      batch.map(invite => sendCopsoqInvite(invite))
+    );
+
+    for (const result of results) {
+      if (result.status === "fulfilled" && result.value) {
+        success++;
+      } else {
+        failed++;
+      }
     }
-    // Aguarda 1 segundo entre emails para evitar rate limiting
-    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Aguarda 500ms entre lotes para evitar rate limiting
+    if (i + BATCH_SIZE < invites.length) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
   }
 
   return { success, failed };
@@ -203,7 +404,7 @@ export async function sendResponseConfirmation(params: {
         </p>
 
         <p style="margin: 0 0 20px 0; font-size: 14px; color: #666;">
-          Obrigado por responder a avaliação <strong>"${assessmentTitle}"</strong>!
+          Obrigado por responder a avaliação <strong>"${escapeHtml(assessmentTitle)}"</strong>!
         </p>
 
         <div style="background: #f0fdf4; padding: 20px; border-left: 4px solid #10b981; margin: 20px 0;">
@@ -229,7 +430,7 @@ export async function sendResponseConfirmation(params: {
     to: respondentEmail,
     subject: `Confirmação: Avaliação ${assessmentTitle} Concluída`,
     html,
-    text: `Sua resposta para a avaliação "${assessmentTitle}" foi registrada com sucesso.`,
+    text: `Sua resposta para a avaliação "${escapeHtml(assessmentTitle)}" foi registrada com sucesso.`,
   });
 }
 
@@ -251,7 +452,7 @@ export async function sendReminderEmail(params: {
     assessmentTitle,
   } = params;
 
-  const inviteUrl = `${process.env.VITE_FRONTEND_URL || "http://localhost:3000"}/copsoq/respond/${inviteToken}`;
+  const inviteUrl = `${process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:3000"}/copsoq/respond/${inviteToken}`;
 
   const reminderMessages = {
     1: {
@@ -337,6 +538,7 @@ export async function sendProposalEmail(params: {
   riskLevel: "low" | "medium" | "high" | "critical";
   services: Array<{ name: string; quantity: number; unitPrice: number }>;
   validUntil?: Date;
+  approvalToken?: string;
 }): Promise<boolean> {
   const {
     clientEmail,
@@ -347,9 +549,13 @@ export async function sendProposalEmail(params: {
     riskLevel,
     services,
     validUntil,
+    approvalToken,
   } = params;
 
-  const proposalUrl = `${process.env.VITE_FRONTEND_URL || "http://localhost:3000"}/proposals/${proposalId}`;
+  const baseUrl = process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:3000";
+  const proposalUrl = `${baseUrl}/proposals/${proposalId}`;
+  const approveUrl = approvalToken ? `${baseUrl}/api/proposal/approve/${approvalToken}` : null;
+  const rejectUrl = approvalToken ? `${baseUrl}/api/proposal/reject/${approvalToken}` : null;
   
   const riskLevelColors = {
     low: { bg: "#dcfce7", border: "#10b981", text: "#166534", label: "Baixo" },
@@ -368,7 +574,7 @@ export async function sendProposalEmail(params: {
     .map(
       service => `
         <tr>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px;">${service.name}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px;">${escapeHtml(service.name)}</td>
           <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px; text-align: center;">${service.quantity}</td>
           <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px; text-align: right;">
             ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(service.unitPrice / 100)}
@@ -391,7 +597,7 @@ export async function sendProposalEmail(params: {
 
       <div style="background: white; padding: 40px 20px; border: 1px solid #e5e7eb; border-top: none;">
         <p style="margin: 0 0 20px 0; font-size: 16px;">
-          Prezado(a) <strong>${clientName}</strong>,
+          Prezado(a) <strong>${escapeHtml(clientName)}</strong>,
         </p>
 
         <p style="margin: 0 0 20px 0; font-size: 14px; color: #666;">
@@ -441,11 +647,27 @@ export async function sendProposalEmail(params: {
           </p>
         </div>
 
+        ${approveUrl ? `
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${approveUrl}" style="background: #10b981; color: white; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px; margin: 5px 10px;">
+            Aprovar Proposta
+          </a>
+          <a href="${rejectUrl}" style="background: #ef4444; color: white; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 14px; margin: 5px 10px;">
+            Recusar
+          </a>
+        </div>
+        <div style="text-align: center; margin: 10px 0;">
+          <a href="${proposalUrl}" style="color: #667eea; font-size: 14px; text-decoration: underline;">
+            Ver proposta completa
+          </a>
+        </div>
+        ` : `
         <div style="text-align: center; margin: 30px 0;">
           <a href="${proposalUrl}" style="background: #667eea; color: white; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
             Ver Proposta Completa
           </a>
         </div>
+        `}
 
         <p style="margin: 20px 0 0 0; font-size: 12px; color: #999; text-align: center;">
           ${validityText}
@@ -473,7 +695,7 @@ export async function sendProposalEmail(params: {
   const textContent = `
 Proposta Comercial - Black Belt Consultoria
 
-Prezado(a) ${clientName},
+Prezado(a) ${escapeHtml(clientName)},
 
 Com base na avaliação de riscos psicossociais realizada, preparamos uma proposta personalizada.
 
@@ -496,6 +718,240 @@ contato@blackbeltconsultoria.com
   return sendEmail({
     to: clientEmail,
     subject: `Proposta: ${proposalTitle} - Black Belt Consultoria`,
+    html,
+    text: textContent,
+  });
+}
+
+/**
+ * Envia email com instruções de pagamento após aprovação de proposta final
+ */
+export async function sendPaymentInstructionsEmail(params: {
+  clientEmail: string;
+  clientName: string;
+  proposalTitle: string;
+  totalValue: number;
+  installments: Array<{ installment: number; percentage: number; amount: number }>;
+  paymentPix?: string;
+  paymentBank?: string;
+  paymentInstructions?: string;
+}): Promise<boolean> {
+  const {
+    clientEmail,
+    clientName,
+    proposalTitle,
+    totalValue,
+    installments,
+    paymentPix,
+    paymentBank,
+    paymentInstructions,
+  } = params;
+
+  const formatCurrency = (v: number) =>
+    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v / 100);
+
+  const installmentsHtml = installments
+    .map(
+      (inst) => `
+        <tr>
+          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px; text-align: center;">${inst.installment}ª Parcela</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px; text-align: center;">${inst.percentage}%</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px; text-align: right; font-weight: bold;">${formatCurrency(inst.amount)}</td>
+        </tr>
+      `
+    )
+    .join("");
+
+  const paymentDataHtml = [];
+  if (paymentPix) {
+    paymentDataHtml.push(`<p style="margin: 8px 0; font-size: 14px; color: #2d3748;"><strong>Chave PIX:</strong> ${escapeHtml(paymentPix)}</p>`);
+  }
+  if (paymentBank) {
+    paymentDataHtml.push(`<p style="margin: 8px 0; font-size: 14px; color: #2d3748;"><strong>Dados Bancários:</strong><br>${escapeHtml(paymentBank).replace(/\n/g, "<br>")}</p>`);
+  }
+  if (paymentInstructions) {
+    paymentDataHtml.push(`<p style="margin: 8px 0; font-size: 14px; color: #2d3748;"><strong>Instruções:</strong><br>${escapeHtml(paymentInstructions).replace(/\n/g, "<br>")}</p>`);
+  }
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 28px;">Instruções de Pagamento</h1>
+        <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Black Belt Consultoria</p>
+      </div>
+
+      <div style="background: white; padding: 40px 20px; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="margin: 0 0 20px 0; font-size: 16px;">
+          Prezado(a) <strong>${escapeHtml(clientName)}</strong>,
+        </p>
+
+        <p style="margin: 0 0 20px 0; font-size: 14px; color: #666;">
+          Sua proposta <strong>"${escapeHtml(proposalTitle)}"</strong> foi aprovada com sucesso!
+          Abaixo estão as informações para efetuar o pagamento.
+        </p>
+
+        <div style="background: #f0fdf4; padding: 20px; border-left: 4px solid #10b981; margin: 20px 0; border-radius: 6px;">
+          <p style="margin: 0; font-size: 16px; color: #166534;">
+            <strong>Valor Total:</strong> ${formatCurrency(totalValue)}
+          </p>
+        </div>
+
+        <h2 style="font-size: 18px; color: #333; margin: 30px 0 15px 0; border-bottom: 2px solid #667eea; padding-bottom: 10px;">
+          Condições de Pagamento
+        </h2>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <thead>
+            <tr style="background: #f3f4f6;">
+              <th style="padding: 12px; text-align: center; font-size: 14px; font-weight: 600; border-bottom: 2px solid #667eea;">Parcela</th>
+              <th style="padding: 12px; text-align: center; font-size: 14px; font-weight: 600; border-bottom: 2px solid #667eea;">Percentual</th>
+              <th style="padding: 12px; text-align: right; font-size: 14px; font-weight: 600; border-bottom: 2px solid #667eea;">Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${installmentsHtml}
+          </tbody>
+        </table>
+
+        ${paymentDataHtml.length > 0 ? `
+        <h2 style="font-size: 18px; color: #333; margin: 30px 0 15px 0; border-bottom: 2px solid #667eea; padding-bottom: 10px;">
+          Dados para Pagamento
+        </h2>
+        <div style="background: #f7fafc; border: 2px solid #667eea; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          ${paymentDataHtml.join("")}
+        </div>
+        ` : ""}
+
+        <div style="background: #fef3c7; padding: 20px; border-left: 4px solid #f59e0b; margin: 30px 0; border-radius: 6px;">
+          <p style="margin: 0; font-size: 14px; color: #92400e;">
+            <strong>Importante:</strong> Após efetuar cada pagamento, por favor envie o comprovante para que possamos registrar e dar andamento aos serviços contratados.
+          </p>
+        </div>
+      </div>
+
+      <div style="background: #f9fafb; padding: 25px 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+        <p style="margin: 0; font-size: 12px; color: #666; text-align: center;">
+          Black Belt Consultoria | Plataforma de Gestão de Riscos Psicossociais<br>
+          <a href="mailto:contato@blackbeltconsultoria.com" style="color: #667eea; text-decoration: none;">contato@blackbeltconsultoria.com</a>
+        </p>
+      </div>
+    </div>
+  `;
+
+  const installmentsText = installments
+    .map((inst) => `  ${inst.installment}ª Parcela: ${inst.percentage}% - ${formatCurrency(inst.amount)}`)
+    .join("\n");
+
+  const textContent = `
+Instruções de Pagamento - Black Belt Consultoria
+
+Prezado(a) ${clientName},
+
+Sua proposta "${proposalTitle}" foi aprovada!
+
+Valor Total: ${formatCurrency(totalValue)}
+
+Condições de Pagamento:
+${installmentsText}
+
+${paymentPix ? `Chave PIX: ${paymentPix}` : ""}
+${paymentBank ? `Dados Bancários: ${paymentBank}` : ""}
+${paymentInstructions ? `Instruções: ${paymentInstructions}` : ""}
+
+Após efetuar cada pagamento, envie o comprovante para registro.
+
+Black Belt Consultoria
+contato@blackbeltconsultoria.com
+  `.trim();
+
+  return sendEmail({
+    to: clientEmail,
+    subject: `Instruções de Pagamento: ${proposalTitle} - Black Belt Consultoria`,
+    html,
+    text: textContent,
+  });
+}
+
+/**
+ * Envia email de boas-vindas para empresa com credenciais de acesso
+ * e orientações sobre cadastro de setores/colaboradores.
+ */
+export async function sendWelcomeCompanyEmail(params: {
+  companyEmail: string;
+  companyName: string;
+  tempPassword: string;
+  loginUrl: string;
+}): Promise<boolean> {
+  const { companyEmail, companyName, tempPassword, loginUrl } = params;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #1a365d 0%, #2d3748 100%); color: white; padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 24px;">Bem-vindo(a) ao BlackBelt</h1>
+        <p style="margin: 10px 0 0; opacity: 0.9;">Plataforma de Conformidade NR-01</p>
+      </div>
+
+      <div style="background: #fff; padding: 30px 20px; border: 1px solid #e2e8f0;">
+        <p style="font-size: 16px; color: #2d3748;">Prezado(a) responsável da <strong>${escapeHtml(companyName)}</strong>,</p>
+
+        <p style="color: #4a5568;">Sua proposta foi aprovada com sucesso! Abaixo estão suas credenciais de acesso à plataforma BlackBelt:</p>
+
+        <div style="background: #f7fafc; border: 2px solid #1a365d; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <h3 style="margin: 0 0 10px; color: #1a365d;">Credenciais de Acesso</h3>
+          <p style="margin: 5px 0; color: #2d3748;"><strong>Email:</strong> ${escapeHtml(companyEmail)}</p>
+          <p style="margin: 5px 0; color: #2d3748;"><strong>Senha:</strong> ${escapeHtml(tempPassword)}</p>
+          <p style="margin: 10px 0 0; font-size: 13px; color: #e53e3e;">Recomendamos alterar sua senha no primeiro acesso.</p>
+        </div>
+
+        <h3 style="color: #1a365d; margin-top: 25px;">Próximos Passos</h3>
+        <ol style="color: #4a5568; line-height: 1.8;">
+          <li>Acesse a plataforma com as credenciais acima</li>
+          <li>No menu lateral, acesse <strong>Colaboradores e Setores</strong></li>
+          <li>Cadastre os <strong>setores</strong> da empresa</li>
+          <li>Cadastre os <strong>colaboradores</strong> com nome, email e setor</li>
+          <li>Dica: use o botão <strong>"Baixar Modelo"</strong> para importar uma planilha com todos os dados de uma vez</li>
+        </ol>
+
+        <p style="color: #4a5568; margin-top: 15px;">Após o cadastro dos colaboradores, a consultoria enviará o <strong>questionário COPSOQ-II</strong> diretamente para o email de cada colaborador.</p>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${loginUrl}" style="display: inline-block; background: #1a365d; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: bold;">Acessar Plataforma</a>
+        </div>
+      </div>
+
+      <div style="background: #f7fafc; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; border: 1px solid #e2e8f0; border-top: 0;">
+        <p style="margin: 0; color: #718096; font-size: 13px;">Dúvidas? Entre em contato: contato@blackbeltconsultoria.com</p>
+        <p style="margin: 5px 0 0; color: #a0aec0; font-size: 12px;">Black Belt Consultoria — Conformidade NR-01</p>
+      </div>
+    </div>
+  `;
+
+  const textContent = `
+Bem-vindo(a) ao BlackBelt — Plataforma de Conformidade NR-01
+
+Prezado(a) responsável da ${companyName},
+
+Sua proposta foi aprovada! Credenciais de acesso:
+- Email: ${companyEmail}
+- Senha: ${tempPassword}
+
+PRÓXIMOS PASSOS:
+1. Acesse a plataforma: ${loginUrl}
+2. No menu lateral, acesse Colaboradores e Setores
+3. Cadastre os setores da empresa
+4. Cadastre os colaboradores com nome, email e setor
+5. Dica: use o botão "Baixar Modelo" para importar uma planilha
+
+Após o cadastro, a consultoria enviará o questionário COPSOQ-II para os colaboradores.
+
+Recomendamos alterar sua senha no primeiro acesso.
+
+Dúvidas? contato@blackbeltconsultoria.com
+  `.trim();
+
+  return sendEmail({
+    to: companyEmail,
+    subject: `Bem-vindo à BlackBelt — Acesso à Plataforma - ${companyName}`,
     html,
     text: textContent,
   });

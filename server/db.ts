@@ -52,6 +52,10 @@ import {
   invoices,
   subscriptions,
   onboardingProgress,
+  copsoqBillingEvents,
+  pendingCopsoqPayments,
+  creditTransactions,
+  tenantCredits,
 } from "../drizzle/schema";
 import {
   copsoqAssessments,
@@ -79,6 +83,9 @@ export async function getDb() {
           waitForConnections: true,
           connectionLimit: process.env.NODE_ENV === "production" ? 50 : 10,
           queueLimit: 1000,
+          connectTimeout: 10_000,
+          enableKeepAlive: true,
+          keepAliveInitialDelay: 10_000,
           ...(needsSsl ? { ssl: { minVersion: 'TLSv1.2', rejectUnauthorized: true } } : {}),
         });
         _db = drizzle(_pool, { schema: fullSchema, mode: "default" });
@@ -99,6 +106,20 @@ export async function getDb() {
     }
   }
   return _db;
+}
+
+/** Fecha o pool de conexoes (chamado no graceful shutdown) */
+export async function closePool(): Promise<void> {
+  if (_pool) {
+    try {
+      await _pool.end();
+      log.info("[Database] Connection pool closed");
+    } catch (err) {
+      log.error("[Database] Error closing pool", { error: String(err) });
+    }
+    _pool = null;
+    _db = null;
+  }
 }
 
 /** Verifica se o banco de dados esta acessivel (para health check) */
@@ -334,18 +355,91 @@ export async function deleteTenant(id: string) {
 
   log.info("deleteTenant: starting cascade delete", { tenantId: id });
 
-  // NR-01 tables (schema_nr01)
+  // NR-01 tables (schema_nr01) — complete cascade delete
   try {
-    const { copsoqResponses, copsoqReports, copsoqAssessments } = await import("../drizzle/schema_nr01");
-    await safeDelete(() => db.delete(copsoqResponses).where(
+    const nr01 = await import("../drizzle/schema_nr01");
+
+    // Ergonomic
+    await safeDelete(() => db.delete(nr01.ergonomicItems).where(
+      sql`assessmentId IN (SELECT id FROM ergonomic_assessments WHERE tenantId = ${id})`
+    ), "ergonomicItems");
+    await safeDelete(() => db.delete(nr01.ergonomicAssessments).where(eq(nr01.ergonomicAssessments.tenantId, id)), "ergonomicAssessments");
+
+    // eSocial & Financial
+    await safeDelete(() => db.delete(nr01.esocialExports).where(eq(nr01.esocialExports.tenantId, id)), "esocialExports");
+    await safeDelete(() => db.delete(nr01.financialParameters).where(eq(nr01.financialParameters.tenantId, id)), "financialParameters");
+
+    // Compliance
+    await safeDelete(() => db.delete(nr01.deadlineAlerts).where(eq(nr01.deadlineAlerts.tenantId, id)), "deadlineAlerts");
+    await safeDelete(() => db.delete(nr01.complianceCertificates).where(eq(nr01.complianceCertificates.tenantId, id)), "complianceCertificates");
+    await safeDelete(() => db.delete(nr01.complianceChecklist).where(eq(nr01.complianceChecklist.tenantId, id)), "complianceChecklist");
+    await safeDelete(() => db.delete(nr01.complianceMilestones).where(eq(nr01.complianceMilestones.tenantId, id)), "complianceMilestones");
+    await safeDelete(() => db.delete(nr01.complianceDocuments).where(eq(nr01.complianceDocuments.tenantId, id)), "complianceDocuments");
+
+    // Surveys
+    await safeDelete(() => db.delete(nr01.surveyInvites).where(eq(nr01.surveyInvites.tenantId, id)), "surveyInvites");
+    await safeDelete(() => db.delete(nr01.anonymousReports).where(eq(nr01.anonymousReports.tenantId, id)), "anonymousReports");
+
+    // Training
+    await safeDelete(() => db.delete(nr01.trainingProgress).where(
+      sql`moduleId IN (SELECT id FROM training_modules WHERE tenantId = ${id})`
+    ), "trainingProgress");
+    await safeDelete(() => db.delete(nr01.trainingModules).where(eq(nr01.trainingModules.tenantId, id)), "trainingModules");
+
+    // PCMSO (benchmarkData is global, not per-tenant)
+    await safeDelete(() => db.delete(nr01.pcmsoRecommendations).where(eq(nr01.pcmsoRecommendations.tenantId, id)), "pcmsoRecommendations");
+    await safeDelete(() => db.delete(nr01.dsrRequests).where(eq(nr01.dsrRequests.tenantId, id)), "dsrRequests");
+
+    // COPSOQ
+    await safeDelete(() => db.delete(nr01.copsoqReminders).where(
+      sql`invite_id IN (SELECT id FROM copsoq_invites WHERE assessmentId IN (SELECT id FROM copsoq_assessments WHERE tenantId = ${id}))`
+    ), "copsoqReminders");
+    await safeDelete(() => db.delete(nr01.copsoqInvites).where(
+      sql`assessmentId IN (SELECT id FROM copsoq_assessments WHERE tenantId = ${id})`
+    ), "copsoqInvites");
+    await safeDelete(() => db.delete(nr01.copsoqResponses).where(
       sql`assessmentId IN (SELECT id FROM copsoq_assessments WHERE tenantId = ${id})`
     ), "copsoqResponses");
-    await safeDelete(() => db.delete(copsoqReports).where(
+    await safeDelete(() => db.delete(nr01.copsoqReports).where(
       sql`assessmentId IN (SELECT id FROM copsoq_assessments WHERE tenantId = ${id})`
     ), "copsoqReports");
-    await safeDelete(() => db.delete(copsoqAssessments).where(eq(copsoqAssessments.tenantId, id)), "copsoqAssessments");
+    await safeDelete(() => db.delete(nr01.copsoqAssessments).where(eq(nr01.copsoqAssessments.tenantId, id)), "copsoqAssessments");
+
+    // Intervention programs
+    await safeDelete(() => db.delete(nr01.programParticipants).where(
+      sql`programId IN (SELECT id FROM intervention_programs WHERE tenantId = ${id})`
+    ), "programParticipants");
+    await safeDelete(() => db.delete(nr01.individualSessions).where(eq(nr01.individualSessions.tenantId, id)), "individualSessions");
+    await safeDelete(() => db.delete(nr01.mentalHealthIndicators).where(eq(nr01.mentalHealthIndicators.tenantId, id)), "mentalHealthIndicators");
+    await safeDelete(() => db.delete(nr01.interventionPrograms).where(eq(nr01.interventionPrograms.tenantId, id)), "interventionPrograms");
+
+    // Psychosocial surveys
+    await safeDelete(() => db.delete(nr01.surveyResponses).where(
+      sql`surveyId IN (SELECT id FROM psychosocial_surveys WHERE tenantId = ${id})`
+    ), "surveyResponses");
+    await safeDelete(() => db.delete(nr01.psychosocialSurveys).where(eq(nr01.psychosocialSurveys.tenantId, id)), "psychosocialSurveys");
+
+    // Risk assessments & action plans
+    await safeDelete(() => db.delete(nr01.riskAssessmentItems).where(
+      sql`assessmentId IN (SELECT id FROM risk_assessments WHERE tenantId = ${id})`
+    ), "riskAssessmentItems");
+    await safeDelete(() => db.delete(nr01.riskAssessments).where(eq(nr01.riskAssessments.tenantId, id)), "riskAssessments");
+    await safeDelete(() => db.delete(nr01.actionPlans).where(eq(nr01.actionPlans.tenantId, id)), "actionPlans");
   } catch (err) {
     log.warn("deleteTenant: schema_nr01 cleanup skipped", { error: err instanceof Error ? err.message : String(err) });
+  }
+
+  // Agent tables (schema_agent)
+  try {
+    const agent = await import("../drizzle/schema_agent");
+    await safeDelete(() => db.delete(agent.agentActions).where(eq(agent.agentActions.tenantId, id)), "agentActions");
+    await safeDelete(() => db.delete(agent.agentAlerts).where(eq(agent.agentAlerts.tenantId, id)), "agentAlerts");
+    await safeDelete(() => db.delete(agent.agentMessages).where(
+      sql`conversationId IN (SELECT id FROM agent_conversations WHERE tenantId = ${id})`
+    ), "agentMessages");
+    await safeDelete(() => db.delete(agent.agentConversations).where(eq(agent.agentConversations.tenantId, id)), "agentConversations");
+  } catch (err) {
+    log.warn("deleteTenant: schema_agent cleanup skipped", { error: err instanceof Error ? err.message : String(err) });
   }
 
   // Delete in dependency order (most dependent first) - using static imports
@@ -393,8 +487,17 @@ export async function deleteTenant(id: string) {
   await safeDelete(() => db.delete(sectors).where(eq(sectors.tenantId, id)), "sectors");
   await safeDelete(() => db.delete(tenantSettings).where(eq(tenantSettings.tenantId, id)), "tenantSettings");
 
-  // Desassociar users do tenant (não excluir users)
-  await safeDelete(() => db.update(users).set({ tenantId: null }).where(eq(users.tenantId, id)), "users-disassociate");
+  // Billing tables
+  await safeDelete(() => db.delete(copsoqBillingEvents).where(eq(copsoqBillingEvents.tenantId, id)), "copsoqBillingEvents");
+  await safeDelete(() => db.delete(pendingCopsoqPayments).where(eq(pendingCopsoqPayments.tenantId, id)), "pendingCopsoqPayments");
+  await safeDelete(() => db.delete(creditTransactions).where(eq(creditTransactions.tenantId, id)), "creditTransactions");
+  await safeDelete(() => db.delete(tenantCredits).where(eq(tenantCredits.tenantId, id)), "tenantCredits");
+
+  // Delete users associated with this tenant
+  await safeDelete(() => db.delete(loginAttempts).where(
+    sql`email IN (SELECT email FROM users WHERE tenantId = ${id})`
+  ), "loginAttempts-users");
+  await safeDelete(() => db.delete(users).where(eq(users.tenantId, id)), "users");
 
   // Finalmente, excluir o tenant
   await db.delete(tenants).where(eq(tenants.id, id));
@@ -554,7 +657,25 @@ export async function listPeople(tenantId: string, filters: { sectorId?: string;
   if (filters.sectorId) conditions.push(eq(people.sectorId, filters.sectorId));
   if (filters.employmentType) conditions.push(eq(people.employmentType, filters.employmentType as any));
   if (filters.search) conditions.push(or(like(people.name, `%${filters.search}%`), like(people.email, `%${filters.search}%`)) as any);
-  return db.select().from(people).where(and(...conditions)).orderBy(desc(people.createdAt));
+  const rows = await db
+    .select({
+      id: people.id,
+      tenantId: people.tenantId,
+      sectorId: people.sectorId,
+      name: people.name,
+      position: people.position,
+      email: people.email,
+      phone: people.phone,
+      employmentType: people.employmentType,
+      createdAt: people.createdAt,
+      updatedAt: people.updatedAt,
+      sectorName: sectors.name,
+    })
+    .from(people)
+    .leftJoin(sectors, eq(people.sectorId, sectors.id))
+    .where(and(...conditions))
+    .orderBy(desc(people.createdAt));
+  return rows;
 }
 
 export async function getPerson(id: string, tenantId: string) {

@@ -2,8 +2,8 @@ import crypto from "crypto";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { eq, and } from "drizzle-orm";
-import { protectedProcedure, router, tenantProcedure, subscribedProcedure } from "../_core/trpc";
+import { eq, and, sql } from "drizzle-orm";
+import { protectedProcedure, router, tenantProcedure, subscribedProcedure, consultantProcedure } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   copsoqAssessments,
@@ -11,11 +11,15 @@ import {
   copsoqReports,
   copsoqInvites,
 } from "../../drizzle/schema_nr01";
-import { sendBulkCopsoqInvites } from "../_core/email";
+import { subscriptions, plans, copsoqBillingEvents, tenantCredits, creditTransactions, pendingCopsoqPayments } from "../../drizzle/schema";
+import { sendBulkCopsoqInvites, sendEmail } from "../_core/email";
+import { log } from "../_core/logger";
+import { updateAsaasSubscriptionValue } from "./asaas";
+import { users } from "../../drizzle/schema";
 
 export const assessmentsRouter = router({
-  // Criar nova avaliacao
-  create: subscribedProcedure
+  // Criar nova avaliacao (somente consultor/admin)
+  create: consultantProcedure
     .input(
       z.object({
         
@@ -299,8 +303,8 @@ export const assessmentsRouter = router({
         .where(eq(copsoqInvites.tenantId, ctx.tenantId!));
     }),
 
-  // Enviar convites em lote
-  sendInvites: subscribedProcedure
+  // Enviar convites em lote (somente consultor/admin)
+  sendInvites: consultantProcedure
     .input(
       z.object({
         
@@ -320,7 +324,123 @@ export const assessmentsRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      // Criar avaliacao
+      const inviteCount = input.invitees.length;
+
+      // ========== BILLING CHECK: Verificar excedentes ANTES de enviar ==========
+      const [sub] = await db.select()
+        .from(subscriptions)
+        .where(eq(subscriptions.tenantId, ctx.tenantId!))
+        .limit(1);
+
+      let exceedentCount = 0;
+      let chargeAmount = 0;
+      let pricePerInvite = 0;
+      let included = 0;
+
+      if (sub) {
+        const [plan] = await db.select()
+          .from(plans)
+          .where(eq(plans.id, sub.planId))
+          .limit(1);
+
+        const sentBefore = sub.copsoqInvitesSent || 0;
+        const sentAfter = sentBefore + inviteCount;
+        included = plan?.copsoqInvitesIncluded || 0;
+        pricePerInvite = plan?.pricePerCopsoqInvite || 0;
+
+        if (sentAfter > included && pricePerInvite > 0) {
+          const excedentsBefore = Math.max(0, sentBefore - included);
+          const excedentsAfter = Math.max(0, sentAfter - included);
+          exceedentCount = excedentsAfter - excedentsBefore;
+          chargeAmount = exceedentCount * pricePerInvite;
+        }
+      }
+
+      // Email alert at 80% of included invites
+      if (sub && included > 0) {
+        const sentBefore = sub.copsoqInvitesSent || 0;
+        const sentAfter = sentBefore + inviteCount;
+        const pctBefore = Math.round((sentBefore / included) * 100);
+        const pctAfter = Math.round((sentAfter / included) * 100);
+        if (pctBefore < 80 && pctAfter >= 80 && pctAfter < 100) {
+          try {
+            const [owner] = await db.select().from(users).where(eq(users.tenantId, ctx.tenantId!)).limit(1);
+            if (owner?.email) {
+              await sendEmail({
+                to: owner.email,
+                subject: "[BlackBelt] Voce atingiu 80% dos convites COPSOQ inclusos",
+                html: `<h2>Alerta de Uso — BlackBelt Platform</h2>
+                  <p>Voce utilizou <strong>${sentAfter} de ${included}</strong> convites COPSOQ inclusos no seu plano.</p>
+                  <p>Convites excedentes serao cobrados a <strong>R$ ${(pricePerInvite / 100).toFixed(2)}</strong> cada.</p>
+                  <p>Considere comprar creditos pre-pagos para evitar interrupcoes.</p>`,
+              });
+              log.info(`[Billing] 80% alert sent to ${owner.email}`);
+            }
+          } catch { /* don't fail on email error */ }
+        }
+      }
+
+      // If there are exceedents, check for credits or block
+      if (chargeAmount > 0) {
+        const [credits] = await db.select()
+          .from(tenantCredits)
+          .where(eq(tenantCredits.tenantId, ctx.tenantId!))
+          .limit(1);
+
+        const creditBalance = credits?.balance || 0;
+
+        if (creditBalance >= chargeAmount) {
+          // Has enough credits — deduct and continue
+          await db.update(tenantCredits)
+            .set({ balance: creditBalance - chargeAmount, updatedAt: new Date() })
+            .where(eq(tenantCredits.tenantId, ctx.tenantId!));
+
+          await db.insert(creditTransactions).values({
+            id: nanoid(),
+            tenantId: ctx.tenantId!,
+            type: "usage",
+            amount: -chargeAmount,
+            description: `${exceedentCount} convites COPSOQ excedentes — ${input.assessmentTitle}`,
+            referenceId: null,
+          });
+
+          log.info(`[Billing] Credits used: tenant=${ctx.tenantId} R$${(chargeAmount / 100).toFixed(2)} for ${exceedentCount} exceedents`);
+        } else {
+          // NOT enough credits — BLOCK and create pending payment
+          const pendingId = nanoid();
+          const expiresAt = new Date();
+          expiresAt.setMinutes(expiresAt.getMinutes() + 30);
+
+          await db.insert(pendingCopsoqPayments).values({
+            id: pendingId,
+            tenantId: ctx.tenantId!,
+            assessmentTitle: input.assessmentTitle,
+            invitees: JSON.stringify(input.invitees),
+            totalInvites: inviteCount,
+            freeInvites: Math.max(0, inviteCount - exceedentCount),
+            exceedentCount,
+            chargeAmount,
+            paymentStatus: "pending",
+            expiresAt,
+          });
+
+          log.info(`[Billing] BLOCKED: tenant=${ctx.tenantId} ${exceedentCount} exceedents, R$${(chargeAmount / 100).toFixed(2)} required`);
+
+          return {
+            blocked: true,
+            pendingPaymentId: pendingId,
+            totalInvites: inviteCount,
+            freeInvites: Math.max(0, inviteCount - exceedentCount),
+            exceedentCount,
+            chargeAmount,
+            pricePerInvite,
+            creditBalance,
+            message: `${exceedentCount} convite(s) excedente(s). Valor: R$ ${(chargeAmount / 100).toFixed(2)}. Pague para liberar o envio.`,
+          };
+        }
+      }
+
+      // ========== ENVIO: Criar avaliação e enviar convites ==========
       const assessmentId = `copsoq_${Date.now()}_${nanoid(8)}`;
       await db.insert(copsoqAssessments).values({
         id: assessmentId,
@@ -330,7 +450,6 @@ export const assessmentsRouter = router({
         status: "in_progress",
       });
 
-      // Criar convites
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + input.expiresIn);
 
@@ -358,13 +477,12 @@ export const assessmentsRouter = router({
           assessmentTitle: input.assessmentTitle,
           inviteToken,
           expiresIn: input.expiresIn,
+          tenantId: ctx.tenantId!,
         });
       }
 
-      // Enviar emails em lote
       const result = await sendBulkCopsoqInvites(invitesToSend);
 
-      // Atualizar status dos convites enviados
       for (const invitee of input.invitees) {
         await db
           .update(copsoqInvites)
@@ -372,9 +490,27 @@ export const assessmentsRouter = router({
           .where(eq(copsoqInvites.respondentEmail, invitee.email));
       }
 
+      // ========== BILLING: Atualizar contadores ==========
+      if (sub) {
+        const sentBefore = sub.copsoqInvitesSent || 0;
+        const sentAfter = sentBefore + inviteCount;
+        const totalExtra = (sub.copsoqExtraCharges || 0) + chargeAmount;
+        const totalPrice = (sub.currentPrice || 0) + totalExtra;
+
+        await db.update(subscriptions)
+          .set({ copsoqInvitesSent: sentAfter, copsoqExtraCharges: totalExtra, totalPrice, updatedAt: new Date() })
+          .where(eq(subscriptions.id, sub.id));
+
+        await db.insert(copsoqBillingEvents).values({
+          id: nanoid(), tenantId: ctx.tenantId!, subscriptionId: sub.id,
+          inviteId: assessmentId, invitesSentBefore: sentBefore, invitesSentAfter: sentAfter, chargeAmount,
+        });
+      }
+
       return {
+        blocked: false,
         assessmentId,
-        totalInvites: input.invitees.length,
+        totalInvites: inviteCount,
         successfulSends: result.success,
         failedSends: result.failed,
       };
@@ -445,7 +581,7 @@ function calculateDimensionScores(responses: Record<string | number, number>) {
   const scores: Record<string, number> = {};
 
   for (const [dimension, questions] of Object.entries(dimensions)) {
-    const values = questions.map(q => responses[q] || 0).filter(v => v > 0);
+    const values = questions.map(q => responses[q] || responses[`q${q}`] || 0).filter(v => v > 0);
 
     if (values.length === 0) {
       scores[dimension] = 0;

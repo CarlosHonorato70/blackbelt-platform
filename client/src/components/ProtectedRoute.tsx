@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -15,9 +16,19 @@ const SUBSCRIPTION_EXEMPT_PATHS = [
   "/subscription/failure",
 ];
 
+// Rotas que exigem role de admin
+const ADMIN_ONLY_PATHS = [
+  "/admin/",
+];
+
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
   const location = useLocation();
+
+  const { data: companies } = trpc.companies.list.useQuery(
+    undefined,
+    { enabled: !!user && user.role !== "admin" }
+  );
 
   if (loading) {
     return (
@@ -34,6 +45,12 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/login" replace />;
   }
 
+  // Bloquear rotas admin para não-admins
+  const isAdminRoute = ADMIN_ONLY_PATHS.some((p) => location.pathname.startsWith(p));
+  if (isAdminRoute && user.role !== "admin") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   // Admin bypass — admins não precisam de assinatura
   if (user.role === "admin") {
     return <>{children}</>;
@@ -42,7 +59,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   // Verificar se a rota atual é isenta de assinatura
   const isExempt = SUBSCRIPTION_EXEMPT_PATHS.some((p) => location.pathname.startsWith(p));
 
-  // Se não tem assinatura ativa e não está em rota isenta, redirecionar para pricing
+  // Todos os planos são pagos — sem plano gratuito
   if (!isExempt) {
     const status = user.subscriptionStatus;
     const hasActiveSubscription = status === "active" || status === "trialing";

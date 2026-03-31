@@ -1,8 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { publicProcedure, router } from "../_core/trpc";
-import { requireActiveSubscription } from "../_core/subscriptionMiddleware";
+import { tenantProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   interventionPrograms,
@@ -14,13 +13,13 @@ import { eq, and, desc, sql } from "drizzle-orm";
 
 export const trainingRouter = router({
   // Listar programas de treinamento
-  listPrograms: publicProcedure
+  listPrograms: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
@@ -29,7 +28,7 @@ export const trainingRouter = router({
         .from(interventionPrograms)
         .where(
           and(
-            eq(interventionPrograms.tenantId, input.tenantId),
+            eq(interventionPrograms.tenantId, ctx.tenantId!),
             sql`${interventionPrograms.programType} IN ('training', 'workshop', 'leadership')`
           )
         )
@@ -53,14 +52,14 @@ export const trainingRouter = router({
     }),
 
   // Obter programa com módulos e participantes
-  getProgram: publicProcedure
+  getProgram: tenantProcedure
     .input(
       z.object({
         id: z.string(),
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -74,7 +73,7 @@ export const trainingRouter = router({
         .where(
           and(
             eq(interventionPrograms.id, input.id),
-            eq(interventionPrograms.tenantId, input.tenantId)
+            eq(interventionPrograms.tenantId, ctx.tenantId!)
           )
         );
 
@@ -104,10 +103,10 @@ export const trainingRouter = router({
     }),
 
   // Criar programa de treinamento
-  createProgram: publicProcedure
+  createProgram: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
         title: z.string(),
         description: z.string().optional(),
         programType: z.enum(["training", "mentoring", "workshop", "therapy", "resilience", "leadership"]),
@@ -119,8 +118,7 @@ export const trainingRouter = router({
         maxParticipants: z.number().optional(),
       })
     )
-    .mutation(async ({ input }) => {
-      await requireActiveSubscription(input.tenantId);
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -132,7 +130,7 @@ export const trainingRouter = router({
 
       await db.insert(interventionPrograms).values({
         id,
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         title: input.title,
         description: input.description || null,
         programType: input.programType,
@@ -151,11 +149,11 @@ export const trainingRouter = router({
     }),
 
   // Adicionar módulo ao programa
-  addModule: publicProcedure
+  addModule: tenantProcedure
     .input(
       z.object({
         programId: z.string(),
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
         title: z.string(),
         content: z.string().optional(),
         order: z.number().optional(),
@@ -165,8 +163,7 @@ export const trainingRouter = router({
         passingScore: z.number().optional(),
       })
     )
-    .mutation(async ({ input }) => {
-      await requireActiveSubscription(input.tenantId);
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -179,7 +176,7 @@ export const trainingRouter = router({
       await db.insert(trainingModules).values({
         id,
         programId: input.programId,
-        tenantId: input.tenantId,
+        tenantId: ctx.tenantId!,
         title: input.title,
         content: input.content || null,
         order: input.order ?? 0,
@@ -194,7 +191,7 @@ export const trainingRouter = router({
     }),
 
   // Atualizar módulo
-  updateModule: publicProcedure
+  updateModule: tenantProcedure
     .input(
       z.object({
         id: z.string(),
@@ -207,7 +204,7 @@ export const trainingRouter = router({
         passingScore: z.number().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -229,15 +226,15 @@ export const trainingRouter = router({
       await db
         .update(trainingModules)
         .set(updateData)
-        .where(eq(trainingModules.id, id));
+        .where(and(eq(trainingModules.id, id), eq(trainingModules.tenantId, ctx.tenantId!)));
 
       return { success: true };
     }),
 
   // Deletar módulo
-  deleteModule: publicProcedure
+  deleteModule: tenantProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -247,22 +244,21 @@ export const trainingRouter = router({
 
       await db
         .delete(trainingModules)
-        .where(eq(trainingModules.id, input.id));
+        .where(and(eq(trainingModules.id, input.id), eq(trainingModules.tenantId, ctx.tenantId!)));
 
       return { success: true };
     }),
 
   // Inscrever participante no programa
-  enrollParticipant: publicProcedure
+  enrollParticipant: protectedProcedure
     .input(
       z.object({
         programId: z.string(),
         personId: z.string(),
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
-      await requireActiveSubscription(input.tenantId);
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -276,7 +272,7 @@ export const trainingRouter = router({
         id,
         programId: input.programId,
         personId: input.personId,
-        tenantId: input.tenantId,
+        tenantId: ctx.user.tenantId!,
         enrolledAt: new Date(),
       });
 
@@ -284,15 +280,15 @@ export const trainingRouter = router({
     }),
 
   // Obter progresso do participante
-  getProgress: publicProcedure
+  getProgress: protectedProcedure
     .input(
       z.object({
         participantId: z.string(),
         programId: z.string(),
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
@@ -310,7 +306,7 @@ export const trainingRouter = router({
         .where(
           and(
             eq(trainingProgress.participantId, input.participantId),
-            eq(trainingProgress.tenantId, input.tenantId)
+            eq(trainingProgress.tenantId, ctx.user.tenantId!)
           )
         );
 
@@ -325,15 +321,15 @@ export const trainingRouter = router({
     }),
 
   // Iniciar módulo
-  startModule: publicProcedure
+  startModule: protectedProcedure
     .input(
       z.object({
         participantId: z.string(),
         moduleId: z.string(),
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -369,7 +365,7 @@ export const trainingRouter = router({
         id,
         participantId: input.participantId,
         moduleId: input.moduleId,
-        tenantId: input.tenantId,
+        tenantId: ctx.user.tenantId!,
         status: "in_progress",
         startedAt: new Date(),
         attempts: 0,
@@ -380,16 +376,16 @@ export const trainingRouter = router({
     }),
 
   // Completar módulo
-  completeModule: publicProcedure
+  completeModule: protectedProcedure
     .input(
       z.object({
         participantId: z.string(),
         moduleId: z.string(),
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
         quizScore: z.number().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -474,7 +470,7 @@ export const trainingRouter = router({
         id,
         participantId: input.participantId,
         moduleId: input.moduleId,
-        tenantId: input.tenantId,
+        tenantId: ctx.user.tenantId!,
         status: "completed",
         startedAt: new Date(),
         completedAt: new Date(),

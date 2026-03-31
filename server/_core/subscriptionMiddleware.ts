@@ -274,7 +274,7 @@ export async function requireActiveSubscription(
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
       message:
-        "Nenhuma assinatura encontrada. Por favor, assine um plano para continuar.",
+        "Assinatura necessaria. Escolha um plano para acessar a plataforma.",
     });
   }
 

@@ -21,8 +21,8 @@ export default function Register() {
 
   const registerMutation = trpc.auth.register.useMutation({
     onSuccess: () => {
-      toast.success("Conta criada com sucesso!");
-      window.location.href = "/subscription/pricing";
+      toast.success("Conta criada! Verifique seu email para continuar.");
+      navigate("/verify-email");
     },
     onError: (err: any) => {
       setError(err.message || "Erro ao criar conta");
@@ -63,7 +63,7 @@ export default function Register() {
           </div>
           <CardTitle className="text-2xl text-center">Criar Conta</CardTitle>
           <CardDescription className="text-center">
-            Cadastre-se como Administrador Master
+            Crie sua conta na plataforma Black Belt
           </CardDescription>
         </CardHeader>
         <CardContent>

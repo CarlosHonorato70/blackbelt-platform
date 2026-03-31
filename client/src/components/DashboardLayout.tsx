@@ -23,7 +23,6 @@ import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import {
   Building2,
-  Download,
   Eye,
   FileText,
   LayoutDashboard,
@@ -32,38 +31,29 @@ import {
   Mail,
   PanelLeft,
   Users,
-  UserSquare2,
-  TestTube,
   HelpCircle,
   Clipboard,
-  BarChart3,
   Bell,
-  DollarSign,
   ShoppingCart,
   ChevronRight,
-  Shield,
   Palette,
   TrendingUp,
   ClipboardList,
-  LifeBuoy,
-  Activity,
   CreditCard,
-  Ticket,
   Brain,
   Target,
-  Calculator,
   Calendar,
   CheckSquare,
   Award,
-  GitCompare,
   Megaphone,
   GraduationCap,
-  AlertTriangle,
   Ruler,
   Upload,
-  LineChart,
   HeartPulse,
   MessageSquareWarning,
+  Headphones,
+  ShieldAlert,
+  Activity,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { CSSProperties, Fragment, useEffect, useState } from "react";
@@ -81,77 +71,57 @@ type MenuItem = {
   adminOnly?: boolean;
   consultantOnly?: boolean; // Visível apenas para consultores (e admin)
   companyVisible?: boolean; // Visível para empresas clientes
+  paidOnly?: boolean; // Visível para empresa somente após pagamento completo
   group?: string;
 };
 
 const menuItems: MenuItem[] = [
-  // --- Geral ---
-  { icon: LayoutDashboard, label: "Dashboard", path: "/", group: "Geral", companyVisible: true },
-  { icon: Building2, label: "Todas as Empresas", path: "/tenants", adminOnly: true, group: "Geral" },
-  { icon: Building2, label: "Minhas Empresas", path: "/companies", consultantOnly: true, group: "Geral" },
-  { icon: UserSquare2, label: "Setores", path: "/sectors", group: "Geral", companyVisible: true },
-  { icon: Users, label: "Colaboradores", path: "/people", group: "Geral", companyVisible: true },
-  { icon: TrendingUp, label: "Dashboard Executivo", path: "/executive-dashboard", group: "Geral", companyVisible: true },
+  // --- Principal ---
+  { icon: LayoutDashboard, label: "Dashboard", path: "/home", group: "Principal", companyVisible: true },
+  { icon: Brain, label: "SamurAI", path: "/agent", group: "Principal", consultantOnly: true },
+  { icon: Building2, label: "Minhas Empresas", path: "/companies", consultantOnly: true, group: "Principal" },
+  { icon: Users, label: "Colaboradores", path: "/people", group: "Principal", companyVisible: true },
+  { icon: TrendingUp, label: "Dashboard Executivo", path: "/executive-dashboard", group: "Principal", companyVisible: true },
 
-  // --- Avaliações (somente consultor) ---
-  { icon: FileText, label: "Avaliações NR-01", path: "/risk-assessments", group: "Avaliações", consultantOnly: true },
-  { icon: ClipboardList, label: "Planos de Ação", path: "/action-plans", group: "Avaliações", consultantOnly: true },
-  { icon: Target, label: "Matriz de Risco", path: "/risk-matrix", group: "Avaliações", companyVisible: true },
-  { icon: HeartPulse, label: "Integração PGR+PCMSO", path: "/pgr-pcmso", group: "Avaliações", consultantOnly: true },
+  // --- Documentos NR-01 (consultor revisa/edita, exporta PDF) ---
+  { icon: FileText, label: "Propostas Comerciais", path: "/proposals", group: "Documentos NR-01", consultantOnly: true },
+  { icon: Clipboard, label: "Relatório COPSOQ-II", path: "/copsoq/analytics", group: "Documentos NR-01", companyVisible: true, paidOnly: true },
+  { icon: Eye, label: "Respostas COPSOQ", path: "/copsoq/tracking", group: "Documentos NR-01", companyVisible: true, paidOnly: true },
+  { icon: Target, label: "Inventário de Riscos", path: "/risk-assessments", group: "Documentos NR-01", companyVisible: true, paidOnly: true },
+  { icon: ClipboardList, label: "Plano de Ação", path: "/action-plans", group: "Documentos NR-01", companyVisible: true, paidOnly: true },
+  { icon: GraduationCap, label: "Programa de Treinamento", path: "/training", group: "Documentos NR-01", companyVisible: true, paidOnly: true },
+  { icon: HeartPulse, label: "Integração PGR+PCMSO", path: "/pgr-pcmso", group: "Documentos NR-01", consultantOnly: true },
+  { icon: Award, label: "Certificado NR-01", path: "/compliance-certificate", group: "Documentos NR-01", companyVisible: true, paidOnly: true },
 
-  // --- COPSOQ-II ---
-  { icon: Clipboard, label: "COPSOQ-II", path: "/copsoq", group: "COPSOQ-II", consultantOnly: true },
-  { icon: FileText, label: "Análise COPSOQ-II", path: "/copsoq/analytics", group: "COPSOQ-II", companyVisible: true },
-  { icon: GitCompare, label: "Benchmark COPSOQ", path: "/benchmark", group: "COPSOQ-II", companyVisible: true },
-  { icon: Mail, label: "Enviar Convites", path: "/copsoq/invites", group: "COPSOQ-II", consultantOnly: true },
-  { icon: BarChart3, label: "Rastreamento", path: "/copsoq/tracking", group: "COPSOQ-II", consultantOnly: true },
-  { icon: FileText, label: "Histórico", path: "/assessment-history", group: "COPSOQ-II", companyVisible: true },
-  { icon: LineChart, label: "Tendências", path: "/assessment-trends", group: "COPSOQ-II", companyVisible: true },
+  // --- Acompanhamento ---
+  { icon: Calendar, label: "Cronograma NR-01", path: "/compliance-timeline", group: "Acompanhamento", companyVisible: true },
+  { icon: CheckSquare, label: "Checklist Conformidade", path: "/compliance-checklist", group: "Acompanhamento", companyVisible: true },
+  { icon: Bell, label: "Alertas e Prazos", path: "/deadline-alerts", group: "Acompanhamento", companyVisible: true },
+  { icon: Brain, label: "Indicadores", path: "/psychosocial-dashboard", group: "Acompanhamento", companyVisible: true },
 
-  // --- Indicadores & Relatórios ---
-  { icon: Brain, label: "Indicadores Psicossociais", path: "/psychosocial-dashboard", group: "Indicadores", companyVisible: true },
-  { icon: Calculator, label: "Calculadora Financeira", path: "/financial-calculator", group: "Indicadores", consultantOnly: true },
-  { icon: FileText, label: "Laudo Técnico", path: "/laudo-tecnico", group: "Indicadores", companyVisible: true },
-  { icon: FileText, label: "Relatórios Compliance", path: "/compliance-reports", group: "Indicadores", companyVisible: true },
-
-  // --- Conformidade NR-01 ---
-  { icon: Calendar, label: "Cronograma NR-01", path: "/compliance-timeline", group: "Conformidade", companyVisible: true },
-  { icon: CheckSquare, label: "Checklist Conformidade", path: "/compliance-checklist", group: "Conformidade", companyVisible: true },
-  { icon: Award, label: "Certificado", path: "/compliance-certificate", group: "Conformidade", companyVisible: true },
-  { icon: Bell, label: "Alertas de Prazos", path: "/deadline-alerts", group: "Conformidade", companyVisible: true },
-  { icon: Bell, label: "Lembretes Automáticos", path: "/reminder-management", group: "Conformidade", consultantOnly: true },
-
-  // --- Pessoas & Cultura ---
-  { icon: Megaphone, label: "Pesquisa de Clima", path: "/climate-surveys", group: "Pessoas", companyVisible: true },
-  { icon: GraduationCap, label: "Treinamentos", path: "/training", group: "Pessoas", companyVisible: true },
-  { icon: MessageSquareWarning, label: "Canal de Denúncia", path: "/anonymous-report", group: "Pessoas", companyVisible: true },
-  { icon: AlertTriangle, label: "Gestão Denúncias", path: "/report-management", group: "Pessoas", consultantOnly: true },
-  { icon: Ruler, label: "Avaliação Ergonômica", path: "/ergonomic-assessments", group: "Pessoas", companyVisible: true },
+  // --- Ferramentas ---
+  { icon: Megaphone, label: "Pesquisa de Clima", path: "/climate-surveys", group: "Ferramentas", companyVisible: true },
+  { icon: MessageSquareWarning, label: "Canal de Denúncia", path: "/anonymous-report", group: "Ferramentas", companyVisible: true },
+  { icon: ShieldAlert, label: "Gestão de Denúncias", path: "/complaints", group: "Ferramentas", consultantOnly: true },
+  { icon: Ruler, label: "Avaliação Ergonômica", path: "/ergonomic-assessments", group: "Ferramentas", companyVisible: true },
+  { icon: Upload, label: "Exportação eSocial", path: "/esocial-export", group: "Ferramentas", consultantOnly: true },
 
   // --- Comercial (somente consultor) ---
-  { icon: Mail, label: "Convites de Usuários", path: "/user-invites", group: "Comercial", consultantOnly: true },
-  { icon: DollarSign, label: "Precificação", path: "/pricing-parameters", group: "Comercial", consultantOnly: true },
-  { icon: ShoppingCart, label: "Serviços", path: "/services", group: "Comercial", consultantOnly: true },
-  { icon: Building2, label: "Clientes", path: "/clients", group: "Comercial", consultantOnly: true },
-  { icon: FileText, label: "Propostas", path: "/proposals", group: "Comercial", consultantOnly: true },
-
-  // --- Integrações ---
-  { icon: Upload, label: "Exportação eSocial", path: "/esocial-export", group: "Integrações", consultantOnly: true },
-  { icon: Download, label: "Exportação LGPD", path: "/data-export", adminOnly: true, group: "Integrações" },
+  { icon: ShoppingCart, label: "Serviços e Preços", path: "/services", group: "Comercial", consultantOnly: true },
+  // Clientes removido — gestão unificada via Empresas
+  { icon: Mail, label: "Convites", path: "/user-invites", group: "Comercial", consultantOnly: true },
 
   // --- Administração (somente admin master) ---
+  { icon: Building2, label: "Tenants", path: "/tenants", adminOnly: true, group: "Administração" },
   { icon: Lock, label: "Perfis e Permissões", path: "/roles-permissions", adminOnly: true, group: "Administração" },
-  { icon: Eye, label: "Auditoria", path: "/audit-logs", adminOnly: true, group: "Administração" },
-  { icon: Shield, label: "Segurança", path: "/security-dashboard", adminOnly: true, group: "Administração" },
+  { icon: Eye, label: "Auditoria e Segurança", path: "/audit-logs", adminOnly: true, group: "Administração" },
+  { icon: CreditCard, label: "Assinaturas", path: "/admin/subscriptions", adminOnly: true, group: "Administração" },
   { icon: Palette, label: "Identidade Visual", path: "/branding-settings", adminOnly: true, group: "Administração" },
-  { icon: TestTube, label: "Dashboard de Testes", path: "/test-dashboard", adminOnly: true, group: "Administração" },
-  { icon: Activity, label: "Painel Admin", path: "/admin/metrics", adminOnly: true, group: "Administração" },
-  { icon: CreditCard, label: "Assinaturas Admin", path: "/admin/subscriptions", adminOnly: true, group: "Administração" },
-  { icon: Ticket, label: "Tickets Admin", path: "/admin/support", adminOnly: true, group: "Administração" },
+  { icon: Activity, label: "Monitoramento", path: "/admin/monitoring", adminOnly: true, group: "Administração" },
 
   // --- Suporte ---
-  { icon: LifeBuoy, label: "Suporte", path: "/support", group: "Suporte", companyVisible: true },
-  { icon: HelpCircle, label: "Ajuda e Suporte", path: "/help", group: "Suporte", companyVisible: true },
+  { icon: Headphones, label: "Suporte IA", path: "/support-chat", group: "Suporte", companyVisible: true },
+  { icon: HelpCircle, label: "Ajuda", path: "/help", group: "Suporte", companyVisible: true },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -252,8 +222,16 @@ function DashboardLayoutContent({
     enabled: !!user && user.role !== "admin",
   });
   const isAdmin = user?.role === "admin";
-  const isCompanyUser = tenantInfo?.tenantType === "company";
-  const isConsultant = isAdmin || tenantInfo?.tenantType === "consultant";
+  const tenantInfoLoaded = tenantInfo !== undefined;
+  const isCompanyUser = tenantInfoLoaded ? tenantInfo?.tenantType === "company" : !isAdmin;
+  const isConsultant = isAdmin || (tenantInfoLoaded && tenantInfo?.tenantType === "consultant");
+
+  // Check if company has paid (for paidOnly menu items)
+  const { data: companyPaymentStatus } = trpc.proposals.getPaymentStatus.useQuery(undefined, {
+    retry: false,
+    enabled: isCompanyUser,
+  });
+  const isPaid = companyPaymentStatus?.paid === true;
 
   useEffect(() => {
     if (isCollapsed) {
@@ -327,7 +305,7 @@ function DashboardLayoutContent({
                       Black Belt
                     </span>
                     <span className="text-[10px] text-[#c8a55a] font-medium tracking-widest uppercase">
-                      Consultoria
+                      {isAdmin ? "Administrador" : isCompanyUser ? "Empresa" : "Consultoria"}
                     </span>
                   </div>
                 </div>
@@ -361,14 +339,22 @@ function DashboardLayoutContent({
           <SidebarMenu className="px-2 py-1">
             {(() => {
               const filtered = menuItems.filter(item => {
-                // Admin vê tudo
-                if (isAdmin) return true;
+                // Admin vê tudo EXCETO items exclusivos de consultoria
+                if (isAdmin) {
+                  // Admin não vê "Minhas Empresas" (usa Tenants) nem "Convites"
+                  if (item.path === "/companies" || item.path === "/user-invites") return false;
+                  return true;
+                }
                 // Items adminOnly: só admin vê
                 if (item.adminOnly) return false;
                 // Empresa: vê apenas items com companyVisible
-                if (isCompanyUser) return item.companyVisible === true;
+                // Items paidOnly só aparecem após pagamento completo
+                if (isCompanyUser) {
+                  if (!item.companyVisible) return false;
+                  if (item.paidOnly && !isPaid) return false;
+                  return true;
+                }
                 // Consultor: vê tudo exceto adminOnly (já filtrado acima)
-                // Items consultantOnly: visíveis para consultor
                 return true;
               });
               let lastGroup = "";
@@ -473,7 +459,7 @@ function DashboardLayoutContent({
               </div>
             </div>
             <div className="flex-1 max-w-xs ml-4 flex items-center gap-2">
-              <TenantSelectionModal />
+              {(isAdmin || isConsultant) && <TenantSelectionModal />}
               <NotificationCenter />
             </div>
           </div>

@@ -105,15 +105,15 @@ export const DIMENSION_TO_HAZARDS: Record<string, string[]> = {
   "Demandas Quantitativas": ["P3", "P4", "P72"],
   "Controle sobre o Trabalho": ["P1", "P5"],
   "Suporte Social": ["P62", "P7"],
-  "Lideranca": ["P7", "P62"],
+  "Liderança": ["P7", "P62"],
   "Comunidade no Trabalho": ["P62", "P2"],
   "Significado do Trabalho": ["P2"],
-  "Confianca": ["P7", "P6"],
-  "Justica": ["P7", "P6"],
-  "Inseguranca no Trabalho": ["P4", "P91"],
-  "Saude Mental": ["P4", "P8", "P3"],
+  "Confiança": ["P7", "P6"],
+  "Justiça": ["P7", "P6"],
+  "Insegurança no Trabalho": ["P4", "P91"],
+  "Saúde Mental": ["P4", "P8", "P3"],
   "Burnout": ["P3", "P72", "P4"],
-  "Violencia e Assedio": ["P6"],
+  "Violência e Assédio": ["P6"],
 };
 
 // ============================================================================

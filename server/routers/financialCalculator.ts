@@ -1,8 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { publicProcedure, router } from "../_core/trpc";
-import { requireActiveSubscription } from "../_core/subscriptionMiddleware";
+import { tenantProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   financialParameters,
@@ -13,9 +12,9 @@ import { eq, and, desc, sql } from "drizzle-orm";
 
 export const financialCalculatorRouter = router({
   // Obter parâmetros financeiros do tenant
-  getParameters: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .query(async ({ input }) => {
+  getParameters: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -26,13 +25,13 @@ export const financialCalculatorRouter = router({
       const [params] = await db
         .select()
         .from(financialParameters)
-        .where(eq(financialParameters.tenantId, input.tenantId))
+        .where(eq(financialParameters.tenantId, ctx.tenantId!))
         .limit(1);
 
       // Retornar valores padrão se não existirem parâmetros
       if (!params) {
         return {
-          tenantId: input.tenantId,
+          tenantId: ctx.tenantId!,
           averageSalary: 500000, // R$ 5.000,00
           headcount: 100,
           avgReplacementCost: 1500000, // R$ 15.000,00
@@ -47,10 +46,10 @@ export const financialCalculatorRouter = router({
     }),
 
   // Atualizar parâmetros financeiros (upsert)
-  updateParameters: publicProcedure
+  updateParameters: tenantProcedure
     .input(
       z.object({
-        tenantId: z.string(),
+        tenantId: z.string().optional(),
         averageSalary: z.number().optional(),
         headcount: z.number().optional(),
         avgReplacementCost: z.number().optional(),
@@ -59,8 +58,7 @@ export const financialCalculatorRouter = router({
         litigationAvgCost: z.number().optional(),
       })
     )
-    .mutation(async ({ input }) => {
-      await requireActiveSubscription(input.tenantId);
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -74,7 +72,7 @@ export const financialCalculatorRouter = router({
       const [existing] = await db
         .select()
         .from(financialParameters)
-        .where(eq(financialParameters.tenantId, tenantId))
+        .where(eq(financialParameters.tenantId, ctx.tenantId!))
         .limit(1);
 
       if (existing) {
@@ -89,12 +87,12 @@ export const financialCalculatorRouter = router({
         await db
           .update(financialParameters)
           .set(updateData)
-          .where(eq(financialParameters.tenantId, tenantId));
+          .where(eq(financialParameters.tenantId, ctx.tenantId!));
       } else {
         const id = nanoid();
         await db.insert(financialParameters).values({
           id,
-          tenantId,
+          tenantId: ctx.tenantId!,
           averageSalary: data.averageSalary || 500000,
           headcount: data.headcount || 100,
           avgReplacementCost: data.avgReplacementCost || 1500000,
@@ -110,9 +108,9 @@ export const financialCalculatorRouter = router({
     }),
 
   // Calcular riscos financeiros
-  calculate: publicProcedure
-    .input(z.object({ tenantId: z.string() }))
-    .query(async ({ input }) => {
+  calculate: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -124,7 +122,7 @@ export const financialCalculatorRouter = router({
       const [params] = await db
         .select()
         .from(financialParameters)
-        .where(eq(financialParameters.tenantId, input.tenantId))
+        .where(eq(financialParameters.tenantId, ctx.tenantId!))
         .limit(1);
 
       // Usar valores padrão se não houver parâmetros
@@ -141,7 +139,7 @@ export const financialCalculatorRouter = router({
       const [indicators] = await db
         .select()
         .from(mentalHealthIndicators)
-        .where(eq(mentalHealthIndicators.tenantId, input.tenantId))
+        .where(eq(mentalHealthIndicators.tenantId, ctx.tenantId!))
         .orderBy(desc(mentalHealthIndicators.createdAt))
         .limit(1);
 
