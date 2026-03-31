@@ -1840,6 +1840,19 @@ async function generateFallbackResponse(
     }
   }
 
+  // ── 0b. "Nova empresa" / "reiniciar" — clear context and ask for new CNPJ ──
+  const wantsNewCompany = msg.includes("nova empresa") || msg.includes("outra empresa") ||
+    msg.includes("novo cliente") || msg.includes("outro cliente") ||
+    msg.includes("reiniciar") || msg.includes("comecar de novo") || msg.includes("começar de novo") ||
+    msg.includes("novo processo") || msg.includes("nova consultoria");
+
+  if (wantsNewCompany) {
+    return {
+      content: `Claro! Para iniciar o processo NR-01 para uma nova empresa, me envie o **CNPJ** dela e o **número de funcionários**.\n\nExemplo: *"12.345.678/0001-90 com 45 funcionários"*`,
+      actions: [],
+    };
+  }
+
   // ── 1. Current message has CNPJ: do fresh lookup ──
   const cnpj = extractCNPJ(userMessage);
   if (cnpj) {
