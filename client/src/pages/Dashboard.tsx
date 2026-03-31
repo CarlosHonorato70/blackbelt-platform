@@ -63,17 +63,18 @@ export default function Dashboard() {
     { enabled: !!tenantId }
   );
 
-  const assessmentCount = riskAssessments.length;
-  const completedCount = riskAssessments.filter(a => a.status === "completed" || a.status === "reviewed").length;
+  const copsoqTotal = copsoqAssessments.length;
+  const copsoqCompleted = copsoqAssessments.filter((a: any) => a.status === "completed" || a.status === "closed").length;
+  const copsoqPending = copsoqAssessments.filter((a: any) => a.status === "active" || a.status === "in_progress").length;
   const actionPlanCount = actionPlans.length;
   const completedPlans = actionPlans.filter((p: any) => p.status === "completed").length;
   const complianceRate = actionPlanCount > 0 ? Math.round((completedPlans / actionPlanCount) * 100) : 0;
 
   const metrics = [
     {
-      title: "Avaliações Realizadas",
-      value: String(assessmentCount),
-      description: `${completedCount} concluída(s)`,
+      title: "Avaliações COPSOQ-II",
+      value: String(copsoqTotal),
+      description: `${copsoqCompleted} concluída(s)`,
       icon: CheckCircle2,
       color: "text-blue-600",
       bgColor: "bg-blue-50",
@@ -96,7 +97,7 @@ export default function Dashboard() {
     },
     {
       title: "Avaliações Pendentes",
-      value: String(riskAssessments.filter(a => a.status === "draft" || a.status === "in_progress").length),
+      value: String(copsoqPending),
       description: "Aguardando conclusão",
       icon: Users,
       color: "text-purple-600",
@@ -347,7 +348,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {(() => {
-              const hasAssessments = completedCount > 0;
+              const hasAssessments = copsoqCompleted > 0 || riskAssessments.filter(a => a.status === "completed" || a.status === "reviewed").length > 0;
               const hasPlans = actionPlanCount > 0;
               const plansComplete = hasPlans && completedPlans === actionPlanCount;
               const plansPartial = hasPlans && completedPlans > 0 && completedPlans < actionPlanCount;
