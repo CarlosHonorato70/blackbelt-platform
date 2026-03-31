@@ -1254,7 +1254,7 @@ async function generateFallbackResponse(
     // Step 11: Final proposal
     const { proposals: proposalsTable } = await import("../../drizzle/schema");
     const [finalProposal] = await db2.select().from(proposalsTable)
-      .where(and(eq(proposalsTable.tenantId, tenantId), eq(proposalsTable.proposalType, "final")))
+      .where(and(eq(proposalsTable.tenantId, companyId), eq(proposalsTable.proposalType, "final")))
       .limit(1);
     if (!finalProposal) return "generate_final_proposal";
 
@@ -1476,7 +1476,7 @@ async function generateFallbackResponse(
   }
 
   // ── 0a3. Handle generate_inventory action (button click from awaiting_responses) ──
-  if (msg.startsWith("executar:generate_inventory") || msg.startsWith("executar: Gerar Relat") || msg.startsWith("executar: gerar relat")) {
+  if (msg.startsWith("executar:generate_inventory") || msg.startsWith("executar: gerar relat")) {
     let company = memory.cnpj ? await findCompanyByCNPJ() : null;
     if (!company) {
       const db2 = await getDb();
@@ -1529,7 +1529,7 @@ async function generateFallbackResponse(
           .where(eq(cAssessments.tenantId, company.id))
           .orderBy(desc(cAssessments.createdAt)).limit(1);
         if (latestAssessment) {
-          const result = await executeGenerateInventoryAndPlan(company.id, latestAssessment.id, company.name, memory.headcount || 3);
+          const result = await executeGenerateInventoryAndPlan(company.id, latestAssessment.id, company.name, memory.headcount || 4);
           if (result.success) {
             return {
               content: result.message + `\n\n**Proxima etapa:** Criar programa de treinamento sobre riscos psicossociais.\nClique no botao abaixo ou diga **"sim"** para continuar.`,
@@ -1970,7 +1970,7 @@ async function generateFallbackResponse(
             .where(eq(cAssessments.tenantId, existingCompany.id))
             .orderBy(desc(cAssessments.createdAt)).limit(1);
           if (latestAssessment) {
-            const result = await executeGenerateInventoryAndPlan(existingCompany.id, latestAssessment.id, existingCompany.name, memory.headcount || 5);
+            const result = await executeGenerateInventoryAndPlan(existingCompany.id, latestAssessment.id, existingCompany.name, memory.headcount || 4);
             if (result.success) {
               return {
                 content: result.message + `\n\n**Proxima etapa:** Criar programa de treinamento sobre riscos psicossociais.\nClique no botao abaixo ou diga **"sim"** para continuar.`,
