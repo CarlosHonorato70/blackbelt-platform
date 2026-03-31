@@ -160,6 +160,22 @@ function AgentChatPage() {
   // Fetch alerts
   const { data: alerts } = trpc.agent.getAlerts.useQuery({ limit: 10 }, { refetchInterval: 30000 });
 
+  // Auto-process alerts: when proposal is approved or COPSOQ responses arrive, auto-continue the flow
+  const processedAlertIds = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!alerts || !conversationId) return;
+    const autoTypes = ["proposal_approved", "copsoq_responses_ready"];
+    const toProcess = alerts.filter(
+      (a) => !a.dismissed && autoTypes.includes(a.alertType) && !processedAlertIds.current.has(a.id)
+    );
+    if (toProcess.length === 0) return;
+    for (const alert of toProcess) {
+      processedAlertIds.current.add(alert.id);
+      dismissAlert.mutate({ id: alert.id });
+      sendMessage.mutate({ conversationId, content: "continuar" });
+    }
+  }, [alerts, conversationId]);
+
   // Send message
   const sendMessage = trpc.agent.sendMessage.useMutation({
     onMutate: () => setIsTyping(true),

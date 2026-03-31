@@ -29,7 +29,8 @@ export type AlertType =
   | "training_incomplete"
   | "document_missing"
   | "certification_ready"
-  | "proposal_approved";
+  | "proposal_approved"
+  | "copsoq_responses_ready";
 
 interface AlertDef {
   type: AlertType;

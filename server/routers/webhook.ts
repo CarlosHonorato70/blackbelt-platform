@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { copsoqInvites, copsoqResponses, anonymousReports } from "../../drizzle/schema_nr01";
@@ -127,6 +127,34 @@ export const webhookRouter = router({
           completedAt: new Date(),
         })
         .where(eq(copsoqInvites.inviteToken, input.inviteToken));
+
+      // Notify consultant via agentAlert so SamurAI auto-detects COPSOQ response
+      try {
+        const { nanoid: nanoidAlert } = await import("nanoid");
+        const { agentAlerts } = await import("../../drizzle/schema_agent");
+        // Only create alert if no undismissed alert exists yet for this assessment
+        const [existingAlert] = await db.select().from(agentAlerts)
+          .where(and(
+            eq(agentAlerts.tenantId, input.tenantId),
+            eq(agentAlerts.alertType, "copsoq_responses_ready" as any),
+            eq(agentAlerts.dismissed, false)
+          )).limit(1);
+        if (!existingAlert) {
+          await db.insert(agentAlerts).values({
+            id: await nanoidAlert(),
+            tenantId: input.tenantId,
+            alertType: "copsoq_responses_ready" as any,
+            title: "Resposta COPSOQ recebida",
+            message: `Nova resposta ao questionário COPSOQ-II recebida. O SamurAI pode gerar o inventário de riscos.`,
+            severity: "info",
+            dismissed: false,
+            metadata: { assessmentId: input.assessmentId, tenantId: input.tenantId },
+            createdAt: new Date(),
+          });
+        }
+      } catch (alertErr) {
+        // non-critical — ignore
+      }
 
       return {
         success: true,
@@ -258,6 +286,33 @@ export const webhookRouter = router({
           completedAt: new Date(),
         })
         .where(eq(copsoqInvites.inviteToken, input.inviteToken));
+
+      // Notify consultant via agentAlert so SamurAI auto-detects COPSOQ response
+      try {
+        const { nanoid: nanoidAlert } = await import("nanoid");
+        const { agentAlerts } = await import("../../drizzle/schema_agent");
+        const [existingAlert] = await db.select().from(agentAlerts)
+          .where(and(
+            eq(agentAlerts.tenantId, invite.tenantId),
+            eq(agentAlerts.alertType, "copsoq_responses_ready" as any),
+            eq(agentAlerts.dismissed, false)
+          )).limit(1);
+        if (!existingAlert) {
+          await db.insert(agentAlerts).values({
+            id: await nanoidAlert(),
+            tenantId: invite.tenantId,
+            alertType: "copsoq_responses_ready" as any,
+            title: "Resposta COPSOQ recebida",
+            message: `Nova resposta ao questionário COPSOQ-II recebida. O SamurAI pode gerar o inventário de riscos.`,
+            severity: "info",
+            dismissed: false,
+            metadata: { assessmentId: invite.assessmentId, tenantId: invite.tenantId },
+            createdAt: new Date(),
+          });
+        }
+      } catch (alertErr) {
+        // non-critical — ignore
+      }
 
       return {
         success: true,

@@ -113,24 +113,8 @@ export function registerRoutes(app: Express) {
 
       log.info(`[Proposal] Approved: ${proposal.id} by ${proposal.contactEmail}`);
 
-      // 1b. Notify consultant via agentAlert
-      try {
-        const { nanoid: nanoidFn } = await import("nanoid");
-        const { agentAlerts } = await import("../drizzle/schema_agent");
-        await db.insert(agentAlerts).values({
-          id: nanoidFn(),
-          tenantId: proposal.tenantId,
-          alertType: "proposal_approved",
-          title: proposal.proposalType === "final" ? "Proposta Final aprovada" : "Pré-Proposta aprovada",
-          message: `A empresa aprovou a proposta. Clique para continuar o fluxo no SamurAI.`,
-          severity: "info",
-          dismissed: false,
-          metadata: { proposalId: proposal.id, proposalType: proposal.proposalType },
-          createdAt: new Date(),
-        });
-      } catch (alertErr) {
-        log.warn("[Proposal] Failed to create approval alert", { error: String(alertErr) });
-      }
+      // 1b. Notify consultant via agentAlert (CNPJ will be added below after client lookup)
+      let _proposalAlertCnpj: string | undefined = undefined;
 
       // 2. Create or assign company user account
       if (proposal.contactEmail) {
@@ -148,6 +132,7 @@ export function registerRoutes(app: Express) {
           if (proposal.clientId) {
             const [client] = await db.select().from(clients).where(eq(clients.id, proposal.clientId));
             if (client?.cnpj) {
+              _proposalAlertCnpj = client.cnpj;
               // Find company tenant by CNPJ (with or without formatting)
               const cnpjClean = client.cnpj.replace(/\D/g, "");
               const allTenants = await db.select().from(tenants);
@@ -180,6 +165,25 @@ export function registerRoutes(app: Express) {
           if (companyName === "Empresa") {
             const [tenant] = await db.select().from(tenants).where(eq(tenants.id, companyTenantId));
             companyName = tenant?.name || "Empresa";
+          }
+
+          // Insert approval alert now that we have the CNPJ
+          try {
+            const { nanoid: nanoidFn } = await import("nanoid");
+            const { agentAlerts } = await import("../drizzle/schema_agent");
+            await db.insert(agentAlerts).values({
+              id: nanoidFn(),
+              tenantId: proposal.tenantId,
+              alertType: "proposal_approved",
+              title: proposal.proposalType === "final" ? "Proposta Final aprovada" : "Pré-Proposta aprovada",
+              message: `A empresa aprovou a proposta. Clique para continuar o fluxo no SamurAI.`,
+              severity: "info",
+              dismissed: false,
+              metadata: { proposalId: proposal.id, proposalType: proposal.proposalType, ...((_proposalAlertCnpj) ? { cnpj: _proposalAlertCnpj } : {}) },
+              createdAt: new Date(),
+            });
+          } catch (alertErr) {
+            log.warn("[Proposal] Failed to create approval alert", { error: String(alertErr) });
           }
 
           console.log(`[Proposal] Company tenant resolved: ${companyTenantId} (${companyName})`);
@@ -251,6 +255,25 @@ export function registerRoutes(app: Express) {
           // Don't fail the approval if user creation fails
           console.error("[Proposal] User creation failed (approval still OK):", userErr?.message, userErr?.stack);
           log.error("[Proposal] User creation failed (approval still OK):", userErr?.message);
+        }
+      } else {
+        // No contactEmail: still create the approval alert (without CNPJ)
+        try {
+          const { nanoid: nanoidFn } = await import("nanoid");
+          const { agentAlerts } = await import("../drizzle/schema_agent");
+          await db.insert(agentAlerts).values({
+            id: nanoidFn(),
+            tenantId: proposal.tenantId,
+            alertType: "proposal_approved",
+            title: proposal.proposalType === "final" ? "Proposta Final aprovada" : "Pré-Proposta aprovada",
+            message: `A empresa aprovou a proposta. Clique para continuar o fluxo no SamurAI.`,
+            severity: "info",
+            dismissed: false,
+            metadata: { proposalId: proposal.id, proposalType: proposal.proposalType },
+            createdAt: new Date(),
+          });
+        } catch (alertErr) {
+          log.warn("[Proposal] Failed to create approval alert (no email path)", { error: String(alertErr) });
         }
       }
 
