@@ -40,6 +40,7 @@ import {
   TrendingUp,
   ClipboardList,
   CreditCard,
+  Banknote,
   Brain,
   Target,
   Calendar,
@@ -108,6 +109,7 @@ const menuItems: MenuItem[] = [
 
   // --- Comercial (somente consultor) ---
   { icon: ShoppingCart, label: "Serviços e Preços", path: "/services", group: "Comercial", consultantOnly: true },
+  { icon: Banknote, label: "Configurações de Pagamento", path: "/payment-settings", group: "Comercial", consultantOnly: true },
   // Clientes removido — gestão unificada via Empresas
   { icon: Mail, label: "Convites", path: "/user-invites", group: "Comercial", consultantOnly: true },
 

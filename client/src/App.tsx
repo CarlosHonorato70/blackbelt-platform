@@ -39,6 +39,7 @@ const DataExport = lazy(() => import("./pages/DataExport"));
 const SecurityDashboard = lazy(() => import("./pages/SecurityDashboard"));
 const ExecutiveDashboard = lazy(() => import("./pages/ExecutiveDashboard"));
 const BrandingSettings = lazy(() => import("./pages/BrandingSettings"));
+const PaymentSettings = lazy(() => import("./pages/PaymentSettings"));
 const TestDashboard = lazy(() => import("./pages/TestDashboard"));
 const ActionPlans = lazy(() => import("./pages/ActionPlans"));
 const Help = lazy(() => import("./pages/Help"));
@@ -221,6 +222,7 @@ export default function App() {
                 <Route path="/data-export" element={<ProtectedPage><DataExport /></ProtectedPage>} />
                 <Route path="/security-dashboard" element={<ProtectedPage><SecurityDashboard /></ProtectedPage>} />
                 <Route path="/branding-settings" element={<ProtectedPage><BrandingSettings /></ProtectedPage>} />
+                <Route path="/payment-settings" element={<ProtectedPage><PaymentSettings /></ProtectedPage>} />
                 <Route path="/test-dashboard" element={<ProtectedPage><TestDashboard /></ProtectedPage>} />
                 <Route path="/help" element={<ProtectedPage><Help /></ProtectedPage>} />
                 <Route path="/support-chat" element={<ProtectedPage><SupportChat /></ProtectedPage>} />

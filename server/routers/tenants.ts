@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { router, protectedProcedure, adminProcedure } from "../_core/trpc";
+import { router, protectedProcedure, adminProcedure, tenantProcedure } from "../_core/trpc";
 import * as db from "../db";
 import { log } from "../_core/logger";
 import { tenants } from "../../drizzle/schema";
@@ -268,6 +268,37 @@ export const tenantsRouter = router({
       if (features) settings.features = features.settingValue;
 
       return settings;
+    }),
+
+  // Configurações de pagamento — consultoria gerencia as próprias
+  getPaymentSettings: tenantProcedure.query(async ({ ctx }) => {
+    const tenantId = ctx.tenantId!;
+    const [pix, bank, instructions] = await Promise.all([
+      db.getTenantSetting(tenantId, "payment_pix"),
+      db.getTenantSetting(tenantId, "payment_bank"),
+      db.getTenantSetting(tenantId, "payment_instructions"),
+    ]);
+    return {
+      pixKey: (pix?.settingValue as string) ?? "",
+      bankDetails: (bank?.settingValue as string) ?? "",
+      paymentInstructions: (instructions?.settingValue as string) ?? "",
+    };
+  }),
+
+  updatePaymentSettings: tenantProcedure
+    .input(z.object({
+      pixKey: z.string().max(100),
+      bankDetails: z.string().max(500),
+      paymentInstructions: z.string().max(1000),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const tenantId = ctx.tenantId!;
+      await Promise.all([
+        db.setTenantSetting(tenantId, "payment_pix", input.pixKey),
+        db.setTenantSetting(tenantId, "payment_bank", input.bankDetails),
+        db.setTenantSetting(tenantId, "payment_instructions", input.paymentInstructions),
+      ]);
+      return { success: true };
     }),
 
   // Atualizar configuracao do tenant (apenas admin)
