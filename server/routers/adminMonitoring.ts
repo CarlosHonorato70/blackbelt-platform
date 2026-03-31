@@ -5,6 +5,7 @@ import { getDb, checkDbHealth } from "../db";
 import { monitoringChecks, maintenanceRequests } from "../../drizzle/schema";
 import { publicProcedure } from "../_core/trpc";
 import { agentConversations, agentMessages } from "../../drizzle/schema_agent";
+import { copsoqAssessments, riskAssessments, actionPlans, complianceCertificates } from "../../drizzle/schema_nr01";
 import { desc, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { log } from "../_core/logger";
@@ -225,6 +226,141 @@ export async function saveCheckAndAlert(result: Awaited<ReturnType<typeof runMon
   }
 }
 
+// ============================================================================
+// KLINIKOS — SamurAI Flow Health Check
+// Fluxo de 18 etapas (ver Fluxograma_SamurAI_BlackBelt.pdf)
+// ============================================================================
+
+const SAMURAI_PHASE_LABELS: Record<string, string> = {
+  create_assessment:       "Etapa 10 — Enviar COPSOQ",
+  awaiting_responses:      "Etapa 11 — Aguardando Respostas",
+  generate_inventory:      "Etapa 12/13 — Gerar Relatório + Inventário",
+  create_training:         "Etapa 14 — Plano de Ação / Treinamento",
+  complete_checklist:      "Etapa 15 — Checklist de Conformidade",
+  generate_final_proposal: "Etapa 15 — Gerar Proposta Final",
+  awaiting_final_approval: "Etapa 16 — Aguardando Aprovação Final",
+  awaiting_payment:        "Etapa 16 — Aguardando Pagamento",
+  completed:               "Etapa 18 — Concluído",
+  unknown:                 "Fase desconhecida",
+};
+
+// Horas sem atividade para considerar "travado"
+const STUCK_HOURS: Record<string, number> = {
+  awaiting_responses:      168, // 7 dias (prazo do COPSOQ)
+  awaiting_final_approval: 240, // 10 dias (aguarda decisão da empresa)
+  awaiting_payment:        240, // 10 dias
+  default:                  48, // 2 dias para fases de execução
+};
+
+export async function runSamurAIHealthCheck(): Promise<{
+  totalFlows: number;
+  activeFlows: number;
+  completedFlows: number;
+  stuckFlows: Array<{
+    conversationId: string;
+    companyId: string | null;
+    tenantId: string;
+    phase: string;
+    phaseLabel: string;
+    lastActivity: string;
+    daysSinceActivity: number;
+  }>;
+  phaseDistribution: Array<{ phase: string; label: string; count: number }>;
+  dataIntegrity: {
+    copsoqTotal: number;
+    copsoqInProgress: number;
+    copsoqCompleted: number;
+    riskAssessmentsTotal: number;
+    actionPlansTotal: number;
+    certificatesTotal: number;
+  };
+}> {
+  const empty = {
+    totalFlows: 0, activeFlows: 0, completedFlows: 0,
+    stuckFlows: [], phaseDistribution: [],
+    dataIntegrity: { copsoqTotal: 0, copsoqInProgress: 0, copsoqCompleted: 0, riskAssessmentsTotal: 0, actionPlansTotal: 0, certificatesTotal: 0 },
+  };
+
+  try {
+    const db = await getDb();
+    if (!db) return empty;
+    const now = Date.now();
+
+    // 1. Todas as conversas reais do SamurAI (exclui monitoring-agent e suporte)
+    const conversations = await db
+      .select({ id: agentConversations.id, tenantId: agentConversations.tenantId, companyId: agentConversations.companyId, phase: agentConversations.phase, updatedAt: agentConversations.updatedAt })
+      .from(agentConversations)
+      .where(sql`${agentConversations.companyId} IS NOT NULL AND ${agentConversations.companyId} NOT IN ('monitoring-agent', 'support-agent')`);
+
+    const totalFlows = conversations.length;
+    const completedFlows = conversations.filter(c => c.phase === "completed").length;
+
+    const stuckFlows = conversations
+      .filter(c => c.phase !== "completed")
+      .filter(c => {
+        if (!c.updatedAt) return false;
+        const basePhase = (c.phase ?? "").split(":")[0];
+        const threshold = STUCK_HOURS[basePhase] ?? STUCK_HOURS.default;
+        const hoursSince = (now - new Date(c.updatedAt).getTime()) / 3600000;
+        return hoursSince > threshold;
+      })
+      .map(c => {
+        const basePhase = (c.phase ?? "unknown").split(":")[0];
+        const hoursSince = (now - new Date(c.updatedAt!).getTime()) / 3600000;
+        return {
+          conversationId: c.id,
+          companyId: c.companyId ?? null,
+          tenantId: c.tenantId,
+          phase: c.phase ?? "unknown",
+          phaseLabel: SAMURAI_PHASE_LABELS[basePhase] ?? SAMURAI_PHASE_LABELS.unknown,
+          lastActivity: c.updatedAt!.toISOString(),
+          daysSinceActivity: Math.floor(hoursSince / 24),
+        };
+      });
+
+    const activeFlows = totalFlows - completedFlows - stuckFlows.length;
+
+    // Distribuição por fase
+    const phaseMap: Record<string, number> = {};
+    for (const c of conversations) {
+      const base = (c.phase ?? "unknown").split(":")[0];
+      phaseMap[base] = (phaseMap[base] || 0) + 1;
+    }
+    const phaseDistribution = Object.entries(phaseMap).map(([phase, count]) => ({
+      phase,
+      label: SAMURAI_PHASE_LABELS[phase] ?? phase,
+      count,
+    }));
+
+    // 2. Integridade de dados
+    const [cTotal] = await db.select({ n: sql<number>`count(*)` }).from(copsoqAssessments);
+    const [cProgress] = await db.select({ n: sql<number>`count(*)` }).from(copsoqAssessments).where(eq(copsoqAssessments.status, "in_progress"));
+    const [cDone] = await db.select({ n: sql<number>`count(*)` }).from(copsoqAssessments).where(sql`${copsoqAssessments.status} IN ('completed','reviewed')`);
+    const [rTotal] = await db.select({ n: sql<number>`count(*)` }).from(riskAssessments);
+    const [aTotal] = await db.select({ n: sql<number>`count(*)` }).from(actionPlans);
+    const [certTotal] = await db.select({ n: sql<number>`count(*)` }).from(complianceCertificates);
+
+    return {
+      totalFlows,
+      activeFlows,
+      completedFlows,
+      stuckFlows,
+      phaseDistribution,
+      dataIntegrity: {
+        copsoqTotal:           Number(cTotal?.n ?? 0),
+        copsoqInProgress:      Number(cProgress?.n ?? 0),
+        copsoqCompleted:       Number(cDone?.n ?? 0),
+        riskAssessmentsTotal:  Number(rTotal?.n ?? 0),
+        actionPlansTotal:      Number(aTotal?.n ?? 0),
+        certificatesTotal:     Number(certTotal?.n ?? 0),
+      },
+    };
+  } catch (err) {
+    log.error("[Klinikos] runSamurAIHealthCheck failed", { error: String(err) });
+    return empty;
+  }
+}
+
 export const adminMonitoringRouter = router({
 
   getStatus: adminProcedure.query(async () => {
@@ -273,6 +409,14 @@ export const adminMonitoringRouter = router({
         details: typeof r.details === "string" ? JSON.parse(r.details) : r.details,
       }));
     }),
+
+  // ============================================
+  // KLINIKOS — SamurAI Flow Health
+  // ============================================
+
+  getFlowHealth: adminProcedure.query(async () => {
+    return runSamurAIHealthCheck();
+  }),
 
   // ============================================
   // CHAT IA — Conversa com o Agente de Monitoramento
@@ -363,16 +507,30 @@ export const adminMonitoringRouter = router({
         }
       } catch { /* ignore */ }
 
-      // 5. Build LLM messages
+      // 5. Get SamurAI flow health
+      const flowHealth = await runSamurAIHealthCheck();
+
+      // 6. Build LLM messages
       const uptimeH = Math.floor(status.app.uptime / 3600);
       const uptimeM = Math.floor((status.app.uptime % 3600) / 60);
 
-      const systemPrompt = `Voce e o Klinikos IA, o agente inteligente de monitoramento da plataforma BlackBelt.
-Responda sempre em portugues de forma clara e direta.
-Voce tem acesso aos dados em tempo real da plataforma que sao fornecidos a cada mensagem.
-Ajude o admin a entender o estado do sistema, diagnosticar problemas e sugerir acoes.
-Seja conciso mas completo. Use emojis para indicar status (verde, amarelo, vermelho).
-Quando o admin perguntar sobre algo especifico, foque na resposta e nao repita todos os dados.`;
+      const systemPrompt = `Voce e o Klinikos IA, o agente de saude e integridade da plataforma BlackBelt.
+Suas responsabilidades sao tres:
+1. SAUDE DA PLATAFORMA: memoria, banco de dados, erros, uptime, disco, backups.
+2. INTEGRIDADE DO FLUXO SAMURAI: monitorar as 18 etapas do processo NR-01 para cada empresa cliente. Detectar fluxos travados, fases sem avanco, inconsistencias de dados.
+3. INTEGRIDADE DE DADOS: verificar consistencia entre avaliacoes COPSOQ, inventarios de risco, planos de acao e certificados.
+
+Fluxo SamurAI (18 etapas resumidas):
+Etapa 1-3: CNPJ → Receita Federal → Cadastro Empresa
+Etapa 4-7: Pre-Proposta → Editar → Enviar Email → Aprovacao
+Etapa 8-9: Criar Conta → Cadastrar Pessoas
+Etapa 10-11: Enviar COPSOQ → Respostas (anonimo, 7 dias)
+Etapa 12-14: Gerar Relatorio → Inventario Riscos → Plano de Acao
+Etapa 15-16: Proposta Final → Aprovar + Pagar
+Etapa 17-18: Liberar 7 PDFs → Entrega Final
+
+Responda sempre em portugues. Seja direto e use emojis para status (verde OK, amarelo atencao, vermelho critico).
+Quando detectar fluxos travados ou problemas, sugira acoes corretivas especificas.`;
 
       const contextMsg = `[DADOS EM TEMPO REAL DA PLATAFORMA]
 Status Geral: ${status.status.toUpperCase()}
@@ -387,9 +545,20 @@ RAM Sistema: ${status.disk.totalGB}GB total, ${status.disk.freeGB}GB livre (${st
 Ultimo Backup: ${status.lastBackup ? `${status.lastBackup.file} (${status.lastBackup.sizeMB}MB em ${status.lastBackup.date})` : "Nenhum encontrado"}
 ${errorLines.length > 0 ? `\nUltimos erros:\n${errorLines.join("\n")}` : "Sem erros recentes."}`;
 
+      const flowContextMsg = `[SAUDE DO FLUXO SAMURAI — ${new Date().toLocaleString("pt-BR")}]
+Fluxos Totais: ${flowHealth.totalFlows} | Ativos: ${flowHealth.activeFlows} | Concluidos: ${flowHealth.completedFlows} | Travados: ${flowHealth.stuckFlows.length}
+${flowHealth.stuckFlows.length > 0 ? `\nEMPRESAS COM FLUXO TRAVADO:\n${flowHealth.stuckFlows.map(f => `- ID ${f.companyId} | ${f.phaseLabel} | ${f.daysSinceActivity} dia(s) sem atividade`).join("\n")}` : "Nenhum fluxo travado."}
+\nDistribuicao por Fase:\n${flowHealth.phaseDistribution.map(p => `- ${p.label}: ${p.count}`).join("\n") || "Sem dados."}
+\nIntegridade de Dados:
+- Avaliacoes COPSOQ: ${flowHealth.dataIntegrity.copsoqTotal} total | ${flowHealth.dataIntegrity.copsoqInProgress} em andamento | ${flowHealth.dataIntegrity.copsoqCompleted} concluidas
+- Inventarios de Risco: ${flowHealth.dataIntegrity.riskAssessmentsTotal}
+- Planos de Acao: ${flowHealth.dataIntegrity.actionPlansTotal}
+- Certificados NR-01 emitidos: ${flowHealth.dataIntegrity.certificatesTotal}`;
+
       const llmMessages = [
         { role: "system" as const, content: systemPrompt },
         { role: "system" as const, content: contextMsg },
+        { role: "system" as const, content: flowContextMsg },
         ...history.map(m => ({
           role: m.role as "user" | "assistant",
           content: m.content,

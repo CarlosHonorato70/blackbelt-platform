@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { trpc } from "@/lib/trpc";
-import { Activity, Database, HardDrive, AlertTriangle, CheckCircle, XCircle, RefreshCw, Server, Clock, Send, Bot, User, MessageSquare } from "lucide-react";
+import { Activity, Database, HardDrive, AlertTriangle, CheckCircle, XCircle, RefreshCw, Server, Clock, Send, Bot, User, MessageSquare, GitBranch, ShieldAlert } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import Markdown from "react-markdown";
@@ -89,6 +89,10 @@ export default function AdminMonitoring() {
     refetchInterval: 30000,
   });
 
+  const flowHealthQuery = (trpc as any).adminMonitoring.getFlowHealth.useQuery(undefined, {
+    refetchInterval: 60000,
+  });
+
   const errorLogQuery = (trpc as any).adminMonitoring.getErrorLog.useQuery();
 
   const historyQuery = (trpc as any).adminMonitoring.getHistory.useQuery({ limit: 20 });
@@ -154,6 +158,112 @@ export default function AdminMonitoring() {
               <span className="text-sm text-muted-foreground ml-auto">
                 Atualizado automaticamente a cada 30s
               </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* SamurAI Flow Health */}
+      {flowHealthQuery.data && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <GitBranch className="h-5 w-5 text-[#c8a55a]" />
+                Saude do Fluxo SamurAI
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Monitoramento das 18 etapas NR-01 por empresa
+              </p>
+            </div>
+            <div className="flex gap-4 text-center">
+              <div>
+                <p className="text-2xl font-bold">{flowHealthQuery.data.totalFlows}</p>
+                <p className="text-xs text-muted-foreground">Total</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-blue-600">{flowHealthQuery.data.activeFlows}</p>
+                <p className="text-xs text-muted-foreground">Ativos</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-green-600">{flowHealthQuery.data.completedFlows}</p>
+                <p className="text-xs text-muted-foreground">Concluidos</p>
+              </div>
+              <div>
+                <p className={`text-2xl font-bold ${flowHealthQuery.data.stuckFlows.length > 0 ? "text-red-600" : "text-muted-foreground"}`}>
+                  {flowHealthQuery.data.stuckFlows.length}
+                </p>
+                <p className="text-xs text-muted-foreground">Travados</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Distribuicao por fase */}
+            {flowHealthQuery.data.phaseDistribution.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Distribuicao por Fase</p>
+                <div className="flex flex-wrap gap-2">
+                  {flowHealthQuery.data.phaseDistribution.map((p: any) => (
+                    <Badge key={p.phase} variant="outline" className="text-xs">
+                      {p.label}: <strong className="ml-1">{p.count}</strong>
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Fluxos travados */}
+            {flowHealthQuery.data.stuckFlows.length > 0 ? (
+              <div>
+                <p className="text-xs font-semibold text-red-600 uppercase mb-2 flex items-center gap-1">
+                  <ShieldAlert className="h-3 w-3" /> Fluxos Travados
+                </p>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Empresa (ID)</TableHead>
+                      <TableHead>Fase Atual</TableHead>
+                      <TableHead>Sem Atividade</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {flowHealthQuery.data.stuckFlows.map((f: any) => (
+                      <TableRow key={f.conversationId}>
+                        <TableCell className="font-mono text-xs">{f.companyId}</TableCell>
+                        <TableCell className="text-sm">{f.phaseLabel}</TableCell>
+                        <TableCell>
+                          <Badge variant="destructive">{f.daysSinceActivity}d</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-green-600 text-sm">
+                <CheckCircle className="h-4 w-4" />
+                Nenhum fluxo travado — todos os processos estao progredindo normalmente.
+              </div>
+            )}
+
+            {/* Integridade de dados */}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Integridade de Dados NR-01</p>
+              <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                {[
+                  { label: "COPSOQ Total", value: flowHealthQuery.data.dataIntegrity.copsoqTotal },
+                  { label: "COPSOQ Ativo", value: flowHealthQuery.data.dataIntegrity.copsoqInProgress },
+                  { label: "COPSOQ OK", value: flowHealthQuery.data.dataIntegrity.copsoqCompleted },
+                  { label: "Inventarios", value: flowHealthQuery.data.dataIntegrity.riskAssessmentsTotal },
+                  { label: "Planos Acao", value: flowHealthQuery.data.dataIntegrity.actionPlansTotal },
+                  { label: "Certificados", value: flowHealthQuery.data.dataIntegrity.certificatesTotal },
+                ].map(item => (
+                  <div key={item.label} className="text-center p-2 bg-muted rounded-lg">
+                    <p className="text-lg font-bold">{item.value}</p>
+                    <p className="text-[10px] text-muted-foreground">{item.label}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>
