@@ -504,7 +504,20 @@ export async function executeGenerateInventoryAndPlan(
   const db = await getDb();
   if (!db) return { success: false, message: "Database not available" };
 
+  // Helper: spread deadline within 12 months from company creation
+  const spreadDeadline = (companyCreatedAt: Date, days: number): Date => {
+    const maxDays = 365;
+    const d = Math.min(days, maxDays);
+    const candidate = new Date(companyCreatedAt.getTime() + d * 86400000);
+    const now = new Date();
+    return candidate > now ? candidate : new Date(now.getTime() + d * 86400000);
+  };
+
   try {
+    // Fetch company creation date for deadline anchoring
+    const [tenantRow] = await db.select({ createdAt: tenants.createdAt }).from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+    const companyCreatedAt: Date = tenantRow?.createdAt ?? new Date();
+
     // Get or generate the COPSOQ report from partial/complete responses
     let [report] = await db.select().from(copsoqReports)
       .where(eq(copsoqReports.assessmentId, assessmentId)).limit(1);
@@ -647,8 +660,9 @@ export async function executeGenerateInventoryAndPlan(
     for (const item of riskItems) {
       const actions = getActionsForDimension(item.dim, item.severity);
       for (const action of actions) {
-        const deadline = new Date();
-        deadline.setDate(deadline.getDate() + (item.severity === "critical" ? 30 : item.severity === "high" ? 60 : 90));
+        // Distribute deadlines across 12 months from company creation, anchored by severity
+        const severityDays = item.severity === "critical" ? 30 : item.severity === "high" ? 90 : item.severity === "medium" ? 180 : 270;
+        const deadline = spreadDeadline(companyCreatedAt, severityDays);
 
         await db.insert(actionPlans).values({
           id: nanoid(), tenantId, assessmentItemId: null,
@@ -746,6 +760,18 @@ export async function executeCreateTraining(
   if (!db) return { success: false, message: "Database not available" };
 
   try {
+    // Fetch company creation date to anchor training dates within 12-month window
+    const [trainingTenantRow] = await db.select({ createdAt: tenants.createdAt }).from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+    const companyCreatedAt: Date = trainingTenantRow?.createdAt ?? new Date();
+
+    // Training starts at month 3 (after COPSOQ analysis) and ends at month 12
+    const trainingStartDate = new Date(companyCreatedAt.getTime() + 90 * 86400000);   // +3 months
+    const trainingEndDate   = new Date(companyCreatedAt.getTime() + 365 * 86400000);  // +12 months
+    // If start is already past, push forward from today
+    const now = new Date();
+    const effectiveStart = trainingStartDate > now ? trainingStartDate : now;
+    const effectiveEnd   = trainingEndDate   > now ? trainingEndDate   : new Date(now.getTime() + 275 * 86400000);
+
     const programId = nanoid();
     await db.insert(interventionPrograms).values({
       id: programId, tenantId,
@@ -753,10 +779,14 @@ export async function executeCreateTraining(
       description: "Programa de capacitação NR-01 sobre riscos psicossociais",
       programType: "training", targetAudience: "Todos os funcionários",
       duration: 480, facilitator: "Consultoria BlackBelt SST",
+      startDate: effectiveStart,
+      endDate: effectiveEnd,
       maxParticipants: 20, status: "active",
       createdAt: new Date(), updatedAt: new Date(),
     });
 
+    // Distribute the 6 modules across the training period (months 3–12)
+    const totalTrainingMs = effectiveEnd.getTime() - effectiveStart.getTime();
     const modules = [
       { title: "Introdução à NR-01 e Riscos Psicossociais", content: "Conceitos fundamentais, legislação, direitos e deveres", duration: 60 },
       { title: "Identificação de Fatores de Risco", content: "Assédio moral/sexual, burnout, estresse, sobrecarga", duration: 90 },
@@ -767,11 +797,14 @@ export async function executeCreateTraining(
     ];
 
     for (let i = 0; i < modules.length; i++) {
+      // Spread modules evenly across training period
+      const fraction = modules.length === 1 ? 0 : i / (modules.length - 1);
+      const moduleDate = new Date(effectiveStart.getTime() + fraction * totalTrainingMs);
       await db.insert(trainingModules).values({
         id: nanoid(), programId, tenantId,
         title: modules[i].title, content: modules[i].content,
         order: i + 1, duration: modules[i].duration,
-        createdAt: new Date(),
+        createdAt: moduleDate,
       });
     }
 

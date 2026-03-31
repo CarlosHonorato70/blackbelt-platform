@@ -108,7 +108,7 @@ async function executeCreateCompany(
       { title: "Integração PGR+PCMSO", category: "documentation", targetDate: addDays(150), order: 8 },
       { title: "Treinamento de lideranças", category: "training", targetDate: addDays(135), order: 9 },
       { title: "Revisão e auditoria", category: "review", targetDate: addDays(210), order: 10 },
-      { title: "Adequação completa NR-01", category: "review", targetDate: new Date("2026-05-26"), order: 11 },
+      { title: "Adequação completa NR-01", category: "review", targetDate: addDays(365), order: 11 },
     ];
 
     for (const m of milestones) {

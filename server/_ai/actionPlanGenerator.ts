@@ -143,12 +143,14 @@ export async function generateActionPlan(
 
   // 1. Buscar tenant
   const [tenant] = await db
-    .select({ name: tenants.name })
+    .select({ name: tenants.name, createdAt: tenants.createdAt })
     .from(tenants)
     .where(eq(tenants.id, tenantId))
     .limit(1);
 
   const tenantName = tenant?.name || "Organizacao";
+  // Base date for all deadlines: company creation (capped to 12 months max)
+  const companyCreatedAt: Date = tenant?.createdAt ?? new Date();
 
   // 2. Buscar assessment
   const [assessment] = await db
@@ -303,7 +305,7 @@ Gere o plano de acao completo para mitigacao dos riscos psicossociais identifica
       title: action.controlMeasure.substring(0, 255),
       description: `${action.situationDescription}\n\nImpacto esperado: ${action.expectedImpact}`,
       actionType: mapActionType(action.actionType),
-      deadline: new Date(Date.now() + parseDays(action.deadline) * 86400000),
+      deadline: spreadDeadline(companyCreatedAt, parseDays(action.deadline)),
       status: "pending",
       priority: mapPriority(action.priority),
       aiGenerated: true,
@@ -316,7 +318,11 @@ Gere o plano de acao completo para mitigacao dos riscos psicossociais identifica
   }
 
   // 9. Persistir — acoes gerais (como action plans sem assessmentItemId)
-  for (const ga of parsed.generalActions) {
+  // Distribute general actions evenly across 12 months
+  const generalActionDaySlots = [45, 90, 135, 180, 225, 270, 315, 360];
+  for (let gi = 0; gi < parsed.generalActions.length; gi++) {
+    const ga = parsed.generalActions[gi];
+    const slotDays = generalActionDaySlots[gi % generalActionDaySlots.length];
     await db.insert(actionPlans).values({
       id: `ap_g_${nanoid(12)}`,
       tenantId,
@@ -324,6 +330,7 @@ Gere o plano de acao completo para mitigacao dos riscos psicossociais identifica
       title: ga.title.substring(0, 255),
       description: `${ga.description}\n\nFrequencia: ${ga.frequency}`,
       actionType: "administrative",
+      deadline: spreadDeadline(companyCreatedAt, slotDays),
       status: "pending",
       priority: "medium",
       aiGenerated: true,
@@ -388,4 +395,22 @@ function parseDays(deadline: string): number {
   if (deadline.toLowerCase().includes("imediato")) return 15;
   if (deadline.toLowerCase().includes("urgente")) return 30;
   return 90;
+}
+
+/**
+ * Calcula o prazo (deadline) a partir da data de criação da empresa,
+ * distribuindo as ações ao longo de 12 meses.
+ * Se o prazo calculado já passou (empresa antiga), projeta a partir de hoje.
+ * Garante que nenhum prazo ultrapasse 365 dias da criação da empresa.
+ */
+function spreadDeadline(companyCreatedAt: Date, daysFromLLM: number): Date {
+  const maxDays = 365;
+  const days = Math.min(daysFromLLM, maxDays);
+  const fromCreation = new Date(companyCreatedAt.getTime() + days * 86400000);
+  const now = new Date();
+  // If already in the past, anchor from today but respect original spread
+  if (fromCreation <= now) {
+    return new Date(now.getTime() + days * 86400000);
+  }
+  return fromCreation;
 }
