@@ -2146,6 +2146,11 @@ async function generateFallbackResponse(
   if (wantsFinalProposal && memory.cnpj) {
     const existingCompany = await findCompanyByCNPJ();
     if (existingCompany) {
+      // Guard: if already past training, show current state instead of re-generating
+      const phaseForFinal = await getNextPhase(existingCompany.id);
+      if (phaseForFinal === "awaiting_final_approval" || phaseForFinal === "awaiting_payment" || phaseForFinal === "completed") {
+        return await buildCompletedResponse(existingCompany, tenantId);
+      }
       const hc = memory.headcount || 10;
       const riskLevel = memory.highRisk ? "high" as const : "low" as const;
       const fpData = await buildFinalProposalData(
@@ -2188,6 +2193,14 @@ async function generateFallbackResponse(
   if (wantsPricing && !wantsFinalProposal && memory.cnpj) {
     const existingCompany = await findCompanyByCNPJ();
     if (existingCompany) {
+      // Guard: if NR-01 already in progress beyond initial assessment, don't regenerate pre-proposal
+      const phaseForPricing = await getNextPhase(existingCompany.id);
+      if (phaseForPricing !== "create_assessment" && phaseForPricing !== "unknown") {
+        return {
+          content: `O fluxo NR-01 de **${existingCompany.name}** já está em andamento.\n\nDiga **"continuar"** para verificar o próximo passo.`,
+          actions: [],
+        };
+      }
       const hc = memory.headcount || 10;
       const riskLevel = memory.highRisk ? "high" as const : "low" as const;
       const proposal = generatePricingProposal({

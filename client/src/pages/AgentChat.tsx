@@ -158,7 +158,7 @@ function AgentChatPage() {
   const { data: nr01Status } = trpc.agent.getStatus.useQuery({});
 
   // Fetch alerts
-  const { data: alerts } = trpc.agent.getAlerts.useQuery({ limit: 10 });
+  const { data: alerts } = trpc.agent.getAlerts.useQuery({ limit: 10 }, { refetchInterval: 30000 });
 
   // Send message
   const sendMessage = trpc.agent.sendMessage.useMutation({
@@ -303,6 +303,26 @@ function AgentChatPage() {
             </div>
           </div>
           <Card className="flex flex-1 flex-col overflow-hidden rounded-t-none border-t-0">
+
+            {/* Proposal approval banners */}
+            {alerts?.filter(a => a.alertType === "proposal_approved").map(alert => (
+              <div key={alert.id} className="mx-4 mt-3 p-3 rounded-lg bg-green-50 border border-green-200 flex items-center justify-between gap-3">
+                <span className="text-sm text-green-800 flex-1">✅ {alert.message}</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-green-400 text-green-700 shrink-0"
+                  onClick={() => {
+                    dismissAlert.mutate({ id: alert.id });
+                    if (conversationId) {
+                      sendMessage.mutate({ conversationId, content: "continuar" });
+                    }
+                  }}
+                >
+                  Continuar fluxo
+                </Button>
+              </div>
+            ))}
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4">

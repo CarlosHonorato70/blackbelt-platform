@@ -28,7 +28,8 @@ export type AlertType =
   | "action_overdue"
   | "training_incomplete"
   | "document_missing"
-  | "certification_ready";
+  | "certification_ready"
+  | "proposal_approved";
 
 interface AlertDef {
   type: AlertType;

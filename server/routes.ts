@@ -113,6 +113,25 @@ export function registerRoutes(app: Express) {
 
       log.info(`[Proposal] Approved: ${proposal.id} by ${proposal.contactEmail}`);
 
+      // 1b. Notify consultant via agentAlert
+      try {
+        const { nanoid: nanoidFn } = await import("nanoid");
+        const { agentAlerts } = await import("../drizzle/schema_agent");
+        await db.insert(agentAlerts).values({
+          id: nanoidFn(),
+          tenantId: proposal.tenantId,
+          alertType: "proposal_approved",
+          title: proposal.proposalType === "final" ? "Proposta Final aprovada" : "Pré-Proposta aprovada",
+          message: `A empresa aprovou a proposta. Clique para continuar o fluxo no SamurAI.`,
+          severity: "info",
+          dismissed: false,
+          metadata: { proposalId: proposal.id, proposalType: proposal.proposalType },
+          createdAt: new Date(),
+        });
+      } catch (alertErr) {
+        log.warn("[Proposal] Failed to create approval alert", { error: String(alertErr) });
+      }
+
       // 2. Create or assign company user account
       if (proposal.contactEmail) {
         try {
