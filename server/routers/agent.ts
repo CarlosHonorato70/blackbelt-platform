@@ -1254,7 +1254,7 @@ async function generateFallbackResponse(
     // Step 11: Final proposal
     const { proposals: proposalsTable } = await import("../../drizzle/schema");
     const [finalProposal] = await db2.select().from(proposalsTable)
-      .where(and(eq(proposalsTable.tenantId, companyId), eq(proposalsTable.proposalType, "final")))
+      .where(and(eq(proposalsTable.clientId, companyId), eq(proposalsTable.proposalType, "final")))
       .limit(1);
     if (!finalProposal) return "generate_final_proposal";
 
