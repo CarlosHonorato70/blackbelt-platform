@@ -969,14 +969,29 @@ async function saveFinalProposal(
 
     const finalTotalValue = Math.max(totalCalc, initialProposal.totalEstimate.max * 1.3);
 
-    // Get contactEmail from pre-proposal if not provided
+    // Get contactEmail: try multiple sources in order
     let finalContactEmail = contactEmail;
     if (!finalContactEmail) {
+      // 1. Try pre-proposal with same clientId (if saveInitialProposal was used)
       const [preProposal] = await db2.select().from(proposals)
         .where(and(eq(proposals.tenantId, tenantId), eq(proposals.clientId, clientId)))
         .orderBy(desc(proposals.createdAt))
         .limit(1);
       finalContactEmail = preProposal?.contactEmail || null;
+    }
+    if (!finalContactEmail) {
+      // 2. Try any pre-proposal for this tenant (savePreProposalWithApproval path uses clients table ID)
+      const [anyPreProposal] = await db2.select().from(proposals)
+        .where(and(eq(proposals.tenantId, tenantId), eq(proposals.proposalType, "pre_proposal")))
+        .orderBy(desc(proposals.createdAt))
+        .limit(1);
+      finalContactEmail = anyPreProposal?.contactEmail || null;
+    }
+    if (!finalContactEmail) {
+      // 3. Fall back to company tenant's contactEmail
+      const { tenants: tenantsTable } = await import("../../drizzle/schema");
+      const [companyTenant] = await db2.select().from(tenantsTable).where(eq(tenantsTable.id, clientId)).limit(1);
+      finalContactEmail = companyTenant?.contactEmail || null;
     }
 
     // Generate approval token
@@ -1106,35 +1121,63 @@ async function sendPreProposalByEmail(proposalId: string): Promise<{ success: bo
     if (!proposal) return { success: false, message: "Proposta nao encontrada" };
     if (!proposal.contactEmail) return { success: false, message: "Email de contato nao informado" };
 
-    const { clients } = await import("../../drizzle/schema");
+    // Resolve client name: try clients table first, then tenants table (final proposals use tenant ID as clientId)
+    const { clients, tenants: tenantsTable } = await import("../../drizzle/schema");
+    let clientName = "Prezado(a)";
     const [client] = await db.select().from(clients).where(eq(clients.id, proposal.clientId));
+    if (client?.name) {
+      clientName = client.name;
+    } else {
+      const [tenantRecord] = await db.select().from(tenantsTable).where(eq(tenantsTable.id, proposal.clientId)).limit(1);
+      if (tenantRecord?.name) clientName = tenantRecord.name;
+    }
 
-    const { sendProposalEmail } = await import("../_core/email");
+    const { sendProposalEmail, queueEmail } = await import("../_core/email");
 
-    const totalFormatted = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(proposal.totalValue / 100);
+    // Use queue for guaranteed delivery — falls back to direct send if queue unavailable
+    const baseUrl = process.env.FRONTEND_URL || "https://blackbeltconsultoria.com";
+    const approveUrl = proposal.approvalToken ? `${baseUrl}/api/proposal/approve/${proposal.approvalToken}` : null;
 
-    const sent = await sendProposalEmail({
-      clientEmail: proposal.contactEmail,
-      clientName: client?.name || "Prezado(a)",
-      proposalId: proposal.id,
-      proposalTitle: proposal.title,
-      totalValue: proposal.totalValue,
-      riskLevel: "medium",
-      services: [
-        { name: "Conformidade NR-01 Completa", quantity: 1, unitPrice: proposal.totalValue },
-      ],
-      validUntil: proposal.validUntil || undefined,
-      approvalToken: proposal.approvalToken || undefined,
+    try {
+      const sent = await sendProposalEmail({
+        clientEmail: proposal.contactEmail,
+        clientName,
+        proposalId: proposal.id,
+        proposalTitle: proposal.title,
+        totalValue: proposal.totalValue,
+        riskLevel: "medium",
+        services: [
+          { name: "Conformidade NR-01 Completa", quantity: 1, unitPrice: proposal.totalValue },
+        ],
+        validUntil: proposal.validUntil || undefined,
+        approvalToken: proposal.approvalToken || undefined,
+      });
+
+      if (sent) {
+        await db.update(proposals)
+          .set({ sentAt: new Date(), updatedAt: new Date() })
+          .where(eq(proposals.id, proposalId));
+        log.info(`[Agent] Proposal email sent: ${proposalId} to ${proposal.contactEmail}`);
+        return { success: true, message: `Proposta enviada para ${proposal.contactEmail}` };
+      }
+    } catch (sendErr) {
+      log.warn("[Agent] sendProposalEmail failed, falling back to queueEmail", { error: String(sendErr) });
+    }
+
+    // Fallback: queue via email queue for retry
+    const formattedValue = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(proposal.totalValue / 100);
+    await queueEmail({
+      to: proposal.contactEmail,
+      subject: `${proposal.title} — Black Belt Consultoria`,
+      html: `<p>Prezado(a) ${clientName},</p><p>Segue proposta: <strong>${proposal.title}</strong> no valor de <strong>${formattedValue}</strong>.</p>${approveUrl ? `<p><a href="${approveUrl}" style="background:#667eea;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;">Aprovar Proposta</a></p>` : ""}<p>Equipe Black Belt Consultoria</p>`,
+      text: `${proposal.title}\nValor: ${formattedValue}\n${approveUrl ? `Aprovar: ${approveUrl}` : ""}`,
     });
 
-    if (sent) {
-      await db.update(proposals)
-        .set({ sentAt: new Date(), updatedAt: new Date() })
-        .where(eq(proposals.id, proposalId));
-      log.info(`[Agent] Proposal email sent: ${proposalId} to ${proposal.contactEmail}`);
-      return { success: true, message: `Proposta enviada para ${proposal.contactEmail}` };
-    }
-    return { success: false, message: "Falha ao enviar email" };
+    await db.update(proposals)
+      .set({ sentAt: new Date(), updatedAt: new Date() })
+      .where(eq(proposals.id, proposalId));
+    log.info(`[Agent] Proposal email queued: ${proposalId} to ${proposal.contactEmail}`);
+    return { success: true, message: `Proposta enviada para ${proposal.contactEmail}` };
   } catch (error) {
     log.error("[Agent] Failed to send proposal email:", error);
     return { success: false, message: "Erro ao enviar email da proposta" };
