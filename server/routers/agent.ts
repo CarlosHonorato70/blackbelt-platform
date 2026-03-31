@@ -229,28 +229,59 @@ async function buildCompletedResponse(company: any, consultantTenantId: string):
     const paidCount = payments.filter((p: any) => p.status === "paid").length;
     const totalInstallments = payments.length || 3;
 
+    // PDFs are released after first installment (40%) is confirmed
+    const firstInstallmentPaid = paidCount >= 1 || fp.paymentStatus === "paid";
+
     if (fp.paymentStatus === "paid" || paidCount === totalInstallments) {
-      // Fully paid — show PDFs
+      // Fully paid
       return {
-        content: `✅ **Processo completo!** NR-01 finalizado, proposta aprovada e **pagamento confirmado**.\n\n` +
+        content: `✅ **Processo completo!** NR-01 finalizado, proposta aprovada e **pagamento integral confirmado**.\n\n` +
           `Todos os documentos estão liberados para download:` + buildPdfDownloadLinks(company.id) +
           `\n\nDeseja iniciar o processo para **outra empresa**? Envie o CNPJ.`,
         actions: [],
       };
     }
 
-    // Partially paid or pending
-    let paymentInfo = `\n\n💰 **Status do Pagamento:** ${paidCount} de ${totalInstallments} parcelas pagas\n`;
-    for (const p of payments) {
-      const statusIcon = (p as any).status === "paid" ? "✅" : "⏳";
-      const pct = (p as any).percentage;
-      const val = ((p as any).amount / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-      paymentInfo += `${statusIcon} Parcela ${(p as any).installment} (${pct}%) — ${val}\n`;
+    if (firstInstallmentPaid) {
+      // First installment paid — PDFs already released, show remaining installments
+      let paymentInfo = `\n\n💰 **Status do Pagamento:** ${paidCount} de ${totalInstallments} parcelas pagas\n`;
+      for (const p of payments) {
+        const statusIcon = (p as any).status === "paid" ? "✅" : "⏳";
+        const pct = (p as any).percentage;
+        const val = ((p as any).amount / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+        paymentInfo += `${statusIcon} Parcela ${(p as any).installment} (${pct}%) — ${val}\n`;
+      }
+      return {
+        content: `✅ **Primeiro pagamento confirmado!** PDFs já liberados.\n${paymentInfo}\n📄 **Documentos disponíveis:**` + buildPdfDownloadLinks(company.id) +
+          `\n\nClique em **"Confirmar Próximo Pagamento"** quando receber as demais parcelas.`,
+        actions: [
+          { type: "mark_all_paid", label: "Confirmar Próximo Pagamento", params: { proposalId: fp.id, companyId: company.id, totalValue: fp.totalValue } },
+        ],
+      };
+    }
+
+    // No payments yet
+    let paymentInfo = `\n\n💰 **Status do Pagamento:** ${paidCount} de ${totalInstallments} parcelas\n`;
+    if (payments.length > 0) {
+      for (const p of payments) {
+        const statusIcon = (p as any).status === "paid" ? "✅" : "⏳";
+        const pct = (p as any).percentage;
+        const val = ((p as any).amount / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+        paymentInfo += `${statusIcon} Parcela ${(p as any).installment} (${pct}%) — ${val}\n`;
+      }
+    } else {
+      // No payment records yet — show default 3-installment split
+      const totalVal = fp.totalValue;
+      paymentInfo += `⏳ Parcela 1 (40%) — ${(totalVal * 0.4 / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}\n`;
+      paymentInfo += `⏳ Parcela 2 (30%) — ${(totalVal * 0.3 / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}\n`;
+      paymentInfo += `⏳ Parcela 3 (30%) — ${(totalVal * 0.3 / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}\n`;
     }
 
     return {
-      content: `✅ **NR-01 concluído.** Proposta final **aprovada**.\n${paymentInfo}\n⚠️ **PDFs serão liberados após confirmação de todas as parcelas.**\n\nPara confirmar pagamentos, acesse **Propostas Comerciais** e clique em "Marcar Pagamento".`,
-      actions: [],
+      content: `✅ **NR-01 concluído.** Proposta final **aprovada**.\n${paymentInfo}\n🔓 **PDFs serão liberados após confirmação do 1º pagamento (40%).**\n\nQuando receber o pagamento inicial, clique em **"Confirmar 1º Pagamento"**.`,
+      actions: [
+        { type: "mark_all_paid", label: "Confirmar 1º Pagamento (40%)", params: { proposalId: fp.id, companyId: company.id, totalValue: fp.totalValue } },
+      ],
     };
   }
 
@@ -1502,6 +1533,97 @@ async function generateFallbackResponse(
     return { content: "Nenhuma proposta final encontrada. Gere primeiro com 'Gerar Proposta Final'.", actions: [] };
   }
 
+  // ── 0a1d. Handle mark_all_paid action + payment confirmation keywords ──
+  const wantsMarkPaid = msg.startsWith("executar:mark_all_paid") ||
+    msg.includes("confirmar pagamento") || msg.includes("pagamento confirmado") ||
+    msg.includes("recebi pagamento") || msg.includes("recebi o pagamento") ||
+    msg.includes("paguei") || msg.includes("todas as parcelas") ||
+    msg.includes("primeiro pagamento") || msg.includes("1o pagamento") ||
+    msg.includes("parcela paga") || msg.includes("libertar pdf") || msg.includes("liberar pdf");
+
+  if (wantsMarkPaid) {
+    const db2 = await getDb();
+    // Find final proposal for this tenant
+    const [fp] = await db2.select().from(proposals)
+      .where(and(eq(proposals.tenantId, tenantId), eq(proposals.proposalType, "final"), eq(proposals.status, "approved")))
+      .orderBy(desc(proposals.createdAt))
+      .limit(1);
+
+    if (fp) {
+      // Check existing payments
+      const existingPayments = await db2.select().from(proposalPayments)
+        .where(eq(proposalPayments.proposalId, fp.id))
+        .orderBy(proposalPayments.installment);
+
+      const alreadyPaid = existingPayments.filter((p: any) => p.status === "paid").length;
+      const nextInstallment = alreadyPaid + 1;
+      const totalInstallments = existingPayments.length || 3;
+
+      if (alreadyPaid >= totalInstallments) {
+        // All paid already
+        await db2.update(proposals)
+          .set({ paymentStatus: "paid", updatedAt: new Date() })
+          .where(eq(proposals.id, fp.id));
+        const company = await findCompanyByCNPJ() || { id: fp.clientId, name: "Empresa" };
+        return {
+          content: `✅ **Pagamento integral já confirmado!**\n\n📄 **Documentos liberados:**` + buildPdfDownloadLinks(company.id),
+          actions: [],
+        };
+      }
+
+      // Create or update payment record for next installment
+      const installmentPct = nextInstallment === 1 ? 40 : 30;
+      const installmentAmount = Math.round(fp.totalValue * installmentPct / 100);
+
+      const existingRecord = existingPayments.find((p: any) => p.installment === nextInstallment);
+      if (existingRecord) {
+        await db2.update(proposalPayments)
+          .set({ status: "paid", paidAt: new Date(), paidBy: userId })
+          .where(eq(proposalPayments.id, existingRecord.id));
+      } else {
+        await db2.insert(proposalPayments).values({
+          id: nanoid(),
+          proposalId: fp.id,
+          installment: nextInstallment,
+          percentage: installmentPct,
+          amount: installmentAmount,
+          status: "paid",
+          paidAt: new Date(),
+          paidBy: userId,
+        });
+      }
+
+      // If first installment, release PDFs (update proposal paymentStatus to partial)
+      const newPaidCount = alreadyPaid + 1;
+      const isFullyPaid = newPaidCount >= totalInstallments;
+      await db2.update(proposals)
+        .set({ paymentStatus: isFullyPaid ? "paid" : "partial", updatedAt: new Date() })
+        .where(eq(proposals.id, fp.id));
+
+      const company = await findCompanyByCNPJ() || { id: fp.clientId, name: "Empresa" };
+      const valFormatted = (installmentAmount / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+      if (isFullyPaid) {
+        return {
+          content: `✅ **Pagamento integral confirmado!** (${newPaidCount}/${totalInstallments} parcelas)\n\n📄 **Todos os documentos estão liberados:**` + buildPdfDownloadLinks(company.id) +
+            `\n\nDeseja iniciar o processo para **outra empresa**? Envie o CNPJ.`,
+          actions: [],
+        };
+      }
+
+      // First or partial payment — release PDFs
+      const remainingInstallments = totalInstallments - newPaidCount;
+      return {
+        content: `✅ **Parcela ${nextInstallment}/${totalInstallments} confirmada!** (${valFormatted} — ${installmentPct}%)\n\n🔓 **PDFs liberados para download:**` + buildPdfDownloadLinks(company.id) +
+          `\n\n⏳ Ainda restam **${remainingInstallments} parcela(s)** a receber.\n\nQuando receber a próxima parcela, clique em **"Confirmar Próximo Pagamento"**.`,
+        actions: [
+          { type: "mark_all_paid", label: "Confirmar Próximo Pagamento", params: { proposalId: fp.id, companyId: company.id } },
+        ],
+      };
+    }
+    return { content: "Nenhuma proposta final aprovada encontrada para registrar pagamento.", actions: [] };
+  }
+
   // ── 0a2. Handle send_copsoq_invites action ──
   if (msg.startsWith("executar:send_copsoq_invites") || msg.includes("enviar copsoq")) {
     const companyIdMatch = msg.match(/companyId[=:]([^\s,}]+)/);
@@ -2419,20 +2541,22 @@ async function generateFallbackResponse(
     const existingCompany = await findCompanyByCNPJ();
     if (existingCompany) {
       const nextPhase = await getNextPhase(existingCompany.id);
-      if (nextPhase !== "completed" && nextPhase !== "unknown") {
+      // Payment and completed phases — delegate to buildCompletedResponse
+      if (nextPhase === "completed" || nextPhase === "awaiting_payment" || nextPhase === "awaiting_final_approval") {
+        return await buildCompletedResponse(existingCompany, tenantId);
+      }
+      if (nextPhase !== "unknown") {
         const phaseLabels: Record<string, string> = {
           create_assessment: "Criar Avaliacao COPSOQ-II",
           generate_inventory: "Gerar Inventario e Plano de Acao",
           create_training: "Criar Programa de Treinamento",
           complete_checklist: "Finalizar e Emitir Certificado",
+          generate_final_proposal: "Gerar Proposta Final",
         };
         return {
           content: `Empresa **${existingCompany.name}** encontrada. A proxima etapa e: **${phaseLabels[nextPhase] || nextPhase}**.\n\nClique no botao abaixo ou diga **"sim"** para continuar o processo.`,
           actions: [{ type: nextPhase, label: phaseLabels[nextPhase] || "Continuar", params: { companyId: existingCompany.id } }],
         };
-      }
-      if (nextPhase === "completed") {
-        return await buildCompletedResponse(existingCompany, tenantId);
       }
     }
   }
