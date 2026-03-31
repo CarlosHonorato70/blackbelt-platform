@@ -1712,15 +1712,20 @@ async function generateFallbackResponse(
           return { content: result.message, actions: [] };
         }
       }
+      // Payment/completion phases — delegate
+      if (nextPhase === "completed" || nextPhase === "awaiting_payment" || nextPhase === "awaiting_final_approval") {
+        return await buildCompletedResponse(company, tenantId);
+      }
       // For other phases, show status
       const phaseLabels: Record<string, string> = {
         create_assessment: "Enviar COPSOQ-II",
         generate_inventory: "Gerar Inventario e Plano de Acao",
         create_training: "Criar Programa de Treinamento",
         complete_checklist: "Finalizar e Emitir Certificado",
+        generate_final_proposal: "Gerar Proposta Final",
       };
       return {
-        content: `Empresa **${company.name}**. Proxima etapa: **${phaseLabels[nextPhase] || nextPhase}**.\n\nClique no botao abaixo ou diga **"sim"** para continuar.`,
+        content: `Empresa **${company.name}**. Proxima etapa: **${phaseLabels[nextPhase] || "continuar"}**.\n\nClique no botao abaixo ou diga **"sim"** para continuar.`,
         actions: [{ type: nextPhase, label: phaseLabels[nextPhase] || "Continuar", params: { companyId: company.id } }],
       };
     }
@@ -1844,18 +1849,19 @@ async function generateFallbackResponse(
     if (existingCompany) {
       const nextPhase = await getNextPhase(existingCompany.id);
 
-      if (nextPhase === "completed") {
-        // NR-01 fully completed — check final proposal + payment status
+      if (nextPhase === "completed" || nextPhase === "awaiting_payment" || nextPhase === "awaiting_final_approval") {
+        // Payment/completion phases — delegate to buildCompletedResponse for proper action buttons
         return await buildCompletedResponse(existingCompany, tenantId);
       }
 
       if (nextPhase !== "unknown") {
-        // NR-01 in progress or at beginning — show current phase, don't re-ask for details
+        // NR-01 in progress — show current phase with proper label and action button
         const phaseLabels: Record<string, string> = {
           create_assessment: "Enviar COPSOQ-II",
           generate_inventory: "Gerar Inventário e Plano de Ação",
           create_training: "Criar Programa de Treinamento",
           complete_checklist: "Finalizar e Emitir Certificado",
+          generate_final_proposal: "Gerar Proposta Final",
         };
         const label = phaseLabels[nextPhase] || nextPhase;
 
@@ -1941,8 +1947,8 @@ async function generateFallbackResponse(
         // Check if NR-01 process already exists for this company
         if (execResult.companyId) {
           const nextPhase = await getNextPhase(execResult.companyId);
-          if (nextPhase === "completed") {
-            // Check final proposal + payment status
+          if (nextPhase === "completed" || nextPhase === "awaiting_payment" || nextPhase === "awaiting_final_approval") {
+            // Payment/completion phases
             const completedResp = await buildCompletedResponse({ id: execResult.companyId, name: data.nome_fantasia || data.razao_social, cnpj: formattedCNPJ }, tenantId);
             content += `\n\n` + completedResp.content;
             return { content, actions: completedResp.actions };
@@ -1953,6 +1959,7 @@ async function generateFallbackResponse(
               generate_inventory: "Gerar Inventário e Plano de Ação",
               create_training: "Criar Programa de Treinamento",
               complete_checklist: "Finalizar e Emitir Certificado",
+              generate_final_proposal: "Gerar Proposta Final",
             };
             const label = phaseLabels[nextPhase] || nextPhase;
             content += `\n\n📋 **Processo NR-01 em andamento.** Próxima etapa: **${label}**`;
