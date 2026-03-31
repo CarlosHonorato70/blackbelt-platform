@@ -65,8 +65,11 @@ export async function runMonitoringCheck(): Promise<{
           for (const line of lines) {
             try {
               const entry = JSON.parse(line);
-              if (entry.timestamp && new Date(entry.timestamp) > cutoff) {
-                errors24h++;
+              if (entry.timestamp) {
+                // Normalize "YYYY-MM-DD HH:MM:SS" → "YYYY-MM-DDTHH:MM:SS" for ISO compatibility
+                const ts = new Date(String(entry.timestamp).replace(" ", "T"));
+                if (!isNaN(ts.getTime()) && ts > cutoff) errors24h++;
+                else if (isNaN(ts.getTime())) errors24h++; // unparseable timestamp still counts
               }
             } catch { errors24h++; } // Count non-JSON lines too
           }
@@ -429,7 +432,8 @@ export async function runCodeIntegrityCheck(): Promise<{
         for (const line of content.split("\n").filter(l => l.trim())) {
           try {
             const entry = JSON.parse(line);
-            if (entry.timestamp && new Date(entry.timestamp).getTime() > cutoff) {
+            const tsNorm = new Date(String(entry.timestamp || "").replace(" ", "T"));
+            if (entry.timestamp && !isNaN(tsNorm.getTime()) && tsNorm.getTime() > cutoff) {
               const key = (entry.message || entry.msg || "unknown").slice(0, 80);
               errorMap[key] = (errorMap[key] || 0) + 1;
             }
