@@ -172,7 +172,16 @@ function AgentChatPage() {
     for (const alert of toProcess) {
       processedAlertIds.current.add(alert.id);
       dismissAlert.mutate({ id: alert.id });
-      sendMessage.mutate({ conversationId, content: "continuar" });
+      // Build a context-aware message so SamurAI knows which company/event triggered this
+      let content = "continuar";
+      const meta = (alert.metadata || {}) as Record<string, any>;
+      if (alert.alertType === "proposal_approved" && meta.cnpj) {
+        const tipo = meta.proposalType === "final" ? "proposta final" : "pré-proposta";
+        content = `A ${tipo} para o CNPJ ${meta.cnpj} foi aprovada pela empresa. continuar`;
+      } else if (alert.alertType === "copsoq_responses_ready" && meta.assessmentId) {
+        content = "continuar — respostas COPSOQ recebidas";
+      }
+      sendMessage.mutate({ conversationId, content });
     }
   }, [alerts, conversationId]);
 
