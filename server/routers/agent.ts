@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
+import crypto from "crypto";
 import { tenantProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { agentConversations, agentMessages, agentActions, agentAlerts } from "../../drizzle/schema_agent";
@@ -1062,7 +1063,6 @@ async function generateAndSavePreProposal(params: {
 }): Promise<{ success: boolean; proposalId?: string; message?: string }> {
   try {
     const db = await getDb();
-    const crypto = await import("crypto");
     const proposalId = nanoid();
     const approvalToken = crypto.randomBytes(32).toString("hex");
 
