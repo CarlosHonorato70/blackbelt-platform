@@ -896,7 +896,45 @@ export const clientsRouter = router({
 export const servicesRouter = router({
   list: tenantProcedure.query(async ({ ctx }) => {
     if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autorizado" });
-    return await db.listServices(ctx.tenantId!);
+    const tenantId = ctx.tenantId!;
+    const dbConn = await getDb();
+    if (!dbConn) return await db.listServices(tenantId);
+
+    // Auto-seed: if consultoria has no services, copy from admin as starting template
+    const [existing] = await dbConn.select({ id: services.id }).from(services)
+      .where(eq(services.tenantId, tenantId)).limit(1);
+    if (!existing) {
+      try {
+        const [adminTenant] = await dbConn.select({ id: tenants.id }).from(tenants)
+          .where(eq(tenants.tenantType, "admin")).limit(1);
+        if (adminTenant) {
+          const adminServices = await dbConn.select().from(services)
+            .where(eq(services.tenantId, adminTenant.id));
+          if (adminServices.length > 0) {
+            for (const svc of adminServices) {
+              await dbConn.insert(services).values({
+                id: nanoid(),
+                tenantId,
+                name: svc.name,
+                description: svc.description,
+                category: svc.category,
+                unit: svc.unit,
+                minPrice: svc.minPrice,
+                maxPrice: svc.maxPrice,
+                isActive: svc.isActive,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              });
+            }
+            log.info(`[Services] Auto-seeded ${adminServices.length} services from admin to tenant ${tenantId}`);
+          }
+        }
+      } catch (e: any) {
+        log.warn(`[Services] Auto-seed failed: ${e.message}`);
+      }
+    }
+
+    return await db.listServices(tenantId);
   }),
 
   create: tenantProcedure
