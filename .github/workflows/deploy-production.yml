@@ -103,7 +103,7 @@ jobs:
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
-          echo "StrictHostKeyChecking accept-new" >> ~/.ssh/config
+          printf "Host %s\n  StrictHostKeyChecking accept-new\n  IdentitiesOnly yes\n" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/config
           chmod 600 ~/.ssh/config
 
       - name: Deploy to server
@@ -159,7 +159,7 @@ jobs:
           curl -f https://${{ secrets.PRODUCTION_URL }}/api/health || exit 1
 
       - name: Notify deployment
-        if: always()
+        if: always() && secrets.SLACK_WEBHOOK != ''
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
@@ -185,7 +185,7 @@ jobs:
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
-          echo "StrictHostKeyChecking accept-new" >> ~/.ssh/config
+          printf "Host %s\n  StrictHostKeyChecking accept-new\n  IdentitiesOnly yes\n" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/config
           chmod 600 ~/.ssh/config
 
       - name: Rollback deployment
