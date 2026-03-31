@@ -23,6 +23,8 @@ import {
   userRoles,
   permissions,
   rolePermissions,
+  services,
+  pricingParameters,
 } from "./schema";
 import { seedPlans, seedFeatures, getPlanFeatureAssociations } from "../seed_plans";
 import crypto from "crypto";
@@ -249,6 +251,7 @@ async function seed() {
       id: tenantId,
       name: "BlackBelt Platform (Admin)",
       cnpj: TENANT_CNPJ,
+      tenantType: "admin",
       contactName: "Admin",
       contactEmail: "admin@blackbeltconsultoria.com",
       status: "active",
@@ -276,7 +279,62 @@ async function seed() {
     }
   } else {
     tenantId = existingTenant[0].id;
+    // Ensure tenantType is set to "admin" for existing tenant
+    if ((existingTenant[0] as any).tenantType !== "admin") {
+      await db.update(tenants).set({ tenantType: "admin" } as any).where(eq(tenants.id, tenantId));
+      console.log(`  ~ Updated tenantType to "admin" for existing tenant`);
+    }
     console.log(`  = Tenant already exists: ${existingTenant[0].name}`);
+  }
+
+  // 7b. Seed Admin Services (tabela de referência para auto-seed nas consultorias)
+  console.log("[7b] Seeding admin services...");
+  const adminServicesDefault = [
+    { category: "copsoq",        name: "Avaliação COPSOQ-II (por colaborador)",      description: "Diagnóstico psicossocial completo por colaborador", unit: "person",  minPrice: 30000,  maxPrice: 50000  },
+    { category: "inventario",    name: "Inventário de Riscos Psicossociais",          description: "Mapeamento e classificação de riscos (projeto)",       unit: "project", minPrice: 80000,  maxPrice: 150000 },
+    { category: "plano_acao",    name: "Plano de Ação (por ação)",                   description: "Elaboração de plano de ação por fator de risco",       unit: "item",    minPrice: 25000,  maxPrice: 45000  },
+    { category: "treinamento",   name: "Treinamento NR-01 (por colaborador, 8h)",    description: "Programa de treinamento presencial ou EAD",            unit: "person",  minPrice: 10000,  maxPrice: 15000  },
+    { category: "pgr_pcmso",     name: "Integração PGR/PCMSO",                       description: "Integração do PPRA psicossocial ao PGR e PCMSO",       unit: "project", minPrice: 200000, maxPrice: 350000 },
+    { category: "acompanhamento",name: "Acompanhamento Trimestral",                  description: "Monitoramento contínuo (por trimestre)",               unit: "project", minPrice: 150000, maxPrice: 250000 },
+    { category: "lideranca",     name: "Treinamento de Lideranças",                  description: "Workshop de gestão e saúde mental para líderes",       unit: "project", minPrice: 280000, maxPrice: 420000 },
+    { category: "certificacao",  name: "Certificação de Conformidade NR-01",         description: "Emissão do certificado de conformidade NR-01",         unit: "project", minPrice: 80000,  maxPrice: 160000 },
+  ];
+  const existingAdminSvcs = await db.select({ id: services.id }).from(services)
+    .where(eq(services.tenantId, tenantId)).limit(1);
+  if (existingAdminSvcs.length === 0) {
+    for (const svc of adminServicesDefault) {
+      await db.insert(services).values({
+        id: nanoid(),
+        tenantId,
+        name: svc.name,
+        description: svc.description,
+        category: svc.category,
+        unit: svc.unit,
+        minPrice: svc.minPrice,
+        maxPrice: svc.maxPrice,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    }
+    console.log(`  + ${adminServicesDefault.length} admin services seeded`);
+
+    // Seed pricing parameters for admin
+    await db.insert(pricingParameters).values({
+      id: nanoid(),
+      tenantId,
+      monthlyFixedCost: 500000,   // R$5.000/mês custos fixos (centavos)
+      laborCost: 1200000,          // R$12.000/mês mão de obra
+      productiveHoursPerMonth: 160,
+      defaultTaxRegime: "SN",
+      riskAdjustment: 100,
+      seniorityAdjustment: 100,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    console.log(`  + Admin pricing parameters seeded`);
+  } else {
+    console.log(`  = Admin services already exist`);
   }
 
   // 6. Seed Admin User

@@ -880,13 +880,21 @@ async function saveFinalProposal(
     const isHighCritical = fpData.overallRisk === "high" || fpData.overallRisk === "critical";
     const hasLeadershipIssue = fpData.copsoqScores.lideranca !== undefined && fpData.copsoqScores.lideranca < 50;
 
-    // Calculate per-employee rate
-    const perEmployeeRate = Math.round((initialProposal.pricePerEmployee.min + initialProposal.pricePerEmployee.max) / 2);
+    // Look up tenant's service prices from DB (editable per consultancy)
+    const { services: svcTable } = await import("../../drizzle/schema");
+    const tenantServices = await db2.select().from(svcTable).where(eq(svcTable.tenantId, tenantId));
+    const svcByCategory = Object.fromEntries(
+      tenantServices.map((s: any) => [s.category, Math.round((s.minPrice + s.maxPrice) / 2 / 100)])
+    ) as Record<string, number>;
+
+    // Calculate per-employee rate — use DB service or fall back to initialProposal range
+    const defaultPerEmployee = Math.round((initialProposal.pricePerEmployee.min + initialProposal.pricePerEmployee.max) / 2);
+    const perEmployeeRate = svcByCategory["copsoq"] ?? defaultPerEmployee;
     const copsoqCost = perEmployeeRate * headcount;
-    const inventarioCost = Math.round(copsoqCost * 0.20);
-    const planoCost = Math.round(fpData.actionPlansCount * 350);
-    const treinamentoCost = Math.round(headcount * 120); // 8h training for all
-    const pgrPcmsoCost = 2500;
+    const inventarioCost = svcByCategory["inventario"] ?? Math.round(copsoqCost * 0.20);
+    const planoCost = (svcByCategory["plano_acao"] ?? 350) * fpData.actionPlansCount;
+    const treinamentoCost = (svcByCategory["treinamento"] ?? 120) * headcount;
+    const pgrPcmsoCost = svcByCategory["pgr_pcmso"] ?? 2500;
     let totalCalc = copsoqCost + inventarioCost + planoCost + treinamentoCost + pgrPcmsoCost;
 
     // Build items list
@@ -928,7 +936,7 @@ async function saveFinalProposal(
 
     // Conditional items based on risk
     if (isHighCritical) {
-      const acompCost = 1800;
+      const acompCost = svcByCategory["acompanhamento"] ?? 1800;
       totalCalc += acompCost * 4; // 4 quarters
       items.push({
         id: nanoid(), proposalId: finalProposalId, serviceId: 'SVC-ACOMPANHAMENTO',
@@ -939,7 +947,7 @@ async function saveFinalProposal(
     }
 
     if (hasLeadershipIssue) {
-      const liderancaCost = 3500;
+      const liderancaCost = svcByCategory["lideranca"] ?? 3500;
       totalCalc += liderancaCost;
       items.push({
         id: nanoid(), proposalId: finalProposalId, serviceId: 'SVC-LIDERANCA',
@@ -950,7 +958,7 @@ async function saveFinalProposal(
     }
 
     // Certification always included in final
-    const certCost = 1200;
+    const certCost = svcByCategory["certificacao"] ?? 1200;
     totalCalc += certCost;
     items.push({
       id: nanoid(), proposalId: finalProposalId, serviceId: 'SVC-CERTIFICACAO',

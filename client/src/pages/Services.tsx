@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,8 @@ const unitLabels: Record<string, string> = {
 };
 
 export default function Services() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [dialogMode, setDialogMode] = useState<DialogMode>("closed");
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -237,9 +240,17 @@ export default function Services() {
         <div>
           <h1 className="text-3xl font-bold">Serviços e Preços</h1>
           <p className="text-muted-foreground">
-            Gerencie o catálogo de serviços e parâmetros de precificação
+            {isAdmin
+              ? "Serviços padrão da plataforma — consultorias recebem uma cópia editável automaticamente"
+              : "Gerencie o catálogo de serviços e parâmetros de precificação"}
           </p>
         </div>
+
+        {isAdmin && (
+          <div className="rounded-lg border border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-800 p-4 text-sm text-yellow-800 dark:text-yellow-200">
+            <strong>Admin Master:</strong> Os serviços cadastrados aqui são o catálogo padrão da plataforma. Novas consultorias recebem automaticamente uma cópia com estes preços, que podem ser ajustados individualmente. Os preços são usados para cálculo automático da proposta final no SamurAI.
+          </div>
+        )}
 
         <Tabs defaultValue="servicos" className="w-full">
           <TabsList>
