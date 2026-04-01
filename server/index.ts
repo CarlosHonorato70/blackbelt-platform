@@ -212,7 +212,9 @@ app.use((req, res, next) => {
 
     log.error(`[ERROR] ${status} - ${err.message}`, { stack: err.stack });
 
-    if (status >= 500 && process.env.SENTRY_DSN) {
+    // Report to Sentry only for real 500 errors (skip CORS rejections)
+    const isCorsError = err.message?.includes("CORS");
+    if (status >= 500 && process.env.SENTRY_DSN && !isCorsError) {
       Sentry.captureException(err);
     }
 
