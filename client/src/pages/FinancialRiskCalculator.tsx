@@ -43,19 +43,19 @@ function parseBRL(value: string): number {
 interface FinancialParams {
   averageSalary: number;
   headcount: number;
-  replacementCost: number;
+  avgReplacementCost: number;
   dailyAbsenteeismCost: number;
-  penaltyPerWorker: number;
-  averageLitigationCost: number;
+  finePerWorker: number;
+  litigationAvgCost: number;
 }
 
 const INITIAL_PARAMS: FinancialParams = {
   averageSalary: 0,
   headcount: 0,
-  replacementCost: 0,
+  avgReplacementCost: 0,
   dailyAbsenteeismCost: 0,
-  penaltyPerWorker: 0,
-  averageLitigationCost: 0,
+  finePerWorker: 0,
+  litigationAvgCost: 0,
 };
 
 const BAR_COLORS = ["#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6"];
@@ -95,31 +95,34 @@ export default function FinancialRiskCalculator() {
     },
   });
 
+  const exportFinancialCalculatorMutation = trpc.nr01Pdf.exportFinancialCalculator.useMutation();
+
   useEffect(() => {
     if (paramsQuery.data) {
       setParams({
         averageSalary: paramsQuery.data.averageSalary ?? 0,
         headcount: paramsQuery.data.headcount ?? 0,
-        replacementCost: paramsQuery.data.replacementCost ?? 0,
+        avgReplacementCost: paramsQuery.data.avgReplacementCost ?? 0,
         dailyAbsenteeismCost: paramsQuery.data.dailyAbsenteeismCost ?? 0,
-        penaltyPerWorker: paramsQuery.data.penaltyPerWorker ?? 0,
-        averageLitigationCost: paramsQuery.data.averageLitigationCost ?? 0,
+        finePerWorker: paramsQuery.data.finePerWorker ?? 0,
+        litigationAvgCost: paramsQuery.data.litigationAvgCost ?? 0,
       });
     }
   }, [paramsQuery.data]);
 
   const results = calcQuery.data;
 
-  const chartData = results
+  const costs = results?.costs;
+  const chartData = costs
     ? [
-        { name: "Absenteísmo", value: results.absenteeismCost ?? 0 },
-        { name: "Turnover", value: results.turnoverCost ?? 0 },
-        { name: "Multas NR-01", value: results.penaltyCost ?? 0 },
-        { name: "Litígios", value: results.litigationCost ?? 0 },
+        { name: "Absenteísmo", value: costs.annualAbsenteeismCost ?? 0 },
+        { name: "Turnover", value: costs.annualTurnoverCost ?? 0 },
+        { name: "Multas NR-01", value: costs.fineRisk ?? 0 },
+        { name: "Litígios", value: costs.litigationRisk ?? 0 },
       ]
     : [];
 
-  const totalRisk = results?.totalRiskCost ?? 0;
+  const totalRisk = costs?.totalRiskCost ?? 0;
 
   function handleSave() {
     updateMutation.mutate({ tenantId: tenantId!, ...params });
@@ -132,10 +135,10 @@ export default function FinancialRiskCalculator() {
   const paramFields = [
     { key: "averageSalary" as const, label: "Salário Médio" },
     { key: "headcount" as const, label: "Headcount" },
-    { key: "replacementCost" as const, label: "Custo de Reposição" },
+    { key: "avgReplacementCost" as const, label: "Custo de Reposição" },
     { key: "dailyAbsenteeismCost" as const, label: "Custo Diário Absenteísmo" },
-    { key: "penaltyPerWorker" as const, label: "Multa por Trabalhador" },
-    { key: "averageLitigationCost" as const, label: "Custo Médio Litígio" },
+    { key: "finePerWorker" as const, label: "Multa por Trabalhador" },
+    { key: "litigationAvgCost" as const, label: "Custo Médio Litígio" },
   ];
 
   return (
@@ -155,7 +158,7 @@ export default function FinancialRiskCalculator() {
             variant="outline"
             size="sm"
             disabled={isExporting || !tenantId}
-            onClick={() => exportPdf(() => trpc.nr01Pdf.exportFinancialCalculator.mutate({ tenantId: tenantId! }))}
+            onClick={() => exportPdf(() => exportFinancialCalculatorMutation.mutateAsync({ tenantId: tenantId! }))}
           >
             <FileDown className="h-4 w-4 mr-2" />
             {isExporting ? "Exportando..." : "Exportar PDF"}
@@ -218,7 +221,7 @@ export default function FinancialRiskCalculator() {
                   <CardContent className="p-4">
                     <p className="text-sm text-muted-foreground">Custo Anual Absenteísmo</p>
                     <p className="text-xl font-bold text-blue-600 mt-1">
-                      {formatBRL(results?.absenteeismCost ?? 0)}
+                      {formatBRL(costs?.annualAbsenteeismCost ?? 0)}
                     </p>
                   </CardContent>
                 </Card>
@@ -226,7 +229,7 @@ export default function FinancialRiskCalculator() {
                   <CardContent className="p-4">
                     <p className="text-sm text-muted-foreground">Custo Turnover</p>
                     <p className="text-xl font-bold text-yellow-600 mt-1">
-                      {formatBRL(results?.turnoverCost ?? 0)}
+                      {formatBRL(costs?.annualTurnoverCost ?? 0)}
                     </p>
                   </CardContent>
                 </Card>
@@ -234,7 +237,7 @@ export default function FinancialRiskCalculator() {
                   <CardContent className="p-4">
                     <p className="text-sm text-muted-foreground">Risco de Multas NR-01</p>
                     <p className="text-xl font-bold text-red-600 mt-1">
-                      {formatBRL(results?.penaltyCost ?? 0)}
+                      {formatBRL(costs?.fineRisk ?? 0)}
                     </p>
                   </CardContent>
                 </Card>
@@ -242,7 +245,7 @@ export default function FinancialRiskCalculator() {
                   <CardContent className="p-4">
                     <p className="text-sm text-muted-foreground">Risco Litígios</p>
                     <p className="text-xl font-bold text-purple-600 mt-1">
-                      {formatBRL(results?.litigationCost ?? 0)}
+                      {formatBRL(costs?.litigationRisk ?? 0)}
                     </p>
                   </CardContent>
                 </Card>

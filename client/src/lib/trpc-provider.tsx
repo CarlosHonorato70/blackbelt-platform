@@ -18,7 +18,6 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
       links: [
         httpBatchLink({
           url: '/api/trpc',
-          credentials: 'include',
           headers() {
             const headers: Record<string, string> = {};
             const impersonating = localStorage.getItem('blackbelt_impersonating_tenant');

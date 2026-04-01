@@ -79,7 +79,7 @@ export default function UserInvites() {
   // tRPC queries
   const { data: invites = [], isLoading, refetch } =
     trpc.userInvites.list.useQuery(
-      { tenantId },
+      {},
       { enabled: !!tenantId }
     );
 

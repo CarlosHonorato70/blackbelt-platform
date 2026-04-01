@@ -103,6 +103,8 @@ export default function TrainingPrograms() {
     },
   });
 
+  const exportTrainingReportMutation = trpc.nr01Pdf.exportTrainingReport.useMutation();
+
   const handleCreate = () => {
     if (!form.title) {
       toast.error("Informe o titulo do programa");
@@ -112,12 +114,12 @@ export default function TrainingPrograms() {
       tenantId,
       title: form.title,
       description: form.description,
-      programType: form.programType,
+      programType: form.programType as "training" | "mentoring" | "workshop" | "therapy" | "resilience" | "leadership",
       targetAudience: form.targetAudience,
-      durationHours: form.duration ? parseInt(form.duration) : undefined,
+      duration: form.duration ? parseInt(form.duration) : undefined,
       facilitator: form.facilitator,
-      startDate: form.startDate || undefined,
-      endDate: form.endDate || undefined,
+      startDate: form.startDate ? new Date(form.startDate) : undefined,
+      endDate: form.endDate ? new Date(form.endDate) : undefined,
       maxParticipants: form.maxParticipants ? parseInt(form.maxParticipants) : undefined,
     });
   };
@@ -137,7 +139,7 @@ export default function TrainingPrograms() {
               variant="outline"
               size="sm"
               disabled={isExporting || !tenantId}
-              onClick={() => exportPdf(() => trpc.nr01Pdf.exportTrainingReport.mutate({ tenantId: tenantId! }))}
+              onClick={() => exportPdf(() => exportTrainingReportMutation.mutateAsync({ tenantId: tenantId! }))}
             >
               <FileDown className="h-4 w-4 mr-2" />
               {isExporting ? "Exportando..." : "Exportar PDF"}

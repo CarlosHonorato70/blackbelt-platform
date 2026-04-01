@@ -113,7 +113,8 @@ async function executeCreateCompany(
 
     for (const m of milestones) {
       await db.insert(complianceMilestones).values({
-        id: nanoid(), tenantId: companyId, title: m.title, category: m.category,
+        id: nanoid(), tenantId: companyId, title: m.title,
+        category: m.category as "assessment" | "inventory" | "action_plan" | "training" | "documentation" | "review",
         targetDate: m.targetDate, status: "pending", order: m.order,
         createdAt: new Date(), updatedAt: new Date(),
       });
@@ -1140,7 +1141,7 @@ async function generateAndSavePreProposal(params: {
     log.info(`[Agent] Pre-proposal saved: ${proposalId} for ${params.companyName} (${params.contactEmail})`);
     return { success: true, proposalId };
   } catch (error) {
-    log.error("[Agent] Failed to generate pre-proposal:", error);
+    log.error("[Agent] Failed to generate pre-proposal:", error as Record<string, unknown>);
     return { success: false, message: "Erro ao gerar pre-proposta" };
   }
 }
@@ -1210,7 +1211,7 @@ async function sendPreProposalByEmail(proposalId: string): Promise<{ success: bo
     log.info(`[Agent] Proposal email queued: ${proposalId} to ${proposal.contactEmail}`);
     return { success: true, message: `Proposta enviada para ${proposal.contactEmail}` };
   } catch (error) {
-    log.error("[Agent] Failed to send proposal email:", error);
+    log.error("[Agent] Failed to send proposal email:", error as Record<string, unknown>);
     return { success: false, message: "Erro ao enviar email da proposta" };
   }
 }

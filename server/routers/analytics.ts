@@ -66,7 +66,7 @@ export const analyticsRouter = router({
       
       activeSubscriptions.forEach((sub) => {
         const month = new Date(sub.currentPeriodStart!).toISOString().substring(0, 7);
-        const monthlyAmount = calculateMonthlyAmount(sub.amount, sub.interval);
+        const monthlyAmount = calculateMonthlyAmount(sub.currentPrice, sub.billingCycle);
         mrrByMonth[month] = (mrrByMonth[month] || 0) + monthlyAmount;
       });
 
@@ -246,7 +246,7 @@ export const analyticsRouter = router({
 
       // Calculate total revenue
       const totalRevenue = activeSubscriptions.reduce(
-        (sum, sub) => sum + (sub.amount || 0),
+        (sum, sub) => sum + (sub.currentPrice || 0),
         0
       );
 
@@ -291,7 +291,7 @@ export const analyticsRouter = router({
     const avgMonthlyRevenue =
       activeSubs.length > 0
         ? activeSubs.reduce((sum, sub) => {
-            const monthly = calculateMonthlyAmount(sub.amount, sub.interval);
+            const monthly = calculateMonthlyAmount(sub.currentPrice, sub.billingCycle);
             return sum + monthly;
           }, 0) / activeSubs.length
         : 0;
@@ -355,6 +355,7 @@ export const analyticsRouter = router({
 
       const usersByMonth: Record<string, number> = {};
       newUsers.forEach((user) => {
+        if (!user.createdAt) return;
         const month = new Date(user.createdAt).toISOString().substring(0, 7);
         usersByMonth[month] = (usersByMonth[month] || 0) + 1;
       });
@@ -399,6 +400,7 @@ export const analyticsRouter = router({
       // Group by month
       const riskAssessmentsByMonth: Record<string, number> = {};
       tenantAssessments.forEach((assessment) => {
+        if (!assessment.createdAt) return;
         const month = new Date(assessment.createdAt).toISOString().substring(0, 7);
         riskAssessmentsByMonth[month] = (riskAssessmentsByMonth[month] || 0) + 1;
       });
@@ -542,7 +544,7 @@ export const analyticsRouter = router({
     });
 
     const monthlyCost = subscription
-      ? calculateMonthlyAmount(subscription.amount, subscription.interval)
+      ? calculateMonthlyAmount(subscription.currentPrice, subscription.billingCycle)
       : 0;
 
     // Count riskAssessments (compliance = avoided penalties)
@@ -578,8 +580,11 @@ function calculateMonthlyAmount(
 
   switch (interval) {
     case "month":
+    case "monthly":
       return amount;
     case "year":
+    case "yearly":
+    case "annual":
       return amount / 12;
     case "day":
       return amount * 30;

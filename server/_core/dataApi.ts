@@ -4,7 +4,6 @@
  *     query: { gl: "US", hl: "en", q: "manus" },
  *   })
  */
-import { ENV } from "./env";
 
 export type DataApiCallOptions = {
   query?: Record<string, unknown>;
@@ -25,11 +24,8 @@ export async function callDataApi(
   }
 
   // Build the full URL by appending the service path to the base URL
-  const baseUrl = ENV.forgeApiUrl.endsWith("/")
-    ? ENV.forgeApiUrl
-    : `${ENV.forgeApiUrl}/`;
-  const baseUrl = process.env.OPENAI_API_URL.endsWith("/")
-    ? process.env.OPENAI_API_URL
+  const baseUrl = (process.env.OPENAI_API_URL as string).endsWith("/")
+    ? process.env.OPENAI_API_URL as string
     : `${process.env.OPENAI_API_URL}/`;
   const fullUrl = new URL(
     "webdevtoken.v1.WebDevService/CallApi",

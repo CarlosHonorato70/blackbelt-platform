@@ -706,8 +706,8 @@ const pdfGenerators: Record<string, PdfGenerator> = {
       non_compliant: "#ef4444",
     };
 
-    const compliant = items.filter((i) => i.status === "compliant").length;
-    const partial = items.filter((i) => i.status === "partial").length;
+    const compliant = items.filter((i: any) => i.status === "compliant").length;
+    const partial = items.filter((i: any) => i.status === "partial").length;
     const total = items.length;
     const score = total > 0 ? Math.round(((compliant + partial * 0.5) / total) * 100) : 0;
 
@@ -728,7 +728,7 @@ const pdfGenerators: Record<string, PdfGenerator> = {
           { header: "Requisito", width: 280 },
           { header: "Status", width: 80, align: "center" },
         ],
-        rows: items.map((i) => ({
+        rows: items.map((i: any) => ({
           cells: [i.requirementCode, i.requirementText, statusLabels[i.status] || i.status],
           accentColor: statusColors[i.status],
         })),

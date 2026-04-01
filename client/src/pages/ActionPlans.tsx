@@ -153,7 +153,7 @@ export default function ActionPlans() {
       description: form.description || undefined,
       actionType: form.actionType,
       priority: form.priority,
-      deadline: form.deadline ? new Date(form.deadline).toISOString() : undefined,
+      deadline: form.deadline ? new Date(form.deadline) : undefined,
       budget: form.budget ? Math.round(parseFloat(form.budget) * 100) : undefined,
     });
   };

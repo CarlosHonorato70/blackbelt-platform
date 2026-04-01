@@ -51,7 +51,7 @@ export default function COPSOQ() {
 
   // Auto-select latest assessment if none set
   const { data: assessmentsList = [] } = trpc.assessments.list.useQuery(
-    undefined,
+    {},
     { enabled: !!effectiveId }
   );
 

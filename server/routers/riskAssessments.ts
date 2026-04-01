@@ -149,7 +149,7 @@ export const riskAssessmentsRouter = router({
       await db
         .update(riskAssessments)
         .set({
-          ...updates,
+          ...updates as any,
           updatedAt: new Date(),
         })
         .where(

@@ -194,7 +194,7 @@ export default function AssessmentAnalytics() {
       actionType: actionPlanForm.actionType,
       priority: actionPlanForm.priority,
       deadline: actionPlanForm.deadline
-        ? new Date(actionPlanForm.deadline).toISOString()
+        ? new Date(actionPlanForm.deadline)
         : undefined,
       budget: actionPlanForm.budget
         ? Math.round(parseFloat(actionPlanForm.budget) * 100)

@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const authValue: AuthContextValue = {
-    user: user || null,
+    user: user ? { ...user, name: user.name ?? "", email: user.email ?? "" } : null,
     loading: isLoading,
     logout,
   };

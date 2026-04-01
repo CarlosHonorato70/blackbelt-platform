@@ -25,6 +25,7 @@ export default function ClimateSurveyResults() {
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
   const { id: surveyId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const exportClimateSurveyMutation = trpc.nr01Pdf.exportClimateSurvey.useMutation();
 
   if (!tenantId) {
     return (
@@ -61,9 +62,14 @@ export default function ClimateSurveyResults() {
 
   const totalResponses = results?.totalResponses ?? 0;
   const averageScore = results?.averageScore ?? 0;
-  const completionRate = results?.completionRate ?? 0;
-  const questionAverages = results?.questionAverages ?? [];
-  const responseDistribution = results?.responseDistribution ?? [];
+  const completionRate = 0; // not returned by API
+  const responseDistribution = results?.responseDistribution ?? {};
+  const questionAverages = Object.entries(responseDistribution).map(([label, val]: [string, any]) => ({
+    label,
+    average: val.average ?? 0,
+    count: val.count ?? 0,
+  }));
+  const responseDistributionArray = questionAverages;
 
   return (
     <DashboardLayout>
@@ -76,7 +82,7 @@ export default function ClimateSurveyResults() {
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Resultados da Pesquisa</h1>
               <p className="text-muted-foreground">
-                {results?.surveyTitle || "Carregando..."}
+                Resultados
               </p>
             </div>
           </div>
@@ -84,7 +90,7 @@ export default function ClimateSurveyResults() {
             variant="outline"
             size="sm"
             disabled={isExporting || !tenantId || !surveyId}
-            onClick={() => exportPdf(() => trpc.nr01Pdf.exportClimateSurvey.mutate({ tenantId: tenantId!, surveyId: surveyId! }))}
+            onClick={() => exportPdf(() => exportClimateSurveyMutation.mutateAsync({ tenantId: tenantId!, surveyId: surveyId! }))}
           >
             <FileDown className="h-4 w-4 mr-2" />
             {isExporting ? "Exportando..." : "Exportar PDF"}
@@ -159,7 +165,7 @@ export default function ClimateSurveyResults() {
               </Card>
             )}
 
-            {responseDistribution.length > 0 && (
+            {responseDistributionArray.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle>Distribuicao de Respostas</CardTitle>
@@ -167,7 +173,7 @@ export default function ClimateSurveyResults() {
                 <CardContent>
                   <ResponsiveContainer width="100%" height={400}>
                     <BarChart
-                      data={responseDistribution}
+                      data={responseDistributionArray.map((q) => ({ question: q.label, media: q.average }))}
                       margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" />
@@ -180,12 +186,7 @@ export default function ClimateSurveyResults() {
                       />
                       <YAxis />
                       <Tooltip />
-                      <Legend />
-                      <Bar dataKey="score1" name="1 - Muito Ruim" fill="#ef4444" stackId="a" />
-                      <Bar dataKey="score2" name="2 - Ruim" fill="#f97316" stackId="a" />
-                      <Bar dataKey="score3" name="3 - Regular" fill="#eab308" stackId="a" />
-                      <Bar dataKey="score4" name="4 - Bom" fill="#22c55e" stackId="a" />
-                      <Bar dataKey="score5" name="5 - Excelente" fill="#3b82f6" stackId="a" />
+                      <Bar dataKey="media" name="Media" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>

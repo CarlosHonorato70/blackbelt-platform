@@ -86,14 +86,14 @@ export default function TrainingModule() {
   const completedModules = modules.filter((m: any) => m.completed).length;
   const progressPercent = totalModules > 0 ? (completedModules / totalModules) * 100 : 0;
 
-  const quizQuestions = currentModule?.quizQuestions || [];
+  const quizQuestions: any[] = Array.isArray(currentModule?.quizQuestions) ? currentModule.quizQuestions : [];
 
   const handleComplete = () => {
     completeMutation.mutate({
-      programId,
-      moduleId,
+      participantId: programId!,
+      moduleId: moduleId!,
       tenantId,
-      quizAnswers: Object.keys(quizAnswers).length > 0 ? quizAnswers : undefined,
+      quizScore: Object.keys(quizAnswers).length > 0 ? Object.keys(quizAnswers).length : undefined,
     });
   };
 
@@ -223,10 +223,10 @@ export default function TrainingModule() {
               <Button
                 size="lg"
                 onClick={handleComplete}
-                disabled={completeMutation.isPending || currentModule?.completed}
+                disabled={completeMutation.isPending || (currentModule as any)?.completed}
               >
                 {completeMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {currentModule?.completed ? (
+                {(currentModule as any)?.completed ? (
                   <>
                     <CheckCircle2 className="mr-2 h-4 w-4" />
                     Módulo Concluído

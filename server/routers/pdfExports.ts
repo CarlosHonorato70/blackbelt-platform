@@ -112,7 +112,7 @@ export const pdfExportsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-      if (!ctx.tenantId) throw new TRPCError({ code: "UNAUTHORIZED", message: "Tenant ID required" });
+      if (!ctx.user?.tenantId) throw new TRPCError({ code: "UNAUTHORIZED", message: "Tenant ID required" });
 
       const exportId = nanoid();
       const filename = `proposta-${input.data.proposalNumber}.pdf`;
@@ -134,7 +134,7 @@ export const pdfExportsRouter = router({
           const uploadResult = await uploadPdfToS3(
             pdfBuffer,
             filename,
-            ctx.tenantId,
+            ctx.user?.tenantId,
             {
               documentType: "proposal",
               proposalId: input.proposalId,
@@ -174,7 +174,7 @@ export const pdfExportsRouter = router({
         // Save export record
         await db.insert(pdfExports).values({
           id: exportId,
-          tenantId: ctx.tenantId,
+          tenantId: ctx.user?.tenantId,
           userId: ctx.user.id,
           documentType: "proposal",
           documentId: input.proposalId,
@@ -213,7 +213,7 @@ export const pdfExportsRouter = router({
         // Save failed export record
         await db.insert(pdfExports).values({
           id: exportId,
-          tenantId: ctx.tenantId,
+          tenantId: ctx.user?.tenantId,
           userId: ctx.user.id,
           documentType: "proposal",
           documentId: input.proposalId,
@@ -249,7 +249,7 @@ export const pdfExportsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-      if (!ctx.tenantId) throw new TRPCError({ code: "UNAUTHORIZED", message: "Tenant ID required" });
+      if (!ctx.user?.tenantId) throw new TRPCError({ code: "UNAUTHORIZED", message: "Tenant ID required" });
 
       const exportId = nanoid();
       const filename = `avaliacao-${input.data.assessmentNumber}.pdf`;
@@ -271,7 +271,7 @@ export const pdfExportsRouter = router({
           const uploadResult = await uploadPdfToS3(
             pdfBuffer,
             filename,
-            ctx.tenantId,
+            ctx.user?.tenantId,
             {
               documentType: "assessment",
               assessmentId: input.assessmentId,
@@ -311,7 +311,7 @@ export const pdfExportsRouter = router({
         // Save export record
         await db.insert(pdfExports).values({
           id: exportId,
-          tenantId: ctx.tenantId,
+          tenantId: ctx.user?.tenantId,
           userId: ctx.user.id,
           documentType: "assessment",
           documentId: input.assessmentId,
@@ -350,7 +350,7 @@ export const pdfExportsRouter = router({
         // Save failed export record
         await db.insert(pdfExports).values({
           id: exportId,
-          tenantId: ctx.tenantId,
+          tenantId: ctx.user?.tenantId,
           userId: ctx.user.id,
           documentType: "assessment",
           documentId: input.assessmentId,
@@ -387,20 +387,20 @@ export const pdfExportsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-      if (!ctx.tenantId) throw new TRPCError({ code: "UNAUTHORIZED", message: "Tenant ID required" });
+      if (!ctx.user?.tenantId) throw new TRPCError({ code: "UNAUTHORIZED", message: "Tenant ID required" });
 
       // Fetch tenant info
       const [tenant] = await db
         .select({ name: tenants.name })
         .from(tenants)
-        .where(eq(tenants.id, ctx.tenantId))
+        .where(eq(tenants.id, ctx.user?.tenantId))
         .limit(1);
 
       // Fetch latest risk assessment
       const [assessment] = await db
         .select()
         .from(riskAssessments)
-        .where(eq(riskAssessments.tenantId, ctx.tenantId))
+        .where(eq(riskAssessments.tenantId, ctx.user?.tenantId))
         .orderBy(desc(riskAssessments.createdAt))
         .limit(1);
 
@@ -452,7 +452,7 @@ export const pdfExportsRouter = router({
         let url: string | undefined;
 
         if (isS3Configured()) {
-          const uploadResult = await uploadPdfToS3(pdfBuffer, filename, ctx.tenantId, {
+          const uploadResult = await uploadPdfToS3(pdfBuffer, filename, ctx.user?.tenantId, {
             documentType: "inventory",
             assessmentId: input.assessmentId,
           });
@@ -463,7 +463,7 @@ export const pdfExportsRouter = router({
 
         await db.insert(pdfExports).values({
           id: exportId,
-          tenantId: ctx.tenantId,
+          tenantId: ctx.user?.tenantId,
           userId: ctx.user.id,
           documentType: "assessment",
           documentId: assessment.id,
@@ -506,20 +506,20 @@ export const pdfExportsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-      if (!ctx.tenantId) throw new TRPCError({ code: "UNAUTHORIZED", message: "Tenant ID required" });
+      if (!ctx.user?.tenantId) throw new TRPCError({ code: "UNAUTHORIZED", message: "Tenant ID required" });
 
       // Fetch tenant info
       const [tenant] = await db
         .select({ name: tenants.name })
         .from(tenants)
-        .where(eq(tenants.id, ctx.tenantId))
+        .where(eq(tenants.id, ctx.user?.tenantId))
         .limit(1);
 
       // Fetch action plans
       const plans = await db
         .select()
         .from(actionPlans)
-        .where(eq(actionPlans.tenantId, ctx.tenantId))
+        .where(eq(actionPlans.tenantId, ctx.user?.tenantId))
         .orderBy(desc(actionPlans.createdAt));
 
       if (plans.length === 0) {
@@ -564,7 +564,7 @@ export const pdfExportsRouter = router({
         let url: string | undefined;
 
         if (isS3Configured()) {
-          const uploadResult = await uploadPdfToS3(pdfBuffer, filename, ctx.tenantId, {
+          const uploadResult = await uploadPdfToS3(pdfBuffer, filename, ctx.user?.tenantId, {
             documentType: "action_plan",
             assessmentId: input.assessmentId,
           });
@@ -575,7 +575,7 @@ export const pdfExportsRouter = router({
 
         await db.insert(pdfExports).values({
           id: exportId,
-          tenantId: ctx.tenantId,
+          tenantId: ctx.user?.tenantId,
           userId: ctx.user.id,
           documentType: "assessment",
           documentId: input.assessmentId,
@@ -618,9 +618,9 @@ export const pdfExportsRouter = router({
     .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-      if (!ctx.tenantId) throw new TRPCError({ code: "UNAUTHORIZED", message: "Tenant ID required" });
+      if (!ctx.user?.tenantId) throw new TRPCError({ code: "UNAUTHORIZED", message: "Tenant ID required" });
 
-      const conditions = [eq(pdfExports.tenantId, ctx.tenantId)];
+      const conditions = [eq(pdfExports.tenantId, ctx.user?.tenantId)];
 
       if (input.documentType) {
         conditions.push(eq(pdfExports.documentType, input.documentType));
@@ -644,12 +644,12 @@ export const pdfExportsRouter = router({
     .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-      if (!ctx.tenantId) throw new TRPCError({ code: "UNAUTHORIZED", message: "Tenant ID required" });
+      if (!ctx.user?.tenantId) throw new TRPCError({ code: "UNAUTHORIZED", message: "Tenant ID required" });
 
       const [pdfExport] = await db
         .select()
         .from(pdfExports)
-        .where(and(eq(pdfExports.id, input.id), eq(pdfExports.tenantId, ctx.tenantId)))
+        .where(and(eq(pdfExports.id, input.id), eq(pdfExports.tenantId, ctx.user?.tenantId)))
         .limit(1);
 
       if (!pdfExport) {
@@ -682,12 +682,12 @@ export const pdfExportsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-      if (!ctx.tenantId) throw new TRPCError({ code: "UNAUTHORIZED", message: "Tenant ID required" });
+      if (!ctx.user?.tenantId) throw new TRPCError({ code: "UNAUTHORIZED", message: "Tenant ID required" });
 
       const [pdfExport] = await db
         .select()
         .from(pdfExports)
-        .where(and(eq(pdfExports.id, input.id), eq(pdfExports.tenantId, ctx.tenantId)))
+        .where(and(eq(pdfExports.id, input.id), eq(pdfExports.tenantId, ctx.user?.tenantId)))
         .limit(1);
 
       if (!pdfExport) {

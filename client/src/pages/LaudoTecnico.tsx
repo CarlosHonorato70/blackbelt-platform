@@ -82,6 +82,8 @@ export default function LaudoTecnico() {
     },
   });
 
+  const exportLaudoTecnicoMutation = trpc.nr01Pdf.exportLaudoTecnico.useMutation();
+
   const handleCreate = () => {
     if (!form.title || !form.professionalName || !form.professionalRegistry) {
       toast.error("Preencha todos os campos obrigatorios");
@@ -92,9 +94,9 @@ export default function LaudoTecnico() {
       title: form.title,
       description: form.description,
       documentType: "laudo_tecnico",
+      version: "1.0",
       signedBy: form.professionalName,
-      professionalRegistry: form.professionalRegistry,
-      validFrom: form.validFrom || undefined,
+      validFrom: form.validFrom ? new Date(form.validFrom) : new Date(),
     });
   };
 
@@ -113,7 +115,7 @@ export default function LaudoTecnico() {
               variant="outline"
               size="sm"
               disabled={isExporting || !tenantId}
-              onClick={() => exportPdf(() => trpc.nr01Pdf.exportLaudoTecnico.mutate({ tenantId: tenantId! }))}
+              onClick={() => exportPdf(() => exportLaudoTecnicoMutation.mutateAsync({ tenantId: tenantId! }))}
             >
               <FileDown className="h-4 w-4 mr-2" />
               {isExporting ? "Exportando..." : "Exportar PDF"}

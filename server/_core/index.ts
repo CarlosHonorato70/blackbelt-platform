@@ -79,33 +79,6 @@ async function startServer() {
   // WEBHOOK ENDPOINTS (Before body parsing - need raw body)
   // ============================================================================
 
-  // Stripe webhook (requires raw body)
-  app.post(
-    "/api/webhooks/stripe",
-    express.raw({ type: "application/json" }),
-    async (req, res) => {
-      const signature = req.headers["stripe-signature"];
-      
-      if (!signature || typeof signature !== "string") {
-        return res.status(400).send("Missing stripe-signature header");
-      }
-
-      try {
-        const { handleStripeWebhook } = await import("../routers/stripe");
-        const result = await handleStripeWebhook(req.body, signature);
-        
-        if (result.received) {
-          res.json({ received: true });
-        } else {
-          res.status(400).json({ error: result.error });
-        }
-      } catch (error) {
-        log.error("Stripe webhook error", { error: error instanceof Error ? error.message : String(error) });
-        res.status(400).send("Webhook Error");
-      }
-    }
-  );
-
   // ============================================================================
   // RATE LIMITING
   // ============================================================================
@@ -162,23 +135,6 @@ async function startServer() {
   
   const restApiRouter = await import("../_core/restApi");
   app.use("/api/v1", restApiRouter.default);
-
-  // Mercado Pago webhook (can use parsed JSON body)
-  app.post("/api/webhooks/mercadopago", async (req, res) => {
-    try {
-      const { handleMercadoPagoWebhook } = await import("../routers/mercadopago");
-      const result = await handleMercadoPagoWebhook(req.body);
-      
-      if (result.received) {
-        res.status(200).json({ success: true });
-      } else {
-        res.status(400).json({ error: result.error });
-      }
-    } catch (error) {
-      log.error("Mercado Pago webhook error", { error: error instanceof Error ? error.message : String(error) });
-      res.status(400).json({ error: "Webhook processing failed" });
-    }
-  });
 
   // ============================================================================
   // STATIC FILES / VITE

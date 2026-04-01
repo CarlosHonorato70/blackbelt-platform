@@ -214,7 +214,7 @@ export const companiesRouter = router({
       try {
         await db.createAuditLog({
           tenantId: ctx.tenantId,
-          userId: ctx.user.id,
+          userId: ctx.user!.id,
           action: "CREATE",
           entityType: "company",
           entityId: companyId,
@@ -292,7 +292,7 @@ export const companiesRouter = router({
             id: nanoid(),
             tenantId: companyId,
             title: m.title,
-            category: m.category,
+            category: m.category as "assessment" | "inventory" | "action_plan" | "training" | "documentation" | "review",
             targetDate: m.targetDate,
             status: "pending",
             order: m.order,
@@ -366,7 +366,7 @@ export const companiesRouter = router({
       try {
         await db.createAuditLog({
           tenantId: ctx.tenantId,
-          userId: ctx.user.id,
+          userId: ctx.user!.id,
           action: "UPDATE",
           entityType: "company",
           entityId: id,
@@ -411,7 +411,7 @@ export const companiesRouter = router({
       try {
         await db.createAuditLog({
           tenantId: ctx.tenantId,
-          userId: ctx.user.id,
+          userId: ctx.user!.id,
           action: "DELETE",
           entityType: "company",
           entityId: input.id,

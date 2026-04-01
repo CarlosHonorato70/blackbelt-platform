@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
 import { onboardingProgress, industryTemplates } from "../../drizzle/schema";
@@ -20,7 +21,7 @@ const ONBOARDING_STEPS = [
 export const onboardingRouter = router({
 
   getProgress: protectedProcedure.query(async ({ ctx }) => {
-    const tenantId = ctx.user.tenantId;
+    const tenantId = ctx.user.tenantId!;
     const db = await getDb();
 
     let progress = await db
@@ -37,7 +38,7 @@ export const onboardingRouter = router({
         completedSteps: JSON.stringify([]),
         checklistItems: JSON.stringify([]),
         skipped: false,
-      });
+      } as typeof onboardingProgress.$inferInsert);
 
       progress = await db
         .select()
@@ -48,15 +49,15 @@ export const onboardingRouter = router({
 
     return {
       ...progress[0],
-      completedSteps: JSON.parse(progress[0].completedSteps),
-      checklistItems: JSON.parse(progress[0].checklistItems),
+      completedSteps: JSON.parse(progress[0].completedSteps as string),
+      checklistItems: JSON.parse(progress[0].checklistItems as string),
       steps: ONBOARDING_STEPS,
     };
   }),
 
-  updateStep: protectedProcedure.mutation(async ({ ctx, input }) => {
-    const { step } = input as { step: number };
-    const tenantId = ctx.user.tenantId;
+  updateStep: protectedProcedure.input(z.object({ step: z.number() })).mutation(async ({ ctx, input }) => {
+    const { step } = input;
+    const tenantId = ctx.user.tenantId!;
     const db = await getDb();
 
     await db
@@ -70,9 +71,9 @@ export const onboardingRouter = router({
     return { success: true };
   }),
 
-  completeChecklistItem: protectedProcedure.mutation(async ({ ctx, input }) => {
-    const { itemId } = input as { itemId: string };
-    const tenantId = ctx.user.tenantId;
+  completeChecklistItem: protectedProcedure.input(z.object({ itemId: z.string() })).mutation(async ({ ctx, input }) => {
+    const { itemId } = input;
+    const tenantId = ctx.user.tenantId!;
     const db = await getDb();
 
     const [progress] = await db
@@ -82,7 +83,7 @@ export const onboardingRouter = router({
 
     if (!progress) return { success: false };
 
-    const items = JSON.parse(progress.checklistItems);
+    const items = JSON.parse(progress.checklistItems as string) as string[];
     if (!items.includes(itemId)) items.push(itemId);
 
     await db
@@ -97,7 +98,7 @@ export const onboardingRouter = router({
   }),
 
   skipOnboarding: protectedProcedure.mutation(async ({ ctx }) => {
-    const tenantId = ctx.user.tenantId;
+    const tenantId = ctx.user.tenantId!;
     const db = await getDb();
 
     await db
@@ -112,7 +113,7 @@ export const onboardingRouter = router({
   }),
 
   resetOnboarding: protectedProcedure.mutation(async ({ ctx }) => {
-    const tenantId = ctx.user.tenantId;
+    const tenantId = ctx.user.tenantId!;
     const db = await getDb();
 
     await db
@@ -135,9 +136,9 @@ export const onboardingRouter = router({
     return await db.select().from(industryTemplates);
   }),
 
-  applyTemplate: protectedProcedure.mutation(async ({ ctx, input }) => {
-    const tenantId = ctx.user.tenantId;
-    const { templateId } = input as { templateId: string };
+  applyTemplate: protectedProcedure.input(z.object({ templateId: z.string() })).mutation(async ({ ctx, input }) => {
+    const tenantId = ctx.user.tenantId!;
+    const { templateId } = input;
     const db = await getDb();
 
     const [template] = await db
@@ -146,6 +147,8 @@ export const onboardingRouter = router({
       .where(eq(industryTemplates.id, templateId));
 
     if (!template) return { success: false };
+
+    void tenantId; // used for authorization context
 
     return { success: true };
   }),

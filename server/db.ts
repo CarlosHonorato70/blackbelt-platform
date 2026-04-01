@@ -88,7 +88,8 @@ export async function getDb() {
           keepAliveInitialDelay: 10_000,
           ...(needsSsl ? { ssl: { minVersion: 'TLSv1.2', rejectUnauthorized: true } } : {}),
         });
-        _db = drizzle(_pool, { schema: fullSchema, mode: "default" });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        _db = drizzle(_pool, { schema: fullSchema, mode: "default" } as any) as any;
         if (attempt > 0) {
           log.info(`[Database] Connected after ${attempt + 1} attempts`);
         }
@@ -104,6 +105,9 @@ export async function getDb() {
         }
       }
     }
+  }
+  if (!_db) {
+    throw new Error("[Database] Connection not available. Check DATABASE_URL configuration.");
   }
   return _db;
 }
@@ -556,14 +560,13 @@ export async function setTenantSetting(
 // AUDIT LOGS
 // ============================================================================
 
-export async function createAuditLog(data: Omit<InsertAuditLog, "id" | "createdAt">) {
+export async function createAuditLog(data: Omit<InsertAuditLog, "id" | "timestamp">) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
 
   const auditLog: InsertAuditLog = {
     id: nanoid(),
     ...data,
-    createdAt: new Date(),
+    timestamp: new Date(),
   };
 
   await db.insert(auditLogs).values(auditLog);
@@ -578,9 +581,8 @@ export async function getAuditLogs(filters?: {
   limit?: number;
 }) {
   const db = await getDb();
-  if (!db) return [];
 
-  let query = db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt));
+  let query = db.select().from(auditLogs).orderBy(desc(auditLogs.timestamp));
 
   const conditions = [];
   if (filters?.tenantId) {
@@ -825,7 +827,7 @@ export async function createProposal(data: { tenantId: string; clientId: string;
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const id = nanoid();
-  await db.insert(proposals).values({ id, ...data, status: data.status || "draft", generatedAt: new Date(), createdAt: new Date(), updatedAt: new Date() });
+  await db.insert(proposals).values({ id, ...data, status: data.status || "draft", generatedAt: new Date(), createdAt: new Date(), updatedAt: new Date() } as any);
   return id;
 }
 

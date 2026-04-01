@@ -111,6 +111,7 @@ function AgentChatPage() {
         if (!item.id && item.serviceName.trim()) {
           await addItemMutation.mutateAsync({
             proposalId: editProposalId,
+            serviceId: (item as any).serviceId || "",
             serviceName: item.serviceName,
             quantity: item.quantity,
             unitPrice: Math.round(item.unitPrice * 100),

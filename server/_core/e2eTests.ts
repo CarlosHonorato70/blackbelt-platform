@@ -83,7 +83,6 @@ export async function runAllE2ETests(): Promise<{
         loginMethod: "local",
         emailVerified: false,
         createdAt: new Date(),
-        updatedAt: new Date(),
       });
 
       // Verify user exists

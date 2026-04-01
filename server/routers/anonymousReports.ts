@@ -161,7 +161,7 @@ export const anonymousReportsRouter = router({
         conditions.push(eq(anonymousReports.status, input.status));
       }
       if (input?.category) {
-        conditions.push(eq(anonymousReports.category, input.category));
+        conditions.push(eq(anonymousReports.category, input.category as any));
       }
       if (input?.severity) {
         conditions.push(eq(anonymousReports.severity, input.severity));

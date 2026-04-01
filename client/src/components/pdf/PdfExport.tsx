@@ -303,7 +303,7 @@ export function PdfExportHistory({ documentType, limit = 10 }: PdfExportHistoryP
               </div>
               <div className="flex items-center gap-2">
                 {pdfExport.emailSent && (
-                  <Mail className="h-4 w-4 text-green-600" title="Enviado por email" />
+                  <Mail className="h-4 w-4 text-green-600" />
                 )}
                 {pdfExport.status === "completed" && pdfExport.url && (
                   <Button

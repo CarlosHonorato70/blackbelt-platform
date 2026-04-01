@@ -67,7 +67,7 @@ export function registerRoutes(app: Express) {
         res.status(400).json({ error: result.error });
       }
     } catch (error) {
-      log.error("[Asaas Webhook] Error:", error);
+      log.error("[Asaas Webhook] Error:", error as Record<string, unknown>);
       res.status(500).json({ error: "Webhook processing failed" });
     }
   });
@@ -219,7 +219,6 @@ export function registerRoutes(app: Express) {
                 name: companyName,
                 passwordHash: hashedPassword,
                 emailVerified: true,
-                updatedAt: new Date(),
               }).where(eq(users.id, existingEmailUser.id));
 
               log.info(`[Proposal] Existing user ${emailNormalized} assigned to tenant ${companyTenantId}`);
@@ -237,7 +236,6 @@ export function registerRoutes(app: Express) {
                 role: "user",
                 emailVerified: true,
                 createdAt: new Date(),
-                updatedAt: new Date(),
               });
 
               log.info(`[Proposal] Company user created: ${emailNormalized} for tenant ${companyTenantId}`);
@@ -325,9 +323,9 @@ export function registerRoutes(app: Express) {
               percentage: i.percentage,
               amount: i.amount,
             })),
-            paymentPix: paymentPix?.settingValue || undefined,
-            paymentBank: paymentBank?.settingValue || undefined,
-            paymentInstructions: paymentInstructions?.settingValue || undefined,
+            paymentPix: paymentPix?.settingValue as string | undefined,
+            paymentBank: paymentBank?.settingValue as string | undefined,
+            paymentInstructions: paymentInstructions?.settingValue as string | undefined,
           }).catch(err => log.error("[Proposal] Payment instructions email failed:", err));
         } catch (payErr: any) {
           console.error("[Proposal] Payment setup failed (approval still OK):", payErr?.message);
@@ -338,7 +336,7 @@ export function registerRoutes(app: Express) {
       res.set("Cache-Control", "no-store");
       res.redirect(`${frontendUrl}/proposal/result?status=approved&id=${proposal.id}`);
     } catch (error) {
-      log.error("[Proposal Approve] Error:", error);
+      log.error("[Proposal Approve] Error:", error as Record<string, unknown>);
       res.set("Cache-Control", "no-store");
       res.redirect(`${process.env.FRONTEND_URL || ""}/proposal/result?status=error`);
     }
@@ -364,7 +362,7 @@ export function registerRoutes(app: Express) {
       log.info(`[Proposal] Rejected: ${proposal.id} by ${proposal.contactEmail}`);
       res.redirect(`${process.env.FRONTEND_URL || ""}/proposal/result?status=rejected&id=${proposal.id}`);
     } catch (error) {
-      log.error("[Proposal Reject] Error:", error);
+      log.error("[Proposal Reject] Error:", error as Record<string, unknown>);
       res.redirect(`${process.env.FRONTEND_URL || ""}/proposal/result?status=error`);
     }
   });

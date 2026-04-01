@@ -68,6 +68,7 @@ export default function AssessmentTrends() {
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
   const { exportPdf, isExporting } = usePdfExport();
+  const exportAssessmentTrendsMutation = trpc.nr01Pdf.exportAssessmentTrends.useMutation();
 
   if (!tenantId) {
     return (
@@ -86,8 +87,8 @@ export default function AssessmentTrends() {
   const trendsQuery = trpc.psychosocialDashboard.getHistoricalTrends.useQuery({ tenantId });
   const data = trendsQuery.data;
 
-  const chartData = data?.trends ?? [];
-  const assessments = data?.assessments ?? [];
+  const chartData = data ?? [];
+  const assessments = data ?? [];
 
   return (
     <DashboardLayout>
@@ -106,7 +107,7 @@ export default function AssessmentTrends() {
             variant="outline"
             size="sm"
             disabled={isExporting || !tenantId}
-            onClick={() => exportPdf(() => trpc.nr01Pdf.exportAssessmentTrends.mutate({ tenantId: tenantId! }))}
+            onClick={() => exportPdf(() => exportAssessmentTrendsMutation.mutateAsync({ tenantId: tenantId! }))}
           >
             <FileDown className="h-4 w-4 mr-2" />
             {isExporting ? "Exportando..." : "Exportar PDF"}

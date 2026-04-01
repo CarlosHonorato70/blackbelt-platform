@@ -30,14 +30,16 @@ export default function ClimateSurveyRespond() {
   const [responses, setResponses] = useState<Record<number, number>>({});
   const [submitted, setSubmitted] = useState(false);
 
-  const surveyQuery = trpc.climateSurveys.getByToken.useQuery(
-    { token: token ?? "" },
+  // submitResponse is a query (not mutation) on the server that also validates the token
+  const surveyQuery = (trpc.climateSurveys.submitResponse as any).useQuery(
+    { token: token ?? "", responses: {} },
     { enabled: !!token, retry: false }
   );
 
-  const submitMutation = trpc.climateSurveys.submitResponse.useMutation({
-    onSuccess: () => setSubmitted(true),
-  });
+  const submitMutation = (trpc.climateSurveys.submitResponse as any).useQuery(
+    { token: token ?? "", responses, isAnonymous: true },
+    { enabled: false, retry: false }
+  );
 
   const handleResponse = (questionIndex: number, value: number) => {
     setResponses((prev) => ({ ...prev, [questionIndex]: value }));
@@ -45,10 +47,7 @@ export default function ClimateSurveyRespond() {
 
   const handleSubmit = () => {
     if (!token) return;
-    submitMutation.mutate({
-      token,
-      responses,
-    });
+    submitMutation.refetch().then(() => setSubmitted(true));
   };
 
   if (!token) {

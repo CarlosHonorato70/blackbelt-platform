@@ -401,7 +401,7 @@ export async function createSecurityAlert(
       resolved: false,
     });
   } catch (error) {
-    log.error("Failed to create security alert", { error: error instanceof Error ? error.message : String(error) });
+    console.error("Failed to create security alert", { error: error instanceof Error ? error.message : String(error) });
   }
 }
 
@@ -430,6 +430,6 @@ export async function logLoginAttempt(
       failureReason: failureReason || null,
     });
   } catch (error) {
-    log.error("Failed to log login attempt", { error: error instanceof Error ? error.message : String(error) });
+    console.error("Failed to log login attempt", { error: error instanceof Error ? error.message : String(error) });
   }
 }

@@ -123,6 +123,8 @@ export default function ErgonomicAssessmentForm() {
     onError: (err) => toast.error(err.message),
   });
 
+  const exportErgonomicAssessmentMutation = trpc.nr01Pdf.exportErgonomicAssessment.useMutation();
+
   if (!tenantId) {
     return (
       <DashboardLayout>
@@ -177,10 +179,9 @@ export default function ErgonomicAssessmentForm() {
     }
     addItemMutation.mutate({
       assessmentId: id!,
-      tenantId: tenantId!,
-      category: itemForm.category,
+      category: itemForm.category as "workstation" | "posture" | "repetition" | "lighting" | "noise" | "organization" | "psychosocial",
       factor: itemForm.factor,
-      riskLevel: itemForm.riskLevel,
+      riskLevel: itemForm.riskLevel as "high" | "critical" | "acceptable" | "moderate",
       observation: itemForm.observation || undefined,
       recommendation: itemForm.recommendation || undefined,
     });
@@ -189,8 +190,7 @@ export default function ErgonomicAssessmentForm() {
   const handleStatusChange = (newStatus: string) => {
     updateMutation.mutate({
       id: id!,
-      tenantId: tenantId!,
-      status: newStatus,
+      status: newStatus as "draft" | "in_progress" | "completed" | "reviewed",
     });
   };
 
@@ -208,7 +208,7 @@ export default function ErgonomicAssessmentForm() {
             variant="outline"
             size="sm"
             disabled={isExporting || !tenantId || !id}
-            onClick={() => exportPdf(() => trpc.nr01Pdf.exportErgonomicAssessment.mutate({ tenantId: tenantId!, assessmentId: id! }))}
+            onClick={() => exportPdf(() => exportErgonomicAssessmentMutation.mutateAsync({ tenantId: tenantId!, assessmentId: id! }))}
           >
             <FileDown className="h-4 w-4 mr-2" />
             {isExporting ? "Exportando..." : "Exportar PDF"}
@@ -307,7 +307,6 @@ export default function ErgonomicAssessmentForm() {
                               onClick={() =>
                                 deleteItemMutation.mutate({
                                   id: item.id,
-                                  tenantId: tenantId!,
                                 })
                               }
                               disabled={deleteItemMutation.isPending}

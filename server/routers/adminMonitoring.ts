@@ -569,7 +569,7 @@ export const adminMonitoringRouter = router({
     const id = nanoid();
     await db.insert(agentConversations).values({
       id,
-      tenantId: ctx.user.tenantId,
+      tenantId: ctx.user.tenantId!,
       userId: ctx.user.id,
       companyId: "monitoring-agent",
       title: "Klinikos IA",
@@ -715,7 +715,7 @@ Resumo: ${codeIntegrity.summary.join(" | ")}`;
       let assistantContent: string;
       try {
         const result = await invokeLLM({ messages: llmMessages });
-        assistantContent = result.choices[0]?.message?.content || "Desculpe, nao consegui processar sua solicitacao.";
+        assistantContent = (result.choices[0]?.message?.content as string) || "Desculpe, nao consegui processar sua solicitacao.";
       } catch (err) {
         log.error("[MonitoringChat] LLM call failed", { error: String(err) });
         // Fallback: respond with raw data

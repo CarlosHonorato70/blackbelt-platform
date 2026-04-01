@@ -101,6 +101,8 @@ export default function ClimateSurveys() {
     },
   });
 
+  const exportClimateSurveyMutation = trpc.nr01Pdf.exportClimateSurvey.useMutation();
+
   const handleCreate = () => {
     if (!form.title) {
       toast.error("Informe o titulo da pesquisa");
@@ -121,7 +123,7 @@ export default function ClimateSurveys() {
       tenantId,
       title: form.title,
       description: form.description,
-      surveyType: form.surveyType,
+      surveyType: form.surveyType as "custom" | "climate" | "stress" | "burnout" | "engagement",
       questions: parsedQuestions,
     });
   };
@@ -141,7 +143,7 @@ export default function ClimateSurveys() {
               variant="outline"
               size="sm"
               disabled={isExporting || !tenantId}
-              onClick={() => exportPdf(() => trpc.nr01Pdf.exportClimateSurvey.mutate({ tenantId: tenantId! }))}
+              onClick={() => exportPdf(() => exportClimateSurveyMutation.mutateAsync({ tenantId: tenantId!, surveyId: surveys[0]?.id || "" }))}
             >
               <FileDown className="h-4 w-4 mr-2" />
               {isExporting ? "Exportando..." : "Exportar PDF"}

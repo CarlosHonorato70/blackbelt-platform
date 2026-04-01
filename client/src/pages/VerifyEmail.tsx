@@ -5,7 +5,7 @@ import { CheckCircle2, XCircle, Loader2, Mail } from "lucide-react";
 
 export default function VerifyEmail() {
   const { token } = useParams<{ token: string }>();
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "success" | "error" | "waiting">("loading");
   const [errorMessage, setErrorMessage] = useState("");
 
   const verifyMutation = trpc.auth.verifyEmail.useMutation({

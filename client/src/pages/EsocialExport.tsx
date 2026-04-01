@@ -90,6 +90,8 @@ export default function EsocialExport() {
     onError: (err) => toast.error(err.message),
   });
 
+  const exportEsocialReportMutation = trpc.nr01Pdf.exportEsocialReport.useMutation();
+
   if (!tenantId) {
     return (
       <DashboardLayout>
@@ -111,7 +113,7 @@ export default function EsocialExport() {
     }
     generateMutation.mutate({
       tenantId: tenantId!,
-      eventType,
+      eventType: eventType as "S-2220" | "S-2240",
       riskAssessmentId,
     });
   };
@@ -141,7 +143,7 @@ export default function EsocialExport() {
             variant="outline"
             size="sm"
             disabled={isExporting || !tenantId}
-            onClick={() => exportPdf(() => trpc.nr01Pdf.exportEsocialReport.mutate({ tenantId: tenantId! }))}
+            onClick={() => exportPdf(() => exportEsocialReportMutation.mutateAsync({ tenantId: tenantId! }))}
           >
             <FileDown className="h-4 w-4 mr-2" />
             {isExporting ? "Exportando..." : "Exportar PDF"}
@@ -252,7 +254,7 @@ export default function EsocialExport() {
                               size="sm"
                               variant="outline"
                               onClick={() =>
-                                validateMutation.mutate({ id: exp.id, tenantId: tenantId! })
+                                validateMutation.mutate({ id: exp.id })
                               }
                               disabled={validateMutation.isPending}
                             >

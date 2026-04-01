@@ -128,7 +128,7 @@ export default function Pricing() {
             billingCycle={billingCycle}
             features={getPlanFeatures(plan.name)}
             isPopular={getPlanPopular(plan.name)}
-            isCurrentPlan={currentSubscription?.planId === plan.id}
+            isCurrentPlan={currentSubscription?.plan?.id === plan.id}
             onSelect={() => handleSelectPlan(plan.id)}
           />
         ))}
@@ -249,7 +249,7 @@ export default function Pricing() {
             },
             {
               q: "Quais metodos de pagamento sao aceitos?",
-              a: "Aceitamos cartoes de credito via Stripe e Mercado Pago (PIX, boleto). Para planos Enterprise, tambem aceitamos transferencia bancaria.",
+              a: "Aceitamos cartao de credito, PIX e boleto via Asaas. Para planos Enterprise, tambem aceitamos transferencia bancaria.",
             },
           ].map((faq, index) => (
             <Card key={index}>

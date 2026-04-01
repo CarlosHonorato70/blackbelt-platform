@@ -119,7 +119,7 @@ export const subscriptionsRouter = router({
       })
       .from(subscriptions)
       .innerJoin(plans, eq(subscriptions.planId, plans.id))
-      .where(eq(subscriptions.tenantId, ctx.tenantId))
+      .where(eq(subscriptions.tenantId, ctx.user!.tenantId!))
       .limit(1);
 
     if (!result) {
@@ -241,7 +241,7 @@ export const subscriptionsRouter = router({
       })
       .from(subscriptions)
       .innerJoin(plans, eq(subscriptions.planId, plans.id))
-      .where(eq(subscriptions.tenantId, ctx.tenantId))
+      .where(eq(subscriptions.tenantId, ctx.user!.tenantId!))
       .limit(1);
 
     return subscription || null;
@@ -259,7 +259,7 @@ export const subscriptionsRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       // Garantir que usuário tenha tenant (auto-cria se necessário)
-      const tenantId = await ensureTenantForUser(ctx.user.id, ctx.user.name, ctx.user.email, ctx.user.tenantId);
+      const tenantId = await ensureTenantForUser(ctx.user.id, ctx.user.name ?? "", ctx.user.email ?? "", ctx.user.tenantId);
       if (!tenantId) {
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar sua organização. Tente novamente." });
       }
@@ -338,7 +338,7 @@ export const subscriptionsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.user!.tenantId!) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
       }
 
@@ -351,7 +351,7 @@ export const subscriptionsRouter = router({
           ...input,
           updatedAt: new Date(),
         })
-        .where(eq(subscriptions.tenantId, ctx.tenantId));
+        .where(eq(subscriptions.tenantId, ctx.user!.tenantId!));
 
       return { success: true };
     }),
@@ -360,7 +360,7 @@ export const subscriptionsRouter = router({
    * Cancelar assinatura (no final do período)
    */
   cancelSubscription: protectedProcedure.mutation(async ({ ctx }) => {
-    if (!ctx.tenantId) {
+    if (!ctx.user!.tenantId!) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
     }
 
@@ -374,7 +374,7 @@ export const subscriptionsRouter = router({
         canceledAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(subscriptions.tenantId, ctx.tenantId));
+      .where(eq(subscriptions.tenantId, ctx.user!.tenantId!));
 
     return { success: true, message: "Assinatura cancelada no final do período" };
   }),
@@ -383,7 +383,7 @@ export const subscriptionsRouter = router({
    * Reativar assinatura cancelada
    */
   reactivateSubscription: protectedProcedure.mutation(async ({ ctx }) => {
-    if (!ctx.tenantId) {
+    if (!ctx.user!.tenantId!) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
     }
 
@@ -397,7 +397,7 @@ export const subscriptionsRouter = router({
         canceledAt: null,
         updatedAt: new Date(),
       })
-      .where(eq(subscriptions.tenantId, ctx.tenantId));
+      .where(eq(subscriptions.tenantId, ctx.user!.tenantId!));
 
     return { success: true, message: "Assinatura reativada" };
   }),
@@ -413,7 +413,7 @@ export const subscriptionsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.user!.tenantId!) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
       }
 
@@ -435,7 +435,7 @@ export const subscriptionsRouter = router({
       const [currentSub] = await db
         .select()
         .from(subscriptions)
-        .where(eq(subscriptions.tenantId, ctx.tenantId))
+        .where(eq(subscriptions.tenantId, ctx.user!.tenantId!))
         .limit(1);
 
       if (!currentSub) {
@@ -457,7 +457,7 @@ export const subscriptionsRouter = router({
           currentPrice: newPrice,
           updatedAt: new Date(),
         })
-        .where(eq(subscriptions.tenantId, ctx.tenantId));
+        .where(eq(subscriptions.tenantId, ctx.user!.tenantId!));
 
       return {
         success: true,
@@ -474,7 +474,7 @@ export const subscriptionsRouter = router({
    * Verificar limites do plano atual
    */
   checkLimits: protectedProcedure.query(async ({ ctx }) => {
-    if (!ctx.tenantId) {
+    if (!ctx.user!.tenantId!) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
     }
 
@@ -489,7 +489,7 @@ export const subscriptionsRouter = router({
       })
       .from(subscriptions)
       .innerJoin(plans, eq(subscriptions.planId, plans.id))
-      .where(eq(subscriptions.tenantId, ctx.tenantId))
+      .where(eq(subscriptions.tenantId, ctx.user!.tenantId!))
       .limit(1);
 
     if (!subscription) {
@@ -506,7 +506,7 @@ export const subscriptionsRouter = router({
       .from(usageMetrics)
       .where(
         and(
-          eq(usageMetrics.tenantId, ctx.tenantId),
+          eq(usageMetrics.tenantId, ctx.user!.tenantId!),
           gte(usageMetrics.periodStart, periodStart)
         )
       )
@@ -559,7 +559,7 @@ export const subscriptionsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.user!.tenantId!) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
       }
 
@@ -578,7 +578,7 @@ export const subscriptionsRouter = router({
 
       await db.insert(usageMetrics).values({
         id: nanoid(),
-        tenantId: ctx.tenantId,
+        tenantId: ctx.user!.tenantId!,
         periodStart,
         periodEnd,
         activeUsers: input.activeUsers || 0,
@@ -608,14 +608,14 @@ export const subscriptionsRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.user!.tenantId!) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
       }
 
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-      const conditions = [eq(invoices.tenantId, ctx.tenantId)];
+      const conditions = [eq(invoices.tenantId, ctx.user!.tenantId!)];
       if (input.status) {
         conditions.push(eq(invoices.status, input.status));
       }
@@ -636,7 +636,7 @@ export const subscriptionsRouter = router({
   getInvoice: protectedProcedure
     .input(z.object({ invoiceId: z.string() }))
     .query(async ({ input, ctx }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.user!.tenantId!) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Tenant não selecionado" });
       }
 
@@ -649,7 +649,7 @@ export const subscriptionsRouter = router({
         .where(
           and(
             eq(invoices.id, input.invoiceId),
-            eq(invoices.tenantId, ctx.tenantId)
+            eq(invoices.tenantId, ctx.user!.tenantId!)
           )
         )
         .limit(1);
@@ -668,7 +668,7 @@ export const subscriptionsRouter = router({
   getCreditBalance: tenantProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) return { balance: 0 };
-    const [credits] = await db.select().from(tenantCredits).where(eq(tenantCredits.tenantId, ctx.tenantId)).limit(1);
+    const [credits] = await db.select().from(tenantCredits).where(eq(tenantCredits.tenantId, ctx.user!.tenantId!)).limit(1);
     return { balance: credits?.balance || 0 };
   }),
 
@@ -676,7 +676,7 @@ export const subscriptionsRouter = router({
     const db = await getDb();
     if (!db) return [];
     return db.select().from(creditTransactions)
-      .where(eq(creditTransactions.tenantId, ctx.tenantId))
+      .where(eq(creditTransactions.tenantId, ctx.user!.tenantId!))
       .orderBy(desc(creditTransactions.createdAt))
       .limit(50);
   }),
@@ -692,7 +692,7 @@ export const subscriptionsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       const [payment] = await db.select()
         .from(pendingCopsoqPayments)
-        .where(and(eq(pendingCopsoqPayments.id, input.paymentId), eq(pendingCopsoqPayments.tenantId, ctx.tenantId)))
+        .where(and(eq(pendingCopsoqPayments.id, input.paymentId), eq(pendingCopsoqPayments.tenantId, ctx.user!.tenantId!)))
         .limit(1);
       if (!payment) throw new TRPCError({ code: "NOT_FOUND" });
       return payment;
@@ -709,7 +709,7 @@ export const subscriptionsRouter = router({
 
       const [payment] = await db.select()
         .from(pendingCopsoqPayments)
-        .where(and(eq(pendingCopsoqPayments.id, input.pendingPaymentId), eq(pendingCopsoqPayments.tenantId, ctx.tenantId)))
+        .where(and(eq(pendingCopsoqPayments.id, input.pendingPaymentId), eq(pendingCopsoqPayments.tenantId, ctx.user!.tenantId!)))
         .limit(1);
 
       if (!payment) throw new TRPCError({ code: "NOT_FOUND", message: "Pagamento pendente nao encontrado" });
@@ -717,7 +717,7 @@ export const subscriptionsRouter = router({
 
       if (input.method === "credits") {
         // Pay with credits
-        const [credits] = await db.select().from(tenantCredits).where(eq(tenantCredits.tenantId, ctx.tenantId)).limit(1);
+        const [credits] = await db.select().from(tenantCredits).where(eq(tenantCredits.tenantId, ctx.user!.tenantId!)).limit(1);
         const balance = credits?.balance || 0;
 
         if (balance < payment.chargeAmount) {
@@ -726,10 +726,10 @@ export const subscriptionsRouter = router({
 
         await db.update(tenantCredits)
           .set({ balance: balance - payment.chargeAmount, updatedAt: new Date() })
-          .where(eq(tenantCredits.tenantId, ctx.tenantId));
+          .where(eq(tenantCredits.tenantId, ctx.user!.tenantId!));
 
         await db.insert(creditTransactions).values({
-          id: nanoid(), tenantId: ctx.tenantId, type: "usage",
+          id: nanoid(), tenantId: ctx.user!.tenantId!, type: "usage",
           amount: -payment.chargeAmount,
           description: `${payment.exceedentCount} convites COPSOQ excedentes`,
           referenceId: payment.id,
@@ -746,7 +746,7 @@ export const subscriptionsRouter = router({
       }
 
       // PIX or credit_card via Asaas
-      const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.tenantId, ctx.tenantId)).limit(1);
+      const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.tenantId, ctx.user!.tenantId!)).limit(1);
       const asaasCustomerId = sub?.asaasCustomerId;
 
       if (!asaasCustomerId) {
@@ -814,7 +814,7 @@ export const subscriptionsRouter = router({
       if (!db) return { status: "unknown" };
       const [payment] = await db.select()
         .from(pendingCopsoqPayments)
-        .where(and(eq(pendingCopsoqPayments.id, input.pendingPaymentId), eq(pendingCopsoqPayments.tenantId, ctx.tenantId)))
+        .where(and(eq(pendingCopsoqPayments.id, input.pendingPaymentId), eq(pendingCopsoqPayments.tenantId, ctx.user!.tenantId!)))
         .limit(1);
       return { status: payment?.paymentStatus || "unknown" };
     }),
@@ -829,7 +829,7 @@ export const subscriptionsRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.tenantId, ctx.tenantId)).limit(1);
+      const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.tenantId, ctx.user!.tenantId!)).limit(1);
       if (!sub?.asaasCustomerId) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Sem cliente Asaas vinculado. Assine um plano primeiro." });
       }
@@ -839,13 +839,13 @@ export const subscriptionsRouter = router({
         value: input.amount / 100,
         description: `Compra de creditos BlackBelt - R$ ${(input.amount / 100).toFixed(2)}`,
         billingType: input.method === "pix" ? "PIX" : "CREDIT_CARD",
-        externalReference: `credits_${ctx.tenantId}_${Date.now()}`,
+        externalReference: `credits_${ctx.user!.tenantId!}_${Date.now()}`,
       });
 
       // Credits will be added when payment is confirmed via webhook
       // For now, store a pending credit purchase
       await db.insert(creditTransactions).values({
-        id: nanoid(), tenantId: ctx.tenantId, type: "purchase",
+        id: nanoid(), tenantId: ctx.user!.tenantId!, type: "purchase",
         amount: input.amount, description: `Compra de creditos (aguardando pagamento)`,
         referenceId: charge.id,
       });

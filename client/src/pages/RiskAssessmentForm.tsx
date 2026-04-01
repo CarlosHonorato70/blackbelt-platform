@@ -119,7 +119,7 @@ export default function RiskAssessmentForm() {
       tenantId,
       title: formData.title,
       description: descriptionParts || undefined,
-      assessmentDate: formData.assessmentDate,
+      assessmentDate: formData.assessmentDate ? new Date(formData.assessmentDate) : new Date(),
       assessor: formData.assessor || undefined,
       methodology: formData.methodology || undefined,
       sectorId: formData.sector || undefined,

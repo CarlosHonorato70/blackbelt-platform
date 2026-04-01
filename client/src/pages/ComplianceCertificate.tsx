@@ -39,6 +39,8 @@ export default function ComplianceCertificate() {
     );
   }
 
+  const exportComplianceCertificateMutation = trpc.nr01Pdf.exportComplianceCertificate.useMutation();
+
   const listQuery = trpc.complianceCertificate.list.useQuery({ tenantId });
   const issueMutation = trpc.complianceCertificate.issue.useMutation({
     onSuccess: () => {
@@ -81,7 +83,7 @@ export default function ComplianceCertificate() {
             variant="outline"
             size="sm"
             disabled={isExporting || !tenantId}
-            onClick={() => exportPdf(() => trpc.nr01Pdf.exportComplianceCertificate.mutate({ tenantId: tenantId! }))}
+            onClick={() => exportPdf(() => exportComplianceCertificateMutation.mutateAsync({ tenantId: tenantId! }))}
           >
             <FileDown className="h-4 w-4 mr-2" />
             {isExporting ? "Exportando..." : "Exportar PDF"}
@@ -103,7 +105,7 @@ export default function ComplianceCertificate() {
               </p>
               <Button
                 size="lg"
-                onClick={() => issueMutation.mutate({ tenantId: tenantId! })}
+                onClick={() => issueMutation.mutate({ tenantId: tenantId!, issuedBy: "Sistema" })}
                 disabled={issueMutation.isPending}
               >
                 {issueMutation.isPending ? (
@@ -210,7 +212,7 @@ export default function ComplianceCertificate() {
             <div className="text-center mt-6">
               <Button
                 variant="outline"
-                onClick={() => issueMutation.mutate({ tenantId: tenantId! })}
+                onClick={() => issueMutation.mutate({ tenantId: tenantId!, issuedBy: "Sistema" })}
                 disabled={issueMutation.isPending}
               >
                 {issueMutation.isPending ? (

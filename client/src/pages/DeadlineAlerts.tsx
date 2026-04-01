@@ -74,6 +74,8 @@ export default function DeadlineAlerts() {
     { enabled: !!tenantId }
   );
 
+  const exportDeadlineAlertsMutation = trpc.nr01Pdf.exportDeadlineAlerts.useMutation();
+
   const autoGenerateMutation = trpc.deadlineAlerts.autoGenerate.useMutation({
     onSuccess: () => {
       toast.success("Alertas gerados com sucesso!");
@@ -127,7 +129,7 @@ export default function DeadlineAlerts() {
             variant="outline"
             size="sm"
             disabled={isExporting || !tenantId}
-            onClick={() => exportPdf(() => trpc.nr01Pdf.exportDeadlineAlerts.mutate({ tenantId: tenantId! }))}
+            onClick={() => exportPdf(() => exportDeadlineAlertsMutation.mutateAsync({ tenantId: tenantId! }))}
           >
             <FileDown className="h-4 w-4 mr-2" />
             {isExporting ? "Exportando..." : "Exportar PDF"}
@@ -226,7 +228,6 @@ export default function DeadlineAlerts() {
                               onClick={() =>
                                 acknowledgeMutation.mutate({
                                   id: alert.id,
-                                  tenantId: tenantId!,
                                 })
                               }
                               disabled={acknowledgeMutation.isPending}

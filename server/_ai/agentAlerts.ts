@@ -110,7 +110,7 @@ export async function scanTenantAlerts(tenantId: string, companyId?: string): Pr
 
     // 4. Check low response rate on active assessments
     const [latestAssessment] = await db.select().from(copsoqAssessments).where(
-      and(eq(copsoqAssessments.tenantId, targetTenantId), eq(copsoqAssessments.status, "active"))
+      and(eq(copsoqAssessments.tenantId, targetTenantId), eq(copsoqAssessments.status, "active" as any))
     ).orderBy(desc(copsoqAssessments.createdAt)).limit(1);
 
     if (latestAssessment) {

@@ -82,6 +82,8 @@ export default function ComplianceChecklist() {
   const listQuery = trpc.complianceChecklist.list.useQuery({ tenantId });
   const scoreQuery = trpc.complianceChecklist.getComplianceScore.useQuery({ tenantId });
 
+  const exportComplianceChecklistMutation = trpc.nr01Pdf.exportComplianceChecklist.useMutation();
+
   const seedMutation = trpc.complianceChecklist.seedNr01Requirements.useMutation({
     onSuccess: () => {
       toast.success("Checklist NR-01 criado com sucesso!");
@@ -118,14 +120,14 @@ export default function ComplianceChecklist() {
   // Pie chart data
   const pieData = score
     ? [
-        { name: "Conforme", value: score.compliantCount ?? 0, color: "#22c55e" },
-        { name: "Parcial", value: score.partialCount ?? 0, color: "#eab308" },
-        { name: "Não Conforme", value: score.nonCompliantCount ?? 0, color: "#ef4444" },
-        { name: "N/A", value: score.notApplicableCount ?? 0, color: "#9ca3af" },
+        { name: "Conforme", value: score.compliant ?? 0, color: "#22c55e" },
+        { name: "Parcial", value: score.partial ?? 0, color: "#eab308" },
+        { name: "Não Conforme", value: score.nonCompliant ?? 0, color: "#ef4444" },
+        { name: "N/A", value: score.notApplicable ?? 0, color: "#9ca3af" },
       ].filter((d) => d.value > 0)
     : [];
 
-  const compliancePercent = score?.complianceScore ?? 0;
+  const compliancePercent = score?.scorePercent ?? 0;
 
   function toggleCategory(cat: string) {
     setExpandedCategories((prev) => {
@@ -137,7 +139,7 @@ export default function ComplianceChecklist() {
   }
 
   function handleStatusChange(requirementId: string, newStatus: string) {
-    updateStatusMutation.mutate({ id: requirementId, tenantId: tenantId!, status: newStatus });
+    updateStatusMutation.mutate({ id: requirementId, status: newStatus as "compliant" | "partial" | "non_compliant" | "not_applicable" });
   }
 
   const isLoading = listQuery.isLoading || scoreQuery.isLoading;
@@ -159,7 +161,7 @@ export default function ComplianceChecklist() {
             variant="outline"
             size="sm"
             disabled={isExporting || !tenantId}
-            onClick={() => exportPdf(() => trpc.nr01Pdf.exportComplianceChecklist.mutate({ tenantId: tenantId! }))}
+            onClick={() => exportPdf(() => exportComplianceChecklistMutation.mutateAsync({ tenantId: tenantId! }))}
           >
             <FileDown className="h-4 w-4 mr-2" />
             {isExporting ? "Exportando..." : "Exportar PDF"}

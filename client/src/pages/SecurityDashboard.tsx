@@ -1046,6 +1046,7 @@ export default function SecurityDashboard() {
  */
 export function SecurityDashboardContent() {
   const { selectedTenant } = useTenant();
+  const effectiveId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
 
   // Local state for add-IP form
   const [newIP, setNewIP] = useState("");

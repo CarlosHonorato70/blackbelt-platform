@@ -138,7 +138,7 @@ export const asaasRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      const tenantId = ctx.user!.tenantId;
+      const tenantId = ctx.user!.tenantId!;
 
       // 1. Buscar tenant para pegar CPF/CNPJ
       const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
@@ -295,7 +295,7 @@ export const asaasRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      const tenantId = ctx.user!.tenantId;
+      const tenantId = ctx.user!.tenantId!;
 
       // Buscar asaasCustomerId da assinatura existente
       const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.tenantId, tenantId));
@@ -353,7 +353,7 @@ export const asaasRouter = router({
    */
   getSubscriptionDetails: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
-    const tenantId = ctx.user!.tenantId;
+    const tenantId = ctx.user!.tenantId!;
 
     const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.tenantId, tenantId));
     if (!sub?.asaasSubscriptionId) return null;
@@ -380,7 +380,7 @@ export const asaasRouter = router({
    */
   cancelSubscription: protectedProcedure.mutation(async ({ ctx }) => {
     const db = await getDb();
-    const tenantId = ctx.user!.tenantId;
+    const tenantId = ctx.user!.tenantId!;
 
     const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.tenantId, tenantId));
     if (!sub?.asaasSubscriptionId) throw new Error("Nenhuma assinatura Asaas encontrada");
@@ -409,7 +409,7 @@ export const asaasRouter = router({
     .input(z.object({ limit: z.number().default(10), offset: z.number().default(0) }))
     .query(async ({ ctx, input }) => {
       const db = await getDb();
-      const tenantId = ctx.user!.tenantId;
+      const tenantId = ctx.user!.tenantId!;
 
       const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.tenantId, tenantId));
       if (!sub?.asaasCustomerId) return [];
@@ -611,7 +611,7 @@ export async function handleAsaasWebhook(body: any): Promise<{ received: boolean
 
     return { received: true };
   } catch (error) {
-    log.error("[Asaas Webhook] Erro ao processar:", error);
+    log.error("[Asaas Webhook] Erro ao processar:", error as Record<string, unknown>);
     return { received: false, error: "Processing failed" };
   }
 }

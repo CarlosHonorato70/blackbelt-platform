@@ -85,6 +85,8 @@ export default function PsychosocialDashboard() {
     );
   }
 
+  const exportPsychosocialDashboardMutation = trpc.nr01Pdf.exportPsychosocialDashboard.useMutation();
+
   const summaryQuery = trpc.psychosocialDashboard.getSummary.useQuery({ tenantId });
   const trendsQuery = trpc.psychosocialDashboard.getTrends.useQuery({ tenantId });
 
@@ -94,9 +96,10 @@ export default function PsychosocialDashboard() {
   const isLoading = summaryQuery.isLoading || trendsQuery.isLoading;
 
   // Build radar data from summary dimensions
+  const dims = summary?.dimensions as Record<string, number | null> | undefined;
   const radarData = DIMENSION_KEYS.map((key) => ({
     dimension: DIMENSION_LABELS[key],
-    score: summary?.dimensions?.[key] ?? 0,
+    score: dims?.[key] ?? 0,
     fullMark: 100,
   }));
 
@@ -104,7 +107,7 @@ export default function PsychosocialDashboard() {
   const dimensionScores = DIMENSION_KEYS.map((key) => ({
     key,
     label: DIMENSION_LABELS[key],
-    score: summary?.dimensions?.[key] ?? 0,
+    score: dims?.[key] ?? 0,
   }));
 
   const summaryCards = [
@@ -128,7 +131,9 @@ export default function PsychosocialDashboard() {
     },
     {
       title: "Dimensões Críticas",
-      value: summary?.criticalDimensions ?? 0,
+      value: dims
+        ? Object.values(dims).filter((v) => typeof v === "number" && v >= 3.5).length
+        : 0,
       icon: Activity,
       color: "text-red-600",
     },
@@ -148,7 +153,7 @@ export default function PsychosocialDashboard() {
             variant="outline"
             size="sm"
             disabled={isExporting || !tenantId}
-            onClick={() => exportPdf(() => trpc.nr01Pdf.exportPsychosocialDashboard.mutate({ tenantId: tenantId! }))}
+            onClick={() => exportPdf(() => exportPsychosocialDashboardMutation.mutateAsync({ tenantId: tenantId! }))}
           >
             <FileDown className="h-4 w-4 mr-2" />
             {isExporting ? "Exportando..." : "Exportar PDF"}

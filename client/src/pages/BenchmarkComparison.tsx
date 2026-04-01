@@ -55,6 +55,7 @@ export default function BenchmarkComparison() {
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
   const [selectedSector, setSelectedSector] = useState<string>("");
+  const exportBenchmarkMutation = trpc.nr01Pdf.exportBenchmark.useMutation();
 
   if (!tenantId) {
     return (
@@ -119,7 +120,7 @@ export default function BenchmarkComparison() {
             variant="outline"
             size="sm"
             disabled={isExporting || !tenantId}
-            onClick={() => exportPdf(() => trpc.nr01Pdf.exportBenchmark.mutate({ tenantId: tenantId! }))}
+            onClick={() => exportPdf(() => exportBenchmarkMutation.mutateAsync({ tenantId: tenantId! }))}
           >
             <FileDown className="h-4 w-4 mr-2" />
             {isExporting ? "Exportando..." : "Exportar PDF"}

@@ -83,6 +83,8 @@ export default function PgrPcmsoIntegration() {
     );
   }
 
+  const exportPcmsoIntegrationMutation = trpc.nr01Pdf.exportPcmsoIntegration.useMutation();
+
   const listQuery = trpc.pcmsoIntegration.list.useQuery({ tenantId });
   const generateMutation = trpc.pcmsoIntegration.generate.useMutation({
     onSuccess: () => {
@@ -97,7 +99,9 @@ export default function PgrPcmsoIntegration() {
   const recommendations = listQuery.data ?? [];
 
   function handleGenerate() {
-    generateMutation.mutate({ tenantId: tenantId! });
+    // Use the latest risk assessment ID if available; fall back to empty string
+    const latestAssessment = (listQuery.data as any)?.[0];
+    generateMutation.mutate({ tenantId: tenantId!, riskAssessmentId: latestAssessment?.riskAssessmentId || latestAssessment?.id || "" });
   }
 
   function handleEdit(item: any) {
@@ -132,7 +136,7 @@ export default function PgrPcmsoIntegration() {
               variant="outline"
               size="sm"
               disabled={isExporting || !tenantId}
-              onClick={() => exportPdf(() => trpc.nr01Pdf.exportPcmsoIntegration.mutate({ tenantId: tenantId! }))}
+              onClick={() => exportPdf(() => exportPcmsoIntegrationMutation.mutateAsync({ tenantId: tenantId! }))}
             >
               <FileDown className="h-4 w-4 mr-2" />
               {isExporting ? "Exportando..." : "Exportar PDF"}

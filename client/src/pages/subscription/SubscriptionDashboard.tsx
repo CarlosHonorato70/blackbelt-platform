@@ -42,8 +42,11 @@ export default function SubscriptionDashboard() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   // Buscar dados
-  const { data: subscription, isLoading } = trpc.subscriptions.getCurrentSubscription.useQuery();
-  const { data: limits } = trpc.subscriptions.checkLimits.useQuery();
+  const { data: subscriptionData, isLoading } = trpc.subscriptions.getCurrentSubscription.useQuery();
+  const { data: limitsData } = trpc.subscriptions.checkLimits.useQuery();
+  const subscription = subscriptionData?.subscription;
+  const plan = subscriptionData?.plan;
+  const limits = limitsData;
   const { data: invoices } = trpc.subscriptions.listInvoices.useQuery({ limit: 10 });
   const { data: asaasDetails } = trpc.asaas.getSubscriptionDetails.useQuery();
 
@@ -95,7 +98,7 @@ export default function SubscriptionDashboard() {
     );
   }
 
-  if (!subscription) {
+  if (!subscriptionData) {
     return (
       <div className="container mx-auto py-12 px-4">
         <Card>
@@ -123,7 +126,7 @@ export default function SubscriptionDashboard() {
     unpaid: { label: "Nao Paga", color: "bg-red-500" },
   };
 
-  const status = statusMap[subscription.status] || { label: subscription.status, color: "bg-gray-500" };
+  const status = statusMap[subscription?.status ?? ""] || { label: subscription?.status ?? "-", color: "bg-gray-500" };
 
   const billingTypeIcon = (type?: string) => {
     switch (type) {
@@ -157,9 +160,9 @@ export default function SubscriptionDashboard() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Plano {subscription.plan?.displayName}</CardTitle>
+                  <CardTitle>Plano {plan?.displayName}</CardTitle>
                   <CardDescription>
-                    {subscription.billingCycle === "monthly" ? "Mensal" : "Anual"}
+                    {subscription?.billingCycle === "monthly" ? "Mensal" : "Anual"}
                   </CardDescription>
                 </div>
                 <Badge className={status.color}>{status.label}</Badge>
@@ -172,7 +175,7 @@ export default function SubscriptionDashboard() {
                   <p className="text-lg font-semibold">
                     {asaasDetails?.nextDueDate
                       ? new Date(asaasDetails.nextDueDate).toLocaleDateString("pt-BR")
-                      : subscription.currentPeriodEnd
+                      : subscription?.currentPeriodEnd
                         ? new Date(subscription.currentPeriodEnd).toLocaleDateString("pt-BR")
                         : "-"}
                   </p>
@@ -180,9 +183,9 @@ export default function SubscriptionDashboard() {
                 <div>
                   <p className="text-sm text-muted-foreground">Valor</p>
                   <p className="text-lg font-semibold">
-                    {((subscription.billingCycle === "monthly"
-                      ? subscription.plan?.monthlyPrice
-                      : subscription.plan?.yearlyPrice) / 100 || 0).toLocaleString("pt-BR", {
+                    {(((subscription?.billingCycle === "monthly"
+                      ? plan?.monthlyPrice
+                      : plan?.yearlyPrice) ?? 0) / 100 || 0).toLocaleString("pt-BR", {
                       style: "currency",
                       currency: "BRL",
                     })}
@@ -201,7 +204,7 @@ export default function SubscriptionDashboard() {
                 </div>
               </div>
 
-              {subscription.status === "pending" && (
+              {subscription?.status === "pending" && (
                 <div className="bg-amber-50 dark:bg-amber-950 p-4 rounded-lg">
                   <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
                     Aguardando confirmacao do pagamento. Sua assinatura sera ativada automaticamente.
@@ -209,7 +212,7 @@ export default function SubscriptionDashboard() {
                 </div>
               )}
 
-              {subscription.cancelAtPeriodEnd && (
+              {subscription?.cancelAtPeriodEnd && (
                 <div className="bg-yellow-50 dark:bg-yellow-950 p-4 rounded-lg">
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
@@ -218,7 +221,7 @@ export default function SubscriptionDashboard() {
                         Assinatura sera cancelada
                       </p>
                       <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
-                        Voce tera acesso ate {subscription.currentPeriodEnd
+                        Voce tera acesso ate {subscription?.currentPeriodEnd
                           ? new Date(subscription.currentPeriodEnd).toLocaleDateString("pt-BR")
                           : "-"}
                       </p>
@@ -228,7 +231,7 @@ export default function SubscriptionDashboard() {
               )}
 
               <div className="flex gap-2 flex-wrap">
-                {!subscription.cancelAtPeriodEnd ? (
+                {!subscription?.cancelAtPeriodEnd ? (
                   <>
                     <Button variant="outline" onClick={() => navigate("/pricing")}>
                       Mudar Plano
@@ -258,10 +261,10 @@ export default function SubscriptionDashboard() {
             <CardContent>
               <div className="grid md:grid-cols-2 gap-4">
                 {[
-                  { icon: Users, label: "Usuarios", value: subscription.plan?.maxUsersPerTenant === -1 ? "Ilimitados" : subscription.plan?.maxUsersPerTenant },
-                  { icon: HardDrive, label: "Armazenamento", value: subscription.plan?.maxStorageGB === -1 ? "Ilimitado" : `${subscription.plan?.maxStorageGB} GB` },
-                  { icon: Activity, label: "API", value: subscription.plan?.hasApiAccess ? "Incluida" : "Nao incluida" },
-                  { icon: Calendar, label: "Relatorios Avancados", value: subscription.plan?.hasAdvancedReports ? "Sim" : "Basicos" },
+                  { icon: Users, label: "Usuarios", value: plan?.maxUsersPerTenant === -1 ? "Ilimitados" : plan?.maxUsersPerTenant },
+                  { icon: HardDrive, label: "Armazenamento", value: plan?.maxStorageGB === -1 ? "Ilimitado" : `${plan?.maxStorageGB} GB` },
+                  { icon: Activity, label: "API", value: plan?.hasApiAccess ? "Incluida" : "Nao incluida" },
+                  { icon: Calendar, label: "Relatorios Avancados", value: plan?.hasAdvancedReports ? "Sim" : "Basicos" },
                 ].map((item, index) => (
                   <div key={index} className="flex items-center gap-3">
                     <item.icon className="h-5 w-5 text-muted-foreground" />
@@ -290,12 +293,12 @@ export default function SubscriptionDashboard() {
                     <div className="flex justify-between mb-2">
                       <span className="text-sm font-medium">Usuarios</span>
                       <span className="text-sm text-muted-foreground">
-                        {limits.currentUsage.activeUsers} / {limits.plan.maxUsersPerTenant === -1 ? "\u221e" : limits.plan.maxUsersPerTenant}
+                        {limits.usage.activeUsers} / {limits.limits.maxUsersPerTenant === -1 ? "\u221e" : limits.limits.maxUsersPerTenant}
                       </span>
                     </div>
-                    {limits.plan.maxUsersPerTenant !== -1 && (
+                    {limits.limits.maxUsersPerTenant !== -1 && (
                       <Progress
-                        value={(limits.currentUsage.activeUsers / limits.plan.maxUsersPerTenant) * 100}
+                        value={(limits.usage.activeUsers / limits.limits.maxUsersPerTenant) * 100}
                       />
                     )}
                   </div>
@@ -304,27 +307,27 @@ export default function SubscriptionDashboard() {
                     <div className="flex justify-between mb-2">
                       <span className="text-sm font-medium">Armazenamento</span>
                       <span className="text-sm text-muted-foreground">
-                        {(limits.currentUsage.storageUsedGB / 100).toFixed(2)} GB / {limits.plan.maxStorageGB === -1 ? "\u221e" : `${limits.plan.maxStorageGB} GB`}
+                        {(limits.usage.storageUsedGB / 100).toFixed(2)} GB / {limits.limits.maxStorageGB === -1 ? "\u221e" : `${limits.limits.maxStorageGB} GB`}
                       </span>
                     </div>
-                    {limits.plan.maxStorageGB !== -1 && (
+                    {limits.limits.maxStorageGB !== -1 && (
                       <Progress
-                        value={((limits.currentUsage.storageUsedGB / 100) / limits.plan.maxStorageGB) * 100}
+                        value={((limits.usage.storageUsedGB / 100) / limits.limits.maxStorageGB) * 100}
                       />
                     )}
                   </div>
 
-                  {limits.plan.hasApiAccess && (
+                  {limits.limits.maxApiRequestsPerDay !== 0 && (
                     <div>
                       <div className="flex justify-between mb-2">
                         <span className="text-sm font-medium">Requisicoes API (hoje)</span>
                         <span className="text-sm text-muted-foreground">
-                          {limits.currentUsage.apiRequests} / {limits.plan.maxApiRequestsPerDay === -1 ? "\u221e" : limits.plan.maxApiRequestsPerDay}
+                          {limits.usage.apiRequests} / {limits.limits.maxApiRequestsPerDay === -1 ? "\u221e" : limits.limits.maxApiRequestsPerDay}
                         </span>
                       </div>
-                      {limits.plan.maxApiRequestsPerDay !== -1 && (
+                      {limits.limits.maxApiRequestsPerDay !== -1 && (
                         <Progress
-                          value={(limits.currentUsage.apiRequests / limits.plan.maxApiRequestsPerDay) * 100}
+                          value={(limits.usage.apiRequests / limits.limits.maxApiRequestsPerDay) * 100}
                         />
                       )}
                     </div>

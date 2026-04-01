@@ -91,7 +91,7 @@ export default function Services() {
         monthlyFixedCost: pricingParameters.monthlyFixedCost || 0,
         laborCost: pricingParameters.laborCost || 0,
         productiveHoursPerMonth: pricingParameters.productiveHoursPerMonth || 160,
-        defaultTaxRegime: pricingParameters.defaultTaxRegime || "MEI",
+        defaultTaxRegime: (pricingParameters.defaultTaxRegime || "MEI") as "SN" | "MEI" | "LP" | "autonomous",
         riskAdjustment: pricingParameters.riskAdjustment || 0,
         seniorityAdjustment: pricingParameters.seniorityAdjustment || 0,
       });

@@ -202,12 +202,8 @@ export const dataExportRouter = router({
         }).from(users).where(eq(users.email, email));
         userData.account = userRecords;
 
-        // 2. COPSOQ responses (by email match)
-        const copsoqData = await db.select().from(copsoqResponses).where(eq(copsoqResponses.respondentEmail, email));
-        if (copsoqData.length > 0) userData.copsoqResponses = copsoqData;
-
-        // 3. COPSOQ invites
-        const inviteData = await db.select().from(copsoqInvites).where(eq(copsoqInvites.email, email));
+        // 2. COPSOQ invites (by respondentEmail)
+        const inviteData = await db.select().from(copsoqInvites).where(eq(copsoqInvites.respondentEmail, email));
         if (inviteData.length > 0) userData.copsoqInvites = inviteData;
 
         // 4. DSR requests history
@@ -260,14 +256,8 @@ export const dataExportRouter = router({
         const anonymized = `deleted_${Date.now()}@anon.blackbelt`;
         let deletedCount = 0;
 
-        // 1. Anonymize COPSOQ responses
-        await db.update(copsoqResponses)
-          .set({ respondentEmail: anonymized, respondentName: "Dados Removidos" })
-          .where(eq(copsoqResponses.respondentEmail, email));
-        deletedCount++;
-
-        // 2. Delete COPSOQ invites
-        await db.delete(copsoqInvites).where(eq(copsoqInvites.email, email));
+        // 1. Delete COPSOQ invites (by respondentEmail)
+        await db.delete(copsoqInvites).where(eq(copsoqInvites.respondentEmail, email));
         deletedCount++;
 
         // 3. Anonymize user account (don't delete - keep for audit)

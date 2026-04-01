@@ -148,14 +148,14 @@ export const pricingRouter = router({
           });
 
         const { id, tenantId, ...updates } = input;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const clientUpdates: any = { ...updates, updatedAt: new Date() };
+        const effectiveTenantId = tenantId || ctx.tenantId!;
 
         await db
           .update(clients)
-          .set({
-            ...updates,
-            updatedAt: new Date(),
-          })
-          .where(and(eq(clients.id, id), eq(clients.tenantId, tenantId)));
+          .set(clientUpdates)
+          .where(and(eq(clients.id, id), eq(clients.tenantId, effectiveTenantId)));
 
         return { success: true };
       }),
@@ -348,14 +348,14 @@ export const pricingRouter = router({
           });
 
         const { id, tenantId, ...updates } = input;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const serviceUpdates: any = { ...updates, updatedAt: new Date() };
+        const effectiveTenantId = tenantId || ctx.tenantId!;
 
         await db
           .update(services)
-          .set({
-            ...updates,
-            updatedAt: new Date(),
-          })
-          .where(and(eq(services.id, id), eq(services.tenantId, tenantId)));
+          .set(serviceUpdates)
+          .where(and(eq(services.id, id), eq(services.tenantId, effectiveTenantId)));
 
         return { success: true };
       }),
@@ -700,14 +700,14 @@ export const pricingRouter = router({
           });
 
         const { id, tenantId, ...updates } = input;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const proposalUpdates: any = { ...updates, updatedAt: new Date() };
+        const effectiveTenantId = tenantId || ctx.tenantId!;
 
         await db
           .update(proposals)
-          .set({
-            ...updates,
-            updatedAt: new Date(),
-          })
-          .where(and(eq(proposals.id, id), eq(proposals.tenantId, tenantId)));
+          .set(proposalUpdates)
+          .where(and(eq(proposals.id, id), eq(proposals.tenantId, effectiveTenantId)));
 
         return { success: true };
       }),
@@ -1513,7 +1513,7 @@ export const assessmentProposalsRouter = router({
 
       // Get pricing parameters for tax calculation
       const pricingParams = await db.getPricingParameters(ctx.tenantId!);
-      const taxRate = pricingParams?.taxRates?.SN || 0.08; // Default to Simples Nacional 8%
+      const taxRate = (pricingParams?.taxRates as any)?.SN || 0.08; // Default to Simples Nacional 8%
       const taxes = Math.round(subtotal * taxRate);
       const totalValue = subtotal + taxes;
 

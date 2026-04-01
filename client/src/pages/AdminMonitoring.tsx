@@ -789,7 +789,7 @@ export default function AdminMonitoring() {
                       : "bg-muted"
                   }`}>
                     {msg.role === "assistant" ? (
-                      <Markdown className="text-sm prose prose-sm dark:prose-invert max-w-none [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1">
+                      <Markdown {...{ className: "text-sm prose prose-sm dark:prose-invert max-w-none [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1" } as any}>
                         {msg.content}
                       </Markdown>
                     ) : (

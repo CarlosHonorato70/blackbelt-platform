@@ -57,7 +57,7 @@ export default function Home() {
     enabled: !!user,
   });
 
-  const { data: assessmentsData } = trpc.assessments.list.useQuery(undefined, {
+  const { data: assessmentsData } = trpc.assessments.list.useQuery({}, {
     retry: false,
     enabled: !!user,
   });
@@ -67,7 +67,7 @@ export default function Home() {
     enabled: !!user,
   });
 
-  const { data: trainingData } = trpc.training.listPrograms.useQuery(undefined, {
+  const { data: trainingData } = trpc.training.listPrograms.useQuery({}, {
     retry: false,
     enabled: !!user,
   });

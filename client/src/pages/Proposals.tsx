@@ -496,11 +496,12 @@ export default function Proposals() {
         validUntil,
       });
 
-      // Add items sequentially
-      if (result?.id) {
+      // Add items sequentially — createProposal returns the id string directly
+      const proposalId = typeof result === "string" ? result : (result as any)?.id;
+      if (proposalId) {
         for (const item of proposalItems) {
           await addItemMutation.mutateAsync({
-            proposalId: result.id,
+            proposalId,
             serviceId: item.serviceId,
             serviceName: item.serviceName,
             quantity: item.quantity,
@@ -1436,7 +1437,7 @@ export default function Proposals() {
                   )}
                   <div className="flex justify-between text-sm text-muted-foreground mb-1">
                     <span>
-                      Impostos ({taxRegimeLabels[selectedProposalData.data?.taxRegime] || "SN"} —{" "}
+                      Impostos ({taxRegimeLabels[selectedProposalData.data?.taxRegime || "SN"] || "SN"} —{" "}
                       {((taxRates[selectedProposalData.data?.taxRegime || "SN"] || 0.08) * 100).toFixed(0)}%)
                     </span>
                     <span>

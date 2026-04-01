@@ -88,7 +88,7 @@ export default function CopsoqInvites() {
   const [paymentCompleted, setPaymentCompleted] = useState(false);
 
   const invitesQuery = trpc.assessments.listInvites.useQuery(
-    undefined,
+    {},
     { enabled: !!user }
   );
 

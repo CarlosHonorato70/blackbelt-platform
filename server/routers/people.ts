@@ -249,7 +249,6 @@ export const peopleRouter = router({
       const auditLogs = await db.getAuditLogs({
         tenantId: ctx.tenantId!,
         entityType: "people",
-        entityId: input.id,
         limit: 100,
       });
 

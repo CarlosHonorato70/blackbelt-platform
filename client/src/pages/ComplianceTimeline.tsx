@@ -76,6 +76,8 @@ export default function ComplianceTimeline() {
     );
   }
 
+  const exportComplianceTimelineMutation = trpc.nr01Pdf.exportComplianceTimeline.useMutation();
+
   const listQuery = trpc.complianceTimeline.list.useQuery({ tenantId });
   const progressQuery = trpc.complianceTimeline.getProgress.useQuery({ tenantId });
 
@@ -104,12 +106,12 @@ export default function ComplianceTimeline() {
   const milestones = listQuery.data ?? [];
   const progress = progressQuery.data;
 
-  const completedCount = progress?.completedCount ?? 0;
-  const totalCount = progress?.totalCount ?? 0;
+  const completedCount = progress?.completed ?? 0;
+  const totalCount = progress?.total ?? 0;
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   function handleStatusChange(milestoneId: string, newStatus: string) {
-    updateMutation.mutate({ id: milestoneId, tenantId: tenantId!, status: newStatus });
+    updateMutation.mutate({ id: milestoneId, status: newStatus as "pending" | "in_progress" | "completed" | "overdue" });
   }
 
   const isLoading = listQuery.isLoading || progressQuery.isLoading;
@@ -131,7 +133,7 @@ export default function ComplianceTimeline() {
             variant="outline"
             size="sm"
             disabled={isExporting || !tenantId}
-            onClick={() => exportPdf(() => trpc.nr01Pdf.exportComplianceTimeline.mutate({ tenantId: tenantId! }))}
+            onClick={() => exportPdf(() => exportComplianceTimelineMutation.mutateAsync({ tenantId: tenantId! }))}
           >
             <FileDown className="h-4 w-4 mr-2" />
             {isExporting ? "Exportando..." : "Exportar PDF"}

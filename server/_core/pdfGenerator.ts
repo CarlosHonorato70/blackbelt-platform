@@ -1235,9 +1235,9 @@ export async function generateGenericReportPdf(
     }
 
     // ── Footer on every page ────────────────────────────────────────────
-    const pages = doc.bufferedPageRange();
+    const pages = (doc as any).bufferedPageRange();
     for (let i = pages.start; i < pages.start + pages.count; i++) {
-      doc.switchToPage(i);
+      (doc as any).switchToPage(i);
       doc
         .fontSize(7)
         .fillColor(secondaryColor)

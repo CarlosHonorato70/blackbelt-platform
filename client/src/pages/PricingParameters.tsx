@@ -31,7 +31,7 @@ export default function PricingParameters() {
         monthlyFixedCost: parameters.monthlyFixedCost || 0,
         laborCost: parameters.laborCost || 0,
         productiveHoursPerMonth: parameters.productiveHoursPerMonth || 160,
-        defaultTaxRegime: parameters.defaultTaxRegime || "MEI",
+        defaultTaxRegime: (parameters.defaultTaxRegime || "MEI") as "SN" | "MEI" | "LP" | "autonomous",
         riskAdjustment: parameters.riskAdjustment || 0,
         seniorityAdjustment: parameters.seniorityAdjustment || 0,
       });

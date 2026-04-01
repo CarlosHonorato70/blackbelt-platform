@@ -150,7 +150,7 @@ export default function Clients() {
       name: fd.get("name") as string,
       cnpj: (fd.get("cnpj") as string) || undefined,
       industry: (fd.get("industry") as string) || undefined,
-      companySize: companySizeValue || undefined,
+      companySize: (companySizeValue || undefined) as "small" | "medium" | "micro" | "large" | undefined,
       contactName: (fd.get("contactName") as string) || undefined,
       contactEmail: (fd.get("contactEmail") as string) || undefined,
       contactPhone: (fd.get("contactPhone") as string) || undefined,
@@ -174,7 +174,7 @@ export default function Clients() {
       name: fd.get("name") as string,
       cnpj: (fd.get("cnpj") as string) || undefined,
       industry: (fd.get("industry") as string) || undefined,
-      companySize: companySizeValue || undefined,
+      companySize: (companySizeValue || undefined) as "small" | "medium" | "micro" | "large" | undefined,
       contactName: (fd.get("contactName") as string) || undefined,
       contactEmail: (fd.get("contactEmail") as string) || undefined,
       contactPhone: (fd.get("contactPhone") as string) || undefined,
@@ -185,7 +185,7 @@ export default function Clients() {
       city: (fd.get("city") as string) || undefined,
       state: (fd.get("state") as string) || undefined,
       zipCode: (fd.get("zipCode") as string) || undefined,
-      status: statusValue,
+      status: statusValue as "active" | "inactive",
     });
   };
 

@@ -65,7 +65,7 @@ export default function DataExport() {
     isLoading,
     refetch,
   } = trpc.dataExport.list.useQuery(
-    { tenantId },
+    undefined,
     { enabled: !!tenantId }
   );
 
@@ -125,7 +125,6 @@ export default function DataExport() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     createMutation.mutate({
-      tenantId,
       email: formData.email,
       requestType: formData.requestType as "export" | "delete" | "rectify",
       reason: formData.reason || undefined,
@@ -138,7 +137,7 @@ export default function DataExport() {
         `Tem certeza que deseja cancelar a solicitação de ${email}?`
       )
     ) {
-      cancelMutation.mutate({ id, tenantId });
+      cancelMutation.mutate({ id });
     }
   };
 

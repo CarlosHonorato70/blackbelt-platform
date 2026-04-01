@@ -140,6 +140,8 @@ export default function ReportManagement() {
     },
   });
 
+  const exportAnonymousReportsMutation = trpc.nr01Pdf.exportAnonymousReports.useMutation();
+
   const handleOpenDetail = (report: any) => {
     setSelectedReport(report);
     setDetailForm({
@@ -175,7 +177,7 @@ export default function ReportManagement() {
             variant="outline"
             size="sm"
             disabled={isExporting || !tenantId}
-            onClick={() => exportPdf(() => trpc.nr01Pdf.exportAnonymousReports.mutate({ tenantId: tenantId! }))}
+            onClick={() => exportPdf(() => exportAnonymousReportsMutation.mutateAsync({ tenantId: tenantId! }))}
           >
             <FileDown className="h-4 w-4 mr-2" />
             {isExporting ? "Exportando..." : "Exportar PDF"}

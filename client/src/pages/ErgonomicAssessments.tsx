@@ -84,6 +84,8 @@ export default function ErgonomicAssessments() {
     onError: (err) => toast.error(err.message),
   });
 
+  const exportErgonomicAssessmentMutation = trpc.nr01Pdf.exportErgonomicAssessment.useMutation();
+
   if (!tenantId) {
     return (
       <DashboardLayout>
@@ -107,7 +109,7 @@ export default function ErgonomicAssessments() {
       tenantId: tenantId!,
       title: formData.title,
       assessorName: formData.assessorName,
-      assessmentDate: formData.assessmentDate,
+      assessmentDate: new Date(formData.assessmentDate),
       methodology: formData.methodology || undefined,
     });
   };
@@ -130,7 +132,7 @@ export default function ErgonomicAssessments() {
               variant="outline"
               size="sm"
               disabled={isExporting || !tenantId}
-              onClick={() => exportPdf(() => trpc.nr01Pdf.exportErgonomicAssessment.mutate({ tenantId: tenantId! }))}
+              onClick={() => exportPdf(() => exportErgonomicAssessmentMutation.mutateAsync({ tenantId: tenantId!, assessmentId: (listQuery.data as any)?.[0]?.id || "" }))}
             >
               <FileDown className="h-4 w-4 mr-2" />
               {isExporting ? "Exportando..." : "Exportar PDF"}

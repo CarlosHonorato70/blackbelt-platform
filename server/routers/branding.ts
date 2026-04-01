@@ -124,7 +124,7 @@ export const brandingRouter = router({
       }
 
       // Check if plan supports white-label
-      const hasWhiteLabelFeature = tenant.subscription?.plan?.features?.includes(
+      const hasWhiteLabelFeature = (tenant.subscription?.plan as any)?.features?.includes(
         "white_label"
       );
 
@@ -185,7 +185,7 @@ export const brandingRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Tenant not found" });
       }
 
-      const hasWhiteLabelFeature = tenant.subscription?.plan?.features?.includes(
+      const hasWhiteLabelFeature = (tenant.subscription?.plan as any)?.features?.includes(
         "white_label"
       );
 

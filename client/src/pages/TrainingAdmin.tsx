@@ -126,6 +126,8 @@ export default function TrainingAdmin() {
     onError: (err) => toast.error(err.message),
   });
 
+  const exportTrainingReportMutation = trpc.nr01Pdf.exportTrainingReport.useMutation();
+
   if (!tenantId) {
     return (
       <DashboardLayout>
@@ -180,7 +182,7 @@ export default function TrainingAdmin() {
       title: moduleForm.title,
       content: moduleForm.content,
       order: moduleForm.order ? parseInt(moduleForm.order) : undefined,
-      durationMinutes: moduleForm.durationMinutes ? parseInt(moduleForm.durationMinutes) : undefined,
+      duration: moduleForm.durationMinutes ? parseInt(moduleForm.durationMinutes) : undefined,
       videoUrl: moduleForm.videoUrl || undefined,
       passingScore: moduleForm.passingScore ? parseInt(moduleForm.passingScore) : undefined,
     });
@@ -193,11 +195,10 @@ export default function TrainingAdmin() {
     }
     updateModuleMutation.mutate({
       id: selectedModuleId,
-      tenantId: tenantId!,
       title: moduleForm.title,
       content: moduleForm.content,
       order: moduleForm.order ? parseInt(moduleForm.order) : undefined,
-      durationMinutes: moduleForm.durationMinutes ? parseInt(moduleForm.durationMinutes) : undefined,
+      duration: moduleForm.durationMinutes ? parseInt(moduleForm.durationMinutes) : undefined,
       videoUrl: moduleForm.videoUrl || undefined,
       passingScore: moduleForm.passingScore ? parseInt(moduleForm.passingScore) : undefined,
     });
@@ -235,7 +236,7 @@ export default function TrainingAdmin() {
             variant="outline"
             size="sm"
             disabled={isExporting || !tenantId}
-            onClick={() => exportPdf(() => trpc.nr01Pdf.exportTrainingReport.mutate({ tenantId: tenantId! }))}
+            onClick={() => exportPdf(() => exportTrainingReportMutation.mutateAsync({ tenantId: tenantId! }))}
           >
             <FileDown className="h-4 w-4 mr-2" />
             {isExporting ? "Exportando..." : "Exportar PDF"}
@@ -537,7 +538,6 @@ export default function TrainingAdmin() {
                   if (selectedModuleId) {
                     deleteModuleMutation.mutate({
                       id: selectedModuleId,
-                      tenantId: tenantId!,
                     });
                   }
                 }}

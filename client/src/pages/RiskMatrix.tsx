@@ -55,10 +55,13 @@ function getCellTextColor(severity: number, probability: number): string {
 
 interface RiskItem {
   id: string;
-  name: string;
-  description?: string;
+  name?: string;
+  description?: string | null;
   severity: string;
-  probability: string;
+  probability?: string;
+  riskLevel?: string;
+  riskFactorId?: string;
+  hazardCode?: string | null;
 }
 
 export default function RiskMatrix() {
@@ -84,13 +87,15 @@ export default function RiskMatrix() {
     );
   }
 
+  const exportRiskMatrixMutation = trpc.nr01Pdf.exportRiskMatrix.useMutation();
+
   const assessmentsQuery = trpc.riskAssessments.list.useQuery({ tenantId });
   const assessmentDetailQuery = trpc.riskAssessments.get.useQuery(
     { id: selectedAssessmentId, tenantId },
     { enabled: !!selectedAssessmentId }
   );
 
-  const riskItems: RiskItem[] = assessmentDetailQuery.data?.riskItems ?? [];
+  const riskItems = (assessmentDetailQuery.data?.items ?? []) as RiskItem[];
 
   function countItems(severityIdx: number, probabilityIdx: number): number {
     return riskItems.filter(
@@ -125,7 +130,7 @@ export default function RiskMatrix() {
             variant="outline"
             size="sm"
             disabled={isExporting || !tenantId}
-            onClick={() => exportPdf(() => trpc.nr01Pdf.exportRiskMatrix.mutate({ tenantId: tenantId! }))}
+            onClick={() => exportPdf(() => exportRiskMatrixMutation.mutateAsync({ tenantId: tenantId! }))}
           >
             <FileDown className="h-4 w-4 mr-2" />
             {isExporting ? "Exportando..." : "Exportar PDF"}

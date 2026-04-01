@@ -200,7 +200,6 @@ async function executeCreateAssessmentWithInvites(
       assessmentTitle,
       inviteToken,
       expiresIn,
-      tenantId,
     });
   }
 
@@ -538,7 +537,7 @@ export async function executeGenerateInventoryAndPlan(
         dimensionSums[dim] = { sum: 0, count: 0 };
       }
       for (const resp of responses) {
-        const answers = typeof resp.answers === "string" ? JSON.parse(resp.answers) : resp.answers;
+        const answers = typeof (resp as any).responses === "string" ? JSON.parse((resp as any).responses) : (resp as any).responses;
         if (answers && typeof answers === "object") {
           for (const dim of dimensions) {
             const score = answers[dim] || answers[dim.toLowerCase()];
@@ -645,12 +644,12 @@ export async function executeGenerateInventoryAndPlan(
         await db.insert(riskAssessmentItems).values({
           id: nanoid(), assessmentId: raId,
           riskFactorId: `PSY-${dim.toUpperCase()}`,
-          severity, probability,
+          severity: severity as any, probability: probability as any,
           affectedPopulation: headcount,
           currentControls: "Nenhum controle específico identificado",
           observations: `Score COPSOQ-II: ${score}/100. ${severity === "critical" ? "INTERVENÇÃO URGENTE NECESSÁRIA." : "Necessita ação preventiva."}`,
           createdAt: new Date(), updatedAt: new Date(),
-        });
+        } as any);
       }
     }
 
@@ -667,7 +666,7 @@ export async function executeGenerateInventoryAndPlan(
         await db.insert(actionPlans).values({
           id: nanoid(), tenantId, assessmentItemId: null,
           title: action.title, description: action.description,
-          actionType: action.type, priority: item.severity === "critical" ? "urgent" : item.severity === "high" ? "high" : "medium",
+          actionType: action.type as any, priority: (item.severity === "critical" ? "urgent" : item.severity === "high" ? "high" : "medium") as any,
           status: "pending", deadline, createdAt: new Date(), updatedAt: new Date(),
         });
         planCount++;
@@ -683,7 +682,7 @@ export async function executeGenerateInventoryAndPlan(
     for (const p of pcmsoItems) {
       await db.insert(pcmsoRecommendations).values({
         id: nanoid(), tenantId, riskAssessmentId: raId,
-        ...p, createdAt: new Date(), updatedAt: new Date(),
+        ...p, priority: p.priority as any, createdAt: new Date(), updatedAt: new Date(),
       });
     }
 
@@ -873,16 +872,16 @@ export async function executeCompleteChecklist(
       certificateNumber: certNumber,
       complianceScore: score, issuedBy: "Agente IA BlackBelt",
       issuedAt: new Date(), validUntil,
-      status: "active",
+      status: "active" as any,
       createdAt: new Date(), updatedAt: new Date(),
-    });
+    } as any);
 
     // Update milestones
     const milestones = await db.select().from(complianceMilestones)
       .where(eq(complianceMilestones.tenantId, tenantId));
     for (const m of milestones) {
       await db.update(complianceMilestones)
-        .set({ status: "completed", completedAt: new Date(), updatedAt: new Date() })
+        .set({ status: "completed", completedDate: new Date(), updatedAt: new Date() })
         .where(eq(complianceMilestones.id, m.id));
     }
 

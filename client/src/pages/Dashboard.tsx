@@ -54,7 +54,7 @@ export default function Dashboard() {
   );
 
   const { data: copsoqAssessments = [] } = trpc.assessments.list.useQuery(
-    undefined,
+    {},
     { enabled: !!tenantId }
   );
 
@@ -325,7 +325,7 @@ export default function Dashboard() {
                           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
                         );
                         if (sorted.length === 0) return "—";
-                        const date = new Date(sorted[0].createdAt);
+                        const date = new Date(sorted[0].createdAt!);
                         return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
                       })()}
                     </span>
