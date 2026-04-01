@@ -1,4 +1,5 @@
 import type { Express, Request, Response } from "express";
+import crypto from "crypto";
 import { handleAsaasWebhook } from "./routers/asaas";
 import { log } from "./_core/logger";
 import { checkDbHealth } from "./db";
@@ -47,13 +48,19 @@ export function registerRoutes(app: Express) {
   // ============================================
 
   app.post("/api/webhooks/asaas", async (req: Request, res: Response) => {
-    // Validar token de autenticação do webhook
+    // Validar token de autenticação do webhook (timing-safe)
     const webhookToken = process.env.ASAAS_WEBHOOK_TOKEN;
 
     if (webhookToken) {
       const receivedToken = req.headers["asaas-access-token"] as string;
-      if (!receivedToken || receivedToken !== webhookToken) {
-        log.warn("[Asaas Webhook] Token inválido ou ausente");
+      if (!receivedToken) {
+        log.warn("[Asaas Webhook] Token ausente");
+        return res.status(401).json({ error: "Missing webhook token" });
+      }
+      const expected = Buffer.from(webhookToken, "utf8");
+      const received = Buffer.from(receivedToken, "utf8");
+      if (expected.length !== received.length || !crypto.timingSafeEqual(expected, received)) {
+        log.warn("[Asaas Webhook] Token inválido");
         return res.status(401).json({ error: "Invalid webhook token" });
       }
     }

@@ -129,7 +129,7 @@ export const benchmarkRouter = router({
         .from(benchmarkData);
       const count = existingRows[0]?.count || 0;
 
-      if (count >= 9) {
+      if (count >= 12) {
         return { seeded: false, message: "Dados de benchmark já existem", total: count };
       }
 
@@ -223,6 +223,46 @@ export const benchmarkRouter = router({
           avgLeadershipScore: 55, avgCommunityScore: 64, avgMeaningScore: 75,
           avgTrustScore: 56, avgJusticeScore: 52, avgInsecurityScore: 46,
           avgMentalHealthScore: 52, avgBurnoutScore: 42, avgViolenceScore: 28,
+          createdAt: now,
+        },
+        // Financeiro — alta demanda, alto controle, alto burnout
+        {
+          id: nanoid(), dataSource: "sector", sectorCode: "K",
+          sectorName: "Atividades Financeiras", region: "Brasil", period: "2025", sampleSize: 850,
+          avgDemandScore: 35, avgControlScore: 65, avgSupportScore: 58,
+          avgLeadershipScore: 60, avgCommunityScore: 55, avgMeaningScore: 60,
+          avgTrustScore: 52, avgJusticeScore: 50, avgInsecurityScore: 50,
+          avgMentalHealthScore: 50, avgBurnoutScore: 38, avgViolenceScore: 25,
+          createdAt: now,
+        },
+        // Governo / Administração Pública — alto controle, baixa demanda, alta burocracia
+        {
+          id: nanoid(), dataSource: "sector", sectorCode: "O",
+          sectorName: "Administração Pública", region: "Brasil", period: "2025", sampleSize: 1300,
+          avgDemandScore: 52, avgControlScore: 50, avgSupportScore: 55,
+          avgLeadershipScore: 48, avgCommunityScore: 60, avgMeaningScore: 62,
+          avgTrustScore: 45, avgJusticeScore: 42, avgInsecurityScore: 55,
+          avgMentalHealthScore: 55, avgBurnoutScore: 44, avgViolenceScore: 32,
+          createdAt: now,
+        },
+        // Segurança Privada — alta demanda, alto burnout, alta violência
+        {
+          id: nanoid(), dataSource: "sector", sectorCode: "N80",
+          sectorName: "Segurança Privada", region: "Brasil", period: "2025", sampleSize: 650,
+          avgDemandScore: 32, avgControlScore: 42, avgSupportScore: 48,
+          avgLeadershipScore: 44, avgCommunityScore: 52, avgMeaningScore: 55,
+          avgTrustScore: 40, avgJusticeScore: 38, avgInsecurityScore: 35,
+          avgMentalHealthScore: 42, avgBurnoutScore: 35, avgViolenceScore: 45,
+          createdAt: now,
+        },
+        // Varejo — alta rotatividade, médio burnout
+        {
+          id: nanoid(), dataSource: "sector", sectorCode: "G47",
+          sectorName: "Varejo", region: "Brasil", period: "2025", sampleSize: 1100,
+          avgDemandScore: 48, avgControlScore: 50, avgSupportScore: 55,
+          avgLeadershipScore: 50, avgCommunityScore: 56, avgMeaningScore: 48,
+          avgTrustScore: 48, avgJusticeScore: 45, avgInsecurityScore: 42,
+          avgMentalHealthScore: 52, avgBurnoutScore: 46, avgViolenceScore: 34,
           createdAt: now,
         },
       ];

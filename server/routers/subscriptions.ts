@@ -784,8 +784,9 @@ export const subscriptionsRouter = router({
   confirmExceedentPayment: publicProcedure
     .input(z.object({ pendingPaymentId: z.string(), token: z.string() }))
     .mutation(async ({ input }) => {
-      if (input.token !== (process.env.MAINTENANCE_TOKEN || "klinikos-2026")) {
-        throw new TRPCError({ code: "UNAUTHORIZED" });
+      const maintenanceToken = process.env.MAINTENANCE_TOKEN;
+      if (!maintenanceToken || input.token !== maintenanceToken) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token inválido" });
       }
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });

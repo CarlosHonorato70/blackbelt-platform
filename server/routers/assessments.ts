@@ -561,6 +561,26 @@ export const assessmentsRouter = router({
     }),
 });
 
+// COPSOQ-II reverse-coded questions (official Danish methodology)
+// These questions are positively worded — high score = good outcome
+// Must invert before averaging: score = 6 - rawScore
+const REVERSE_CODED_QUESTIONS = new Set([
+  // Controle (autonomia, desenvolvimento, influência) — alto = positivo
+  9, 10, 11, 12, 13, 14, 15,
+  // Liderança (qualidade, previsibilidade, reconhecimento) — alto = positivo
+  23, 24, 25, 26,
+  // Liderança adicional (confiança, justiça) — alto = positivo
+  30, 31, 32,
+  // Comunidade (apoio colegas, pertencimento) — alto = positivo
+  27, 28, 29, 33, 34, 35,
+  // Significado (propósito, engajamento, compromisso) — alto = positivo
+  49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59,
+  // Confiança (confiança horizontal/vertical) — alto = positivo
+  40, 41, 42, 43, 44, 45,
+  // Justiça (procedimentos, distribuição) — alto = positivo
+  46, 47, 48,
+]);
+
 // Funcoes auxiliares
 function calculateDimensionScores(responses: Record<string | number, number>) {
   const dimensions = {
@@ -581,7 +601,13 @@ function calculateDimensionScores(responses: Record<string | number, number>) {
   const scores: Record<string, number> = {};
 
   for (const [dimension, questions] of Object.entries(dimensions)) {
-    const values = questions.map(q => responses[q] || responses[`q${q}`] || 0).filter(v => v > 0);
+    const values = questions.map(q => {
+      const raw = responses[q] || responses[`q${q}`] || 0;
+      if (raw <= 0) return 0;
+      // Apply reverse scoring: positively-worded items need inversion
+      // so all dimensions use "high score = high risk" consistently
+      return REVERSE_CODED_QUESTIONS.has(q) ? (6 - raw) : raw;
+    }).filter(v => v > 0);
 
     if (values.length === 0) {
       scores[dimension] = 0;

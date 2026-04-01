@@ -47,7 +47,9 @@ export const webhookRouter = router({
         )
         .digest("hex");
 
-      if (input.signature !== expectedSignature) {
+      const sigBuf = Buffer.from(input.signature, "hex");
+      const expectedBuf = Buffer.from(expectedSignature, "hex");
+      if (sigBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(sigBuf, expectedBuf)) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Assinatura de webhook inválida",

@@ -8,6 +8,7 @@ import {
   riskAssessments,
   riskAssessmentItems,
 } from "../../drizzle/schema_nr01";
+import { tenants } from "../../drizzle/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 
 export const esocialExportRouter = router({
@@ -48,6 +49,19 @@ export const esocialExportRouter = router({
           message: "Database not available",
         });
 
+      // Buscar dados do tenant (empresa)
+      const [tenant] = await db
+        .select()
+        .from(tenants)
+        .where(eq(tenants.id, ctx.tenantId!));
+
+      if (!tenant) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Tenant não encontrado",
+        });
+      }
+
       // Buscar avaliação de risco
       const [assessment] = await db
         .select()
@@ -72,39 +86,101 @@ export const esocialExportRouter = router({
         .from(riskAssessmentItems)
         .where(eq(riskAssessmentItems.assessmentId, input.riskAssessmentId));
 
+      const cnpjClean = tenant.cnpj.replace(/[^\d]/g, "");
+      const today = new Date().toISOString().split("T")[0];
+      const evtId = `ID${cnpjClean}${Date.now()}`;
+
       let xmlContent: string;
 
       if (input.eventType === "S-2240") {
-        // Gerar XML S-2240 (Exposição a Riscos)
+        // Gerar XML S-2240 (Condições Ambientais do Trabalho - Exposição a Fatores de Risco)
+        const fatoresRisco = items
+          .map(
+            (item) =>
+              `          <fator>
+            <codFat>09.01.001</codFat>
+            <worEnv>1</worEnv>
+            <worPrc>1</worPrc>
+            <worTec>1</worTec>
+            <dscFat>${escapeXml(item.riskFactorId)}</dscFat>
+            <tpAval>2</tpAval>
+          </fator>`
+          )
+          .join("\n");
+
         const agNocEntries = items
           .map(
             (item) =>
-              `        <agNoc><codAgNoc>PSICOSSOCIAL</codAgNoc><dscAgNoc>${escapeXml(item.riskFactorId)}</dscAgNoc><tpAval>2</tpAval></agNoc>`
+              `          <agNoc>
+            <codAgNoc>09.01.001</codAgNoc>
+            <dscAgNoc>${escapeXml(item.riskFactorId)}</dscAgNoc>
+            <tpAval>2</tpAval>
+          </agNoc>`
           )
           .join("\n");
 
         xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
 <eSocial xmlns="http://www.esocial.gov.br/schema/evt/evtExpRisco/v_S_01_02_00">
-  <evtExpRisco>
-    <ideEvento><tpAmb>2</tpAmb></ideEvento>
-    <ideEmpregador><nrInsc>${ctx.tenantId!}</nrInsc></ideEmpregador>
+  <evtExpRisco Id="${escapeXml(evtId)}">
+    <ideEvento>
+      <indRetif>1</indRetif>
+      <tpAmb>2</tpAmb>
+      <procEmi>1</procEmi>
+      <verProc>1.0.0</verProc>
+    </ideEvento>
+    <ideEmpregador>
+      <tpInsc>1</tpInsc>
+      <nrInsc>${escapeXml(cnpjClean)}</nrInsc>
+    </ideEmpregador>
+    <ideVinculo>
+      <cpfTrab>00000000000</cpfTrab>
+      <matricula></matricula>
+    </ideVinculo>
     <infoExpRisco>
+      <dtIniCondicao>${today}</dtIniCondicao>
+      <infoAmb>
+        <codAmb>PSICOSSOCIAL</codAmb>
+        <dscSetor>${escapeXml(tenant.name)}</dscSetor>
+${fatoresRisco}
+      </infoAmb>
 ${agNocEntries}
     </infoExpRisco>
   </evtExpRisco>
 </eSocial>`;
       } else {
-        // Gerar XML S-2220 (Monitoramento da Saúde)
+        // Gerar XML S-2220 (Monitoramento da Saúde do Trabalhador)
         xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
 <eSocial xmlns="http://www.esocial.gov.br/schema/evt/evtMonit/v_S_01_02_00">
-  <evtMonit>
-    <ideEvento><tpAmb>2</tpAmb></ideEvento>
-    <ideEmpregador><nrInsc>${ctx.tenantId!}</nrInsc></ideEmpregador>
+  <evtMonit Id="${escapeXml(evtId)}">
+    <ideEvento>
+      <indRetif>1</indRetif>
+      <tpAmb>2</tpAmb>
+      <procEmi>1</procEmi>
+      <verProc>1.0.0</verProc>
+    </ideEvento>
+    <ideEmpregador>
+      <tpInsc>1</tpInsc>
+      <nrInsc>${escapeXml(cnpjClean)}</nrInsc>
+    </ideEmpregador>
+    <ideVinculo>
+      <cpfTrab>00000000000</cpfTrab>
+      <matricula></matricula>
+    </ideVinculo>
     <exMedOcup>
       <tpExameOcup>0</tpExameOcup>
       <aso>
-        <dtAso>${new Date().toISOString().split("T")[0]}</dtAso>
+        <dtAso>${today}</dtAso>
         <resAso>1</resAso>
+        <exame>
+          <dtExm>${today}</dtExm>
+          <procRealizado>0824</procRealizado>
+          <obsProc>Avaliacao psicossocial COPSOQ-II - riscos psicossociais NR-01</obsProc>
+        </exame>
+        <medico>
+          <nmMed>MEDICO RESPONSAVEL</nmMed>
+          <nrCRM>000000</nrCRM>
+          <ufCRM>SP</ufCRM>
+        </medico>
       </aso>
     </exMedOcup>
   </evtMonit>

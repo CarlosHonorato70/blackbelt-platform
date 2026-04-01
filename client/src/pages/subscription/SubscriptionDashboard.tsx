@@ -109,7 +109,7 @@ export default function SubscriptionDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => navigate("/pricing")}>
+            <Button onClick={() => navigate("/subscription/pricing")}>
               Ver Planos
             </Button>
           </CardContent>
@@ -233,7 +233,7 @@ export default function SubscriptionDashboard() {
               <div className="flex gap-2 flex-wrap">
                 {!subscription?.cancelAtPeriodEnd ? (
                   <>
-                    <Button variant="outline" onClick={() => navigate("/pricing")}>
+                    <Button variant="outline" onClick={() => navigate("/subscription/pricing")}>
                       Mudar Plano
                     </Button>
                     <Button
