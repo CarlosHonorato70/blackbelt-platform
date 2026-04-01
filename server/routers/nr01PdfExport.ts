@@ -31,6 +31,8 @@ import {
   actionPlans,
   mentalHealthIndicators,
 } from "../../drizzle/schema_nr01";
+import { tenants } from "../../drizzle/schema";
+import { interventionPrograms } from "../../drizzle/schema_nr01";
 import { eq, and, desc, sql } from "drizzle-orm";
 
 const SEVERITY_LABELS: Record<string, string> = { low: "Leve", medium: "Moderada", high: "Grave", critical: "Gravissima" };
@@ -975,5 +977,289 @@ export const nr01PdfExportRouter = router({
         sections,
       }, branding);
       return { filename: "relatorio-executivo.pdf", data: buffer.toString("base64") };
+    }),
+
+  // ══════════════════════════════════════════════════════════════════════
+  // PGR CONSOLIDADO — Programa de Gerenciamento de Riscos Psicossociais
+  // Documento obrigatório NR-01 item 1.5.3.1 — consolida inventário,
+  // plano de ação, cronograma, PCMSO e treinamentos em PDF único.
+  // ══════════════════════════════════════════════════════════════════════
+  exportConsolidatedPgr: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .mutation(async ({ ctx }) => {
+      const db = await requireDb();
+      const tid = ctx.tenantId!;
+
+      // ── 1. Dados da empresa ───────────────────────────────────────
+      const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tid)).limit(1);
+      const companyName = tenant?.name || "Empresa";
+
+      // ── 2. Avaliação de riscos + itens ────────────────────────────
+      const assessmentList = await db.select().from(riskAssessments)
+        .where(eq(riskAssessments.tenantId, tid))
+        .orderBy(desc(riskAssessments.createdAt));
+      const latestAssessment = assessmentList[0];
+
+      let riskItems: any[] = [];
+      if (latestAssessment) {
+        riskItems = await db.select().from(riskAssessmentItems)
+          .where(eq(riskAssessmentItems.assessmentId, latestAssessment.id));
+      }
+
+      const criticalItems = riskItems.filter(i => i.riskLevel === "critical");
+      const highItems = riskItems.filter(i => i.riskLevel === "high");
+      const mediumItems = riskItems.filter(i => i.riskLevel === "medium");
+      const lowItems = riskItems.filter(i => i.riskLevel === "low");
+
+      // ── 3. Planos de ação ─────────────────────────────────────────
+      const plans = await db.select().from(actionPlans)
+        .where(eq(actionPlans.tenantId, tid))
+        .orderBy(desc(actionPlans.createdAt));
+      const completedPlans = plans.filter(p => p.status === "completed");
+      const inProgressPlans = plans.filter(p => p.status === "in_progress");
+      const pendingPlans = plans.filter(p => p.status === "pending");
+
+      // ── 4. PCMSO ─────────────────────────────────────────────────
+      const pcmso = await db.select().from(pcmsoRecommendations)
+        .where(eq(pcmsoRecommendations.tenantId, tid));
+
+      // ── 5. COPSOQ ────────────────────────────────────────────────
+      const reports = await db.select().from(copsoqReports)
+        .where(eq(copsoqReports.tenantId, tid))
+        .orderBy(desc(copsoqReports.createdAt))
+        .limit(1);
+      const latestReport = reports[0];
+
+      // ── 6. Cronograma ────────────────────────────────────────────
+      const milestones = await db.select().from(complianceMilestones)
+        .where(eq(complianceMilestones.tenantId, tid))
+        .orderBy(complianceMilestones.targetDate);
+      const completedMilestones = milestones.filter(m => m.status === "completed");
+
+      // ── 7. Checklist de conformidade ─────────────────────────────
+      const checklist = await db.select().from(complianceChecklist)
+        .where(eq(complianceChecklist.tenantId, tid));
+      const compliantItems = checklist.filter(c => c.status === "compliant");
+      const complianceScore = checklist.length > 0
+        ? Math.round((compliantItems.length / checklist.length) * 100)
+        : 0;
+
+      // ── 8. Treinamentos ──────────────────────────────────────────
+      const programs = await db.select().from(interventionPrograms)
+        .where(eq(interventionPrograms.tenantId, tid));
+
+      // ══════════════════════════════════════════════════════════════
+      // CONSTRUIR PDF
+      // ══════════════════════════════════════════════════════════════
+      const sections: PdfSection[] = [];
+
+      // ── CAPA ──────────────────────────────────────────────────────
+      sections.push({ type: "title", content: "PROGRAMA DE GERENCIAMENTO DE RISCOS" });
+      sections.push({ type: "subtitle", content: "Riscos Psicossociais — Conforme NR-01 (Portaria MTE 1.419/2024)" });
+      sections.push({ type: "text", content: `Empresa: ${companyName}` });
+      sections.push({ type: "text", content: `Data de elaboracao: ${fmtDate(new Date())}` });
+      if (latestAssessment) {
+        sections.push({ type: "text", content: `Avaliacao base: ${latestAssessment.title} (${fmtDate(latestAssessment.assessmentDate)})` });
+      }
+      sections.push({ type: "divider" });
+
+      // ── KPIs GERAIS ───────────────────────────────────────────────
+      sections.push({ type: "subtitle", content: "1. Resumo Executivo" });
+      sections.push({ type: "kpis", kpis: [
+        { label: "Riscos Identificados", value: String(riskItems.length), color: "#1a365d" },
+        { label: "Criticos/Altos", value: String(criticalItems.length + highItems.length), color: "#ef4444" },
+        { label: "Planos de Acao", value: `${completedPlans.length}/${plans.length}`, color: "#10b981" },
+        { label: "Conformidade NR-01", value: `${complianceScore}%`, color: complianceScore >= 80 ? "#10b981" : "#f59e0b" },
+      ]});
+      sections.push({ type: "spacer" });
+
+      // ── SEÇÃO 2: INVENTÁRIO DE RISCOS ─────────────────────────────
+      sections.push({ type: "subtitle", content: "2. Inventario de Riscos Psicossociais" });
+      sections.push({ type: "text", content: `Metodologia: COPSOQ-II (Copenhagen Psychosocial Questionnaire) — 76 questoes, 12 dimensoes. Avaliacao realizada em ${fmtDate(latestAssessment?.assessmentDate)}.` });
+
+      if (latestReport) {
+        const dims = latestReport as any;
+        const dimensionRows = [
+          { name: "Demanda de Trabalho", score: dims.demand, risk: (dims.demand || 0) > 60 },
+          { name: "Controle / Autonomia", score: dims.control, risk: (dims.control || 0) < 40 },
+          { name: "Apoio Social", score: dims.support, risk: (dims.support || 0) < 40 },
+          { name: "Lideranca", score: dims.leadership, risk: (dims.leadership || 0) < 40 },
+          { name: "Comunidade", score: dims.community, risk: (dims.community || 0) < 40 },
+          { name: "Significado do Trabalho", score: dims.meaning, risk: (dims.meaning || 0) < 40 },
+          { name: "Confianca", score: dims.trust, risk: (dims.trust || 0) < 40 },
+          { name: "Justica", score: dims.justice, risk: (dims.justice || 0) < 40 },
+          { name: "Inseguranca", score: dims.insecurity, risk: (dims.insecurity || 0) > 60 },
+          { name: "Saude Mental", score: dims.mentalHealth, risk: (dims.mentalHealth || 0) > 60 },
+          { name: "Burnout", score: dims.burnout, risk: (dims.burnout || 0) > 60 },
+          { name: "Violencia e Assedio", score: dims.violence, risk: (dims.violence || 0) > 40 },
+        ];
+
+        sections.push({ type: "table", columns: [
+          { header: "Dimensao COPSOQ-II", width: 180 },
+          { header: "Score (0-100)", width: 90, align: "center" },
+          { header: "Nivel de Risco", width: 100, align: "center" },
+        ], rows: dimensionRows.map(d => ({
+          cells: [
+            d.name,
+            String(d.score ?? "—"),
+            d.risk ? "ATENCAO" : "Adequado",
+          ],
+          accentColor: d.risk ? "#ef4444" : "#10b981",
+        }))});
+      }
+      sections.push({ type: "spacer" });
+
+      // ── SEÇÃO 3: CLASSIFICAÇÃO DE RISCOS ──────────────────────────
+      if (riskItems.length > 0) {
+        sections.push({ type: "subtitle", content: "3. Classificacao dos Riscos (Severidade x Probabilidade)" });
+        sections.push({ type: "table", columns: [
+          { header: "Fator de Risco", width: 160 },
+          { header: "Severidade", width: 80, align: "center" },
+          { header: "Probabilidade", width: 80, align: "center" },
+          { header: "Nivel", width: 70, align: "center" },
+          { header: "Controles Atuais", width: 140 },
+        ], rows: riskItems.map(item => ({
+          cells: [
+            item.description || item.riskFactorId || "—",
+            SEVERITY_LABELS[item.severity] || item.severity,
+            PROBABILITY_LABELS[item.probability] || item.probability,
+            RISK_LABELS[item.riskLevel] || item.riskLevel,
+            item.currentControls || "Nenhum",
+          ],
+          accentColor: RISK_COLORS[item.riskLevel],
+        }))});
+        sections.push({ type: "spacer" });
+      }
+
+      // ── SEÇÃO 4: PLANO DE AÇÃO ────────────────────────────────────
+      sections.push({ type: "subtitle", content: "4. Plano de Acao — Medidas Preventivas e Corretivas" });
+      sections.push({ type: "kpis", kpis: [
+        { label: "Total de Acoes", value: String(plans.length), color: "#1a365d" },
+        { label: "Concluidas", value: String(completedPlans.length), color: "#10b981" },
+        { label: "Em Andamento", value: String(inProgressPlans.length), color: "#3b82f6" },
+        { label: "Pendentes", value: String(pendingPlans.length), color: "#f59e0b" },
+      ]});
+
+      if (plans.length > 0) {
+        sections.push({ type: "table", columns: [
+          { header: "Acao", width: 170 },
+          { header: "Prioridade", width: 70, align: "center" },
+          { header: "Status", width: 80, align: "center" },
+          { header: "Prazo", width: 80, align: "center" },
+          { header: "Descricao", width: 130 },
+        ], rows: plans.map(p => ({
+          cells: [
+            p.title,
+            (p.priority || "—").charAt(0).toUpperCase() + (p.priority || "").slice(1),
+            p.status === "completed" ? "Concluido" : p.status === "in_progress" ? "Em andamento" : "Pendente",
+            fmtDate(p.deadline),
+            (p.description || "").slice(0, 60) + ((p.description || "").length > 60 ? "..." : ""),
+          ],
+          accentColor: p.status === "completed" ? "#10b981" : p.status === "in_progress" ? "#3b82f6" : "#f59e0b",
+        }))});
+      }
+      sections.push({ type: "spacer" });
+
+      // ── SEÇÃO 5: CRONOGRAMA DE IMPLEMENTAÇÃO ─────────────────────
+      sections.push({ type: "subtitle", content: "5. Cronograma de Implementacao" });
+      if (milestones.length > 0) {
+        sections.push({ type: "table", columns: [
+          { header: "Etapa", width: 200 },
+          { header: "Prazo", width: 90, align: "center" },
+          { header: "Status", width: 90, align: "center" },
+          { header: "Conclusao", width: 90, align: "center" },
+        ], rows: milestones.map(m => ({
+          cells: [
+            m.title,
+            fmtDate(m.targetDate),
+            m.status === "completed" ? "Concluido" : m.status === "in_progress" ? "Em andamento" : m.status === "overdue" ? "ATRASADO" : "Pendente",
+            m.completedDate ? fmtDate(m.completedDate) : "—",
+          ],
+          accentColor: m.status === "completed" ? "#10b981" : m.status === "overdue" ? "#ef4444" : "#f59e0b",
+        }))});
+        sections.push({ type: "text", content: `Progresso: ${completedMilestones.length} de ${milestones.length} etapas concluidas (${milestones.length > 0 ? Math.round((completedMilestones.length / milestones.length) * 100) : 0}%)` });
+      }
+      sections.push({ type: "spacer" });
+
+      // ── SEÇÃO 6: INTEGRAÇÃO PCMSO ─────────────────────────────────
+      sections.push({ type: "subtitle", content: "6. Integracao com PCMSO (NR-07)" });
+      sections.push({ type: "text", content: "Recomendacoes de exames e avaliacoes de saude geradas a partir dos riscos identificados:" });
+      if (pcmso.length > 0) {
+        sections.push({ type: "table", columns: [
+          { header: "Tipo de Exame", width: 160 },
+          { header: "Frequencia", width: 90, align: "center" },
+          { header: "Prioridade", width: 80, align: "center" },
+          { header: "Populacao Alvo", width: 120 },
+          { header: "Base Medica", width: 120 },
+        ], rows: pcmso.map(r => ({
+          cells: [
+            (r as any).examType || "—",
+            (r as any).frequency || "—",
+            (r as any).priority || "—",
+            (r as any).targetPopulation || "—",
+            ((r as any).medicalBasis || "").slice(0, 50) + (((r as any).medicalBasis || "").length > 50 ? "..." : ""),
+          ],
+        }))});
+      } else {
+        sections.push({ type: "text", content: "Nenhuma recomendacao PCMSO registrada. Execute o inventario de riscos para gerar recomendacoes automaticas." });
+      }
+      sections.push({ type: "spacer" });
+
+      // ── SEÇÃO 7: PROGRAMA DE TREINAMENTO ──────────────────────────
+      sections.push({ type: "subtitle", content: "7. Programa de Capacitacao e Treinamento" });
+      if (programs.length > 0) {
+        sections.push({ type: "table", columns: [
+          { header: "Programa", width: 200 },
+          { header: "Duracao", width: 80, align: "center" },
+          { header: "Inicio", width: 90, align: "center" },
+          { header: "Termino", width: 90, align: "center" },
+        ], rows: programs.map(p => ({
+          cells: [
+            p.title,
+            `${(p as any).durationHours || (p as any).duration || "—"}h`,
+            fmtDate((p as any).startDate),
+            fmtDate((p as any).endDate),
+          ],
+        }))});
+      } else {
+        sections.push({ type: "text", content: "Nenhum programa de treinamento cadastrado." });
+      }
+      sections.push({ type: "spacer" });
+
+      // ── SEÇÃO 8: CHECKLIST NR-01 ──────────────────────────────────
+      sections.push({ type: "subtitle", content: "8. Checklist de Conformidade NR-01" });
+      sections.push({ type: "kpis", kpis: [
+        { label: "Total Requisitos", value: String(checklist.length), color: "#1a365d" },
+        { label: "Conformes", value: String(compliantItems.length), color: "#10b981" },
+        { label: "Score", value: `${complianceScore}%`, color: complianceScore >= 80 ? "#10b981" : "#ef4444" },
+      ]});
+      sections.push({ type: "spacer" });
+
+      // ── RODAPÉ: BASE LEGAL ────────────────────────────────────────
+      sections.push({ type: "divider" });
+      sections.push({ type: "subtitle", content: "Base Legal e Normativa" });
+      sections.push({ type: "list", items: [
+        "NR-01 — Disposicoes Gerais e Gerenciamento de Riscos Ocupacionais (Portaria MTE 1.419/2024)",
+        "NR-07 — Programa de Controle Medico de Saude Ocupacional (PCMSO)",
+        "NR-17 — Ergonomia e Condicoes de Trabalho",
+        "Guia MTE — Fatores de Riscos Psicossociais Relacionados ao Trabalho (2024)",
+        "COPSOQ-II — Copenhagen Psychosocial Questionnaire (metodologia oficial)",
+      ]});
+      sections.push({ type: "spacer" });
+
+      // ── ASSINATURA ────────────────────────────────────────────────
+      sections.push({ type: "signature", signatureName: "Responsavel Tecnico", signatureRole: "Consultor SST", signatureRegistry: "CREA/CRP" });
+
+      // ── GERAR PDF ─────────────────────────────────────────────────
+      const buffer = await generateGenericReportPdf({
+        reportTitle: "PGR — Programa de Gerenciamento de Riscos Psicossociais",
+        reportSubtitle: `${companyName} — NR-01 Conforme Portaria MTE 1.419/2024`,
+        referenceText: "Documento gerado automaticamente pela BlackBelt Platform",
+        companyName,
+        date: fmtDate(new Date()),
+        sections,
+      }, branding);
+
+      return { filename: `pgr-consolidado-${companyName.replace(/\s+/g, "-").toLowerCase()}.pdf`, data: buffer.toString("base64") };
     }),
 });

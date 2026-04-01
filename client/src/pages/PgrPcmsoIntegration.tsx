@@ -84,6 +84,7 @@ export default function PgrPcmsoIntegration() {
   }
 
   const exportPcmsoIntegrationMutation = trpc.nr01Pdf.exportPcmsoIntegration.useMutation();
+  const exportConsolidatedPgrMutation = trpc.nr01Pdf.exportConsolidatedPgr.useMutation();
 
   const listQuery = trpc.pcmsoIntegration.list.useQuery({ tenantId });
   const generateMutation = trpc.pcmsoIntegration.generate.useMutation({
@@ -133,13 +134,22 @@ export default function PgrPcmsoIntegration() {
           </div>
           <div className="flex items-center gap-2">
             <Button
+              variant="default"
+              size="sm"
+              disabled={isExporting || !tenantId}
+              onClick={() => exportPdf(() => exportConsolidatedPgrMutation.mutateAsync({ tenantId: tenantId! }))}
+            >
+              <FileDown className="h-4 w-4 mr-2" />
+              {isExporting ? "Gerando..." : "PGR Consolidado"}
+            </Button>
+            <Button
               variant="outline"
               size="sm"
               disabled={isExporting || !tenantId}
               onClick={() => exportPdf(() => exportPcmsoIntegrationMutation.mutateAsync({ tenantId: tenantId! }))}
             >
               <FileDown className="h-4 w-4 mr-2" />
-              {isExporting ? "Exportando..." : "Exportar PDF"}
+              {isExporting ? "Exportando..." : "Exportar PCMSO"}
             </Button>
           <Button
             onClick={handleGenerate}
