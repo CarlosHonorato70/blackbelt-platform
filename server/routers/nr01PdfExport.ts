@@ -458,8 +458,17 @@ export const nr01PdfExportRouter = router({
           { cells: ["Emitido por", cert.issuedBy || "—"] },
         ]},
         { type: "spacer" },
-        { type: "signature", signatureName: cert.issuedBy || "Responsavel Tecnico", signatureRole: "Auditor de Conformidade NR-01" },
+        { type: "text", content: `Verificacao online: https://blackbeltconsultoria.com/verify/${cert.certificateNumber}` },
+        { type: "spacer" },
+        { type: "signature", signatureName: cert.issuedBy || ctx.user?.name || "Responsavel Tecnico", signatureRole: "Auditor de Conformidade NR-01" },
       ];
+
+      // Add tenant CNPJ if available
+      const [certTenant] = await db.select().from(tenants).where(eq(tenants.id, ctx.tenantId!)).limit(1);
+      const certCnpj = (certTenant as any)?.cnpj;
+      if (certCnpj) {
+        sections.splice(3, 0, { type: "text", content: `CNPJ: ${certCnpj}` });
+      }
 
       const buffer = await generateGenericReportPdf({
         reportTitle: "Certificado de Conformidade NR-01",
@@ -993,6 +1002,7 @@ export const nr01PdfExportRouter = router({
       // ── 1. Dados da empresa ───────────────────────────────────────
       const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tid)).limit(1);
       const companyName = tenant?.name || "Empresa";
+      const companyCnpj = (tenant as any)?.cnpj || "";
 
       // ── 2. Avaliação de riscos + itens ────────────────────────────
       const assessmentList = await db.select().from(riskAssessments)
@@ -1057,6 +1067,9 @@ export const nr01PdfExportRouter = router({
       sections.push({ type: "title", content: "PROGRAMA DE GERENCIAMENTO DE RISCOS" });
       sections.push({ type: "subtitle", content: "Riscos Psicossociais — Conforme NR-01 (Portaria MTE 1.419/2024)" });
       sections.push({ type: "text", content: `Empresa: ${companyName}` });
+      if (companyCnpj) {
+        sections.push({ type: "text", content: `CNPJ: ${companyCnpj}` });
+      }
       sections.push({ type: "text", content: `Data de elaboracao: ${fmtDate(new Date())}` });
       if (latestAssessment) {
         sections.push({ type: "text", content: `Avaliacao base: ${latestAssessment.title} (${fmtDate(latestAssessment.assessmentDate)})` });
@@ -1080,18 +1093,18 @@ export const nr01PdfExportRouter = router({
       if (latestReport) {
         const dims = latestReport as any;
         const dimensionRows = [
-          { name: "Demanda de Trabalho", score: dims.demand, risk: (dims.demand || 0) > 60 },
-          { name: "Controle / Autonomia", score: dims.control, risk: (dims.control || 0) < 40 },
-          { name: "Apoio Social", score: dims.support, risk: (dims.support || 0) < 40 },
-          { name: "Lideranca", score: dims.leadership, risk: (dims.leadership || 0) < 40 },
-          { name: "Comunidade", score: dims.community, risk: (dims.community || 0) < 40 },
-          { name: "Significado do Trabalho", score: dims.meaning, risk: (dims.meaning || 0) < 40 },
-          { name: "Confianca", score: dims.trust, risk: (dims.trust || 0) < 40 },
-          { name: "Justica", score: dims.justice, risk: (dims.justice || 0) < 40 },
-          { name: "Inseguranca", score: dims.insecurity, risk: (dims.insecurity || 0) > 60 },
-          { name: "Saude Mental", score: dims.mentalHealth, risk: (dims.mentalHealth || 0) > 60 },
-          { name: "Burnout", score: dims.burnout, risk: (dims.burnout || 0) > 60 },
-          { name: "Violencia e Assedio", score: dims.violence, risk: (dims.violence || 0) > 40 },
+          { name: "Demanda de Trabalho", score: dims.averageDemandScore, risk: (dims.averageDemandScore || 0) > 60 },
+          { name: "Controle / Autonomia", score: dims.averageControlScore, risk: (dims.averageControlScore || 0) < 40 },
+          { name: "Apoio Social", score: dims.averageSupportScore, risk: (dims.averageSupportScore || 0) < 40 },
+          { name: "Lideranca", score: dims.averageLeadershipScore, risk: (dims.averageLeadershipScore || 0) < 40 },
+          { name: "Comunidade", score: dims.averageCommunityScore, risk: (dims.averageCommunityScore || 0) < 40 },
+          { name: "Significado do Trabalho", score: dims.averageMeaningScore, risk: (dims.averageMeaningScore || 0) < 40 },
+          { name: "Confianca", score: dims.averageTrustScore, risk: (dims.averageTrustScore || 0) < 40 },
+          { name: "Justica", score: dims.averageJusticeScore, risk: (dims.averageJusticeScore || 0) < 40 },
+          { name: "Inseguranca", score: dims.averageInsecurityScore, risk: (dims.averageInsecurityScore || 0) > 60 },
+          { name: "Saude Mental", score: dims.averageMentalHealthScore, risk: (dims.averageMentalHealthScore || 0) > 60 },
+          { name: "Burnout", score: dims.averageBurnoutScore, risk: (dims.averageBurnoutScore || 0) > 60 },
+          { name: "Violencia e Assedio", score: dims.averageViolenceScore, risk: (dims.averageViolenceScore || 0) > 40 },
         ];
 
         sections.push({ type: "table", columns: [
@@ -1120,7 +1133,23 @@ export const nr01PdfExportRouter = router({
           { header: "Controles Atuais", width: 140 },
         ], rows: riskItems.map(item => ({
           cells: [
-            item.description || item.riskFactorId || "—",
+            (() => {
+              const riskFactorLabels: Record<string, string> = {
+                "PSY-DEMANDA": "Sobrecarga de Demanda de Trabalho",
+                "PSY-CONTROLE": "Falta de Autonomia e Controle",
+                "PSY-APOIO": "Insuficiencia de Apoio Social",
+                "PSY-LIDERANCA": "Deficiencia na Qualidade de Lideranca",
+                "PSY-COMUNIDADE": "Fragilidade no Senso de Comunidade",
+                "PSY-SIGNIFICADO": "Perda de Significado do Trabalho",
+                "PSY-CONFIANCA": "Deficit de Confianca Organizacional",
+                "PSY-JUSTICA": "Percepcao de Injustica no Trabalho",
+                "PSY-INSEGURANCA": "Inseguranca no Emprego",
+                "PSY-SAUDEMENTAL": "Comprometimento da Saude Mental",
+                "PSY-BURNOUT": "Sindrome de Burnout",
+                "PSY-VIOLENCIA": "Exposicao a Violencia e Assedio",
+              };
+              return riskFactorLabels[item.riskFactorId] || item.riskFactorId || "—";
+            })(),
             SEVERITY_LABELS[item.severity] || item.severity,
             PROBABILITY_LABELS[item.probability] || item.probability,
             RISK_LABELS[item.riskLevel] || item.riskLevel,
@@ -1216,7 +1245,7 @@ export const nr01PdfExportRouter = router({
         ], rows: programs.map(p => ({
           cells: [
             p.title,
-            `${(p as any).durationHours || (p as any).duration || "—"}h`,
+            `${(p as any).duration || "—"}h`,
             fmtDate((p as any).startDate),
             fmtDate((p as any).endDate),
           ],
@@ -1248,7 +1277,7 @@ export const nr01PdfExportRouter = router({
       sections.push({ type: "spacer" });
 
       // ── ASSINATURA ────────────────────────────────────────────────
-      sections.push({ type: "signature", signatureName: "Responsavel Tecnico", signatureRole: "Consultor SST", signatureRegistry: "CREA/CRP" });
+      sections.push({ type: "signature", signatureName: ctx.user?.name || "Responsavel Tecnico", signatureRole: "Consultor SST", signatureRegistry: ctx.user?.email || "CREA/CRP" });
 
       // ── GERAR PDF ─────────────────────────────────────────────────
       const buffer = await generateGenericReportPdf({

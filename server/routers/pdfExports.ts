@@ -426,17 +426,49 @@ export const pdfExportsRouter = router({
         date: new Date().toLocaleDateString("pt-BR"),
         methodology: assessment.methodology || "COPSOQ-II + IA",
         assessor: assessment.assessor || "Sistema IA",
-        items: items.map((i) => ({
-          hazardCode: (i as any).hazardCode || "—",
-          hazard: i.observations || "Risco psicossocial",
-          risk: i.observations || "—",
-          healthDamage: "Estresse, ansiedade, burnout",
-          severity: i.severity || "medium",
-          probability: i.probability || "possible",
-          riskLevel: i.riskLevel || "medium",
-          currentControls: i.currentControls || "Nenhum identificado",
-          recommendedControls: i.observations || "Implementar medidas preventivas",
-        })),
+        items: items.map((i) => {
+          // Map riskFactorId (PSY-DEMANDA etc.) to readable descriptions
+          const riskFactorLabels: Record<string, string> = {
+            "PSY-DEMANDA": "Sobrecarga de Demanda de Trabalho",
+            "PSY-CONTROLE": "Falta de Autonomia e Controle",
+            "PSY-APOIO": "Insuficiencia de Apoio Social",
+            "PSY-LIDERANCA": "Deficiencia na Qualidade de Lideranca",
+            "PSY-COMUNIDADE": "Fragilidade no Senso de Comunidade",
+            "PSY-SIGNIFICADO": "Perda de Significado do Trabalho",
+            "PSY-CONFIANCA": "Deficit de Confianca Organizacional",
+            "PSY-JUSTICA": "Percepcao de Injustica no Trabalho",
+            "PSY-INSEGURANCA": "Inseguranca no Emprego",
+            "PSY-SAUDEMENTAL": "Comprometimento da Saude Mental",
+            "PSY-BURNOUT": "Sindrome de Burnout",
+            "PSY-VIOLENCIA": "Exposicao a Violencia e Assedio",
+          };
+          const healthDamageMap: Record<string, string> = {
+            "PSY-DEMANDA": "Estresse cronico, exaustao, cefaleia tensional",
+            "PSY-CONTROLE": "Ansiedade, desmotivacao, presenteismo",
+            "PSY-APOIO": "Isolamento social, depressao, absenteismo",
+            "PSY-LIDERANCA": "Conflitos interpessoais, estresse, turnover",
+            "PSY-COMUNIDADE": "Isolamento, baixa cooperacao, clima hostil",
+            "PSY-SIGNIFICADO": "Desmotivacao, apatia, turnover elevado",
+            "PSY-CONFIANCA": "Ansiedade, rumores, clima de desconfianca",
+            "PSY-JUSTICA": "Frustracao, queixas trabalhistas, absenteismo",
+            "PSY-INSEGURANCA": "Ansiedade, insonia, queda de produtividade",
+            "PSY-SAUDEMENTAL": "Depressao, ansiedade, afastamento INSS",
+            "PSY-BURNOUT": "Esgotamento profissional, despersonalizacao",
+            "PSY-VIOLENCIA": "Trauma, TEPT, afastamento, litigios",
+          };
+          const factorId = i.riskFactorId || "";
+          return {
+            hazardCode: factorId || "—",
+            hazard: riskFactorLabels[factorId] || i.observations || "Risco psicossocial",
+            risk: i.observations || "—",
+            healthDamage: healthDamageMap[factorId] || "Estresse, ansiedade, burnout",
+            severity: i.severity || "medium",
+            probability: i.probability || "possible",
+            riskLevel: i.riskLevel || "medium",
+            currentControls: i.currentControls || "Nenhum identificado",
+            recommendedControls: i.observations || "Implementar medidas preventivas",
+          };
+        }),
         totalWorkers: items[0]?.affectedPopulation ? Number(items[0].affectedPopulation) : undefined,
       };
 

@@ -1952,7 +1952,8 @@ async function generateFallbackResponse(
         headcount,
         street: data.logradouro, number: data.numero, complement: data.complemento,
         neighborhood: data.bairro, city: data.municipio, state: data.uf,
-        zipCode: data.cep, contactPhone: data.telefone, contactEmail: data.email,
+        zipCode: data.cep, contactPhone: data.telefone,
+        contactEmail: (memory as any).contactEmail || data.email,
       }, tenantId, userId);
 
       if (execResult.success) {
@@ -2136,7 +2137,8 @@ async function generateFallbackResponse(
         sector: result.sector, headcount: currentHeadcount,
         street: data.logradouro, number: data.numero, complement: data.complemento,
         neighborhood: data.bairro, city: data.municipio, state: data.uf,
-        zipCode: data.cep, contactPhone: data.telefone, contactEmail: data.email,
+        zipCode: data.cep, contactPhone: data.telefone,
+        contactEmail: (memory as any).contactEmail || data.email,
       }, tenantId, userId);
 
       const content = buildStrategyText(currentHeadcount, result.sector!, result.sectorName!, result.highRisk!) +

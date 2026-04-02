@@ -491,6 +491,47 @@ ${table}`;
 }
 
 // ============================================================================
+// KPI and Impact helpers for action plans
+// ============================================================================
+
+function getKpiForDimension(dim: string): string {
+  const kpis: Record<string, string> = {
+    demanda: "Reducao de horas extras em 30% e queixas de sobrecarga em 50%",
+    controle: "Aumento do indice de autonomia no COPSOQ em 20 pontos",
+    apoio: "Score de apoio social COPSOQ acima de 60/100",
+    lideranca: "Avaliacao de lideranca acima de 70/100 no proximo ciclo",
+    comunidade: "Indice de pertencimento acima de 65/100",
+    significado: "Score de significado do trabalho acima de 70/100",
+    confianca: "Indice de confianca organizacional acima de 60/100",
+    justica: "Score de justica organizacional acima de 65/100",
+    inseguranca: "Reducao do indice de inseguranca abaixo de 40/100",
+    saudeMental: "Reducao de afastamentos por saude mental em 40%",
+    burnout: "Reducao do score de burnout MBI abaixo de 40/100",
+    violencia: "Zero casos de assedio registrados no trimestre",
+  };
+  return kpis[dim] || "Melhoria do score COPSOQ-II na proxima avaliacao";
+}
+
+function getImpactForDimension(dim: string, severity: string): string {
+  const impacts: Record<string, string> = {
+    demanda: "Reducao de absenteismo, presenteismo e turnover. Melhoria do clima organizacional.",
+    controle: "Aumento do engajamento e satisfacao. Reducao de estresse cronico.",
+    apoio: "Fortalecimento das relacoes interpessoais e reducao de isolamento.",
+    lideranca: "Melhoria na comunicacao gestor-equipe e reducao de conflitos.",
+    comunidade: "Fortalecimento do senso de pertencimento e cooperacao.",
+    significado: "Aumento da motivacao intrinseca e reducao de turnover.",
+    confianca: "Melhoria na transparencia e reducao de rumores organizacionais.",
+    justica: "Percepcao de equidade, reducao de queixas trabalhistas.",
+    inseguranca: "Reducao de ansiedade e melhoria na produtividade.",
+    saudeMental: "Reducao de afastamentos INSS e custos com plano de saude.",
+    burnout: "Prevencao de esgotamento profissional e retencao de talentos.",
+    violencia: "Ambiente seguro, reducao de litigios e conformidade legal.",
+  };
+  const severityNote = severity === "critical" ? " URGENTE: Risco critico requer intervencao imediata." : severity === "high" ? " Prioridade alta." : "";
+  return (impacts[dim] || "Melhoria geral dos indicadores psicossociais.") + severityNote;
+}
+
+// ============================================================================
 // STEP 3: Generate Risk Inventory + Action Plan
 // ============================================================================
 
@@ -667,7 +708,10 @@ export async function executeGenerateInventoryAndPlan(
           id: nanoid(), tenantId, assessmentItemId: null,
           title: action.title, description: action.description,
           actionType: action.type as any, priority: (item.severity === "critical" ? "urgent" : item.severity === "high" ? "high" : "medium") as any,
-          status: "pending", deadline, createdAt: new Date(), updatedAt: new Date(),
+          status: "pending", deadline,
+          kpiIndicator: getKpiForDimension(item.dim),
+          expectedImpact: getImpactForDimension(item.dim, item.severity),
+          createdAt: new Date(), updatedAt: new Date(),
         });
         planCount++;
       }
