@@ -5,6 +5,7 @@ import { log } from "./_core/logger";
 import { checkDbHealth } from "./db";
 import { registerPdfDownloadRoutes } from "./pdfDownloadRoutes";
 import { registerImportExportRoutes } from "./importExportRoutes";
+import { registerCertificationUploadRoutes } from "./certificationUploadRoutes";
 
 /**
  * Rotas Express - health check, webhooks Asaas e rotas de download.
@@ -383,4 +384,9 @@ export function registerRoutes(app: Express) {
   // IMPORT/EXPORT ROUTES (people & sectors)
   // ============================================
   registerImportExportRoutes(app);
+
+  // ============================================
+  // CERTIFICATION UPLOAD ROUTES
+  // ============================================
+  registerCertificationUploadRoutes(app);
 }

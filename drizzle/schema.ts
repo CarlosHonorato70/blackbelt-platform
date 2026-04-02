@@ -1303,3 +1303,39 @@ export const emailQueue = mysqlTable(
     nextRetryIdx: index("idx_email_queue_retry").on(table.nextRetryAt),
   })
 );
+
+// ============================================================================
+// CERTIFICACOES PROFISSIONAIS (consultorias)
+// ============================================================================
+
+export const consultantCertifications = mysqlTable(
+  "consultant_certifications",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    tenantId: varchar("tenantId", { length: 64 }).notNull(),
+    uploadedBy: varchar("uploadedBy", { length: 64 }).notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    registryNumber: varchar("registryNumber", { length: 100 }),
+    certType: varchar("certType", { length: 50 }).notNull(), // CRP, CREA, CRM, CRN, CREF, ISO, NR, outro
+    issuer: varchar("issuer", { length: 255 }),
+    issuedAt: timestamp("issuedAt"),
+    expiresAt: timestamp("expiresAt"),
+    fileKey: varchar("fileKey", { length: 500 }).notNull(),
+    fileUrl: varchar("fileUrl", { length: 1000 }).notNull(),
+    fileName: varchar("fileName", { length: 255 }).notNull(),
+    fileSize: int("fileSize").notNull(),
+    mimeType: varchar("mimeType", { length: 100 }).default("application/pdf").notNull(),
+    status: varchar("status", { length: 20 }).default("active").notNull(), // active, expired, revoked
+    notes: text("notes"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    tenantIdx: index("idx_cert_tenant").on(table.tenantId),
+    typeIdx: index("idx_cert_type").on(table.certType),
+    statusIdx: index("idx_cert_status").on(table.status),
+  })
+);
+
+export type ConsultantCertification = typeof consultantCertifications.$inferSelect;
+export type InsertConsultantCertification = typeof consultantCertifications.$inferInsert;

@@ -55,6 +55,7 @@ import {
   Headphones,
   ShieldAlert,
   Activity,
+  BadgeCheck,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { CSSProperties, Fragment, useEffect, useState } from "react";
@@ -112,6 +113,7 @@ const menuItems: MenuItem[] = [
   { icon: Banknote, label: "Configurações de Pagamento", path: "/payment-settings", group: "Comercial", consultantOnly: true },
   // Clientes removido — gestão unificada via Empresas
   { icon: Mail, label: "Convites", path: "/user-invites", group: "Comercial", consultantOnly: true },
+  { icon: BadgeCheck, label: "Certificações", path: "/certifications", group: "Comercial", consultantOnly: true },
 
   // --- Administração (somente admin master) ---
   { icon: Building2, label: "Tenants", path: "/tenants", adminOnly: true, group: "Administração" },

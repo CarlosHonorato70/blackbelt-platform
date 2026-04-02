@@ -56,6 +56,7 @@ import { companiesRouter } from "./routers/companies";
 import { agentRouter } from "./routers/agent";
 import { supportAgentRouter } from "./routers/supportAgent";
 import { adminMonitoringRouter } from "./routers/adminMonitoring";
+import { consultantCertificationsRouter } from "./routers/consultantCertifications";
 
 
 export const appRouter = router({
@@ -153,6 +154,9 @@ export const appRouter = router({
 
   // Monitoramento (Admin Master)
   adminMonitoring: adminMonitoringRouter,
+
+  // Certificações profissionais (consultorias)
+  consultantCertifications: consultantCertificationsRouter,
 });
 
 export type AppRouter = typeof appRouter;

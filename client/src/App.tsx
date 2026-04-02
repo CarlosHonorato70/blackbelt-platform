@@ -90,6 +90,7 @@ const Companies = lazy(() => import("./pages/Companies"));
 const GuidedWorkflow = lazy(() => import("./pages/GuidedWorkflow"));
 const AgentChat = lazy(() => import("./pages/AgentChat"));
 const SupportChat = lazy(() => import("./pages/SupportChat"));
+const ConsultantCertifications = lazy(() => import("./pages/ConsultantCertifications"));
 
 // Subscription pages
 const Pricing = lazy(() => import("./pages/subscription/Pricing"));
@@ -223,6 +224,7 @@ export default function App() {
                 <Route path="/security-dashboard" element={<ProtectedPage><SecurityDashboard /></ProtectedPage>} />
                 <Route path="/branding-settings" element={<ProtectedPage><BrandingSettings /></ProtectedPage>} />
                 <Route path="/payment-settings" element={<ProtectedPage><PaymentSettings /></ProtectedPage>} />
+                <Route path="/certifications" element={<ProtectedPage><ConsultantCertifications /></ProtectedPage>} />
                 <Route path="/test-dashboard" element={<ProtectedPage><TestDashboard /></ProtectedPage>} />
                 <Route path="/help" element={<ProtectedPage><Help /></ProtectedPage>} />
                 <Route path="/support-chat" element={<ProtectedPage><SupportChat /></ProtectedPage>} />
