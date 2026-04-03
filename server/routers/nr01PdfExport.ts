@@ -956,7 +956,7 @@ export const nr01PdfExportRouter = router({
         { type: "kpis", kpis: [
           { label: "Score Conformidade", value: `${complianceScore}%`, color: complianceScore >= 70 ? "#10b981" : "#ef4444" },
           { label: "Requisitos Atendidos", value: `${compliant}/${totalChecklist}`, color: "#1a365d" },
-          { label: "Planos de Ação", value: `${apCompleted}/${apTotal} concluidos`, color: "#3b82f6" },
+          { label: "Planos de Ação", value: `${apCompleted}/${apTotal} concluídos`, color: "#3b82f6" },
         ]},
         { type: "divider" },
         { type: "title", content: "3. Impacto Financeiro" },
