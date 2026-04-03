@@ -56,6 +56,7 @@ import {
   pendingCopsoqPayments,
   creditTransactions,
   tenantCredits,
+  consultantCertifications,
 } from "../drizzle/schema";
 import {
   copsoqAssessments,
@@ -485,6 +486,7 @@ export async function deleteTenant(id: string) {
   await safeDelete(() => db.delete(clients).where(eq(clients.tenantId, id)), "clients");
   await safeDelete(() => db.delete(dataConsents).where(eq(dataConsents.tenantId, id)), "dataConsents");
   await safeDelete(() => db.delete(auditLogs).where(eq(auditLogs.tenantId, id)), "auditLogs");
+  await safeDelete(() => db.delete(consultantCertifications).where(eq(consultantCertifications.tenantId, id)), "consultantCertifications");
   await safeDelete(() => db.delete(userRoles).where(eq(userRoles.tenantId, id)), "userRoles");
   await safeDelete(() => db.delete(userInvites).where(eq(userInvites.tenantId, id)), "userInvites");
   await safeDelete(() => db.delete(people).where(eq(people.tenantId, id)), "people");
