@@ -25,6 +25,7 @@ import {
   FileText,
   Plus,
   AlertTriangle,
+  ArrowLeft,
 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -34,8 +35,10 @@ import {
   exportToPDF,
 } from "@/lib/exportUtils";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 export default function ComplianceReports() {
+  const navigate = useNavigate();
   const { selectedTenant } = useTenant();
   const { data: user } = trpc.auth.me.useQuery();
   const effectiveId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
@@ -199,16 +202,21 @@ export default function ComplianceReports() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Relatórios de Compliance NR-01
-          </h1>
-          <p className="text-muted-foreground">
-            Gestão de conformidade com Portaria MTE nº 1.419/2024 -{" "}
-            {typeof selectedTenant === "string"
-              ? selectedTenant
-              : selectedTenant?.name}
-          </p>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Relatórios de Compliance NR-01
+            </h1>
+            <p className="text-muted-foreground">
+              Gestão de conformidade com Portaria MTE nº 1.419/2024 -{" "}
+              {typeof selectedTenant === "string"
+                ? selectedTenant
+                : selectedTenant?.name}
+            </p>
+          </div>
         </div>
 
         {/* Resumo de Compliance */}

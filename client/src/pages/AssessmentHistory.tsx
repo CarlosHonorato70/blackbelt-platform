@@ -25,6 +25,7 @@ import {
   XCircle,
   Download,
   Eye,
+  ArrowLeft,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth.tsx";
@@ -83,11 +84,16 @@ export default function AssessmentHistory() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Histórico de Avaliações</h1>
-        <p className="text-gray-600 mt-2">
-          Visualize e analise todas as avaliações COPSOQ-II realizadas
-        </p>
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold">Histórico de Avaliações</h1>
+          <p className="text-gray-600 mt-2">
+            Visualize e analise todas as avaliações COPSOQ-II realizadas
+          </p>
+        </div>
       </div>
 
       {/* FILTROS */}

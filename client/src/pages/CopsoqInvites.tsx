@@ -50,9 +50,11 @@ import {
   Wallet,
   Copy,
   Loader2,
+  ArrowLeft,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth.tsx";
+import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 
 interface Invitee {
@@ -64,6 +66,7 @@ interface Invitee {
 
 export default function CopsoqInvites() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [invitees, setInvitees] = useState<Invitee[]>([]);
   const [assessmentTitle, setAssessmentTitle] = useState("");
   const [expiresIn, setExpiresIn] = useState("7");
@@ -321,12 +324,17 @@ export default function CopsoqInvites() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Gerenciar Convites COPSOQ-II</h1>
-        <p className="text-gray-600 mt-2">
-          Importe respondentes e envie convites em lote para participar da
-          avaliação
-        </p>
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold">Gerenciar Convites COPSOQ-II</h1>
+          <p className="text-gray-600 mt-2">
+            Importe respondentes e envie convites em lote para participar da
+            avaliação
+          </p>
+        </div>
       </div>
 
       <Tabs defaultValue="send" className="w-full">

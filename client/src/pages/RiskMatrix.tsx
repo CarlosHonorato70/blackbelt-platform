@@ -28,8 +28,9 @@ import { trpc } from "@/lib/trpc";
 import { useTenant } from "@/contexts/TenantContext";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { toast } from "sonner";
-import { Grid3X3, AlertTriangle, Loader2, FileDown } from "lucide-react";
+import { Grid3X3, AlertTriangle, Loader2, FileDown, ArrowLeft } from "lucide-react";
 import { usePdfExport } from "@/hooks/usePdfExport";
+import { useNavigate } from "react-router-dom";
 
 const SEVERITY_LABELS = ["Baixa", "Média", "Alta", "Crítica"] as const;
 const PROBABILITY_LABELS = ["Rara", "Improvável", "Possível", "Provável", "Certa"] as const;
@@ -66,6 +67,7 @@ interface RiskItem {
 
 export default function RiskMatrix() {
   usePageMeta({ title: "Matriz de Risco Psicossocial" });
+  const navigate = useNavigate();
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
   const { exportPdf, isExporting } = usePdfExport();
@@ -118,6 +120,9 @@ export default function RiskMatrix() {
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
             <Grid3X3 className="h-8 w-8 text-primary" />
             <div>
               <h1 className="text-2xl font-bold">Matriz de Risco Psicossocial</h1>

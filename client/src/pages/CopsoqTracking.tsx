@@ -8,15 +8,17 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
-  CheckCircle, Clock, AlertCircle, XCircle, Mail, Users, BarChart3, ShieldCheck,
+  CheckCircle, Clock, AlertCircle, XCircle, Mail, Users, BarChart3, ShieldCheck, ArrowLeft,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTenant } from "@/contexts/TenantContext";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function CopsoqTracking() {
   usePageMeta({ title: "Respostas COPSOQ" });
+  const navigate = useNavigate();
   const { selectedTenant } = useTenant();
   const { data: user } = trpc.auth.me.useQuery();
   const effectiveId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
@@ -110,11 +112,16 @@ export default function CopsoqTracking() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Respostas COPSOQ-II</h1>
-        <p className="text-gray-600 mt-2">
-          Acompanhe o status de resposta e visualize os resultados anônimos da avaliação
-        </p>
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold">Respostas COPSOQ-II</h1>
+          <p className="text-gray-600 mt-2">
+            Acompanhe o status de resposta e visualize os resultados anônimos da avaliação
+          </p>
+        </div>
       </div>
 
       {/* Aviso de Anonimato */}

@@ -42,7 +42,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Download, TrendingUp, Users, AlertTriangle, Loader2, Brain } from "lucide-react";
+import { Download, TrendingUp, Users, AlertTriangle, Loader2, Brain, ArrowLeft } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth.tsx";
 import { useTenant } from "@/contexts/TenantContext";
@@ -270,12 +270,17 @@ export default function AssessmentAnalytics() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Análise de Avaliações</h1>
-        <p className="text-gray-600 mt-2">
-          Dashboard consolidado com estatísticas e tendências de riscos
-          psicossociais
-        </p>
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold">Análise de Avaliações</h1>
+          <p className="text-gray-600 mt-2">
+            Dashboard consolidado com estatísticas e tendências de riscos
+            psicossociais
+          </p>
+        </div>
       </div>
 
       {/* KPIs */}

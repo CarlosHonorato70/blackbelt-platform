@@ -5,11 +5,13 @@
  * Acessada via redirect do backend após clicar no link do email.
  */
 
-import { useSearchParams } from "react-router-dom";
-import { CheckCircle2, XCircle, AlertTriangle, FileText } from "lucide-react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { CheckCircle2, XCircle, AlertTriangle, FileText, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function ProposalResult() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const status = searchParams.get("status");
 
   const configs: Record<string, { icon: any; title: string; message: string; color: string; bgColor: string }> = {
@@ -56,6 +58,11 @@ export default function ProposalResult() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="max-w-md w-full">
+        <div className="mb-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        </div>
         <div className={`${config.bgColor} rounded-2xl p-8 text-center shadow-lg`}>
           <Icon className={`h-16 w-16 mx-auto mb-4 ${config.color}`} />
           <h1 className="text-2xl font-bold text-gray-900 mb-3">{config.title}</h1>

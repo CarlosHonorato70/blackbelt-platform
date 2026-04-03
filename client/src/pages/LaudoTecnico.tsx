@@ -24,8 +24,9 @@ import { trpc } from "@/lib/trpc";
 import { useTenant } from "@/contexts/TenantContext";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { toast } from "sonner";
-import { Plus, FileText, Loader2, FileDown } from "lucide-react";
+import { Plus, FileText, Loader2, FileDown, ArrowLeft } from "lucide-react";
 import { usePdfExport } from "@/hooks/usePdfExport";
+import { useNavigate } from "react-router-dom";
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   draft: { label: "Rascunho", variant: "secondary" },
@@ -36,6 +37,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secon
 
 export default function LaudoTecnico() {
   usePageMeta({ title: "Laudos Tecnicos" });
+  const navigate = useNavigate();
   const { exportPdf, isExporting } = usePdfExport();
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
@@ -104,11 +106,16 @@ export default function LaudoTecnico() {
     <DashboardLayout>
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Laudos Tecnicos</h1>
-            <p className="text-muted-foreground">
-              Gerenciamento de laudos tecnicos de avaliacao psicossocial
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Laudos Tecnicos</h1>
+              <p className="text-muted-foreground">
+                Gerenciamento de laudos tecnicos de avaliacao psicossocial
+              </p>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button

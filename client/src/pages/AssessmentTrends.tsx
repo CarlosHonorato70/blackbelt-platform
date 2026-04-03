@@ -30,8 +30,10 @@ import {
   Loader2,
   History,
   FileDown,
+  ArrowLeft,
 } from "lucide-react";
 import { usePdfExport } from "@/hooks/usePdfExport";
+import { useNavigate } from "react-router-dom";
 
 const DIMENSION_LABELS: Record<string, string> = {
   demands: "Demanda",
@@ -67,6 +69,7 @@ export default function AssessmentTrends() {
   usePageMeta({ title: "Histórico e Tendências" });
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
+  const navigate = useNavigate();
   const { exportPdf, isExporting } = usePdfExport();
   const exportAssessmentTrendsMutation = trpc.nr01Pdf.exportAssessmentTrends.useMutation();
 
@@ -95,6 +98,9 @@ export default function AssessmentTrends() {
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
             <History className="h-8 w-8 text-primary" />
             <div>
               <h1 className="text-2xl font-bold">Histórico e Tendências</h1>

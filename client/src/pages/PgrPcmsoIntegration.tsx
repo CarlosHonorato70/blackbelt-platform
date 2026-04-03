@@ -39,8 +39,10 @@ import {
   Trash2,
   Stethoscope,
   FileDown,
+  ArrowLeft,
 } from "lucide-react";
 import { usePdfExport } from "@/hooks/usePdfExport";
+import { useNavigate } from "react-router-dom";
 
 const PRIORITY_COLORS: Record<string, string> = {
   alta: "bg-red-100 text-red-800 border-red-200",
@@ -62,6 +64,7 @@ const PRIORITY_LABELS: Record<string, string> = {
 
 export default function PgrPcmsoIntegration() {
   usePageMeta({ title: "Integração PGR/PCMSO" });
+  const navigate = useNavigate();
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
   const { exportPdf, isExporting } = usePdfExport();
@@ -124,6 +127,9 @@ export default function PgrPcmsoIntegration() {
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
             <Stethoscope className="h-8 w-8 text-primary" />
             <div>
               <h1 className="text-2xl font-bold">Integração PGR / PCMSO</h1>
