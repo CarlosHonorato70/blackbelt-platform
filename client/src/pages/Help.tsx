@@ -152,6 +152,42 @@ Use auditoria para rastreabilidade e conformidade LGPD.`,
 Conforme Lei Geral de Proteção de Dados (LGPD).`,
   },
   {
+    id: "certificacoes",
+    title: "Certificações e Assinatura Digital",
+    description: "Gerencie certificados profissionais e configure assinatura digital A1/ICP-Brasil",
+    icon: <FileText className="w-5 h-5" />,
+    content: `A seção Certificações Profissionais permite gerenciar documentos e ativar assinatura digital:
+
+**Upload de Certificações:**
+• **Tipos aceitos**: CRP, CREA, CRM, ISO 45001, ISO 9001, NR, MBA, Especializações e Certificado Digital A1
+• **Formatos**: PDF, JPG, PNG, P12/PFX (máx. 10MB)
+• **Campos**: Nome, tipo, registro, emissor, validade e observações
+• **Alertas**: Notificação automática para certificados vencidos ou a vencer (30 dias)
+
+**Assinatura Digital com Certificado A1 (ICP-Brasil):**
+• **Upload do .p12**: Selecione o arquivo .p12 ou .pfx do certificado A1
+• **Senha**: Informe a senha do certificado (armazenada com criptografia AES-256-GCM)
+• **Validação automática**: A plataforma valida o certificado (senha, chave privada, validade)
+• **Extração**: Nome da organização (CN) e data de validade são extraídos automaticamente
+• **Ativação**: O certificado é configurado como certificado de assinatura ativa
+• **Assinatura automática**: Todos os PDFs NR-01 gerados passam a ser assinados digitalmente
+
+**Como ativar:**
+1. Acesse Menu > Certificações Profissionais
+2. Clique em "Nova Certificação"
+3. Selecione seu arquivo .p12 (certificado A1)
+4. Preencha a senha do certificado
+5. Clique em "Enviar Certificação"
+6. O badge "Assinatura Digital" confirma a ativação
+
+**Padrão da assinatura**: adbe.pkcs7.detached (compatível com Adobe Reader e validadores ICP-Brasil)
+
+**Observações:**
+• Cada consultoria pode ter apenas um certificado de assinatura ativo por vez
+• Ao enviar um novo .p12, o anterior é desativado automaticamente
+• Se a consultoria não tiver certificado A1, os PDFs são assinados com o certificado global da plataforma`,
+  },
+  {
     id: "precificacao",
     title: "Sistema de Precificação",
     description: "Crie propostas comerciais",
@@ -210,13 +246,28 @@ const faqItems = [
     answer:
       "Clique no seu perfil (canto superior direito) > Configurações > Alterar Senha.",
   },
+  {
+    question: "Como configuro a assinatura digital nos PDFs?",
+    answer:
+      "Acesse Certificações Profissionais > Nova Certificação > Selecione seu arquivo .p12 (Certificado A1 ICP-Brasil) > Informe a senha > Enviar. A partir desse momento, todos os PDFs NR-01 da sua consultoria serão assinados digitalmente com seu certificado.",
+  },
+  {
+    question: "Onde consigo um certificado digital A1?",
+    answer:
+      "Certificados A1 são emitidos por Autoridades Certificadoras credenciadas pelo ITI, como Serpro, Certisign, Valid, Safeweb, entre outras. Acesse o site da AC de sua preferência e solicite um e-CNPJ A1.",
+  },
+  {
+    question: "Posso instalar a plataforma como aplicativo no computador ou celular?",
+    answer:
+      "Sim! No Chrome/Edge, acesse a plataforma e clique no ícone de instalação na barra de endereços. No celular Android, toque nos 3 pontos > 'Adicionar à tela inicial'. No iPhone, use Safari > Compartilhar > 'Adicionar à Tela de Início'.",
+  },
 ];
 
 const contactInfo = [
   {
     icon: <Mail className="w-5 h-5" />,
     title: "Email",
-    value: "suporte@blackbelt.com",
+    value: "contato@blackbeltconsultoria.com",
     description: "Envie suas dúvidas",
   },
   {

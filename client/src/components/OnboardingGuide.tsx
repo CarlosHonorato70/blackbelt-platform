@@ -200,6 +200,8 @@ const onboardingSteps: OnboardingStep[] = [
       "O sistema verifica automaticamente quais etapas foram concluídas",
       "Na última etapa, exporte todos os 17 PDFs de uma vez",
       "Os PDFs incluem: Dashboard, Matriz de Risco, PCMSO, Laudo, Certificado...",
+      "Todos os PDFs são assinados digitalmente com certificado A1 ICP-Brasil",
+      "Configure seu certificado em Certificações Profissionais para assinatura própria",
       "Entregue os PDFs ao cliente como documentação oficial da consultoria",
     ],
     actionText: "Abrir Fluxo Guiado",

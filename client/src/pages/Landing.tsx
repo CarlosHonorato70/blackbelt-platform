@@ -121,9 +121,9 @@ const features = [
   },
   {
     icon: FileText,
-    title: "PDF Export & Edição",
+    title: "PDF com Assinatura Digital",
     description:
-      "Edição inline de propostas, relatórios e certificados com exportação PDF.",
+      "PDFs NR-01 assinados digitalmente com certificado A1 ICP-Brasil. Cada consultoria pode usar seu próprio certificado.",
   },
   {
     icon: Building2,
