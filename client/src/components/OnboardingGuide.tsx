@@ -48,7 +48,7 @@ const onboardingSteps: OnboardingStep[] = [
       "Fase 1: Configure sua consultoria (perfil, segurança, plano)",
       "Fase 2: Gerencie empresas clientes (setores, colaboradores, avaliações)",
       "Use o Fluxo Guiado para acompanhar o progresso de cada empresa",
-      "Ao final, exporte os 17 PDFs entregáveis para seu cliente",
+      "Ao final, exporte os 18 PDFs entregáveis para seu cliente",
     ],
     phase: "consultant",
   },
@@ -198,7 +198,7 @@ const onboardingSteps: OnboardingStep[] = [
     details: [
       "Acesse 'Fluxo Guiado' no menu para ver todas as etapas",
       "O sistema verifica automaticamente quais etapas foram concluídas",
-      "Na última etapa, exporte todos os 17 PDFs de uma vez",
+      "Na última etapa, exporte todos os 18 PDFs de uma vez",
       "Os PDFs incluem: Dashboard, Matriz de Risco, PCMSO, Laudo, Certificado...",
       "Todos os PDFs são assinados digitalmente com certificado A1 ICP-Brasil",
       "Configure seu certificado em Certificações Profissionais para assinatura própria",
