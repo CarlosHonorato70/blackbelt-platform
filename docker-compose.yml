@@ -18,6 +18,7 @@ services:
     volumes:
       - app_logs:/app/logs
       - backup_data:/backups:ro
+      - ./server/certs:/app/server/certs:ro
     networks:
       - blackbelt-net
     deploy:
