@@ -12,7 +12,7 @@ export const adminMetricsRouter = router({
     if (!database) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
     const [tenantStats] = await database.select({ total: sql`COUNT(*)`, active: sql`SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END)` }).from(tenants);
     const [userStats] = await database.select({ total: sql`COUNT(*)` }).from(users);
-    const [subStats] = await database.select({ total: sql`COUNT(*)`, active: sql`SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END)`, trialing: sql`SUM(CASE WHEN status = 'trialing' THEN 1 ELSE 0 END)`, pastDue: sql`SUM(CASE WHEN status = 'past_due' THEN 1 ELSE 0 END)`, revenue: sql`SUM(CASE WHEN status = 'active' THEN currentPrice ELSE 0 END)` }).from(subscriptions);
+    const [subStats] = await database.select({ total: sql`COUNT(*)`, active: sql`SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END)`, trialing: sql`SUM(CASE WHEN status = 'trialing' THEN 1 ELSE 0 END)`, pastDue: sql`SUM(CASE WHEN status = 'past_due' THEN 1 ELSE 0 END)`, revenue: sql`SUM(CASE WHEN status = 'active' THEN (CASE WHEN billingCycle = 'yearly' THEN ROUND(currentPrice / 12) ELSE currentPrice END) ELSE 0 END)` }).from(subscriptions);
     let openTickets = 0;
     try { const [ts] = await database.select({ c: sql`COUNT(*)` }).from(supportTickets).where(sql`status IN ('open','in_progress')`); openTickets = Number(ts?.c) || 0; } catch {}
 

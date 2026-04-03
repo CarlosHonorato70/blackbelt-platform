@@ -17,10 +17,10 @@ export const seedPlans = [
     name: "starter",
     displayName: "Starter",
     description:
-      "Ideal para pequenas empresas e consultores independentes. Funcionalidades essenciais para começar.",
-    monthlyPrice: 9900, // R$ 99,00
-    yearlyPrice: 99000, // R$ 990,00 (17% desconto)
-    maxTenants: 1,
+      "Para psicólogos e consultores autônomos (CPF). Funcionalidades essenciais para começar.",
+    monthlyPrice: 29700, // R$ 297,00
+    yearlyPrice: 295704, // R$ 2.957,04 (17% desconto)
+    maxTenants: 3,
     maxUsersPerTenant: 5,
     maxStorageGB: 1,
     maxApiRequestsPerDay: 1000,
@@ -32,7 +32,7 @@ export const seedPlans = [
     hasSLA: false,
     slaUptime: null,
     trialDays: 14,
-    pricePerCopsoqInvite: 1000, // R$ 10,00 por convite excedente
+    pricePerCopsoqInvite: 1200, // R$ 12,00 por convite excedente
     copsoqInvitesIncluded: 20,  // 20 convites inclusos
     isActive: true,
     isPublic: true,
@@ -40,25 +40,25 @@ export const seedPlans = [
   },
   {
     id: nanoid(),
-    name: "pro",
-    displayName: "Pro",
+    name: "professional",
+    displayName: "Professional",
     description:
-      "Para empresas médias e consultorias. Inclui relatórios avançados, API e suporte prioritário.",
-    monthlyPrice: 39900, // R$ 399,00
-    yearlyPrice: 399000, // R$ 3.990,00 (17% desconto)
+      "Para consultorias em crescimento (CNPJ). Relatórios avançados, benchmark e suporte prioritário.",
+    monthlyPrice: 59700, // R$ 597,00
+    yearlyPrice: 594612, // R$ 5.946,12 (17% desconto)
     maxTenants: 10,
     maxUsersPerTenant: 50,
     maxStorageGB: 10,
     maxApiRequestsPerDay: 10000,
     hasAdvancedReports: true,
-    hasApiAccess: true,
+    hasApiAccess: false,
     hasWebhooks: false,
     hasWhiteLabel: false,
     hasPrioritySupport: true,
     hasSLA: true,
     slaUptime: 990, // 99.0%
     trialDays: 14,
-    pricePerCopsoqInvite: 800, // R$ 8,00 por convite excedente
+    pricePerCopsoqInvite: 1000, // R$ 10,00 por convite excedente
     copsoqInvitesIncluded: 100, // 100 convites inclusos
     isActive: true,
     isPublic: true,
@@ -69,13 +69,13 @@ export const seedPlans = [
     name: "enterprise",
     displayName: "Enterprise",
     description:
-      "Para grandes corporações. Recursos ilimitados, white-label, webhooks e SLA garantido.",
-    monthlyPrice: 0, // Customizado
-    yearlyPrice: 0, // Customizado
-    maxTenants: 100, // Até 100 empresas (negociável por contrato)
-    maxUsersPerTenant: 500, // Até 500 usuários por empresa
-    maxStorageGB: 100, // 100 GB
-    maxApiRequestsPerDay: 100000, // 100k requisições/dia
+      "Para grandes consultorias e redes (CNPJ). White-label, API, relatórios personalizados e suporte dedicado.",
+    monthlyPrice: 99700, // R$ 997,00
+    yearlyPrice: 993012, // R$ 9.930,12 (17% desconto)
+    maxTenants: 30,
+    maxUsersPerTenant: 500,
+    maxStorageGB: 100,
+    maxApiRequestsPerDay: 100000,
     hasAdvancedReports: true,
     hasApiAccess: true,
     hasWebhooks: true,
@@ -84,7 +84,7 @@ export const seedPlans = [
     hasSLA: true,
     slaUptime: 999, // 99.9%
     trialDays: 30,
-    pricePerCopsoqInvite: 500, // R$ 5,00 por convite excedente
+    pricePerCopsoqInvite: 800, // R$ 8,00 por convite excedente
     copsoqInvitesIncluded: 500, // 500 convites inclusos
     isActive: true,
     isPublic: true,
@@ -277,7 +277,7 @@ export const getPlanFeatureAssociations = (
   features: typeof seedFeatures
 ) => {
   const starterPlan = plans.find((p) => p.name === "starter");
-  const proPlan = plans.find((p) => p.name === "pro");
+  const proPlan = plans.find((p) => p.name === "professional" || p.name === "pro");
   const enterprisePlan = plans.find((p) => p.name === "enterprise");
 
   if (!starterPlan || !proPlan || !enterprisePlan) {
