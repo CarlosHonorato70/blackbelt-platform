@@ -62,6 +62,7 @@ const CERT_TYPES = [
   { value: "NR_CERT", label: "Certificação NR (Norma Regulamentadora)" },
   { value: "MBA", label: "MBA / Pós-Graduação" },
   { value: "ESPECIALIZACAO", label: "Especialização Profissional" },
+  { value: "A1_DIGITAL", label: "Certificado Digital A1 (ICP-Brasil)" },
   { value: "OUTRO", label: "Outro" },
 ];
 
@@ -107,6 +108,7 @@ export default function ConsultantCertifications() {
   const [issuedAt, setIssuedAt] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [notes, setNotes] = useState("");
+  const [certPassword, setCertPassword] = useState("");
   const [file, setFile] = useState<File | null>(null);
 
   const { data: certifications, isLoading } =
@@ -148,6 +150,7 @@ export default function ConsultantCertifications() {
     setIssuedAt("");
     setExpiresAt("");
     setNotes("");
+    setCertPassword("");
     setFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -157,6 +160,16 @@ export default function ConsultantCertifications() {
       toast({
         title: "Campos obrigatórios",
         description: "Preencha o nome, tipo e selecione um arquivo.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const isP12 = file.name.endsWith(".p12") || file.name.endsWith(".pfx");
+    if (isP12 && !certPassword) {
+      toast({
+        title: "Senha obrigatória",
+        description: "Informe a senha do certificado .p12 para validação.",
         variant: "destructive",
       });
       return;
@@ -173,6 +186,7 @@ export default function ConsultantCertifications() {
       if (issuedAt) formData.append("issuedAt", issuedAt);
       if (expiresAt) formData.append("expiresAt", expiresAt);
       if (notes) formData.append("notes", notes);
+      if (certPassword) formData.append("certPassword", certPassword);
 
       const res = await fetch("/api/certifications/upload", {
         method: "POST",
@@ -185,9 +199,12 @@ export default function ConsultantCertifications() {
         throw new Error(errData.error || "Erro ao enviar arquivo");
       }
 
+      const result = await res.json();
       toast({
-        title: "Certificação enviada!",
-        description: `${name} foi adicionada com sucesso.`,
+        title: result.isSigningCert ? "Certificado A1 configurado!" : "Certificação enviada!",
+        description: result.isSigningCert
+          ? `${result.certSubject || name} — Assinatura digital ativada automaticamente.`
+          : `${name} foi adicionada com sucesso.`,
       });
       resetForm();
       setDialogOpen(false);
@@ -249,8 +266,9 @@ export default function ConsultantCertifications() {
                 Adicionar Certificação
               </DialogTitle>
               <DialogDescription>
-                Faça upload do documento da certificação. Aceita PDF, JPG e PNG
-                (máx. 10MB).
+                Faça upload do documento da certificação. Aceita PDF, JPG, PNG,
+                P12/PFX (máx. 10MB). Certificados A1 (.p12) serão
+                configurados automaticamente para assinatura digital.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 mt-2">
@@ -263,7 +281,7 @@ export default function ConsultantCertifications() {
                   id="cert-file"
                   ref={fileInputRef}
                   type="file"
-                  accept=".pdf,.jpg,.jpeg,.png,.webp"
+                  accept=".pdf,.jpg,.jpeg,.png,.webp,.p12,.pfx"
                   onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                   className="mt-1 cursor-pointer"
                 />
@@ -271,6 +289,24 @@ export default function ConsultantCertifications() {
                   <p className="text-xs text-muted-foreground mt-1">
                     {file.name} ({formatFileSize(file.size)})
                   </p>
+                )}
+                {file && (file.name.endsWith(".p12") || file.name.endsWith(".pfx")) && (
+                  <div className="mt-2 p-3 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+                    <Label htmlFor="cert-password" className="text-blue-800 dark:text-blue-200 text-sm font-medium">
+                      Senha do Certificado A1 <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="cert-password"
+                      type="password"
+                      placeholder="Senha do arquivo .p12"
+                      value={certPassword}
+                      onChange={(e) => setCertPassword(e.target.value)}
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                      A senha é armazenada de forma criptografada. Este certificado será usado para assinar digitalmente todos os PDFs da sua consultoria.
+                    </p>
+                  </div>
                 )}
               </div>
 
@@ -482,10 +518,22 @@ export default function ConsultantCertifications() {
                     return (
                       <TableRow key={cert.id}>
                         <TableCell className="font-medium">
-                          {cert.name}
+                          <div className="flex items-center gap-2">
+                            {cert.name}
+                            {(cert as any).isSigningCert && (
+                              <Badge variant="default" className="bg-blue-600 text-xs">
+                                Assinatura Digital
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-xs text-muted-foreground">
                             {cert.fileName} ({formatFileSize(cert.fileSize)})
                           </p>
+                          {(cert as any).certSubject && (
+                            <p className="text-xs text-blue-600 dark:text-blue-400">
+                              CN: {(cert as any).certSubject}
+                            </p>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary">{typeLabel}</Badge>

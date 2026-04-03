@@ -1326,6 +1326,10 @@ export const consultantCertifications = mysqlTable(
     fileSize: int("fileSize").notNull(),
     mimeType: varchar("mimeType", { length: 100 }).default("application/pdf").notNull(),
     status: varchar("status", { length: 20 }).default("active").notNull(), // active, expired, revoked
+    isSigningCert: boolean("isSigningCert").default(false).notNull(), // true = used for PDF digital signing
+    certPassword: varchar("certPassword", { length: 500 }), // encrypted password for .p12 certs
+    certSubject: varchar("certSubject", { length: 500 }), // CN from certificate (auto-extracted)
+    certValidTo: timestamp("certValidTo"), // expiry from certificate (auto-extracted)
     notes: text("notes"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),

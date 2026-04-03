@@ -113,7 +113,7 @@ export const nr01PdfExportRouter = router({
         sections,
       };
 
-      const buffer = await generateGenericReportPdf(reportData, branding);
+      const buffer = await generateGenericReportPdf(reportData, branding, undefined, ctx.tenantId!);
       return { filename: "matriz-risco.pdf", data: buffer.toString("base64") };
     }),
 
@@ -145,7 +145,7 @@ export const nr01PdfExportRouter = router({
         reportSubtitle: "Recomendacoes de Saude Ocupacional — NR-01 / NR-07",
         date: fmtDate(new Date()),
         sections,
-      }, branding);
+      }, branding, undefined, ctx.tenantId);
       return { filename: "pcmso-integracao.pdf", data: buffer.toString("base64") };
     }),
 
@@ -163,7 +163,7 @@ export const nr01PdfExportRouter = router({
           reportTitle: "Dashboard Psicossocial",
           date: fmtDate(new Date()),
           sections: [{ type: "text", content: "Nenhum relatorio COPSOQ disponivel para este tenant." }],
-        }, branding);
+        }, branding, undefined, ctx.tenantId);
         return { filename: "dashboard-psicossocial.pdf", data: buffer.toString("base64") };
       }
 
@@ -208,7 +208,7 @@ export const nr01PdfExportRouter = router({
         reportSubtitle: "Analise COPSOQ-II — 12 Dimensoes",
         date: fmtDate(new Date()),
         sections,
-      }, branding);
+      }, branding, undefined, ctx.tenantId);
       return { filename: "dashboard-psicossocial.pdf", data: buffer.toString("base64") };
     }),
 
@@ -251,7 +251,7 @@ export const nr01PdfExportRouter = router({
         reportSubtitle: "Evolucao Temporal dos Indicadores COPSOQ-II",
         date: fmtDate(new Date()),
         sections,
-      }, branding);
+      }, branding, undefined, ctx.tenantId);
       return { filename: "tendencias-avaliacao.pdf", data: buffer.toString("base64") };
     }),
 
@@ -323,7 +323,7 @@ export const nr01PdfExportRouter = router({
         reportSubtitle: "Impacto Economico da Nao-Conformidade NR-01",
         date: fmtDate(new Date()),
         sections,
-      }, branding);
+      }, branding, undefined, ctx.tenantId);
       return { filename: "risco-financeiro.pdf", data: buffer.toString("base64") };
     }),
 
@@ -368,7 +368,7 @@ export const nr01PdfExportRouter = router({
         reportSubtitle: "Marcos e Prazos de Conformidade",
         date: fmtDate(new Date()),
         sections,
-      }, branding);
+      }, branding, undefined, ctx.tenantId);
       return { filename: "cronograma-compliance.pdf", data: buffer.toString("base64") };
     }),
 
@@ -413,7 +413,7 @@ export const nr01PdfExportRouter = router({
         reportSubtitle: "Checklist NR-01 — Requisitos Regulatorios",
         date: fmtDate(new Date()),
         sections,
-      }, branding);
+      }, branding, undefined, ctx.tenantId);
       return { filename: "checklist-conformidade.pdf", data: buffer.toString("base64") };
     }),
 
@@ -434,7 +434,7 @@ export const nr01PdfExportRouter = router({
           reportTitle: "Certificado de Conformidade",
           date: fmtDate(new Date()),
           sections: [{ type: "text", content: "Nenhum certificado disponivel para este tenant." }],
-        }, branding);
+        }, branding, undefined, ctx.tenantId);
         return { filename: "certificado.pdf", data: buffer.toString("base64") };
       }
 
@@ -475,7 +475,7 @@ export const nr01PdfExportRouter = router({
         reportSubtitle: "Gestao de Riscos Psicossociais Ocupacionais",
         date: fmtDate(cert.issuedAt),
         sections,
-      }, branding);
+      }, branding, undefined, ctx.tenantId);
       return { filename: `certificado-${cert.certificateNumber}.pdf`, data: buffer.toString("base64") };
     }),
 
@@ -496,7 +496,7 @@ export const nr01PdfExportRouter = router({
           reportTitle: "Laudo Tecnico",
           date: fmtDate(new Date()),
           sections: [{ type: "text", content: "Nenhum laudo tecnico disponivel." }],
-        }, branding);
+        }, branding, undefined, ctx.tenantId);
         return { filename: "laudo-tecnico.pdf", data: buffer.toString("base64") };
       }
 
@@ -537,7 +537,7 @@ export const nr01PdfExportRouter = router({
         reportSubtitle: "Conforme NR-01 item 1.5.7",
         date: fmtDate(doc.validFrom),
         sections,
-      }, branding);
+      }, branding, undefined, ctx.tenantId);
       return { filename: "laudo-tecnico.pdf", data: buffer.toString("base64") };
     }),
 
@@ -600,7 +600,7 @@ export const nr01PdfExportRouter = router({
         reportSubtitle: "Comparacao com Dados Nacionais e Setoriais",
         date: fmtDate(new Date()),
         sections,
-      }, branding);
+      }, branding, undefined, ctx.tenantId);
       return { filename: "benchmark-comparativo.pdf", data: buffer.toString("base64") };
     }),
 
@@ -647,7 +647,7 @@ export const nr01PdfExportRouter = router({
         reportSubtitle: survey.title,
         date: fmtDate(new Date()),
         sections,
-      }, branding);
+      }, branding, undefined, ctx.tenantId);
       return { filename: `pesquisa-clima-${input.surveyId}.pdf`, data: buffer.toString("base64") };
     }),
 
@@ -699,7 +699,7 @@ export const nr01PdfExportRouter = router({
         reportSubtitle: "Capacitacao em Riscos Psicossociais — NR-01",
         date: fmtDate(new Date()),
         sections,
-      }, branding);
+      }, branding, undefined, ctx.tenantId);
       return { filename: "treinamento.pdf", data: buffer.toString("base64") };
     }),
 
@@ -755,7 +755,7 @@ export const nr01PdfExportRouter = router({
         reportSubtitle: "Dados Agregados (Sem PII)",
         date: fmtDate(new Date()),
         sections,
-      }, branding);
+      }, branding, undefined, ctx.tenantId);
       return { filename: "denuncias-anonimas.pdf", data: buffer.toString("base64") };
     }),
 
@@ -798,7 +798,7 @@ export const nr01PdfExportRouter = router({
         reportSubtitle: "Monitoramento de Vencimentos NR-01",
         date: fmtDate(new Date()),
         sections,
-      }, branding);
+      }, branding, undefined, ctx.tenantId);
       return { filename: "alertas-prazos.pdf", data: buffer.toString("base64") };
     }),
 
@@ -844,7 +844,7 @@ export const nr01PdfExportRouter = router({
         reportSubtitle: "Conforme NR-17 — Analise Ergonomica do Trabalho",
         date: fmtDate(assessment.assessmentDate),
         sections,
-      }, branding);
+      }, branding, undefined, ctx.tenantId);
       return { filename: `avaliacao-ergonomica-${input.assessmentId}.pdf`, data: buffer.toString("base64") };
     }),
 
@@ -886,7 +886,7 @@ export const nr01PdfExportRouter = router({
         reportSubtitle: "Eventos S-2220 e S-2240",
         date: fmtDate(new Date()),
         sections,
-      }, branding);
+      }, branding, undefined, ctx.tenantId);
       return { filename: "esocial-exportacoes.pdf", data: buffer.toString("base64") };
     }),
 
@@ -984,7 +984,7 @@ export const nr01PdfExportRouter = router({
         reportSubtitle: "Visao Consolidada NR-01",
         date: fmtDate(new Date()),
         sections,
-      }, branding);
+      }, branding, undefined, ctx.tenantId);
       return { filename: "relatorio-executivo.pdf", data: buffer.toString("base64") };
     }),
 
@@ -1287,7 +1287,7 @@ export const nr01PdfExportRouter = router({
         companyName,
         date: fmtDate(new Date()),
         sections,
-      }, branding);
+      }, branding, undefined, ctx.tenantId);
 
       return { filename: `pgr-consolidado-${companyName.replace(/\s+/g, "-").toLowerCase()}.pdf`, data: buffer.toString("base64") };
     }),

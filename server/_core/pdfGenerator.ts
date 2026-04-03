@@ -5,7 +5,7 @@
 
 import PDFDocument from "pdfkit";
 import { Readable } from "stream";
-import { signPdf, isSigningAvailable } from "./pdfSigner";
+import { signPdfForTenant } from "./pdfSigner";
 
 export interface PdfBranding {
   logoUrl?: string;
@@ -488,7 +488,8 @@ const PROBABILITY_PT: Record<string, string> = {
 export async function generateInventoryPdf(
   data: InventoryPdfData,
   branding?: PdfBranding,
-  metadata?: PdfMetadata
+  metadata?: PdfMetadata,
+  tenantId?: string
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
@@ -506,7 +507,10 @@ export async function generateInventoryPdf(
 
     const buffers: Buffer[] = [];
     doc.on("data", buffers.push.bind(buffers));
-    doc.on("end", () => resolve(Buffer.concat(buffers)));
+    doc.on("end", () => {
+      const pdfBuffer = Buffer.concat(buffers);
+      signPdfForTenant(pdfBuffer, tenantId).then(resolve).catch(() => resolve(pdfBuffer));
+    });
     doc.on("error", reject);
 
     const primaryColor = branding?.primaryColor || "#1a1a1a";
@@ -701,7 +705,8 @@ const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "
 export async function generateActionPlanPdf(
   data: ActionPlanPdfData,
   branding?: PdfBranding,
-  metadata?: PdfMetadata
+  metadata?: PdfMetadata,
+  tenantId?: string
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
@@ -719,7 +724,10 @@ export async function generateActionPlanPdf(
 
     const buffers: Buffer[] = [];
     doc.on("data", buffers.push.bind(buffers));
-    doc.on("end", () => resolve(Buffer.concat(buffers)));
+    doc.on("end", () => {
+      const pdfBuffer = Buffer.concat(buffers);
+      signPdfForTenant(pdfBuffer, tenantId).then(resolve).catch(() => resolve(pdfBuffer));
+    });
     doc.on("error", reject);
 
     const primaryColor = branding?.primaryColor || "#1a1a1a";
@@ -1013,7 +1021,8 @@ export interface GenericReportData {
 export async function generateGenericReportPdf(
   data: GenericReportData,
   branding?: PdfBranding,
-  metadata?: PdfMetadata
+  metadata?: PdfMetadata,
+  tenantId?: string
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
@@ -1034,12 +1043,8 @@ export async function generateGenericReportPdf(
     doc.on("data", buffers.push.bind(buffers));
     doc.on("end", () => {
       const pdfBuffer = Buffer.concat(buffers);
-      // Digitally sign with A1 certificate (ICP-Brasil) if available
-      if (isSigningAvailable()) {
-        resolve(signPdf(pdfBuffer));
-      } else {
-        resolve(pdfBuffer);
-      }
+      // Digitally sign with A1 certificate (ICP-Brasil) — tenant-specific or global
+      signPdfForTenant(pdfBuffer, tenantId).then(resolve).catch(() => resolve(pdfBuffer));
     });
     doc.on("error", reject);
 

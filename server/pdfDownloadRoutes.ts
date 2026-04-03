@@ -89,12 +89,12 @@ async function validateCompanyAccess(tenantId: string, companyId: string, db: an
 // PDF generators per document type
 // ============================================================================
 
-type PdfGenerator = (companyId: string, db: any) => Promise<{ buffer: Buffer; filename: string }>;
+type PdfGenerator = (companyId: string, db: any, signingTenantId?: string) => Promise<{ buffer: Buffer; filename: string }>;
 
 const pdfGenerators: Record<string, PdfGenerator> = {
 
   // Relatório COPSOQ-II
-  async copsoq(companyId, db) {
+  async copsoq(companyId, db, signingTenantId) {
     const [report] = await db.select().from(copsoqReports)
       .where(eq(copsoqReports.tenantId, companyId))
       .orderBy(desc(copsoqReports.generatedAt)).limit(1);
@@ -177,12 +177,12 @@ const pdfGenerators: Record<string, PdfGenerator> = {
       companyName: tenant?.name,
       date: fmtDate(new Date()),
       sections,
-    }, branding);
+    }, branding, undefined, signingTenantId);
     return { buffer, filename: "relatorio-copsoq-ii.pdf" };
   },
 
   // Inventário de Riscos Psicossociais
-  async inventario(companyId, db) {
+  async inventario(companyId, db, signingTenantId) {
     const [tenant] = await db.select({ name: tenants.name }).from(tenants)
       .where(eq(tenants.id, companyId)).limit(1);
 
@@ -196,7 +196,7 @@ const pdfGenerators: Record<string, PdfGenerator> = {
         companyName: tenant?.name,
         date: fmtDate(new Date()),
         sections: [{ type: "text", content: "Nenhum inventário de riscos gerado para esta empresa." }],
-      }, branding);
+      }, branding, undefined, signingTenantId);
       return { buffer, filename: "inventario-riscos.pdf" };
     }
 
@@ -239,12 +239,12 @@ const pdfGenerators: Record<string, PdfGenerator> = {
 
     const buffer = await generateInventoryPdf(pdfData, branding, {
       title: "Inventário de Riscos Ocupacionais \u2014 Psicossociais",
-    });
+    }, signingTenantId);
     return { buffer, filename: "inventario-riscos-psicossociais.pdf" };
   },
 
   // Plano de Ação
-  async plano(companyId, db) {
+  async plano(companyId, db, signingTenantId) {
     const [tenant] = await db.select({ name: tenants.name }).from(tenants)
       .where(eq(tenants.id, companyId)).limit(1);
 
@@ -258,7 +258,7 @@ const pdfGenerators: Record<string, PdfGenerator> = {
         companyName: tenant?.name,
         date: fmtDate(new Date()),
         sections: [{ type: "text", content: "Nenhum plano de ação gerado para esta empresa." }],
-      }, branding);
+      }, branding, undefined, signingTenantId);
       return { buffer, filename: "plano-acao.pdf" };
     }
 
@@ -284,12 +284,12 @@ const pdfGenerators: Record<string, PdfGenerator> = {
 
     const buffer = await generateActionPlanPdf(pdfData, branding, {
       title: "Plano de Ação \u2014 Mitigação de Riscos Psicossociais",
-    });
+    }, signingTenantId);
     return { buffer, filename: "plano-acao-nr01.pdf" };
   },
 
   // Programa de Treinamento
-  async treinamento(companyId, db) {
+  async treinamento(companyId, db, signingTenantId) {
     const [tenant] = await db.select({ name: tenants.name }).from(tenants)
       .where(eq(tenants.id, companyId)).limit(1);
 
@@ -336,12 +336,12 @@ const pdfGenerators: Record<string, PdfGenerator> = {
       companyName: tenant?.name,
       date: fmtDate(new Date()),
       sections,
-    }, branding);
+    }, branding, undefined, signingTenantId);
     return { buffer, filename: "programa-treinamento.pdf" };
   },
 
   // Proposta Comercial (from proposals table — shows BOTH initial and final)
-  async proposta(companyId, db) {
+  async proposta(companyId, db, signingTenantId) {
     const [tenant] = await db.select({ name: tenants.name, cnpj: tenants.cnpj }).from(tenants)
       .where(eq(tenants.id, companyId)).limit(1);
 
@@ -631,12 +631,12 @@ const pdfGenerators: Record<string, PdfGenerator> = {
       companyName: tenant?.name,
       date: fmtDate(new Date()),
       sections,
-    }, branding);
+    }, branding, undefined, signingTenantId);
     return { buffer, filename: "propostas-comerciais-nr01.pdf" };
   },
 
   // Certificado de Conformidade
-  async certificado(companyId, db) {
+  async certificado(companyId, db, signingTenantId) {
     const [tenant] = await db.select({ name: tenants.name, cnpj: tenants.cnpj }).from(tenants)
       .where(eq(tenants.id, companyId)).limit(1);
 
@@ -683,12 +683,12 @@ const pdfGenerators: Record<string, PdfGenerator> = {
       companyName: tenant?.name,
       date: fmtDate(cert?.issuedAt || new Date()),
       sections,
-    }, branding);
+    }, branding, undefined, signingTenantId);
     return { buffer, filename: `certificado-conformidade-nr01.pdf` };
   },
 
   // Checklist de Conformidade
-  async checklist(companyId, db) {
+  async checklist(companyId, db, signingTenantId) {
     const [tenant] = await db.select({ name: tenants.name }).from(tenants)
       .where(eq(tenants.id, companyId)).limit(1);
 
@@ -741,7 +741,7 @@ const pdfGenerators: Record<string, PdfGenerator> = {
       companyName: tenant?.name,
       date: fmtDate(new Date()),
       sections,
-    }, branding);
+    }, branding, undefined, signingTenantId);
     return { buffer, filename: "checklist-conformidade.pdf" };
   },
 };
@@ -808,7 +808,7 @@ export function registerPdfDownloadRoutes(app: Express) {
         }
       }
 
-      const { buffer, filename } = await generator(companyId, db);
+      const { buffer, filename } = await generator(companyId, db, auth.tenantId);
 
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
