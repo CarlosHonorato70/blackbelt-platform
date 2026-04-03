@@ -71,11 +71,15 @@ export default function TrainingModule() {
   );
 
   const completeMutation = trpc.training.completeModule.useMutation({
-    onSuccess: () => {
-      toast.success("Modulo concluido com sucesso!");
+    onSuccess: (data: any) => {
+      if (data.completed) {
+        toast.success(quizResult ? `Módulo concluído! Nota: ${quizResult.score}%` : "Módulo concluído com sucesso!");
+      } else {
+        toast.error(data.message || "Nota insuficiente. Tente novamente.");
+      }
     },
     onError: (err: any) => {
-      toast.error(err.message || "Erro ao concluir modulo");
+      toast.error(err.message || "Erro ao concluir módulo");
     },
   });
 
@@ -88,12 +92,39 @@ export default function TrainingModule() {
 
   const quizQuestions: any[] = Array.isArray(currentModule?.quizQuestions) ? currentModule.quizQuestions : [];
 
+  // Grade quiz: compare selected answers against correctAnswer field
+  const gradeQuiz = (): number | undefined => {
+    if (quizQuestions.length === 0) return undefined;
+    const answered = Object.keys(quizAnswers).length;
+    if (answered === 0) return 0;
+    let correct = 0;
+    quizQuestions.forEach((q: any, idx: number) => {
+      if (q.correctAnswer && quizAnswers[idx] === q.correctAnswer) {
+        correct++;
+      }
+    });
+    return Math.round((correct / quizQuestions.length) * 100);
+  };
+
+  const [quizResult, setQuizResult] = useState<{ score: number; passed: boolean } | null>(null);
+
   const handleComplete = () => {
+    const score = gradeQuiz();
+    const passingScore = (currentModule as any)?.passingScore ?? 70;
+
+    if (score !== undefined) {
+      const passed = score >= passingScore;
+      setQuizResult({ score, passed });
+      if (!passed) {
+        toast.error(`Nota insuficiente: ${score}%. Mínimo: ${passingScore}%`);
+      }
+    }
+
     completeMutation.mutate({
       participantId: programId!,
       moduleId: moduleId!,
       tenantId,
-      quizScore: Object.keys(quizAnswers).length > 0 ? Object.keys(quizAnswers).length : undefined,
+      quizScore: score,
     });
   };
 
@@ -182,38 +213,73 @@ export default function TrainingModule() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
-                    {quizQuestions.map((q: any, qIndex: number) => (
-                      <div key={qIndex} className="space-y-3">
-                        <Label className="text-base font-medium">
-                          {qIndex + 1}. {q.question}
-                        </Label>
-                        <div className="space-y-2 pl-4">
-                          {(q.options || []).map((option: string, oIndex: number) => (
-                            <label
-                              key={oIndex}
-                              className="flex items-center gap-3 cursor-pointer p-2 rounded-md hover:bg-muted"
-                            >
-                              {quizAnswers[qIndex] === option ? (
-                                <CheckCircle2 className="h-5 w-5 text-primary" />
-                              ) : (
-                                <Circle className="h-5 w-5 text-muted-foreground" />
-                              )}
-                              <input
-                                type="radio"
-                                name={`quiz-${qIndex}`}
-                                value={option}
-                                checked={quizAnswers[qIndex] === option}
-                                onChange={() =>
-                                  setQuizAnswers({ ...quizAnswers, [qIndex]: option })
-                                }
-                                className="sr-only"
-                              />
-                              <span>{option}</span>
-                            </label>
-                          ))}
+                    {quizQuestions.map((q: any, qIndex: number) => {
+                      const isGraded = quizResult !== null;
+                      const userAnswer = quizAnswers[qIndex];
+                      const isCorrect = userAnswer === q.correctAnswer;
+
+                      return (
+                        <div key={qIndex} className="space-y-3">
+                          <Label className="text-base font-medium">
+                            {qIndex + 1}. {q.question}
+                            {isGraded && (
+                              <span className={`ml-2 text-sm ${isCorrect ? "text-green-600" : "text-red-600"}`}>
+                                {isCorrect ? "✓ Correto" : "✗ Incorreto"}
+                              </span>
+                            )}
+                          </Label>
+                          <div className="space-y-2 pl-4">
+                            {(q.options || []).map((option: string, oIndex: number) => {
+                              const isSelected = userAnswer === option;
+                              const isCorrectOption = isGraded && option === q.correctAnswer;
+                              let optionClass = "hover:bg-muted";
+                              if (isGraded) {
+                                if (isCorrectOption) optionClass = "bg-green-50 border border-green-300";
+                                else if (isSelected && !isCorrect) optionClass = "bg-red-50 border border-red-300";
+                              }
+
+                              return (
+                                <label
+                                  key={oIndex}
+                                  className={`flex items-center gap-3 ${isGraded ? "" : "cursor-pointer"} p-2 rounded-md ${optionClass}`}
+                                >
+                                  {isSelected ? (
+                                    <CheckCircle2 className={`h-5 w-5 ${isGraded ? (isCorrect ? "text-green-600" : "text-red-600") : "text-primary"}`} />
+                                  ) : (
+                                    <Circle className={`h-5 w-5 ${isCorrectOption ? "text-green-600" : "text-muted-foreground"}`} />
+                                  )}
+                                  <input
+                                    type="radio"
+                                    name={`quiz-${qIndex}`}
+                                    value={option}
+                                    checked={isSelected}
+                                    disabled={isGraded}
+                                    onChange={() =>
+                                      setQuizAnswers({ ...quizAnswers, [qIndex]: option })
+                                    }
+                                    className="sr-only"
+                                  />
+                                  <span>{option}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
                         </div>
+                      );
+                    })}
+
+                    {quizResult && (
+                      <div className={`p-4 rounded-lg ${quizResult.passed ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"}`}>
+                        <p className={`font-semibold ${quizResult.passed ? "text-green-800" : "text-red-800"}`}>
+                          {quizResult.passed ? "Aprovado!" : "Reprovado"} — Nota: {quizResult.score}%
+                        </p>
+                        {!quizResult.passed && (
+                          <p className="text-sm text-red-700 mt-1">
+                            Mínimo necessário: {(currentModule as any)?.passingScore ?? 70}%. Revise o conteúdo e tente novamente.
+                          </p>
+                        )}
                       </div>
-                    ))}
+                    )}
                   </div>
                 </CardContent>
               </Card>

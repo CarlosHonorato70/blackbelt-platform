@@ -210,6 +210,13 @@ export default function GuidedWorkflow() {
   const completedSteps = steps.filter((s) => s.completed).length;
   const progressPercent = Math.round((completedSteps / (steps.length - 1)) * 100); // Exclude last step (export)
 
+  // Step locking: each step requires the previous one to be completed
+  const isStepUnlocked = (idx: number) => {
+    if (idx === 0) return true; // First step always unlocked
+    if (idx === steps.length - 1) return completedSteps >= steps.length - 1; // Export requires all previous
+    return steps[idx - 1].completed;
+  };
+
   const downloadPdf = (filename: string, base64Data: string) => {
     const link = document.createElement("a");
     link.href = `data:application/pdf;base64,${base64Data}`;
@@ -323,18 +330,23 @@ export default function GuidedWorkflow() {
             const StepIcon = step.icon;
             const isExpanded = expandedStep === idx;
             const isLastStep = idx === steps.length - 1;
+            const unlocked = isStepUnlocked(idx);
 
             return (
               <Card
                 key={step.number}
-                className={`cursor-pointer transition-all hover:shadow-md ${
+                className={`transition-all ${
+                  !unlocked
+                    ? "opacity-50 cursor-not-allowed"
+                    : "cursor-pointer hover:shadow-md"
+                } ${
                   step.completed
                     ? "border-green-200 bg-green-50/50"
-                    : isLastStep
+                    : isLastStep && unlocked
                       ? "border-blue-200 bg-blue-50/50"
                       : ""
                 }`}
-                onClick={() => setExpandedStep(isExpanded ? null : idx)}
+                onClick={() => unlocked && setExpandedStep(isExpanded ? null : idx)}
               >
                 <CardContent className="py-4">
                   <div className="flex items-center gap-4">
@@ -368,7 +380,9 @@ export default function GuidedWorkflow() {
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {step.detail}
+                        {!unlocked
+                          ? `🔒 Complete a etapa ${idx} primeiro`
+                          : step.detail}
                       </p>
                     </div>
 
@@ -443,9 +457,10 @@ export default function GuidedWorkflow() {
                         <Button
                           variant={step.completed ? "outline" : "default"}
                           size="sm"
+                          disabled={!unlocked}
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (step.link) navigate(step.link);
+                            if (step.link && unlocked) navigate(step.link);
                           }}
                         >
                           <ExternalLink className="mr-2 h-3.5 w-3.5" />
