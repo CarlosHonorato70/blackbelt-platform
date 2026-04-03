@@ -6,6 +6,7 @@ import { getDb } from "../db";
 import { copsoqInvites, copsoqResponses, anonymousReports } from "../../drizzle/schema_nr01";
 import { TRPCError } from "@trpc/server";
 import crypto from "crypto";
+import { calculateDimensionScores, classifyOverallRisk } from "../_core/copsoqScoring";
 
 /**
  * Webhook para rastrear conclusão de COPSOQ-II
@@ -484,53 +485,5 @@ export const webhookRouter = router({
     }),
 });
 
-// Funções auxiliares
-function calculateDimensionScores(responses: Record<string | number, number>) {
-  const dimensions = {
-    demanda: [1, 2, 3, 4, 5],
-    controle: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    apoio: [16, 17, 18, 19, 20],
-    lideranca: [21, 22, 23, 24, 25, 26, 30, 31, 32, 36, 37, 38, 39],
-    comunidade: [27, 28, 29, 33, 34, 35],
-    significado: [49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59],
-    confianca: [40, 41, 42, 43, 44, 45],
-    justica: [46, 47, 48],
-    inseguranca: [60],
-    saudeMental: [61, 65, 66, 67, 68, 69, 70, 71, 72],
-    burnout: [62, 63, 64],
-    violencia: [73, 74, 75, 76],
-  };
-
-  const scores: Record<string, number> = {};
-
-  for (const [dimension, questions] of Object.entries(dimensions)) {
-    const values = questions.map(q => responses[q] || 0).filter(v => v > 0);
-
-    if (values.length === 0) {
-      scores[dimension] = 0;
-    } else {
-      const average = values.reduce((a, b) => a + b, 0) / values.length;
-      scores[dimension] = Math.round(average * 20); // Escala 0-100
-    }
-  }
-
-  return scores as Record<string, number>;
-}
-
-function classifyOverallRisk(
-  scores: Record<string, number>
-): "low" | "medium" | "high" | "critical" {
-  const criticalFactors = [
-    scores.demanda > 75,
-    scores.controle < 25,
-    scores.apoio < 25,
-    scores.saudeMental > 75,
-    scores.burnout > 75,
-    scores.violencia > 50,
-  ].filter(Boolean).length;
-
-  if (criticalFactors >= 3) return "critical";
-  if (criticalFactors >= 2) return "high";
-  if (criticalFactors >= 1) return "medium";
-  return "low";
-}
+// Shared COPSOQ-II scoring (single source of truth)
+// Imported from _core/copsoqScoring.ts — includes reverse-coded question handling

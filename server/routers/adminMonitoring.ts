@@ -745,7 +745,7 @@ Resumo: ${codeIntegrity.summary.join(" | ")}`;
   pendingMaintenance: publicProcedure
     .input(z.object({ token: z.string() }).optional())
     .query(async ({ input }) => {
-      if (input?.token !== (process.env.MAINTENANCE_TOKEN || "klinikos-2026")) {
+      if (!process.env.MAINTENANCE_TOKEN || input?.token !== process.env.MAINTENANCE_TOKEN) {
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid maintenance token" });
       }
       const db = await getDb();
@@ -769,7 +769,7 @@ Resumo: ${codeIntegrity.summary.join(" | ")}`;
       status: z.enum(["completed", "failed"]).default("completed"),
     }))
     .mutation(async ({ input }) => {
-      if (input.token !== (process.env.MAINTENANCE_TOKEN || "klinikos-2026")) {
+      if (!process.env.MAINTENANCE_TOKEN || input.token !== process.env.MAINTENANCE_TOKEN) {
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid maintenance token" });
       }
       const db = await getDb();

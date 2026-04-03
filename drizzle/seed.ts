@@ -26,6 +26,7 @@ import {
   services,
   pricingParameters,
 } from "./schema";
+import { benchmarkData } from "./schema_nr01";
 import { seedPlans, seedFeatures, getPlanFeatureAssociations } from "../seed_plans";
 import crypto from "crypto";
 import "dotenv/config";
@@ -372,6 +373,92 @@ async function seed() {
     }
   } else {
     console.log(`  = Admin user already exists: ${ADMIN_EMAIL}`);
+  }
+
+  // ── [9] Seed benchmark data (COPSOQ-II Brazilian references) ──
+  console.log("[9] Seeding COPSOQ-II benchmark data...");
+  const existingBenchmarks = await db.select().from(benchmarkData).limit(1);
+  if (existingBenchmarks.length === 0) {
+    const benchmarks = [
+      {
+        id: nanoid(), dataSource: "national", sectorCode: null, sectorName: "Nacional (Brasil)",
+        region: null, period: "2024", sampleSize: 15420,
+        avgDemandScore: 58, avgControlScore: 45, avgSupportScore: 52,
+        avgLeadershipScore: 48, avgCommunityScore: 55, avgMeaningScore: 42,
+        avgTrustScore: 50, avgJusticeScore: 47, avgInsecurityScore: 62,
+        avgMentalHealthScore: 55, avgBurnoutScore: 52, avgViolenceScore: 18,
+      },
+      {
+        id: nanoid(), dataSource: "sector", sectorCode: "C", sectorName: "Indústria de Transformação",
+        region: null, period: "2024", sampleSize: 3200,
+        avgDemandScore: 62, avgControlScore: 40, avgSupportScore: 48,
+        avgLeadershipScore: 44, avgCommunityScore: 50, avgMeaningScore: 45,
+        avgTrustScore: 46, avgJusticeScore: 43, avgInsecurityScore: 65,
+        avgMentalHealthScore: 58, avgBurnoutScore: 55, avgViolenceScore: 22,
+      },
+      {
+        id: nanoid(), dataSource: "sector", sectorCode: "Q", sectorName: "Saúde e Serviços Sociais",
+        region: null, period: "2024", sampleSize: 2800,
+        avgDemandScore: 68, avgControlScore: 42, avgSupportScore: 50,
+        avgLeadershipScore: 46, avgCommunityScore: 58, avgMeaningScore: 35,
+        avgTrustScore: 48, avgJusticeScore: 44, avgInsecurityScore: 60,
+        avgMentalHealthScore: 62, avgBurnoutScore: 65, avgViolenceScore: 28,
+      },
+      {
+        id: nanoid(), dataSource: "sector", sectorCode: "P", sectorName: "Educação",
+        region: null, period: "2024", sampleSize: 2100,
+        avgDemandScore: 65, avgControlScore: 48, avgSupportScore: 45,
+        avgLeadershipScore: 42, avgCommunityScore: 52, avgMeaningScore: 32,
+        avgTrustScore: 44, avgJusticeScore: 40, avgInsecurityScore: 58,
+        avgMentalHealthScore: 60, avgBurnoutScore: 62, avgViolenceScore: 25,
+      },
+      {
+        id: nanoid(), dataSource: "sector", sectorCode: "G", sectorName: "Comércio",
+        region: null, period: "2024", sampleSize: 1800,
+        avgDemandScore: 55, avgControlScore: 38, avgSupportScore: 50,
+        avgLeadershipScore: 45, avgCommunityScore: 52, avgMeaningScore: 48,
+        avgTrustScore: 47, avgJusticeScore: 44, avgInsecurityScore: 68,
+        avgMentalHealthScore: 52, avgBurnoutScore: 48, avgViolenceScore: 15,
+      },
+      {
+        id: nanoid(), dataSource: "sector", sectorCode: "F", sectorName: "Construção Civil",
+        region: null, period: "2024", sampleSize: 1500,
+        avgDemandScore: 60, avgControlScore: 35, avgSupportScore: 46,
+        avgLeadershipScore: 40, avgCommunityScore: 48, avgMeaningScore: 50,
+        avgTrustScore: 42, avgJusticeScore: 38, avgInsecurityScore: 72,
+        avgMentalHealthScore: 50, avgBurnoutScore: 45, avgViolenceScore: 20,
+      },
+      {
+        id: nanoid(), dataSource: "sector", sectorCode: "J", sectorName: "Tecnologia da Informação",
+        region: null, period: "2024", sampleSize: 1600,
+        avgDemandScore: 64, avgControlScore: 55, avgSupportScore: 54,
+        avgLeadershipScore: 52, avgCommunityScore: 56, avgMeaningScore: 38,
+        avgTrustScore: 54, avgJusticeScore: 50, avgInsecurityScore: 55,
+        avgMentalHealthScore: 58, avgBurnoutScore: 60, avgViolenceScore: 12,
+      },
+      {
+        id: nanoid(), dataSource: "sector", sectorCode: "H", sectorName: "Transporte e Armazenagem",
+        region: null, period: "2024", sampleSize: 1200,
+        avgDemandScore: 63, avgControlScore: 32, avgSupportScore: 44,
+        avgLeadershipScore: 38, avgCommunityScore: 45, avgMeaningScore: 52,
+        avgTrustScore: 40, avgJusticeScore: 36, avgInsecurityScore: 70,
+        avgMentalHealthScore: 54, avgBurnoutScore: 50, avgViolenceScore: 24,
+      },
+      {
+        id: nanoid(), dataSource: "sector", sectorCode: "O", sectorName: "Serviços Públicos",
+        region: null, period: "2024", sampleSize: 1220,
+        avgDemandScore: 56, avgControlScore: 42, avgSupportScore: 48,
+        avgLeadershipScore: 40, avgCommunityScore: 50, avgMeaningScore: 40,
+        avgTrustScore: 44, avgJusticeScore: 38, avgInsecurityScore: 52,
+        avgMentalHealthScore: 56, avgBurnoutScore: 54, avgViolenceScore: 16,
+      },
+    ];
+    for (const bm of benchmarks) {
+      await db.insert(benchmarkData).values(bm);
+    }
+    console.log(`  + ${benchmarks.length} benchmark records created (1 national + 8 sectors)`);
+  } else {
+    console.log("  = Benchmark data already exists");
   }
 
   console.log("\nSeed completed!");
