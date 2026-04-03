@@ -5,6 +5,7 @@
 
 import PDFDocument from "pdfkit";
 import { Readable } from "stream";
+import { signPdf, isSigningAvailable } from "./pdfSigner";
 
 export interface PdfBranding {
   logoUrl?: string;
@@ -1031,7 +1032,15 @@ export async function generateGenericReportPdf(
 
     const buffers: Buffer[] = [];
     doc.on("data", buffers.push.bind(buffers));
-    doc.on("end", () => resolve(Buffer.concat(buffers)));
+    doc.on("end", () => {
+      const pdfBuffer = Buffer.concat(buffers);
+      // Digitally sign with A1 certificate (ICP-Brasil) if available
+      if (isSigningAvailable()) {
+        resolve(signPdf(pdfBuffer));
+      } else {
+        resolve(pdfBuffer);
+      }
+    });
     doc.on("error", reject);
 
     const primaryColor = branding?.primaryColor || "#1a365d";

@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,6 +48,7 @@ import {
   Calendar,
   Building2,
   AlertTriangle,
+  ArrowLeft,
 } from "lucide-react";
 
 const CERT_TYPES = [
@@ -89,6 +91,7 @@ function isExpiringSoon(expiresAt: string | Date | null | undefined) {
 }
 
 export default function ConsultantCertifications() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const utils = trpc.useUtils();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -217,15 +220,20 @@ export default function ConsultantCertifications() {
     <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Award className="h-6 w-6 text-primary" />
-            Certificações Profissionais
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Gerencie as certificações e registros profissionais da sua
-            consultoria.
-          </p>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+              <Award className="h-6 w-6 text-primary" />
+              Certificações Profissionais
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Gerencie as certificações e registros profissionais da sua
+              consultoria.
+            </p>
+          </div>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>

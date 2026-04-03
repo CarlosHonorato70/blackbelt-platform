@@ -139,3 +139,8 @@ docker/backups/
 
 # Production environment
 .env.production
+
+# Certificados digitais (A1, ICP-Brasil) — NUNCA commitar
+server/certs/
+*.p12
+*.pfx
