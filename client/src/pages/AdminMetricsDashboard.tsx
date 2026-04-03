@@ -34,6 +34,9 @@ export default function AdminMetricsDashboard() {
     churnRate: raw.churnRate || 0,
     conversionRate: raw.conversionRate || 0,
     arr: raw.arr || 0,
+    totalReceived: (raw as any).totalReceived || 0,
+    paidInvoices: (raw as any).paidInvoices || 0,
+    last30DaysRevenue: (raw as any).last30DaysRevenue || 0,
   };
   const tenantsList = tenantsQuery.data || [];
   const alerts = alertsQuery.data || {};
@@ -111,8 +114,8 @@ export default function AdminMetricsDashboard() {
             <div className="flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-yellow-500" />
               <div>
-                <p className="text-2xl font-bold">R$ {((ov.monthlyRevenue || 0) / 100).toFixed(0)}</p>
-                <p className="text-xs text-muted-foreground">Receita/mês</p>
+                <p className="text-2xl font-bold">R$ {((ov.monthlyRevenue || 0) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+                <p className="text-xs text-muted-foreground">Receita mês atual (Asaas)</p>
               </div>
             </div>
           </CardContent>
@@ -155,8 +158,8 @@ export default function AdminMetricsDashboard() {
             <div className="flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-purple-500" />
               <div>
-                <p className="text-2xl font-bold">R$ {((ov.arr || 0) / 100).toFixed(0)}</p>
-                <p className="text-xs text-muted-foreground">Receita anual</p>
+                <p className="text-2xl font-bold">R$ {((ov.totalReceived || 0) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+                <p className="text-xs text-muted-foreground">Total recebido (Asaas) — {ov.paidInvoices || 0} pagamento(s)</p>
               </div>
             </div>
           </CardContent>

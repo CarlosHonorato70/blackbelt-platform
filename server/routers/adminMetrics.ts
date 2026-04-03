@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { adminProcedure, tenantProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { tenants, users, subscriptions, plans, supportTickets, userRoles, roles, people, proposals } from "../../drizzle/schema";
+import { tenants, users, subscriptions, plans, supportTickets, userRoles, roles, people, proposals, invoices } from "../../drizzle/schema";
 import { copsoqAssessments, copsoqReports, riskAssessments, riskAssessmentItems, actionPlans } from "../../drizzle/schema_nr01";
 import { eq, and, sql, desc, gte, lte, like, or, inArray } from "drizzle-orm";
 
@@ -32,11 +32,23 @@ export const adminMetricsRouter = router({
     const totalTrialed = Number(conversionStats?.totalTrialed) || 0;
     const conversionRate = totalTrialed > 0 ? Math.round((convertedCount / totalTrialed) * 100) : 0;
 
-    // ARR = MRR * 12
-    const mrr = Number(subStats?.revenue) || 0;
-    const arr = mrr * 12;
+    // Receita REAL: soma de pagamentos confirmados pelo Asaas (invoices com status = 'paid')
+    const [invoiceStats] = await database.select({
+      totalReceived: sql`COALESCE(SUM(CASE WHEN status = 'paid' THEN total ELSE 0 END), 0)`,
+      paidCount: sql`SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END)`,
+      thisMonth: sql`COALESCE(SUM(CASE WHEN status = 'paid' AND MONTH(paidAt) = MONTH(NOW()) AND YEAR(paidAt) = YEAR(NOW()) THEN total ELSE 0 END), 0)`,
+      lastMonth: sql`COALESCE(SUM(CASE WHEN status = 'paid' AND paidAt >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN total ELSE 0 END), 0)`,
+    }).from(invoices);
 
-    return { tenants: { total: Number(tenantStats?.total) || 0, active: Number(tenantStats?.active) || 0 }, users: { total: Number(userStats?.total) || 0 }, subscriptions: { total: Number(subStats?.total) || 0, active: Number(subStats?.active) || 0, trialing: Number(subStats?.trialing) || 0, pastDue: Number(subStats?.pastDue) || 0, monthlyRevenue: Number(subStats?.revenue) || 0 }, tickets: { open: openTickets }, churnRate, conversionRate, arr, canceledSubscriptions: canceledCount };
+    const totalReceived = Number(invoiceStats?.totalReceived) || 0;
+    const monthlyRevenue = Number(invoiceStats?.thisMonth) || 0;
+    const last30DaysRevenue = Number(invoiceStats?.lastMonth) || 0;
+
+    // MRR teórico (baseado em assinaturas ativas) para projeção
+    const theoreticalMrr = Number(subStats?.revenue) || 0;
+    const arr = theoreticalMrr * 12;
+
+    return { tenants: { total: Number(tenantStats?.total) || 0, active: Number(tenantStats?.active) || 0 }, users: { total: Number(userStats?.total) || 0 }, subscriptions: { total: Number(subStats?.total) || 0, active: Number(subStats?.active) || 0, trialing: Number(subStats?.trialing) || 0, pastDue: Number(subStats?.pastDue) || 0, monthlyRevenue }, tickets: { open: openTickets }, churnRate, conversionRate, arr, canceledSubscriptions: canceledCount, totalReceived, last30DaysRevenue, paidInvoices: Number(invoiceStats?.paidCount) || 0 };
   }),
 
   tenantsList: adminProcedure
