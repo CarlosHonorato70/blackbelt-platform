@@ -35,9 +35,9 @@ import { tenants } from "../../drizzle/schema";
 import { interventionPrograms } from "../../drizzle/schema_nr01";
 import { eq, and, desc, sql } from "drizzle-orm";
 
-const SEVERITY_LABELS: Record<string, string> = { low: "Leve", medium: "Moderada", high: "Grave", critical: "Gravissima" };
-const PROBABILITY_LABELS: Record<string, string> = { rare: "Rara", unlikely: "Improvavel", possible: "Possivel", likely: "Provavel", certain: "Certa" };
-const RISK_LABELS: Record<string, string> = { low: "Baixo", medium: "Medio", high: "Alto", critical: "Critico" };
+const SEVERITY_LABELS: Record<string, string> = { low: "Leve", medium: "Moderada", high: "Grave", critical: "Gravíssima" };
+const PROBABILITY_LABELS: Record<string, string> = { rare: "Rara", unlikely: "Improvável", possible: "Possível", likely: "Provável", certain: "Certa" };
+const RISK_LABELS: Record<string, string> = { low: "Baixo", medium: "Médio", high: "Alto", critical: "Crítico" };
 const RISK_COLORS: Record<string, string> = { low: "#10b981", medium: "#f59e0b", high: "#f97316", critical: "#ef4444" };
 
 const branding: PdfBranding = { companyName: "Black Belt Platform", primaryColor: "#1a365d" };
@@ -92,23 +92,23 @@ export const nr01PdfExportRouter = router({
         { type: "title", content: "Matriz de Risco — Severidade x Probabilidade" },
         { type: "kpis", kpis: [
           { label: "Total de Riscos", value: String(items.length), color: "#1a365d" },
-          { label: "Criticos", value: String(items.filter((i) => i.riskLevel === "critical").length), color: "#ef4444" },
+          { label: "Críticos", value: String(items.filter((i) => i.riskLevel === "critical").length), color: "#ef4444" },
           { label: "Altos", value: String(items.filter((i) => i.riskLevel === "high").length), color: "#f97316" },
-          { label: "Medios", value: String(items.filter((i) => i.riskLevel === "medium").length), color: "#f59e0b" },
+          { label: "Médios", value: String(items.filter((i) => i.riskLevel === "medium").length), color: "#f59e0b" },
         ]},
         { type: "table", columns: [
           { header: "Severidade", width: 90 },
           { header: "Rara", width: 70, align: "center" },
-          { header: "Improvavel", width: 70, align: "center" },
-          { header: "Possivel", width: 70, align: "center" },
-          { header: "Provavel", width: 70, align: "center" },
+          { header: "Improvável", width: 70, align: "center" },
+          { header: "Possível", width: 70, align: "center" },
+          { header: "Provável", width: 70, align: "center" },
           { header: "Certa", width: 70, align: "center" },
         ], rows },
       ];
 
       const reportData: GenericReportData = {
         reportTitle: "Matriz de Risco Psicossocial",
-        reportSubtitle: "Analise Severidade x Probabilidade — NR-01",
+        reportSubtitle: "Análise Severidade x Probabilidade — NR-01",
         date: fmtDate(new Date()),
         sections,
       };
@@ -126,23 +126,23 @@ export const nr01PdfExportRouter = router({
         .where(eq(pcmsoRecommendations.tenantId, ctx.tenantId!));
 
       const sections: PdfSection[] = [
-        { type: "title", content: "Recomendacoes PCMSO — Integracao PGR" },
-        { type: "text", content: `Total de recomendacoes: ${recs.length}` },
+        { type: "title", content: "Recomendações PCMSO — Integração PGR" },
+        { type: "text", content: `Total de recomendações: ${recs.length}` },
         { type: "table", columns: [
           { header: "Tipo de Exame", width: 110 },
-          { header: "Frequencia", width: 80 },
-          { header: "Populacao-Alvo", width: 120 },
-          { header: "Base Medica", width: 120 },
+          { header: "Frequência", width: 80 },
+          { header: "População-Alvo", width: 120 },
+          { header: "Base Médica", width: 120 },
           { header: "Prioridade", width: 65 },
         ], rows: recs.map((r) => ({
-          cells: [r.examType, r.frequency || "—", r.targetPopulation || "—", r.medicalBasis || "—", RISK_LABELS[r.priority || "medium"] || "Medio"],
+          cells: [r.examType, r.frequency || "—", r.targetPopulation || "—", r.medicalBasis || "—", RISK_LABELS[r.priority || "medium"] || "Médio"],
           accentColor: RISK_COLORS[r.priority || "medium"],
         }))},
       ];
 
       const buffer = await generateGenericReportPdf({
-        reportTitle: "Integracao PGR + PCMSO",
-        reportSubtitle: "Recomendacoes de Saude Ocupacional — NR-01 / NR-07",
+        reportTitle: "Integração PGR + PCMSO",
+        reportSubtitle: "Recomendações de Saúde Ocupacional — NR-01 / NR-07",
         date: fmtDate(new Date()),
         sections,
       }, branding, undefined, ctx.tenantId);
@@ -162,7 +162,7 @@ export const nr01PdfExportRouter = router({
         const buffer = await generateGenericReportPdf({
           reportTitle: "Dashboard Psicossocial",
           date: fmtDate(new Date()),
-          sections: [{ type: "text", content: "Nenhum relatorio COPSOQ disponivel para este tenant." }],
+          sections: [{ type: "text", content: "Nenhum relatório COPSOQ disponível para este tenant." }],
         }, branding, undefined, ctx.tenantId);
         return { filename: "dashboard-psicossocial.pdf", data: buffer.toString("base64") };
       }
@@ -171,15 +171,15 @@ export const nr01PdfExportRouter = router({
         { label: "Demanda", score: report.averageDemandScore },
         { label: "Controle", score: report.averageControlScore },
         { label: "Apoio Social", score: report.averageSupportScore },
-        { label: "Lideranca", score: report.averageLeadershipScore },
+        { label: "Liderança", score: report.averageLeadershipScore },
         { label: "Comunidade", score: report.averageCommunityScore },
         { label: "Significado", score: report.averageMeaningScore },
-        { label: "Confianca", score: report.averageTrustScore },
-        { label: "Justica", score: report.averageJusticeScore },
-        { label: "Inseguranca", score: report.averageInsecurityScore },
-        { label: "Saude Mental", score: report.averageMentalHealthScore },
+        { label: "Confiança", score: report.averageTrustScore },
+        { label: "Justiça", score: report.averageJusticeScore },
+        { label: "Insegurança", score: report.averageInsecurityScore },
+        { label: "Saúde Mental", score: report.averageMentalHealthScore },
         { label: "Burnout", score: report.averageBurnoutScore },
-        { label: "Violencia", score: report.averageViolenceScore },
+        { label: "Violência", score: report.averageViolenceScore },
       ];
 
       const total = (report.lowRiskCount || 0) + (report.mediumRiskCount || 0) + (report.highRiskCount || 0) + (report.criticalRiskCount || 0);
@@ -188,16 +188,16 @@ export const nr01PdfExportRouter = router({
         { type: "kpis", kpis: [
           { label: "Respondentes", value: String(report.totalRespondents || 0), color: "#1a365d" },
           { label: "Taxa de Resposta", value: `${report.responseRate || 0}%`, color: "#10b981" },
-          { label: "Risco Alto/Critico", value: `${total > 0 ? Math.round(((report.highRiskCount || 0) + (report.criticalRiskCount || 0)) / total * 100) : 0}%`, color: "#ef4444" },
+          { label: "Risco Alto/Crítico", value: `${total > 0 ? Math.round(((report.highRiskCount || 0) + (report.criticalRiskCount || 0)) / total * 100) : 0}%`, color: "#ef4444" },
         ]},
-        { type: "subtitle", content: "Scores por Dimensao COPSOQ-II" },
+        { type: "subtitle", content: "Scores por Dimensão COPSOQ-II" },
         { type: "table", columns: [
-          { header: "Dimensao", width: 160 },
+          { header: "Dimensão", width: 160 },
           { header: "Score (0-100)", width: 100, align: "center" },
-          { header: "Nivel", width: 100, align: "center" },
+          { header: "Nível", width: 100, align: "center" },
         ], rows: dims.map((d) => {
           const s = d.score || 0;
-          const level = s >= 70 ? "Bom" : s >= 40 ? "Atencao" : "Critico";
+          const level = s >= 70 ? "Bom" : s >= 40 ? "Atenção" : "Crítico";
           const color = s >= 70 ? "#10b981" : s >= 40 ? "#f59e0b" : "#ef4444";
           return { cells: [d.label, String(s), level], accentColor: color };
         })},
@@ -205,7 +205,7 @@ export const nr01PdfExportRouter = router({
 
       const buffer = await generateGenericReportPdf({
         reportTitle: "Dashboard Psicossocial",
-        reportSubtitle: "Analise COPSOQ-II — 12 Dimensoes",
+        reportSubtitle: "Análise COPSOQ-II — 12 Dimensões",
         date: fmtDate(new Date()),
         sections,
       }, branding, undefined, ctx.tenantId);
@@ -223,16 +223,16 @@ export const nr01PdfExportRouter = router({
 
       const sorted = reports.reverse();
       const sections: PdfSection[] = [
-        { type: "title", content: "Tendencias ao Longo do Tempo" },
-        { type: "text", content: `Periodos analisados: ${sorted.length}` },
+        { type: "title", content: "Tendências ao Longo do Tempo" },
+        { type: "text", content: `Períodos analisados: ${sorted.length}` },
         { type: "table", columns: [
-          { header: "Periodo", width: 80 },
+          { header: "Período", width: 80 },
           { header: "Respondentes", width: 70, align: "center" },
           { header: "Demanda", width: 55, align: "center" },
           { header: "Controle", width: 55, align: "center" },
           { header: "Apoio", width: 55, align: "center" },
           { header: "Burnout", width: 55, align: "center" },
-          { header: "Saude Mental", width: 60, align: "center" },
+          { header: "Saúde Mental", width: 60, align: "center" },
         ], rows: sorted.map((r) => ({
           cells: [
             fmtDate(r.generatedAt),
@@ -247,8 +247,8 @@ export const nr01PdfExportRouter = router({
       ];
 
       const buffer = await generateGenericReportPdf({
-        reportTitle: "Tendencias de Avaliacao Psicossocial",
-        reportSubtitle: "Evolucao Temporal dos Indicadores COPSOQ-II",
+        reportTitle: "Tendências de Avaliação Psicossocial",
+        reportSubtitle: "Evolução Temporal dos Indicadores COPSOQ-II",
         date: fmtDate(new Date()),
         sections,
       }, branding, undefined, ctx.tenantId);
@@ -288,7 +288,7 @@ export const nr01PdfExportRouter = router({
       const totalRisk = absentCost + turnoverCost + fineRisk + litigationRisk;
 
       const sections: PdfSection[] = [
-        { type: "title", content: "Analise de Risco Financeiro" },
+        { type: "title", content: "Análise de Risco Financeiro" },
         { type: "kpis", kpis: [
           { label: "Risco Total Anual", value: fmtCurrency(totalRisk), color: "#ef4444" },
           { label: "Headcount", value: String(fp.headcount), color: "#1a365d" },
@@ -299,28 +299,28 @@ export const nr01PdfExportRouter = router({
           { header: "Componente", width: 200 },
           { header: "Valor Estimado", width: 150, align: "right" },
         ], rows: [
-          { cells: ["Absenteismo Anual", fmtCurrency(absentCost)] },
+          { cells: ["Absenteísmo Anual", fmtCurrency(absentCost)] },
           { cells: ["Turnover Anual", fmtCurrency(turnoverCost)] },
           { cells: ["Risco de Multas (NR-01)", fmtCurrency(fineRisk)], accentColor: "#f97316" },
-          { cells: ["Risco Litigioso (Burnout)", fmtCurrency(litigationRisk)], accentColor: "#ef4444" },
+          { cells: ["Risco Litígioso (Burnout)", fmtCurrency(litigationRisk)], accentColor: "#ef4444" },
           { cells: ["TOTAL", fmtCurrency(totalRisk)], accentColor: "#1a365d" },
         ]},
-        { type: "subtitle", content: "Parametros Utilizados" },
+        { type: "subtitle", content: "Parâmetros Utilizados" },
         { type: "table", columns: [
-          { header: "Parametro", width: 200 },
+          { header: "Parâmetro", width: 200 },
           { header: "Valor", width: 150, align: "right" },
         ], rows: [
-          { cells: ["Salario Medio", fmtCurrency(fp.averageSalary)] },
-          { cells: ["Custo Reposicao", fmtCurrency(fp.avgReplacementCost)] },
-          { cells: ["Custo Diario Absenteismo", fmtCurrency(fp.dailyAbsenteeismCost)] },
+          { cells: ["Salário Médio", fmtCurrency(fp.averageSalary)] },
+          { cells: ["Custo Reposição", fmtCurrency(fp.avgReplacementCost)] },
+          { cells: ["Custo Diário Absenteísmo", fmtCurrency(fp.dailyAbsenteeismCost)] },
           { cells: ["Multa por Trabalhador", fmtCurrency(fp.finePerWorker)] },
-          { cells: ["Custo Medio Litigio", fmtCurrency(fp.litigationAvgCost)] },
+          { cells: ["Custo Médio Litígio", fmtCurrency(fp.litigationAvgCost)] },
         ]},
       ];
 
       const buffer = await generateGenericReportPdf({
         reportTitle: "Calculadora de Risco Financeiro",
-        reportSubtitle: "Impacto Economico da Nao-Conformidade NR-01",
+        reportSubtitle: "Impacto Econômico da Não-Conformidade NR-01",
         date: fmtDate(new Date()),
         sections,
       }, branding, undefined, ctx.tenantId);
@@ -340,10 +340,10 @@ export const nr01PdfExportRouter = router({
       const total = milestones.length;
 
       const sections: PdfSection[] = [
-        { type: "title", content: "Cronograma de Adequacao NR-01" },
+        { type: "title", content: "Cronograma de Adequação NR-01" },
         { type: "kpis", kpis: [
           { label: "Total Etapas", value: String(total), color: "#1a365d" },
-          { label: "Concluidas", value: String(completed), color: "#10b981" },
+          { label: "Concluídas", value: String(completed), color: "#10b981" },
           { label: "Progresso", value: `${total > 0 ? Math.round((completed / total) * 100) : 0}%`, color: "#3b82f6" },
         ]},
         { type: "table", columns: [
@@ -351,10 +351,10 @@ export const nr01PdfExportRouter = router({
           { header: "Etapa", width: 180 },
           { header: "Categoria", width: 90 },
           { header: "Prazo", width: 80 },
-          { header: "Conclusao", width: 80 },
+          { header: "Conclusão", width: 80 },
           { header: "Status", width: 80, align: "center" },
         ], rows: milestones.map((m, i) => {
-          const statusLabels: Record<string, string> = { pending: "Pendente", in_progress: "Em Andamento", completed: "Concluido", overdue: "Atrasado" };
+          const statusLabels: Record<string, string> = { pending: "Pendente", in_progress: "Em Andamento", completed: "Concluído", overdue: "Atrasado" };
           const statusColors: Record<string, string> = { pending: "#6b7280", in_progress: "#3b82f6", completed: "#10b981", overdue: "#ef4444" };
           return {
             cells: [String(i + 1), m.title, m.category, fmtDate(m.targetDate), fmtDate(m.completedDate), statusLabels[m.status] || m.status],
@@ -364,7 +364,7 @@ export const nr01PdfExportRouter = router({
       ];
 
       const buffer = await generateGenericReportPdf({
-        reportTitle: "Cronograma de Adequacao NR-01",
+        reportTitle: "Cronograma de Adequação NR-01",
         reportSubtitle: "Marcos e Prazos de Conformidade",
         date: fmtDate(new Date()),
         sections,
@@ -386,7 +386,7 @@ export const nr01PdfExportRouter = router({
       const total = items.length;
       const score = total > 0 ? Math.round(((compliant + partial * 0.5) / total) * 100) : 0;
 
-      const statusLabels: Record<string, string> = { compliant: "Conforme", partial: "Parcial", non_compliant: "Nao Conforme", not_applicable: "N/A" };
+      const statusLabels: Record<string, string> = { compliant: "Conforme", partial: "Parcial", non_compliant: "Não Conforme", not_applicable: "N/A" };
       const statusColors: Record<string, string> = { compliant: "#10b981", partial: "#f59e0b", non_compliant: "#ef4444", not_applicable: "#6b7280" };
 
       const sections: PdfSection[] = [
@@ -395,10 +395,10 @@ export const nr01PdfExportRouter = router({
           { label: "Score de Conformidade", value: `${score}%`, color: score >= 70 ? "#10b981" : "#ef4444" },
           { label: "Conformes", value: String(compliant), color: "#10b981" },
           { label: "Parciais", value: String(partial), color: "#f59e0b" },
-          { label: "Nao Conformes", value: String(nonCompliant), color: "#ef4444" },
+          { label: "Não Conformes", value: String(nonCompliant), color: "#ef4444" },
         ]},
         { type: "table", columns: [
-          { header: "Codigo", width: 80 },
+          { header: "Código", width: 80 },
           { header: "Requisito", width: 200 },
           { header: "Categoria", width: 90 },
           { header: "Status", width: 80, align: "center" },
@@ -409,8 +409,8 @@ export const nr01PdfExportRouter = router({
       ];
 
       const buffer = await generateGenericReportPdf({
-        reportTitle: "Relatorio de Conformidade Legal",
-        reportSubtitle: "Checklist NR-01 — Requisitos Regulatorios",
+        reportTitle: "Relatório de Conformidade Legal",
+        reportSubtitle: "Checklist NR-01 — Requisitos Regulatórios",
         date: fmtDate(new Date()),
         sections,
       }, branding, undefined, ctx.tenantId);
@@ -433,7 +433,7 @@ export const nr01PdfExportRouter = router({
         const buffer = await generateGenericReportPdf({
           reportTitle: "Certificado de Conformidade",
           date: fmtDate(new Date()),
-          sections: [{ type: "text", content: "Nenhum certificado disponivel para este tenant." }],
+          sections: [{ type: "text", content: "Nenhum certificado disponível para este tenant." }],
         }, branding, undefined, ctx.tenantId);
         return { filename: "certificado.pdf", data: buffer.toString("base64") };
       }
@@ -442,9 +442,9 @@ export const nr01PdfExportRouter = router({
         { type: "spacer" },
         { type: "title", content: "CERTIFICADO DE CONFORMIDADE NR-01" },
         { type: "spacer" },
-        { type: "text", content: `Certificamos que a organizacao atende aos requisitos da Norma Regulamentadora NR-01 para gestao de riscos psicossociais ocupacionais.` },
+        { type: "text", content: `Certificamos que a organização atende aos requisitos da Norma Regulamentadora NR-01 para gestão de riscos psicossociais ocupacionais.` },
         { type: "kpis", kpis: [
-          { label: "Numero do Certificado", value: cert.certificateNumber, color: "#1a365d" },
+          { label: "Número do Certificado", value: cert.certificateNumber, color: "#1a365d" },
           { label: "Score de Conformidade", value: `${cert.complianceScore}%`, color: cert.complianceScore >= 70 ? "#10b981" : "#ef4444" },
           { label: "Status", value: cert.status === "active" ? "Ativo" : cert.status === "expired" ? "Expirado" : "Revogado", color: cert.status === "active" ? "#10b981" : "#ef4444" },
         ]},
@@ -454,13 +454,13 @@ export const nr01PdfExportRouter = router({
           { header: "Valor", width: 300 },
         ], rows: [
           { cells: ["Emitido em", fmtDate(cert.issuedAt)] },
-          { cells: ["Valido ate", fmtDate(cert.validUntil)] },
+          { cells: ["Válido até", fmtDate(cert.validUntil)] },
           { cells: ["Emitido por", cert.issuedBy || "—"] },
         ]},
         { type: "spacer" },
-        { type: "text", content: `Verificacao online: https://blackbeltconsultoria.com/verify/${cert.certificateNumber}` },
+        { type: "text", content: `Verificação online: https://blackbeltconsultoria.com/verify/${cert.certificateNumber}` },
         { type: "spacer" },
-        { type: "signature", signatureName: cert.issuedBy || ctx.user?.name || "Responsavel Tecnico", signatureRole: "Auditor de Conformidade NR-01" },
+        { type: "signature", signatureName: cert.issuedBy || ctx.user?.name || "Responsável Técnico", signatureRole: "Auditor de Conformidade NR-01" },
       ];
 
       // Add tenant CNPJ if available
@@ -472,14 +472,14 @@ export const nr01PdfExportRouter = router({
 
       const buffer = await generateGenericReportPdf({
         reportTitle: "Certificado de Conformidade NR-01",
-        reportSubtitle: "Gestao de Riscos Psicossociais Ocupacionais",
+        reportSubtitle: "Gestão de Riscos Psicossociais Ocupacionais",
         date: fmtDate(cert.issuedAt),
         sections,
       }, branding, undefined, ctx.tenantId);
       return { filename: `certificado-${cert.certificateNumber}.pdf`, data: buffer.toString("base64") };
     }),
 
-  // 9. Laudo Tecnico
+  // 9. Laudo Técnico
   exportLaudoTecnico: tenantProcedure
     .input(z.object({ tenantId: z.string().optional(), documentId: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
@@ -493,9 +493,9 @@ export const nr01PdfExportRouter = router({
       const doc = docs[0];
       if (!doc) {
         const buffer = await generateGenericReportPdf({
-          reportTitle: "Laudo Tecnico",
+          reportTitle: "Laudo Técnico",
           date: fmtDate(new Date()),
-          sections: [{ type: "text", content: "Nenhum laudo tecnico disponivel." }],
+          sections: [{ type: "text", content: "Nenhum laudo técnico disponível." }],
         }, branding, undefined, ctx.tenantId);
         return { filename: "laudo-tecnico.pdf", data: buffer.toString("base64") };
       }
@@ -508,10 +508,10 @@ export const nr01PdfExportRouter = router({
           { header: "Campo", width: 150 },
           { header: "Valor", width: 340 },
         ], rows: [
-          { cells: ["Tipo", "Laudo Tecnico"] },
-          { cells: ["Versao", doc.version || "1.0"] },
-          { cells: ["Valido de", fmtDate(doc.validFrom)] },
-          { cells: ["Valido ate", fmtDate(doc.validUntil)] },
+          { cells: ["Tipo", "Laudo Técnico"] },
+          { cells: ["Versão", doc.version || "1.0"] },
+          { cells: ["Válido de", fmtDate(doc.validFrom)] },
+          { cells: ["Válido até", fmtDate(doc.validUntil)] },
           { cells: ["Status", doc.status] },
           { cells: ["Profissional", doc.professionalName || "—"] },
           { cells: ["Registro", doc.professionalRegistry || "—"] },
@@ -529,11 +529,11 @@ export const nr01PdfExportRouter = router({
 
       sections.push(
         { type: "spacer" },
-        { type: "signature", signatureName: doc.professionalName || "Responsavel Tecnico", signatureRole: "Profissional de SST", signatureRegistry: doc.professionalRegistry || undefined },
+        { type: "signature", signatureName: doc.professionalName || "Responsável Técnico", signatureRole: "Profissional de SST", signatureRegistry: doc.professionalRegistry || undefined },
       );
 
       const buffer = await generateGenericReportPdf({
-        reportTitle: "Laudo Tecnico — Riscos Psicossociais",
+        reportTitle: "Laudo Técnico — Riscos Psicossociais",
         reportSubtitle: "Conforme NR-01 item 1.5.7",
         date: fmtDate(doc.validFrom),
         sections,
@@ -555,9 +555,9 @@ export const nr01PdfExportRouter = router({
         { key: "Demanda", tenant: report?.averageDemandScore, benchFn: (b: any) => b.avgDemandScore },
         { key: "Controle", tenant: report?.averageControlScore, benchFn: (b: any) => b.avgControlScore },
         { key: "Apoio Social", tenant: report?.averageSupportScore, benchFn: (b: any) => b.avgSupportScore },
-        { key: "Lideranca", tenant: report?.averageLeadershipScore, benchFn: (b: any) => b.avgLeadershipScore },
+        { key: "Liderança", tenant: report?.averageLeadershipScore, benchFn: (b: any) => b.avgLeadershipScore },
         { key: "Burnout", tenant: report?.averageBurnoutScore, benchFn: (b: any) => b.avgBurnoutScore },
-        { key: "Saude Mental", tenant: report?.averageMentalHealthScore, benchFn: (b: any) => b.avgMentalHealthScore },
+        { key: "Saúde Mental", tenant: report?.averageMentalHealthScore, benchFn: (b: any) => b.avgMentalHealthScore },
       ];
 
       const nationalBench = benchmarks.find((b) => b.dataSource === "national");
@@ -565,10 +565,10 @@ export const nr01PdfExportRouter = router({
       const sections: PdfSection[] = [
         { type: "title", content: "Comparativo com Benchmarks" },
         { type: "table", columns: [
-          { header: "Dimensao", width: 120 },
+          { header: "Dimensão", width: 120 },
           { header: "Sua Empresa", width: 90, align: "center" },
-          { header: "Media Nacional", width: 90, align: "center" },
-          { header: "Diferenca", width: 90, align: "center" },
+          { header: "Média Nacional", width: 90, align: "center" },
+          { header: "Diferença", width: 90, align: "center" },
         ], rows: dimKeys.map((d) => {
           const tenantVal = d.tenant || 0;
           const benchVal = nationalBench ? d.benchFn(nationalBench) || 0 : 0;
@@ -582,12 +582,12 @@ export const nr01PdfExportRouter = router({
 
       if (benchmarks.length > 1) {
         sections.push(
-          { type: "subtitle", content: "Fontes de Benchmark Disponiveis" },
+          { type: "subtitle", content: "Fontes de Benchmark Disponíveis" },
           { type: "table", columns: [
             { header: "Fonte", width: 100 },
             { header: "Setor", width: 150 },
-            { header: "Regiao", width: 100 },
-            { header: "Periodo", width: 70 },
+            { header: "Região", width: 100 },
+            { header: "Período", width: 70 },
             { header: "Amostra", width: 70, align: "center" },
           ], rows: benchmarks.map((b) => ({
             cells: [b.dataSource, b.sectorName || "—", b.region || "—", b.period || "—", String(b.sampleSize || 0)],
@@ -596,8 +596,8 @@ export const nr01PdfExportRouter = router({
       }
 
       const buffer = await generateGenericReportPdf({
-        reportTitle: "Relatorio Comparativo — Benchmark",
-        reportSubtitle: "Comparacao com Dados Nacionais e Setoriais",
+        reportTitle: "Relatório Comparativo — Benchmark",
+        reportSubtitle: "Comparação com Dados Nacionais e Setoriais",
         date: fmtDate(new Date()),
         sections,
       }, branding, undefined, ctx.tenantId);
@@ -612,7 +612,7 @@ export const nr01PdfExportRouter = router({
       const [survey] = await db.select().from(psychosocialSurveys)
         .where(and(eq(psychosocialSurveys.tenantId, ctx.tenantId!), eq(psychosocialSurveys.id, input.surveyId)));
 
-      if (!survey) throw new TRPCError({ code: "NOT_FOUND", message: "Pesquisa nao encontrada" });
+      if (!survey) throw new TRPCError({ code: "NOT_FOUND", message: "Pesquisa não encontrada" });
 
       const responses = await db.select().from(surveyResponses)
         .where(and(eq(surveyResponses.tenantId, ctx.tenantId!), eq(surveyResponses.surveyId, input.surveyId)));
@@ -628,12 +628,12 @@ export const nr01PdfExportRouter = router({
         { type: "text", content: survey.description || "" },
         { type: "kpis", kpis: [
           { label: "Total Respostas", value: String(totalResponses), color: "#1a365d" },
-          { label: "Score Medio", value: String(avgScore), color: avgScore >= 70 ? "#10b981" : "#f59e0b" },
+          { label: "Score Médio", value: String(avgScore), color: avgScore >= 70 ? "#10b981" : "#f59e0b" },
           { label: "Tipo", value: survey.surveyType, color: "#6b7280" },
         ]},
-        { type: "subtitle", content: "Distribuicao de Risco" },
+        { type: "subtitle", content: "Distribuição de Risco" },
         { type: "table", columns: [
-          { header: "Nivel de Risco", width: 150 },
+          { header: "Nível de Risco", width: 150 },
           { header: "Quantidade", width: 100, align: "center" },
           { header: "Percentual", width: 100, align: "center" },
         ], rows: Object.entries(riskDist).map(([level, count]) => ({
@@ -643,7 +643,7 @@ export const nr01PdfExportRouter = router({
       ];
 
       const buffer = await generateGenericReportPdf({
-        reportTitle: "Relatorio de Pesquisa de Clima",
+        reportTitle: "Relatório de Pesquisa de Clima",
         reportSubtitle: survey.title,
         date: fmtDate(new Date()),
         sections,
@@ -673,17 +673,17 @@ export const nr01PdfExportRouter = router({
       const sections: PdfSection[] = [
         { type: "title", content: "Progresso de Treinamento" },
         { type: "kpis", kpis: [
-          { label: "Modulos", value: String(totalModules), color: "#1a365d" },
-          { label: "Taxa Conclusao", value: `${completionRate}%`, color: completionRate >= 70 ? "#10b981" : "#f59e0b" },
-          { label: "Nota Media Quiz", value: String(avgScore), color: avgScore >= 70 ? "#10b981" : "#ef4444" },
+          { label: "Módulos", value: String(totalModules), color: "#1a365d" },
+          { label: "Taxa Conclusão", value: `${completionRate}%`, color: completionRate >= 70 ? "#10b981" : "#f59e0b" },
+          { label: "Nota Média Quiz", value: String(avgScore), color: avgScore >= 70 ? "#10b981" : "#ef4444" },
         ]},
-        { type: "subtitle", content: "Modulos de Treinamento" },
+        { type: "subtitle", content: "Módulos de Treinamento" },
         { type: "table", columns: [
-          { header: "Modulo", width: 200 },
-          { header: "Duracao (min)", width: 80, align: "center" },
-          { header: "Nota Minima", width: 80, align: "center" },
+          { header: "Módulo", width: 200 },
+          { header: "Duração (min)", width: 80, align: "center" },
+          { header: "Nota Mínima", width: 80, align: "center" },
           { header: "Inscritos", width: 70, align: "center" },
-          { header: "Concluidos", width: 70, align: "center" },
+          { header: "Concluídos", width: 70, align: "center" },
         ], rows: modules.map((m) => {
           const modProgress = progress.filter((p) => p.moduleId === m.id);
           const modCompleted = modProgress.filter((p) => p.status === "completed").length;
@@ -695,8 +695,8 @@ export const nr01PdfExportRouter = router({
       ];
 
       const buffer = await generateGenericReportPdf({
-        reportTitle: "Relatorio de Treinamento Digital",
-        reportSubtitle: "Capacitacao em Riscos Psicossociais — NR-01",
+        reportTitle: "Relatório de Treinamento Digital",
+        reportSubtitle: "Capacitação em Riscos Psicossociais — NR-01",
         date: fmtDate(new Date()),
         sections,
       }, branding, undefined, ctx.tenantId);
@@ -721,16 +721,16 @@ export const nr01PdfExportRouter = router({
         statusCounts[r.status] = (statusCounts[r.status] || 0) + 1;
       });
 
-      const catLabels: Record<string, string> = { harassment: "Assedio", discrimination: "Discriminacao", violence: "Violencia", workload: "Sobrecarga", leadership: "Lideranca", other: "Outros" };
-      const statusLabels: Record<string, string> = { received: "Recebido", investigating: "Em Investigacao", resolved: "Resolvido", dismissed: "Descartado" };
+      const catLabels: Record<string, string> = { harassment: "Assédio", discrimination: "Discriminação", violence: "Violência", workload: "Sobrecarga", leadership: "Liderança", other: "Outros" };
+      const statusLabels: Record<string, string> = { received: "Recebido", investigating: "Em Investigação", resolved: "Resolvido", dismissed: "Descartado" };
 
       const sections: PdfSection[] = [
-        { type: "title", content: "Resumo de Denuncias Anonimas" },
-        { type: "text", content: "Este relatorio apresenta dados agregados sem informacoes pessoais identificaveis (PII)." },
+        { type: "title", content: "Resumo de Denúncias Anônimas" },
+        { type: "text", content: "Este relatório apresenta dados agregados sem informações pessoais identificáveis (PII)." },
         { type: "kpis", kpis: [
-          { label: "Total Denuncias", value: String(reports.length), color: "#1a365d" },
+          { label: "Total Denúncias", value: String(reports.length), color: "#1a365d" },
           { label: "Resolvidas", value: String(statusCounts["resolved"] || 0), color: "#10b981" },
-          { label: "Em Investigacao", value: String(statusCounts["investigating"] || 0), color: "#f59e0b" },
+          { label: "Em Investigação", value: String(statusCounts["investigating"] || 0), color: "#f59e0b" },
         ]},
         { type: "subtitle", content: "Por Categoria" },
         { type: "table", columns: [
@@ -751,7 +751,7 @@ export const nr01PdfExportRouter = router({
       ];
 
       const buffer = await generateGenericReportPdf({
-        reportTitle: "Canal de Denuncia Anonima — Relatorio",
+        reportTitle: "Canal de Denúncia Anônima — Relatório",
         reportSubtitle: "Dados Agregados (Sem PII)",
         date: fmtDate(new Date()),
         sections,
@@ -794,7 +794,7 @@ export const nr01PdfExportRouter = router({
       ];
 
       const buffer = await generateGenericReportPdf({
-        reportTitle: "Relatorio de Alertas de Prazos",
+        reportTitle: "Relatório de Alertas de Prazos",
         reportSubtitle: "Monitoramento de Vencimentos NR-01",
         date: fmtDate(new Date()),
         sections,
@@ -810,14 +810,14 @@ export const nr01PdfExportRouter = router({
       const [assessment] = await db.select().from(ergonomicAssessments)
         .where(and(eq(ergonomicAssessments.tenantId, ctx.tenantId!), eq(ergonomicAssessments.id, input.assessmentId)));
 
-      if (!assessment) throw new TRPCError({ code: "NOT_FOUND", message: "Avaliacao ergonomica nao encontrada" });
+      if (!assessment) throw new TRPCError({ code: "NOT_FOUND", message: "Avaliação ergonômica não encontrada" });
 
       const items = await db.select().from(ergonomicItems)
         .where(eq(ergonomicItems.assessmentId, input.assessmentId));
 
-      const riskLabels: Record<string, string> = { acceptable: "Aceitavel", moderate: "Moderado", high: "Alto", critical: "Critico" };
+      const riskLabels: Record<string, string> = { acceptable: "Aceitável", moderate: "Moderado", high: "Alto", critical: "Crítico" };
       const riskColors: Record<string, string> = { acceptable: "#10b981", moderate: "#f59e0b", high: "#f97316", critical: "#ef4444" };
-      const catLabels: Record<string, string> = { workstation: "Posto de Trabalho", posture: "Postura", repetition: "Repeticao", lighting: "Iluminacao", noise: "Ruido", organization: "Organizacao", psychosocial: "Psicossocial" };
+      const catLabels: Record<string, string> = { workstation: "Posto de Trabalho", posture: "Postura", repetition: "Repetição", lighting: "Iluminação", noise: "Ruído", organization: "Organização", psychosocial: "Psicossocial" };
 
       const sections: PdfSection[] = [
         { type: "title", content: assessment.title },
@@ -831,8 +831,8 @@ export const nr01PdfExportRouter = router({
           { header: "Categoria", width: 90 },
           { header: "Fator", width: 130 },
           { header: "Risco", width: 70, align: "center" },
-          { header: "Observacao", width: 110 },
-          { header: "Recomendacao", width: 110 },
+          { header: "Observação", width: 110 },
+          { header: "Recomendação", width: 110 },
         ], rows: items.map((item) => ({
           cells: [catLabels[item.category] || item.category, item.factor, riskLabels[item.riskLevel] || item.riskLevel, item.observation || "—", item.recommendation || "—"],
           accentColor: riskColors[item.riskLevel],
@@ -840,8 +840,8 @@ export const nr01PdfExportRouter = router({
       ];
 
       const buffer = await generateGenericReportPdf({
-        reportTitle: "Avaliacao Ergonomica Preliminar — AEP",
-        reportSubtitle: "Conforme NR-17 — Analise Ergonomica do Trabalho",
+        reportTitle: "Avaliação Ergonômica Preliminar — AEP",
+        reportSubtitle: "Conforme NR-17 — Análise Ergonômica do Trabalho",
         date: fmtDate(assessment.assessmentDate),
         sections,
       }, branding, undefined, ctx.tenantId);
@@ -863,9 +863,9 @@ export const nr01PdfExportRouter = router({
       const accepted = exports.filter((e) => e.status === "accepted").length;
 
       const sections: PdfSection[] = [
-        { type: "title", content: "Historico de Exportacoes eSocial" },
+        { type: "title", content: "Histórico de Exportações eSocial" },
         { type: "kpis", kpis: [
-          { label: "Total Exportacoes", value: String(exports.length), color: "#1a365d" },
+          { label: "Total Exportações", value: String(exports.length), color: "#1a365d" },
           { label: "Aceitas", value: String(accepted), color: "#10b981" },
           { label: "Rejeitadas", value: String(exports.filter((e) => e.status === "rejected").length), color: "#ef4444" },
         ]},
@@ -873,7 +873,7 @@ export const nr01PdfExportRouter = router({
           { header: "Evento", width: 70 },
           { header: "Status", width: 80, align: "center" },
           { header: "Enviado em", width: 90 },
-          { header: "Codigo Resposta", width: 90 },
+          { header: "Código Resposta", width: 90 },
           { header: "Mensagem", width: 180 },
         ], rows: exports.map((e) => ({
           cells: [e.eventType, statusLabels[e.status] || e.status, fmtDate(e.submittedAt), e.responseCode || "—", e.responseMessage || "—"],
@@ -882,7 +882,7 @@ export const nr01PdfExportRouter = router({
       ];
 
       const buffer = await generateGenericReportPdf({
-        reportTitle: "Relatorio de Exportacao eSocial",
+        reportTitle: "Relatório de Exportação eSocial",
         reportSubtitle: "Eventos S-2220 e S-2240",
         date: fmtDate(new Date()),
         sections,
@@ -945,18 +945,18 @@ export const nr01PdfExportRouter = router({
           { type: "kpis" as const, kpis: [
             { label: "Respondentes", value: String(latestReport.totalRespondents || 0), color: "#1a365d" },
             { label: "Taxa Resposta", value: `${latestReport.responseRate || 0}%`, color: "#10b981" },
-            { label: "Risco Critico", value: String(latestReport.criticalRiskCount || 0), color: "#ef4444" },
+            { label: "Risco Crítico", value: String(latestReport.criticalRiskCount || 0), color: "#ef4444" },
             { label: "Risco Alto", value: String(latestReport.highRiskCount || 0), color: "#f97316" },
           ]},
         ] : [
-          { type: "text" as const, content: "Nenhuma avaliacao COPSOQ disponivel." },
+          { type: "text" as const, content: "Nenhuma avaliação COPSOQ disponível." },
         ]),
         { type: "divider" },
         { type: "title", content: "2. Conformidade Legal" },
         { type: "kpis", kpis: [
           { label: "Score Conformidade", value: `${complianceScore}%`, color: complianceScore >= 70 ? "#10b981" : "#ef4444" },
           { label: "Requisitos Atendidos", value: `${compliant}/${totalChecklist}`, color: "#1a365d" },
-          { label: "Planos de Acao", value: `${apCompleted}/${apTotal} concluidos`, color: "#3b82f6" },
+          { label: "Planos de Ação", value: `${apCompleted}/${apTotal} concluidos`, color: "#3b82f6" },
         ]},
         { type: "divider" },
         { type: "title", content: "3. Impacto Financeiro" },
@@ -966,22 +966,22 @@ export const nr01PdfExportRouter = router({
           { label: "Casos Burnout", value: String(burnoutCases), color: "#f59e0b" },
         ]},
         { type: "divider" },
-        { type: "title", content: "4. Indicadores de Saude" },
+        { type: "title", content: "4. Indicadores de Saúde" },
         { type: "table", columns: [
           { header: "Indicador", width: 200 },
           { header: "Valor", width: 150, align: "center" },
         ], rows: [
-          { cells: ["Taxa de Absenteismo", `${((indicators?.absenteeismRate || 0) / 100).toFixed(2)}%`] },
+          { cells: ["Taxa de Absenteísmo", `${((indicators?.absenteeismRate || 0) / 100).toFixed(2)}%`] },
           { cells: ["Taxa de Turnover", `${((indicators?.turnoverRate || 0) / 100).toFixed(2)}%`] },
-          { cells: ["Nivel de Estresse", `${indicators?.stressLevel || 0}/100`] },
+          { cells: ["Nível de Estresse", `${indicators?.stressLevel || 0}/100`] },
           { cells: ["Engajamento", `${indicators?.engagementScore || 0}/100`] },
-          { cells: ["Satisfacao", `${indicators?.satisfactionScore || 0}/100`] },
+          { cells: ["Satisfação", `${indicators?.satisfactionScore || 0}/100`] },
         ]},
       ];
 
       const buffer = await generateGenericReportPdf({
-        reportTitle: "Relatorio Executivo — Gestao Psicossocial",
-        reportSubtitle: "Visao Consolidada NR-01",
+        reportTitle: "Relatório Executivo — Gestão Psicossocial",
+        reportSubtitle: "Visão Consolidada NR-01",
         date: fmtDate(new Date()),
         sections,
       }, branding, undefined, ctx.tenantId);
@@ -1070,9 +1070,9 @@ export const nr01PdfExportRouter = router({
       if (companyCnpj) {
         sections.push({ type: "text", content: `CNPJ: ${companyCnpj}` });
       }
-      sections.push({ type: "text", content: `Data de elaboracao: ${fmtDate(new Date())}` });
+      sections.push({ type: "text", content: `Data de elaboração: ${fmtDate(new Date())}` });
       if (latestAssessment) {
-        sections.push({ type: "text", content: `Avaliacao base: ${latestAssessment.title} (${fmtDate(latestAssessment.assessmentDate)})` });
+        sections.push({ type: "text", content: `Avaliação base: ${latestAssessment.title} (${fmtDate(latestAssessment.assessmentDate)})` });
       }
       sections.push({ type: "divider" });
 
@@ -1080,15 +1080,15 @@ export const nr01PdfExportRouter = router({
       sections.push({ type: "subtitle", content: "1. Resumo Executivo" });
       sections.push({ type: "kpis", kpis: [
         { label: "Riscos Identificados", value: String(riskItems.length), color: "#1a365d" },
-        { label: "Criticos/Altos", value: String(criticalItems.length + highItems.length), color: "#ef4444" },
-        { label: "Planos de Acao", value: `${completedPlans.length}/${plans.length}`, color: "#10b981" },
+        { label: "Críticos/Altos", value: String(criticalItems.length + highItems.length), color: "#ef4444" },
+        { label: "Planos de Ação", value: `${completedPlans.length}/${plans.length}`, color: "#10b981" },
         { label: "Conformidade NR-01", value: `${complianceScore}%`, color: complianceScore >= 80 ? "#10b981" : "#f59e0b" },
       ]});
       sections.push({ type: "spacer" });
 
       // ── SEÇÃO 2: INVENTÁRIO DE RISCOS ─────────────────────────────
-      sections.push({ type: "subtitle", content: "2. Inventario de Riscos Psicossociais" });
-      sections.push({ type: "text", content: `Metodologia: COPSOQ-II (Copenhagen Psychosocial Questionnaire) — 76 questoes, 12 dimensoes. Avaliacao realizada em ${fmtDate(latestAssessment?.assessmentDate)}.` });
+      sections.push({ type: "subtitle", content: "2. Inventário de Riscos Psicossociais" });
+      sections.push({ type: "text", content: `Metodologia: COPSOQ-II (Copenhagen Psychosocial Questionnaire) — 76 questões, 12 dimensões. Avaliação realizada em ${fmtDate(latestAssessment?.assessmentDate)}.` });
 
       if (latestReport) {
         const dims = latestReport as any;
@@ -1096,26 +1096,26 @@ export const nr01PdfExportRouter = router({
           { name: "Demanda de Trabalho", score: dims.averageDemandScore, risk: (dims.averageDemandScore || 0) > 60 },
           { name: "Controle / Autonomia", score: dims.averageControlScore, risk: (dims.averageControlScore || 0) < 40 },
           { name: "Apoio Social", score: dims.averageSupportScore, risk: (dims.averageSupportScore || 0) < 40 },
-          { name: "Lideranca", score: dims.averageLeadershipScore, risk: (dims.averageLeadershipScore || 0) < 40 },
+          { name: "Liderança", score: dims.averageLeadershipScore, risk: (dims.averageLeadershipScore || 0) < 40 },
           { name: "Comunidade", score: dims.averageCommunityScore, risk: (dims.averageCommunityScore || 0) < 40 },
           { name: "Significado do Trabalho", score: dims.averageMeaningScore, risk: (dims.averageMeaningScore || 0) < 40 },
-          { name: "Confianca", score: dims.averageTrustScore, risk: (dims.averageTrustScore || 0) < 40 },
-          { name: "Justica", score: dims.averageJusticeScore, risk: (dims.averageJusticeScore || 0) < 40 },
-          { name: "Inseguranca", score: dims.averageInsecurityScore, risk: (dims.averageInsecurityScore || 0) > 60 },
-          { name: "Saude Mental", score: dims.averageMentalHealthScore, risk: (dims.averageMentalHealthScore || 0) > 60 },
+          { name: "Confiança", score: dims.averageTrustScore, risk: (dims.averageTrustScore || 0) < 40 },
+          { name: "Justiça", score: dims.averageJusticeScore, risk: (dims.averageJusticeScore || 0) < 40 },
+          { name: "Insegurança", score: dims.averageInsecurityScore, risk: (dims.averageInsecurityScore || 0) > 60 },
+          { name: "Saúde Mental", score: dims.averageMentalHealthScore, risk: (dims.averageMentalHealthScore || 0) > 60 },
           { name: "Burnout", score: dims.averageBurnoutScore, risk: (dims.averageBurnoutScore || 0) > 60 },
-          { name: "Violencia e Assedio", score: dims.averageViolenceScore, risk: (dims.averageViolenceScore || 0) > 40 },
+          { name: "Violência e Assédio", score: dims.averageViolenceScore, risk: (dims.averageViolenceScore || 0) > 40 },
         ];
 
         sections.push({ type: "table", columns: [
-          { header: "Dimensao COPSOQ-II", width: 180 },
+          { header: "Dimensão COPSOQ-II", width: 180 },
           { header: "Score (0-100)", width: 90, align: "center" },
-          { header: "Nivel de Risco", width: 100, align: "center" },
+          { header: "Nível de Risco", width: 100, align: "center" },
         ], rows: dimensionRows.map(d => ({
           cells: [
             d.name,
             String(d.score ?? "—"),
-            d.risk ? "ATENCAO" : "Adequado",
+            d.risk ? "ATENÇÃO" : "Adequado",
           ],
           accentColor: d.risk ? "#ef4444" : "#10b981",
         }))});
@@ -1124,12 +1124,12 @@ export const nr01PdfExportRouter = router({
 
       // ── SEÇÃO 3: CLASSIFICAÇÃO DE RISCOS ──────────────────────────
       if (riskItems.length > 0) {
-        sections.push({ type: "subtitle", content: "3. Classificacao dos Riscos (Severidade x Probabilidade)" });
+        sections.push({ type: "subtitle", content: "3. Classificação dos Riscos (Severidade x Probabilidade)" });
         sections.push({ type: "table", columns: [
           { header: "Fator de Risco", width: 160 },
           { header: "Severidade", width: 80, align: "center" },
           { header: "Probabilidade", width: 80, align: "center" },
-          { header: "Nivel", width: 70, align: "center" },
+          { header: "Nível", width: 70, align: "center" },
           { header: "Controles Atuais", width: 140 },
         ], rows: riskItems.map(item => ({
           cells: [
@@ -1137,16 +1137,16 @@ export const nr01PdfExportRouter = router({
               const riskFactorLabels: Record<string, string> = {
                 "PSY-DEMANDA": "Sobrecarga de Demanda de Trabalho",
                 "PSY-CONTROLE": "Falta de Autonomia e Controle",
-                "PSY-APOIO": "Insuficiencia de Apoio Social",
-                "PSY-LIDERANCA": "Deficiencia na Qualidade de Lideranca",
+                "PSY-APOIO": "Insuficiência de Apoio Social",
+                "PSY-LIDERANCA": "Deficiência na Qualidade de Liderança",
                 "PSY-COMUNIDADE": "Fragilidade no Senso de Comunidade",
                 "PSY-SIGNIFICADO": "Perda de Significado do Trabalho",
-                "PSY-CONFIANCA": "Deficit de Confianca Organizacional",
-                "PSY-JUSTICA": "Percepcao de Injustica no Trabalho",
-                "PSY-INSEGURANCA": "Inseguranca no Emprego",
-                "PSY-SAUDEMENTAL": "Comprometimento da Saude Mental",
-                "PSY-BURNOUT": "Sindrome de Burnout",
-                "PSY-VIOLENCIA": "Exposicao a Violencia e Assedio",
+                "PSY-CONFIANCA": "Déficit de Confiança Organizacional",
+                "PSY-JUSTICA": "Percepção de Injustiça no Trabalho",
+                "PSY-INSEGURANCA": "Insegurança no Emprego",
+                "PSY-SAUDEMENTAL": "Comprometimento da Saúde Mental",
+                "PSY-BURNOUT": "Síndrome de Burnout",
+                "PSY-VIOLENCIA": "Exposição a Violência e Assédio",
               };
               return riskFactorLabels[item.riskFactorId] || item.riskFactorId || "—";
             })(),
@@ -1161,26 +1161,26 @@ export const nr01PdfExportRouter = router({
       }
 
       // ── SEÇÃO 4: PLANO DE AÇÃO ────────────────────────────────────
-      sections.push({ type: "subtitle", content: "4. Plano de Acao — Medidas Preventivas e Corretivas" });
+      sections.push({ type: "subtitle", content: "4. Plano de Ação — Medidas Preventivas e Corretivas" });
       sections.push({ type: "kpis", kpis: [
-        { label: "Total de Acoes", value: String(plans.length), color: "#1a365d" },
-        { label: "Concluidas", value: String(completedPlans.length), color: "#10b981" },
+        { label: "Total de Ações", value: String(plans.length), color: "#1a365d" },
+        { label: "Concluídas", value: String(completedPlans.length), color: "#10b981" },
         { label: "Em Andamento", value: String(inProgressPlans.length), color: "#3b82f6" },
         { label: "Pendentes", value: String(pendingPlans.length), color: "#f59e0b" },
       ]});
 
       if (plans.length > 0) {
         sections.push({ type: "table", columns: [
-          { header: "Acao", width: 170 },
+          { header: "Ação", width: 170 },
           { header: "Prioridade", width: 70, align: "center" },
           { header: "Status", width: 80, align: "center" },
           { header: "Prazo", width: 80, align: "center" },
-          { header: "Descricao", width: 130 },
+          { header: "Descrição", width: 130 },
         ], rows: plans.map(p => ({
           cells: [
             p.title,
             (p.priority || "—").charAt(0).toUpperCase() + (p.priority || "").slice(1),
-            p.status === "completed" ? "Concluido" : p.status === "in_progress" ? "Em andamento" : "Pendente",
+            p.status === "completed" ? "Concluído" : p.status === "in_progress" ? "Em andamento" : "Pendente",
             fmtDate(p.deadline),
             (p.description || "").slice(0, 60) + ((p.description || "").length > 60 ? "..." : ""),
           ],
@@ -1190,36 +1190,36 @@ export const nr01PdfExportRouter = router({
       sections.push({ type: "spacer" });
 
       // ── SEÇÃO 5: CRONOGRAMA DE IMPLEMENTAÇÃO ─────────────────────
-      sections.push({ type: "subtitle", content: "5. Cronograma de Implementacao" });
+      sections.push({ type: "subtitle", content: "5. Cronograma de Implementação" });
       if (milestones.length > 0) {
         sections.push({ type: "table", columns: [
           { header: "Etapa", width: 200 },
           { header: "Prazo", width: 90, align: "center" },
           { header: "Status", width: 90, align: "center" },
-          { header: "Conclusao", width: 90, align: "center" },
+          { header: "Conclusão", width: 90, align: "center" },
         ], rows: milestones.map(m => ({
           cells: [
             m.title,
             fmtDate(m.targetDate),
-            m.status === "completed" ? "Concluido" : m.status === "in_progress" ? "Em andamento" : m.status === "overdue" ? "ATRASADO" : "Pendente",
+            m.status === "completed" ? "Concluído" : m.status === "in_progress" ? "Em andamento" : m.status === "overdue" ? "ATRASADO" : "Pendente",
             m.completedDate ? fmtDate(m.completedDate) : "—",
           ],
           accentColor: m.status === "completed" ? "#10b981" : m.status === "overdue" ? "#ef4444" : "#f59e0b",
         }))});
-        sections.push({ type: "text", content: `Progresso: ${completedMilestones.length} de ${milestones.length} etapas concluidas (${milestones.length > 0 ? Math.round((completedMilestones.length / milestones.length) * 100) : 0}%)` });
+        sections.push({ type: "text", content: `Progresso: ${completedMilestones.length} de ${milestones.length} etapas concluídas (${milestones.length > 0 ? Math.round((completedMilestones.length / milestones.length) * 100) : 0}%)` });
       }
       sections.push({ type: "spacer" });
 
       // ── SEÇÃO 6: INTEGRAÇÃO PCMSO ─────────────────────────────────
-      sections.push({ type: "subtitle", content: "6. Integracao com PCMSO (NR-07)" });
-      sections.push({ type: "text", content: "Recomendacoes de exames e avaliacoes de saude geradas a partir dos riscos identificados:" });
+      sections.push({ type: "subtitle", content: "6. Integração com PCMSO (NR-07)" });
+      sections.push({ type: "text", content: "Recomendações de exames e avaliações de saúde geradas a partir dos riscos identificados:" });
       if (pcmso.length > 0) {
         sections.push({ type: "table", columns: [
           { header: "Tipo de Exame", width: 160 },
-          { header: "Frequencia", width: 90, align: "center" },
+          { header: "Frequência", width: 90, align: "center" },
           { header: "Prioridade", width: 80, align: "center" },
-          { header: "Populacao Alvo", width: 120 },
-          { header: "Base Medica", width: 120 },
+          { header: "População Alvo", width: 120 },
+          { header: "Base Médica", width: 120 },
         ], rows: pcmso.map(r => ({
           cells: [
             (r as any).examType || "—",
@@ -1230,18 +1230,18 @@ export const nr01PdfExportRouter = router({
           ],
         }))});
       } else {
-        sections.push({ type: "text", content: "Nenhuma recomendacao PCMSO registrada. Execute o inventario de riscos para gerar recomendacoes automaticas." });
+        sections.push({ type: "text", content: "Nenhuma recomendação PCMSO registrada. Execute o inventário de riscos para gerar recomendações automáticas." });
       }
       sections.push({ type: "spacer" });
 
       // ── SEÇÃO 7: PROGRAMA DE TREINAMENTO ──────────────────────────
-      sections.push({ type: "subtitle", content: "7. Programa de Capacitacao e Treinamento" });
+      sections.push({ type: "subtitle", content: "7. Programa de Capacitação e Treinamento" });
       if (programs.length > 0) {
         sections.push({ type: "table", columns: [
           { header: "Programa", width: 200 },
-          { header: "Duracao", width: 80, align: "center" },
-          { header: "Inicio", width: 90, align: "center" },
-          { header: "Termino", width: 90, align: "center" },
+          { header: "Duração", width: 80, align: "center" },
+          { header: "Início", width: 90, align: "center" },
+          { header: "Término", width: 90, align: "center" },
         ], rows: programs.map(p => ({
           cells: [
             p.title,
@@ -1268,16 +1268,16 @@ export const nr01PdfExportRouter = router({
       sections.push({ type: "divider" });
       sections.push({ type: "subtitle", content: "Base Legal e Normativa" });
       sections.push({ type: "list", items: [
-        "NR-01 — Disposicoes Gerais e Gerenciamento de Riscos Ocupacionais (Portaria MTE 1.419/2024)",
-        "NR-07 — Programa de Controle Medico de Saude Ocupacional (PCMSO)",
-        "NR-17 — Ergonomia e Condicoes de Trabalho",
+        "NR-01 — Disposições Gerais e Gerenciamento de Riscos Ocupacionais (Portaria MTE 1.419/2024)",
+        "NR-07 — Programa de Controle Médico de Saúde Ocupacional (PCMSO)",
+        "NR-17 — Ergonomia e Condições de Trabalho",
         "Guia MTE — Fatores de Riscos Psicossociais Relacionados ao Trabalho (2024)",
         "COPSOQ-II — Copenhagen Psychosocial Questionnaire (metodologia oficial)",
       ]});
       sections.push({ type: "spacer" });
 
       // ── ASSINATURA ────────────────────────────────────────────────
-      sections.push({ type: "signature", signatureName: ctx.user?.name || "Responsavel Tecnico", signatureRole: "Consultor SST", signatureRegistry: ctx.user?.email || "CREA/CRP" });
+      sections.push({ type: "signature", signatureName: ctx.user?.name || "Responsável Técnico", signatureRole: "Consultor SST", signatureRegistry: ctx.user?.email || "CREA/CRP" });
 
       // ── GERAR PDF ─────────────────────────────────────────────────
       const buffer = await generateGenericReportPdf({
