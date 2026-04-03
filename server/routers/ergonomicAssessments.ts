@@ -6,6 +6,7 @@ import { getDb } from "../db";
 import {
   ergonomicAssessments,
   ergonomicItems,
+  actionPlans,
 } from "../../drizzle/schema_nr01";
 import { eq, and, desc, sql } from "drizzle-orm";
 
@@ -285,5 +286,119 @@ export const ergonomicAssessmentsRouter = router({
         .where(eq(ergonomicItems.id, input.id));
 
       return { success: true };
+    }),
+
+  // Gerar planos de ação automaticamente a partir dos itens de risco alto/crítico
+  generateActionPlans: tenantProcedure
+    .input(z.object({ assessmentId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
+
+      // Verify assessment belongs to tenant
+      const [assessment] = await db.select().from(ergonomicAssessments).where(
+        and(eq(ergonomicAssessments.id, input.assessmentId), eq(ergonomicAssessments.tenantId, ctx.tenantId!))
+      );
+      if (!assessment) throw new TRPCError({ code: "NOT_FOUND", message: "Avaliação não encontrada" });
+
+      // Get all items with high or critical risk
+      const items = await db.select().from(ergonomicItems)
+        .where(eq(ergonomicItems.assessmentId, input.assessmentId));
+
+      const riskItems = items.filter(i => i.riskLevel === "high" || i.riskLevel === "critical");
+      if (riskItems.length === 0) {
+        return { created: 0, message: "Nenhum item com risco alto ou crítico encontrado." };
+      }
+
+      const CATEGORY_LABELS: Record<string, string> = {
+        workstation: "Posto de trabalho",
+        posture: "Postura",
+        repetition: "Repetitividade",
+        lighting: "Iluminação",
+        noise: "Ruído",
+        organization: "Organização do trabalho",
+        psychosocial: "Psicossocial",
+      };
+
+      const ACTION_TYPE_MAP: Record<string, "elimination" | "substitution" | "engineering" | "administrative" | "ppe"> = {
+        workstation: "engineering",
+        posture: "administrative",
+        repetition: "administrative",
+        lighting: "engineering",
+        noise: "engineering",
+        organization: "administrative",
+        psychosocial: "administrative",
+      };
+
+      const createdPlans = [];
+      for (const item of riskItems) {
+        const planId = nanoid();
+        const categoryLabel = CATEGORY_LABELS[item.category] || item.category;
+        const actionType = ACTION_TYPE_MAP[item.category] || "administrative";
+        const priority = item.riskLevel === "critical" ? "urgent" as const : "high" as const;
+
+        // Set deadline: 30 days for critical, 90 for high
+        const deadline = new Date();
+        deadline.setDate(deadline.getDate() + (item.riskLevel === "critical" ? 30 : 90));
+
+        await db.insert(actionPlans).values({
+          id: planId,
+          tenantId: ctx.tenantId!,
+          assessmentItemId: item.id,
+          title: `[NR-17] ${categoryLabel}: ${item.factor}`,
+          description: item.recommendation || `Mitigar risco ergonômico: ${item.observation || item.factor}`,
+          actionType,
+          deadline,
+          status: "pending",
+          priority,
+          regulatoryBasis: "NR-17 (Ergonomia) — AEP/AET",
+          templateType: item.riskLevel === "critical" ? "nr01_corrective" : "nr01_preventive",
+          verificationMethod: `Reavaliação ergonômica do item "${item.factor}" após implementação`,
+          effectivenessIndicator: `Redução do nível de risco de "${item.riskLevel}" para "acceptable" ou "moderate"`,
+          aiGenerated: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+        createdPlans.push({ id: planId, title: `[NR-17] ${categoryLabel}: ${item.factor}`, priority });
+      }
+
+      return {
+        created: createdPlans.length,
+        plans: createdPlans,
+        message: `${createdPlans.length} plano(s) de ação criado(s) a partir de itens ergonômicos de risco alto/crítico.`,
+      };
+    }),
+
+  // Listar planos de ação relacionados a uma avaliação ergonômica
+  listRelatedActionPlans: tenantProcedure
+    .input(z.object({ assessmentId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) return [];
+
+      // Get all item IDs from this assessment
+      const items = await db.select({ id: ergonomicItems.id }).from(ergonomicItems)
+        .where(eq(ergonomicItems.assessmentId, input.assessmentId));
+
+      if (items.length === 0) return [];
+
+      const itemIds = items.map(i => i.id);
+
+      // Find action plans linked to these items
+      const plans = await db.select().from(actionPlans)
+        .where(
+          and(
+            eq(actionPlans.tenantId, ctx.tenantId!),
+            sql`${actionPlans.assessmentItemId} IN (${sql.join(itemIds.map(id => sql`${id}`), sql`, `)})`
+          )
+        )
+        .orderBy(desc(actionPlans.createdAt));
+
+      return plans;
     }),
 });

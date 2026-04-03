@@ -7,6 +7,75 @@ import PDFDocument from "pdfkit";
 import { Readable } from "stream";
 import { signPdfForTenant } from "./pdfSigner";
 
+/**
+ * Fetch a logo from URL and return as Buffer for PDFKit embedding.
+ * Returns null if fetch fails (graceful degradation to text-only).
+ */
+async function fetchLogoBuffer(url: string): Promise<Buffer | null> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!res.ok) return null;
+    const arrayBuf = await res.arrayBuffer();
+    return Buffer.from(arrayBuf);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Pre-fetch logo for use in synchronous PDF rendering.
+ */
+async function prefetchLogo(branding?: PdfBranding): Promise<Buffer | null> {
+  if (!branding?.logoUrl) return null;
+  return fetchLogoBuffer(branding.logoUrl);
+}
+
+/**
+ * Embed logo in PDF header (synchronous). Falls back to text-only if logo is null.
+ */
+function embedLogoHeader(
+  doc: InstanceType<typeof PDFDocument>,
+  branding: PdfBranding | undefined,
+  primaryColor: string,
+  secondaryColor: string,
+  subtitle: string,
+  logoBuf: Buffer | null,
+  opts?: { fontSize?: number; subtitleSize?: number }
+): void {
+  const titleSize = opts?.fontSize ?? 24;
+  const subtitleSize = opts?.subtitleSize ?? 16;
+  let logoEmbedded = false;
+
+  if (logoBuf) {
+    try {
+      doc.image(logoBuf, (doc.page.width - 120) / 2, doc.y, {
+        fit: [120, 60],
+        align: "center",
+      });
+      doc.moveDown(4);
+      logoEmbedded = true;
+    } catch {
+      // Invalid image format — fall through to text
+    }
+  }
+
+  if (!logoEmbedded) {
+    doc
+      .fontSize(titleSize)
+      .fillColor(primaryColor)
+      .text(branding?.companyName || "Black Belt Platform", { align: "center" });
+  }
+
+  doc.moveDown(0.5);
+  doc
+    .fontSize(subtitleSize)
+    .fillColor(secondaryColor)
+    .text(subtitle, { align: "center" });
+}
+
 export interface PdfBranding {
   logoUrl?: string;
   primaryColor?: string;
@@ -40,6 +109,13 @@ export interface ProposalPdfData {
   total: number;
   notes?: string;
   validUntil?: string;
+  // Customizable sections
+  scope?: string;             // Escopo do serviço
+  methodology?: string;       // Metodologia
+  deliverables?: string[];    // Entregáveis
+  timeline?: string;          // Cronograma
+  paymentTerms?: string;      // Condições de pagamento
+  terms?: string;             // Termos e condições gerais
 }
 
 export interface AssessmentPdfData {
@@ -67,6 +143,7 @@ export async function generateProposalPdf(
   branding?: PdfBranding,
   metadata?: PdfMetadata
 ): Promise<Buffer> {
+  const logoBuf = await prefetchLogo(branding);
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: "A4",
@@ -89,21 +166,7 @@ export async function generateProposalPdf(
     const secondaryColor = branding?.secondaryColor || "#666666";
 
     // Header with logo/branding
-    if (branding?.logoUrl) {
-      // TODO: Download and embed logo
-      // For now, just show company name
-    }
-
-    doc
-      .fontSize(24)
-      .fillColor(primaryColor)
-      .text(branding?.companyName || "Black Belt Platform", { align: "center" });
-
-    doc.moveDown(0.5);
-    doc
-      .fontSize(16)
-      .fillColor(secondaryColor)
-      .text("PROPOSTA COMERCIAL", { align: "center" });
+    embedLogoHeader(doc, branding, primaryColor, secondaryColor, "PROPOSTA COMERCIAL", logoBuf);
 
     doc.moveDown(2);
 
@@ -244,17 +307,49 @@ export async function generateProposalPdf(
       align: "right",
     });
 
+    // Custom sections
+    const renderSection = (title: string, content: string) => {
+      if (doc.y > 680) doc.addPage();
+      doc.moveDown(1.5);
+      doc.fontSize(10).fillColor(primaryColor).text(title, 50, doc.y);
+      doc.moveDown(0.3);
+      doc.fontSize(9).fillColor("#000000").text(content, 50, doc.y, { align: "justify", width: 495 });
+    };
+
+    if (data.scope) {
+      renderSection("ESCOPO DO SERVIÇO", data.scope);
+    }
+
+    if (data.methodology) {
+      renderSection("METODOLOGIA", data.methodology);
+    }
+
+    if (data.deliverables && data.deliverables.length > 0) {
+      if (doc.y > 680) doc.addPage();
+      doc.moveDown(1.5);
+      doc.fontSize(10).fillColor(primaryColor).text("ENTREGÁVEIS", 50, doc.y);
+      doc.moveDown(0.3);
+      for (const deliverable of data.deliverables) {
+        doc.fontSize(9).fillColor("#000000").text(`• ${deliverable}`, 60, doc.y, { width: 485 });
+        doc.moveDown(0.2);
+      }
+    }
+
+    if (data.timeline) {
+      renderSection("CRONOGRAMA", data.timeline);
+    }
+
+    if (data.paymentTerms) {
+      renderSection("CONDIÇÕES DE PAGAMENTO", data.paymentTerms);
+    }
+
+    if (data.terms) {
+      renderSection("TERMOS E CONDIÇÕES", data.terms);
+    }
+
     // Notes
     if (data.notes) {
-      doc.moveDown(3);
-      doc
-        .fontSize(10)
-        .fillColor(primaryColor)
-        .text("OBSERVAÇÕES:", 50, doc.y);
-      doc
-        .fontSize(9)
-        .fillColor("#000000")
-        .text(data.notes, 50, doc.y + 10, { align: "justify" });
+      renderSection("OBSERVAÇÕES", data.notes);
     }
 
     // Footer
@@ -280,6 +375,7 @@ export async function generateAssessmentPdf(
   branding?: PdfBranding,
   metadata?: PdfMetadata
 ): Promise<Buffer> {
+  const logoBuf = await prefetchLogo(branding);
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: "A4",
@@ -301,17 +397,8 @@ export async function generateAssessmentPdf(
     const primaryColor = branding?.primaryColor || "#1a1a1a";
     const secondaryColor = branding?.secondaryColor || "#666666";
 
-    // Header
-    doc
-      .fontSize(24)
-      .fillColor(primaryColor)
-      .text(branding?.companyName || "Black Belt Platform", { align: "center" });
-
-    doc.moveDown(0.5);
-    doc
-      .fontSize(16)
-      .fillColor(secondaryColor)
-      .text("RELATÓRIO DE AVALIAÇÃO DE RISCOS", { align: "center" });
+    // Header with logo
+    embedLogoHeader(doc, branding, primaryColor, secondaryColor, "RELATÓRIO DE AVALIAÇÃO DE RISCOS", logoBuf);
 
     doc.moveDown(2);
 
@@ -491,6 +578,7 @@ export async function generateInventoryPdf(
   metadata?: PdfMetadata,
   tenantId?: string
 ): Promise<Buffer> {
+  const logoBuf = await prefetchLogo(branding);
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: "A4",
@@ -517,16 +605,9 @@ export async function generateInventoryPdf(
     const secondaryColor = branding?.secondaryColor || "#666666";
 
     // ── Header ───────────────────────────────────────────────────────────
-    doc
-      .fontSize(18)
-      .fillColor(primaryColor)
-      .text(branding?.companyName || "Black Belt Platform", { align: "center" });
-
-    doc.moveDown(0.3);
-    doc
-      .fontSize(14)
-      .fillColor(secondaryColor)
-      .text("INVENTÁRIO DE RISCOS OCUPACIONAIS — PSICOSSOCIAIS", { align: "center" });
+    embedLogoHeader(doc, branding, primaryColor, secondaryColor,
+      "INVENTÁRIO DE RISCOS OCUPACIONAIS — PSICOSSOCIAIS", logoBuf,
+      { fontSize: 18, subtitleSize: 14 });
 
     doc
       .fontSize(9)
@@ -708,6 +789,7 @@ export async function generateActionPlanPdf(
   metadata?: PdfMetadata,
   tenantId?: string
 ): Promise<Buffer> {
+  const logoBuf = await prefetchLogo(branding);
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: "A4",
@@ -734,16 +816,9 @@ export async function generateActionPlanPdf(
     const secondaryColor = branding?.secondaryColor || "#666666";
 
     // ── Header ───────────────────────────────────────────────────────────
-    doc
-      .fontSize(18)
-      .fillColor(primaryColor)
-      .text(branding?.companyName || "Black Belt Platform", { align: "center" });
-
-    doc.moveDown(0.3);
-    doc
-      .fontSize(14)
-      .fillColor(secondaryColor)
-      .text("PLANO DE AÇÃO — MITIGAÇÃO DE RISCOS PSICOSSOCIAIS", { align: "center" });
+    embedLogoHeader(doc, branding, primaryColor, secondaryColor,
+      "PLANO DE AÇÃO — MITIGAÇÃO DE RISCOS PSICOSSOCIAIS", logoBuf,
+      { fontSize: 18, subtitleSize: 14 });
 
     doc
       .fontSize(9)
@@ -1024,6 +1099,7 @@ export async function generateGenericReportPdf(
   metadata?: PdfMetadata,
   tenantId?: string
 ): Promise<Buffer> {
+  const logoBuf = await prefetchLogo(branding);
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: "A4",
@@ -1053,16 +1129,9 @@ export async function generateGenericReportPdf(
     const pageWidth = data.landscape ? 842 - 100 : 595 - 100; // A4 minus margins
 
     // ── Header ──────────────────────────────────────────────────────────
-    doc
-      .fontSize(18)
-      .fillColor(primaryColor)
-      .text(branding?.companyName || "Black Belt Platform", { align: "center" });
-
-    doc.moveDown(0.3);
-    doc
-      .fontSize(14)
-      .fillColor(secondaryColor)
-      .text(data.reportTitle.toUpperCase(), { align: "center" });
+    embedLogoHeader(doc, branding, primaryColor, secondaryColor,
+      data.reportTitle.toUpperCase(), logoBuf,
+      { fontSize: 18, subtitleSize: 14 });
 
     if (data.reportSubtitle) {
       doc.moveDown(0.2);

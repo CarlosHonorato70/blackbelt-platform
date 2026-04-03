@@ -2712,11 +2712,11 @@ export const agentRouter = router({
         alerts = dbAlerts;
       } catch { /* no alerts */ }
 
-      // Fetch recent conversation history (last 20 messages)
+      // Fetch recent conversation history (last 50 messages for better context)
       const recentMessages = await db.select().from(agentMessages)
         .where(eq(agentMessages.conversationId, input.conversationId))
         .orderBy(desc(agentMessages.createdAt))
-        .limit(20);
+        .limit(50);
 
       const orderedHistory = [...recentMessages].reverse();
 
@@ -2764,14 +2764,57 @@ ${extractHeadcount(input.content) ? `Funcionários informados: ${extractHeadcoun
         })),
       ];
 
-      // ALWAYS use programmatic flow (fallback) — it follows the exact 13-step flowchart
-      // LLM is NOT used for the NR-01 agent (it generates descriptive text instead of executing actions)
+      // Use real LLM for intelligent conversation, with programmatic fallback as safety net
       let assistantContent = "";
       let actions: Array<{ type: string; label: string; params: Record<string, any> }> = [];
 
-      const fallback = await generateFallbackResponse(input.content, company, status, orderedHistory, ctx.tenantId!, ctx.user!.id);
-      assistantContent = fallback.content;
-      actions = fallback.actions;
+      // Check if message is a direct command (executar:, affirmatives after action suggestion)
+      const msgLower = input.content.toLowerCase().trim();
+      const isExecuteCommand = msgLower.startsWith("executar:");
+      const isAffirmative = /^(sim|ok|pode|prossegu|inici|vamos|confirm|faz|comec|start|go|yes|claro|certo|beleza|bora|continuar|próximo|proximo|avançar|avancar|enviar)/i.test(msgLower);
+      const lastAssistantMsg = orderedHistory.filter(m => m.role === "assistant").pop();
+      const lastHadActions = lastAssistantMsg?.metadata && typeof lastAssistantMsg.metadata === "object" && "actions" in (lastAssistantMsg.metadata as any) && ((lastAssistantMsg.metadata as any).actions?.length > 0);
+
+      // For direct commands and confirmations of pending actions, use programmatic flow
+      if (isExecuteCommand || (isAffirmative && lastHadActions)) {
+        const fallback = await generateFallbackResponse(input.content, company, status, orderedHistory, ctx.tenantId!, ctx.user!.id);
+        assistantContent = fallback.content;
+        actions = fallback.actions;
+      } else {
+        // Use real LLM for natural conversation with full context
+        try {
+          const { invokeLLM } = await import("../_core/llm");
+          const llmResult = await invokeLLM({ messages: llmMessages });
+          const rawContent = llmResult.choices?.[0]?.message?.content || "";
+          const llmText = typeof rawContent === "string" ? rawContent : "";
+
+          if (llmText && llmText.length > 10) {
+            assistantContent = llmText;
+            // Parse action blocks from LLM response
+            const actionRegex = /```action\s*\n([\s\S]*?)\n```/g;
+            let actionMatch;
+            while ((actionMatch = actionRegex.exec(llmText)) !== null) {
+              try {
+                const parsed = JSON.parse(actionMatch[1]);
+                if (parsed.type && parsed.label) {
+                  actions.push({ type: parsed.type, label: parsed.label, params: parsed.params || {} });
+                }
+              } catch { /* ignore malformed action JSON */ }
+            }
+          } else {
+            // LLM returned empty/short response — use fallback
+            const fallback = await generateFallbackResponse(input.content, company, status, orderedHistory, ctx.tenantId!, ctx.user!.id);
+            assistantContent = fallback.content;
+            actions = fallback.actions;
+          }
+        } catch (llmError) {
+          // LLM failed — use deterministic fallback
+          console.warn("[SamurAI] LLM failed, using fallback:", (llmError as Error).message);
+          const fallback = await generateFallbackResponse(input.content, company, status, orderedHistory, ctx.tenantId!, ctx.user!.id);
+          assistantContent = fallback.content;
+          actions = fallback.actions;
+        }
+      }
 
       // Save assistant message
       const assistantMsgId = nanoid();

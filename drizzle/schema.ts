@@ -473,6 +473,13 @@ export const proposals = mysqlTable(
     rejectedAt: timestamp("rejectedAt"),
     paymentStatus: varchar("paymentStatus", { length: 20 }),
     paymentNotes: text("paymentNotes"),
+    // Customizable proposal sections
+    scope: text("scope"),
+    methodology: text("methodology"),
+    deliverables: json("deliverables"),
+    timeline: text("timeline"),
+    paymentTerms: text("paymentTerms"),
+    terms: text("terms"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },

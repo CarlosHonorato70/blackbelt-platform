@@ -46,6 +46,8 @@ import {
   Trash2,
   ClipboardCheck,
   FileDown,
+  Zap,
+  ListChecks,
 } from "lucide-react";
 import { usePdfExport } from "@/hooks/usePdfExport";
 
@@ -124,6 +126,19 @@ export default function ErgonomicAssessmentForm() {
   });
 
   const exportErgonomicAssessmentMutation = trpc.nr01Pdf.exportErgonomicAssessment.useMutation();
+
+  const generateActionPlansMutation = trpc.ergonomicAssessments.generateActionPlans.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message);
+      relatedPlansQuery.refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const relatedPlansQuery = trpc.ergonomicAssessments.listRelatedActionPlans.useQuery(
+    { assessmentId: id! },
+    { enabled: !!id && !!tenantId }
+  );
 
   if (!tenantId) {
     return (
@@ -322,6 +337,68 @@ export default function ErgonomicAssessmentForm() {
               </CardContent>
             </Card>
           ))
+        )}
+
+        {/* Action Plans Section */}
+        {items.length > 0 && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <ListChecks className="h-5 w-5" />
+                    Planos de Ação NR-17
+                  </CardTitle>
+                  <CardDescription>
+                    Gere planos de ação automaticamente para itens de risco alto ou crítico
+                  </CardDescription>
+                </div>
+                <Button
+                  onClick={() => generateActionPlansMutation.mutate({ assessmentId: id! })}
+                  disabled={generateActionPlansMutation.isPending || !items.some((i: any) => i.riskLevel === "high" || i.riskLevel === "critical")}
+                >
+                  {generateActionPlansMutation.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Zap className="mr-2 h-4 w-4" />
+                  )}
+                  Gerar Planos de Ação
+                </Button>
+              </div>
+            </CardHeader>
+            {(relatedPlansQuery.data as any[])?.length > 0 && (
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Título</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Prioridade</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Prazo</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(relatedPlansQuery.data as any[]).map((plan: any) => (
+                      <TableRow key={plan.id}>
+                        <TableCell className="font-medium">{plan.title}</TableCell>
+                        <TableCell>{plan.actionType}</TableCell>
+                        <TableCell>
+                          <Badge className={plan.priority === "urgent" ? "bg-red-100 text-red-800" : "bg-orange-100 text-orange-800"}>
+                            {plan.priority === "urgent" ? "Urgente" : "Alta"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{plan.status === "pending" ? "Pendente" : plan.status === "in_progress" ? "Em andamento" : plan.status === "completed" ? "Concluído" : plan.status}</Badge>
+                        </TableCell>
+                        <TableCell>{plan.deadline ? new Date(plan.deadline).toLocaleDateString("pt-BR") : "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            )}
+          </Card>
         )}
 
         <Dialog open={addItemOpen} onOpenChange={setAddItemOpen}>

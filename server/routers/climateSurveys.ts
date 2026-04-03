@@ -303,6 +303,32 @@ export const climateSurveysRouter = router({
       return { responseId, success: true };
     }),
 
+  // Listar convites de uma pesquisa
+  listInvites: tenantProcedure
+    .input(
+      z.object({
+        surveyId: z.string(),
+        tenantId: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) return [];
+
+      const invites = await db
+        .select()
+        .from(surveyInvites)
+        .where(
+          and(
+            eq(surveyInvites.surveyId, input.surveyId),
+            eq(surveyInvites.tenantId, ctx.tenantId!)
+          )
+        )
+        .orderBy(desc(surveyInvites.createdAt));
+
+      return invites;
+    }),
+
   // Obter resultados agregados da pesquisa
   getResults: tenantProcedure
     .input(
@@ -332,13 +358,27 @@ export const climateSurveysRouter = router({
 
       const totalResponses = responses.length;
 
+      // Calculate completion rate from invites
+      const allInvites = await db
+        .select()
+        .from(surveyInvites)
+        .where(
+          and(
+            eq(surveyInvites.surveyId, input.surveyId),
+            eq(surveyInvites.tenantId, ctx.tenantId!)
+          )
+        );
+      const totalInvites = allInvites.length;
+      const completedInvites = allInvites.filter((i) => i.status === "completed").length;
+      const completionRate = totalInvites > 0 ? Math.round((completedInvites / totalInvites) * 100) : 0;
+
       // Calcular scores médios
       const scores = responses
         .map((r) => r.score)
         .filter((s): s is number => s !== null);
       const averageScore =
         scores.length > 0
-          ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+          ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
           : 0;
 
       // Distribuição por nível de risco
@@ -371,11 +411,21 @@ export const climateSurveysRouter = router({
         };
       }
 
+      // Invite status breakdown
+      const inviteStatus = {
+        total: totalInvites,
+        sent: allInvites.filter((i) => i.status === "sent" || i.status === "pending").length,
+        completed: completedInvites,
+        expired: allInvites.filter((i) => i.status === "expired" || (i.expiresAt && new Date() > i.expiresAt && i.status !== "completed")).length,
+      };
+
       return {
         totalResponses,
         averageScore,
+        completionRate,
         riskDistribution,
         responseDistribution,
+        inviteStatus,
       };
     }),
 });

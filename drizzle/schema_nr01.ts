@@ -779,7 +779,7 @@ export const ergonomicItems = mysqlTable("ergonomic_items", {
 export const esocialExports = mysqlTable("esocial_exports", {
   id: varchar("id", { length: 64 }).primaryKey(),
   tenantId: varchar("tenantId", { length: 64 }).notNull(),
-  eventType: mysqlEnum("esocialEventType", ["S-2220", "S-2240"]).notNull(),
+  eventType: mysqlEnum("esocialEventType", ["S-2210", "S-2220", "S-2240"]).notNull(),
   referenceId: varchar("referenceId", { length: 64 }),
   xmlContent: text("xmlContent"),
   status: mysqlEnum("esocialStatus", [

@@ -37,10 +37,13 @@ import {
   FileUp,
   AlertTriangle,
   FileDown,
+  Send,
+  RefreshCw,
 } from "lucide-react";
 import { usePdfExport } from "@/hooks/usePdfExport";
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
+  "S-2210": "CAT - Acidente de Trabalho",
   "S-2220": "Monitoramento da Saúde",
   "S-2240": "Condições Ambientais",
 };
@@ -90,6 +93,26 @@ export default function EsocialExport() {
     onError: (err) => toast.error(err.message),
   });
 
+  const submitMutation = trpc.esocialExport.submit.useMutation({
+    onSuccess: (data) => {
+      if (data.success) {
+        toast.success(`Evento enviado com sucesso! Protocolo: ${data.protocolNumber || "N/A"}`);
+      } else {
+        toast.error(`Falha no envio: ${data.responseMessage}`);
+      }
+      exportsQuery.refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const checkStatusMutation = trpc.esocialExport.checkStatus.useMutation({
+    onSuccess: (data) => {
+      toast.info(`Status: ${data.status} — ${data.message}`);
+      exportsQuery.refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   const exportEsocialReportMutation = trpc.nr01Pdf.exportEsocialReport.useMutation();
 
   if (!tenantId) {
@@ -113,7 +136,7 @@ export default function EsocialExport() {
     }
     generateMutation.mutate({
       tenantId: tenantId!,
-      eventType: eventType as "S-2220" | "S-2240",
+      eventType: eventType as "S-2210" | "S-2220" | "S-2240",
       riskAssessmentId,
     });
   };
@@ -136,7 +159,7 @@ export default function EsocialExport() {
               Exportação eSocial
             </h1>
             <p className="text-muted-foreground">
-              Gere e valide arquivos XML para envio ao eSocial
+              Gere, valide e envie eventos XML diretamente ao portal eSocial
             </p>
           </div>
           <Button
@@ -268,6 +291,39 @@ export default function EsocialExport() {
                               )}
                             </Button>
                           )}
+                          {exp.status === "validated" && (
+                            <Button
+                              size="sm"
+                              onClick={() => submitMutation.mutate({ id: exp.id })}
+                              disabled={submitMutation.isPending}
+                            >
+                              {submitMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <Send className="mr-1 h-4 w-4" />
+                                  Enviar ao eSocial
+                                </>
+                              )}
+                            </Button>
+                          )}
+                          {exp.status === "submitted" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => checkStatusMutation.mutate({ id: exp.id })}
+                              disabled={checkStatusMutation.isPending}
+                            >
+                              {checkStatusMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <RefreshCw className="mr-1 h-4 w-4" />
+                                  Consultar Status
+                                </>
+                              )}
+                            </Button>
+                          )}
                           {exp.xmlContent && (
                             <Button
                               size="sm"
@@ -277,6 +333,11 @@ export default function EsocialExport() {
                               <Download className="mr-1 h-4 w-4" />
                               Baixar XML
                             </Button>
+                          )}
+                          {exp.responseMessage && (
+                            <span className="text-xs text-muted-foreground ml-2 block mt-1">
+                              {exp.responseMessage.substring(0, 80)}
+                            </span>
                           )}
                         </TableCell>
                       </TableRow>

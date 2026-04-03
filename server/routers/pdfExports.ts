@@ -63,6 +63,13 @@ const proposalPdfDataSchema = z.object({
   total: z.number(),
   notes: z.string().optional(),
   validUntil: z.string().optional(),
+  // Customizable sections
+  scope: z.string().optional(),
+  methodology: z.string().optional(),
+  deliverables: z.array(z.string()).optional(),
+  timeline: z.string().optional(),
+  paymentTerms: z.string().optional(),
+  terms: z.string().optional(),
 });
 
 const assessmentPdfDataSchema = z.object({
