@@ -428,6 +428,7 @@ async function seed() {
         avgLeadershipScore: 48, avgCommunityScore: 55, avgMeaningScore: 42,
         avgTrustScore: 50, avgJusticeScore: 47, avgInsecurityScore: 62,
         avgMentalHealthScore: 55, avgBurnoutScore: 52, avgViolenceScore: 18,
+        burnoutRate: 520, harassmentRate: 980, mentalLeaveRate: 310,
       },
       {
         id: nanoid(), dataSource: "sector", sectorCode: "C", sectorName: "Indústria de Transformação",
@@ -436,6 +437,7 @@ async function seed() {
         avgLeadershipScore: 44, avgCommunityScore: 50, avgMeaningScore: 45,
         avgTrustScore: 46, avgJusticeScore: 43, avgInsecurityScore: 65,
         avgMentalHealthScore: 58, avgBurnoutScore: 55, avgViolenceScore: 22,
+        burnoutRate: 580, harassmentRate: 850, mentalLeaveRate: 340,
       },
       {
         id: nanoid(), dataSource: "sector", sectorCode: "Q", sectorName: "Saúde e Serviços Sociais",
@@ -444,6 +446,7 @@ async function seed() {
         avgLeadershipScore: 46, avgCommunityScore: 58, avgMeaningScore: 35,
         avgTrustScore: 48, avgJusticeScore: 44, avgInsecurityScore: 60,
         avgMentalHealthScore: 62, avgBurnoutScore: 65, avgViolenceScore: 28,
+        burnoutRate: 870, harassmentRate: 1250, mentalLeaveRate: 520,
       },
       {
         id: nanoid(), dataSource: "sector", sectorCode: "P", sectorName: "Educação",
@@ -452,6 +455,7 @@ async function seed() {
         avgLeadershipScore: 42, avgCommunityScore: 52, avgMeaningScore: 32,
         avgTrustScore: 44, avgJusticeScore: 40, avgInsecurityScore: 58,
         avgMentalHealthScore: 60, avgBurnoutScore: 62, avgViolenceScore: 25,
+        burnoutRate: 750, harassmentRate: 730, mentalLeaveRate: 440,
       },
       {
         id: nanoid(), dataSource: "sector", sectorCode: "G", sectorName: "Comércio",
@@ -460,6 +464,7 @@ async function seed() {
         avgLeadershipScore: 45, avgCommunityScore: 52, avgMeaningScore: 48,
         avgTrustScore: 47, avgJusticeScore: 44, avgInsecurityScore: 68,
         avgMentalHealthScore: 52, avgBurnoutScore: 48, avgViolenceScore: 15,
+        burnoutRate: 1080, harassmentRate: 920, mentalLeaveRate: 380,
       },
       {
         id: nanoid(), dataSource: "sector", sectorCode: "F", sectorName: "Construção Civil",
@@ -468,6 +473,7 @@ async function seed() {
         avgLeadershipScore: 40, avgCommunityScore: 48, avgMeaningScore: 50,
         avgTrustScore: 42, avgJusticeScore: 38, avgInsecurityScore: 72,
         avgMentalHealthScore: 50, avgBurnoutScore: 45, avgViolenceScore: 20,
+        burnoutRate: 450, harassmentRate: 680, mentalLeaveRate: 260,
       },
       {
         id: nanoid(), dataSource: "sector", sectorCode: "J", sectorName: "Tecnologia da Informação",
@@ -476,6 +482,7 @@ async function seed() {
         avgLeadershipScore: 52, avgCommunityScore: 56, avgMeaningScore: 38,
         avgTrustScore: 54, avgJusticeScore: 50, avgInsecurityScore: 55,
         avgMentalHealthScore: 58, avgBurnoutScore: 60, avgViolenceScore: 12,
+        burnoutRate: 640, harassmentRate: 520, mentalLeaveRate: 410,
       },
       {
         id: nanoid(), dataSource: "sector", sectorCode: "H", sectorName: "Transporte e Armazenagem",
@@ -484,6 +491,7 @@ async function seed() {
         avgLeadershipScore: 38, avgCommunityScore: 45, avgMeaningScore: 52,
         avgTrustScore: 40, avgJusticeScore: 36, avgInsecurityScore: 70,
         avgMentalHealthScore: 54, avgBurnoutScore: 50, avgViolenceScore: 24,
+        burnoutRate: 490, harassmentRate: 760, mentalLeaveRate: 350,
       },
       {
         id: nanoid(), dataSource: "sector", sectorCode: "O", sectorName: "Serviços Públicos",
@@ -492,6 +500,7 @@ async function seed() {
         avgLeadershipScore: 40, avgCommunityScore: 50, avgMeaningScore: 40,
         avgTrustScore: 44, avgJusticeScore: 38, avgInsecurityScore: 52,
         avgMentalHealthScore: 56, avgBurnoutScore: 54, avgViolenceScore: 16,
+        burnoutRate: 560, harassmentRate: 1724, mentalLeaveRate: 480,
       },
     ];
     for (const bm of benchmarks) {

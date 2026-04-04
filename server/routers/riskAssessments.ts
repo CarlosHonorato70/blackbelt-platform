@@ -9,8 +9,10 @@ import {
   riskCategories,
   riskFactors,
   actionPlans,
+  copsoqAssessments,
 } from "../../drizzle/schema_nr01";
 import { eq, and, desc, isNull } from "drizzle-orm";
+import { generateActionPlan } from "../_ai/actionPlanGenerator";
 
 export const riskAssessmentsRouter = router({
   // Listar avaliações por tenant (autenticado + escopo)
@@ -574,5 +576,51 @@ export const riskAssessmentsRouter = router({
         and(eq(actionPlans.id, input.id), eq(actionPlans.tenantId, ctx.tenantId!))
       );
       return { success: true };
+    }),
+
+  // Gerar planos de ação via IA a partir da avaliação de riscos
+  generateActionPlans: tenantProcedure
+    .input(
+      z.object({
+        assessmentId: z.string().optional(),
+        sectorName: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
+        });
+
+      // Find the latest COPSOQ assessment for this tenant
+      const copsoqList = await db
+        .select()
+        .from(copsoqAssessments)
+        .where(eq(copsoqAssessments.tenantId, ctx.tenantId!))
+        .orderBy(desc(copsoqAssessments.createdAt))
+        .limit(1);
+
+      if (copsoqList.length === 0) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Nenhuma avaliação COPSOQ-II encontrada. Execute primeiro uma pesquisa COPSOQ-II para gerar planos de ação.",
+        });
+      }
+
+      const result = await generateActionPlan({
+        assessmentId: copsoqList[0].id,
+        tenantId: ctx.tenantId!,
+        sectorName: input.sectorName,
+      });
+
+      return {
+        planTitle: result.planTitle,
+        specificActions: result.actions.length,
+        generalActions: result.generalActions.length,
+        monitoringStrategy: result.monitoringStrategy,
+        model: result.metadata.model,
+      };
     }),
 });

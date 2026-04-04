@@ -62,6 +62,7 @@ import {
   Plus,
   Save,
   Shield,
+  Sparkles,
   Trash2,
   X,
 } from "lucide-react";
@@ -297,6 +298,16 @@ export default function RiskAssessments() {
       setAssessmentToDelete(null);
     },
     onError: (err) => toast.error(`Erro: ${err.message}`),
+  });
+
+  const generatePlansMutation = trpc.riskAssessments.generateActionPlans.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Plano "${data.planTitle}" gerado com sucesso!`, {
+        description: `${data.specificActions} ações específicas + ${data.generalActions} ações gerais`,
+      });
+      utils.riskAssessments.listActionPlans.invalidate();
+    },
+    onError: (err: any) => toast.error(err.message || "Erro ao gerar planos de ação"),
   });
 
   const deleteItemMutation = trpc.riskAssessments.deleteItem.useMutation({
@@ -610,19 +621,39 @@ export default function RiskAssessments() {
                                 <h4 className="text-sm font-semibold">
                                   Itens de Risco ({expandedAssessment?.items?.length ?? 0})
                                 </h4>
-                                {expandedAssessment?.items && expandedAssessment.items.length > 0 && (
-                                  <div className="flex gap-1">
-                                    {(["low", "medium", "high", "critical"] as const).map((level) => {
-                                      const count = expandedAssessment.items.filter((i: any) => i.riskLevel === level).length;
-                                      if (!count) return null;
-                                      return (
-                                        <Badge key={level} variant="outline" className={`text-[10px] ${RISK_LEVEL_COLORS[level]}`}>
-                                          {SEVERITY_LABELS[level]}: {count}
-                                        </Badge>
-                                      );
-                                    })}
-                                  </div>
-                                )}
+                                <div className="flex items-center gap-2">
+                                  {expandedAssessment?.items && expandedAssessment.items.length > 0 && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 text-xs bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100"
+                                        disabled={generatePlansMutation.isPending}
+                                        onClick={() => generatePlansMutation.mutate({
+                                          sectorName: assessment.sectorId || undefined,
+                                        })}
+                                      >
+                                        {generatePlansMutation.isPending ? (
+                                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                        ) : (
+                                          <Sparkles className="h-3 w-3 mr-1" />
+                                        )}
+                                        Gerar Planos de Ação (IA)
+                                      </Button>
+                                      <div className="flex gap-1">
+                                        {(["low", "medium", "high", "critical"] as const).map((level) => {
+                                          const count = expandedAssessment.items.filter((i: any) => i.riskLevel === level).length;
+                                          if (!count) return null;
+                                          return (
+                                            <Badge key={level} variant="outline" className={`text-[10px] ${RISK_LEVEL_COLORS[level]}`}>
+                                              {SEVERITY_LABELS[level]}: {count}
+                                            </Badge>
+                                          );
+                                        })}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
                               </div>
 
                               {loadingItems ? (

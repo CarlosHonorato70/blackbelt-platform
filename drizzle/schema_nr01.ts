@@ -566,6 +566,10 @@ export const benchmarkData = mysqlTable("benchmark_data", {
   avgMentalHealthScore: int("avgMentalHealthScore"),
   avgBurnoutScore: int("avgBurnoutScore"),
   avgViolenceScore: int("avgViolenceScore"),
+  // Taxas setoriais (dados Gupy/MTE) — valores em % x100 (ex: 580 = 5.8%)
+  burnoutRate: int("burnoutRate"),          // Taxa de burnout no setor
+  harassmentRate: int("harassmentRate"),    // Taxa de assédio no setor
+  mentalLeaveRate: int("mentalLeaveRate"),  // Taxa de afastamento por saúde mental
   createdAt: timestamp("createdAt").defaultNow(),
 });
 

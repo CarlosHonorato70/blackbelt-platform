@@ -22,7 +22,7 @@ import { trpc } from "@/lib/trpc";
 import { useTenant } from "@/contexts/TenantContext";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { toast } from "sonner";
-import { BarChart3, Loader2, Database, TrendingUp, TrendingDown, FileDown, ArrowLeft } from "lucide-react";
+import { BarChart3, Loader2, Database, TrendingUp, TrendingDown, FileDown, ArrowLeft, Flame, ShieldAlert, Brain } from "lucide-react";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { useNavigate } from "react-router-dom";
 import {
@@ -108,6 +108,16 @@ export default function BenchmarkComparison() {
     ? sectorBenchmarks.find((b: any) => b.sectorCode === selectedSector)?.sectorName || "Setor"
     : "Média Nacional";
 
+  // Get the selected benchmark record for burnout/harassment/mental leave rates
+  const selectedBenchmarkRecord = selectedSector
+    ? sectorBenchmarks.find((b: any) => b.sectorCode === selectedSector)
+    : (benchmarksQuery.data ?? []).find((b: any) => b.sectorCode === "nacional");
+
+  const burnoutRate = selectedBenchmarkRecord?.burnoutRate != null ? (selectedBenchmarkRecord.burnoutRate / 100).toFixed(1) : null;
+  const harassmentRate = selectedBenchmarkRecord?.harassmentRate != null ? (selectedBenchmarkRecord.harassmentRate / 100).toFixed(1) : null;
+  const mentalLeaveRate = selectedBenchmarkRecord?.mentalLeaveRate != null ? (selectedBenchmarkRecord.mentalLeaveRate / 100).toFixed(1) : null;
+  const isBurnoutHigh = selectedBenchmarkRecord?.burnoutRate != null && selectedBenchmarkRecord.burnoutRate >= 800;
+
   return (
     <DashboardLayout>
       <div className="space-y-6 p-6">
@@ -177,6 +187,55 @@ export default function BenchmarkComparison() {
                   </div>
                 </CardContent>
               </Card>
+            )}
+
+            {/* Burnout / Harassment / Mental Leave Rate Cards */}
+            {(burnoutRate || harassmentRate || mentalLeaveRate) && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className={`border-l-4 ${isBurnoutHigh ? "border-l-red-500 bg-red-50/50" : "border-l-orange-400"}`}>
+                  <CardContent className="pt-4 pb-3">
+                    <div className="flex items-center gap-3">
+                      <Flame className={`h-8 w-8 ${isBurnoutHigh ? "text-red-500" : "text-orange-500"}`} />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Taxa de Burnout</p>
+                        <p className="text-2xl font-bold">{burnoutRate ?? "—"}%</p>
+                        <p className="text-xs text-muted-foreground">{benchmarkLabel}</p>
+                      </div>
+                      {isBurnoutHigh && (
+                        <Badge variant="destructive" className="ml-auto text-[10px]">
+                          ALERTA: &gt;8%
+                        </Badge>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-violet-400">
+                  <CardContent className="pt-4 pb-3">
+                    <div className="flex items-center gap-3">
+                      <ShieldAlert className="h-8 w-8 text-violet-500" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Taxa de Assédio</p>
+                        <p className="text-2xl font-bold">{harassmentRate ?? "—"}%</p>
+                        <p className="text-xs text-muted-foreground">{benchmarkLabel}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-blue-400">
+                  <CardContent className="pt-4 pb-3">
+                    <div className="flex items-center gap-3">
+                      <Brain className="h-8 w-8 text-blue-500" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Afastamentos Saúde Mental</p>
+                        <p className="text-2xl font-bold">{mentalLeaveRate ?? "—"}%</p>
+                        <p className="text-xs text-muted-foreground">{benchmarkLabel}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             )}
 
             <Card>
