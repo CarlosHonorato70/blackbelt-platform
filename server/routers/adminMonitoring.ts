@@ -19,8 +19,10 @@ import os from "os";
 const ALERT_EMAIL = "psicarloshonorato@gmail.com";
 const MEMORY_WARN_PERCENT = 75;
 const MEMORY_CRIT_PERCENT = 90;
-const ERROR_WARN_THRESHOLD = 5;
-const ERROR_CRIT_THRESHOLD = 20;
+const ERROR_WARN_THRESHOLD = 10;
+const ERROR_CRIT_THRESHOLD = 50;
+const ALERT_THROTTLE_MS = 60 * 60 * 1000; // 1 hour between alert emails
+let lastAlertSentAt = 0;
 
 // Shared logic used by both the router and the background agent
 export async function runMonitoringCheck(): Promise<{
@@ -157,7 +159,9 @@ export async function saveCheckAndAlert(result: Awaited<ReturnType<typeof runMon
       checkedAt: new Date(),
     });
 
-    if (alertSent) {
+    const now = Date.now();
+    if (alertSent && (now - lastAlertSentAt) >= ALERT_THROTTLE_MS) {
+      lastAlertSentAt = now;
       const problems: string[] = [];
       if (!result.database.connected) problems.push("Banco de dados desconectado");
       if (result.memory.memoryStatus === "critical") problems.push(`Memoria critica: ${result.memory.heapPercent}%`);
