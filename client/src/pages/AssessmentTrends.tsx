@@ -36,9 +36,9 @@ import { usePdfExport } from "@/hooks/usePdfExport";
 import { useNavigate } from "react-router-dom";
 
 const DIMENSION_LABELS: Record<string, string> = {
-  demands: "Demanda",
+  demand: "Demanda",
   control: "Controle",
-  socialSupport: "Apoio Social",
+  support: "Apoio Social",
   leadership: "Liderança",
   community: "Comunidade",
   meaning: "Significado",
@@ -51,9 +51,9 @@ const DIMENSION_LABELS: Record<string, string> = {
 };
 
 const DIMENSION_COLORS: Record<string, string> = {
-  demands: "#ef4444",
+  demand: "#ef4444",
   control: "#3b82f6",
-  socialSupport: "#22c55e",
+  support: "#22c55e",
   leadership: "#f59e0b",
   community: "#8b5cf6",
   meaning: "#06b6d4",
@@ -64,6 +64,9 @@ const DIMENSION_COLORS: Record<string, string> = {
   burnout: "#dc2626",
   violence: "#78716c",
 };
+
+// Higher is worse for these dimensions (reversed)
+const NEGATIVE_DIMENSIONS = new Set(["demand", "insecurity", "burnout", "violence"]);
 
 export default function AssessmentTrends() {
   usePageMeta({ title: "Histórico e Tendências" });
@@ -88,10 +91,48 @@ export default function AssessmentTrends() {
   }
 
   const trendsQuery = trpc.psychosocialDashboard.getHistoricalTrends.useQuery({ tenantId });
-  const data = trendsQuery.data;
+  const rawData = trendsQuery.data ?? [];
 
-  const chartData = data ?? [];
-  const assessments = data ?? [];
+  // Transform backend data for chart (flatten dimensions to root keys + add date)
+  const chartData = rawData.map((item: any) => ({
+    date: item.generatedAt ? new Date(item.generatedAt).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }) : "—",
+    ...item.dimensions,
+  }));
+
+  // Compute overall score and delta per assessment
+  const assessments = rawData.map((item: any, idx: number) => {
+    const dims = item.dimensions || {};
+    const dimValues = Object.values(dims).filter((v): v is number => v !== null && v !== undefined);
+    const overallScore = dimValues.length > 0 ? Math.round(dimValues.reduce((a: number, b: number) => a + b, 0) / dimValues.length) : 0;
+
+    // Average delta across all dimensions
+    const deltaValues = Object.values(item.deltas || {}).filter((v): v is number => v !== null);
+    const avgDelta = deltaValues.length > 0 ? deltaValues.reduce((a: number, b: number) => a + b, 0) / deltaValues.length : 0;
+
+    // Find top improved and declined dimensions
+    const dimDeltas = Object.entries(item.deltas || {})
+      .filter(([_, v]) => v !== null)
+      .map(([key, value]) => {
+        const shortKey = key.replace("average", "").replace("Score", "");
+        const dimKey = shortKey.charAt(0).toLowerCase() + shortKey.slice(1);
+        return { dimKey, delta: value as number };
+      })
+      .sort((a, b) => b.delta - a.delta);
+
+    const topImproved = dimDeltas.filter(d => d.delta > 2).slice(0, 2);
+    const topDeclined = dimDeltas.filter(d => d.delta < -2).slice(0, 2);
+
+    return {
+      id: item.reportId,
+      date: item.generatedAt,
+      title: item.title,
+      totalRespondents: item.totalRespondents,
+      overallScore,
+      delta: avgDelta,
+      topImproved,
+      topDeclined,
+    };
+  });
 
   return (
     <DashboardLayout>
@@ -176,9 +217,11 @@ export default function AssessmentTrends() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Data</TableHead>
+                      <TableHead>Respondentes</TableHead>
                       <TableHead>Score Geral</TableHead>
                       <TableHead>Variação</TableHead>
                       <TableHead>Tendência</TableHead>
+                      <TableHead>Destaques</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -196,7 +239,10 @@ export default function AssessmentTrends() {
                           <TableCell className="font-medium">
                             {assessment.date
                               ? new Date(assessment.date).toLocaleDateString("pt-BR")
-                              : "-"}
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {assessment.totalRespondents ?? "—"}
                           </TableCell>
                           <TableCell>
                             <span className="text-lg font-semibold">
@@ -205,8 +251,8 @@ export default function AssessmentTrends() {
                             <span className="text-muted-foreground text-sm"> / 100</span>
                           </TableCell>
                           <TableCell>
-                            {idx === assessments.length - 1 ? (
-                              <span className="text-muted-foreground">-</span>
+                            {idx === 0 ? (
+                              <span className="text-muted-foreground">—</span>
                             ) : (
                               <span
                                 className={
@@ -239,6 +285,25 @@ export default function AssessmentTrends() {
                                 Estável
                               </Badge>
                             )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {assessment.topImproved?.map((d: any) => (
+                                <Badge key={d.dimKey} variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200">
+                                  <TrendingUp className="h-2.5 w-2.5 mr-0.5" />
+                                  {DIMENSION_LABELS[d.dimKey] || d.dimKey} +{d.delta.toFixed(0)}
+                                </Badge>
+                              ))}
+                              {assessment.topDeclined?.map((d: any) => (
+                                <Badge key={d.dimKey} variant="outline" className="text-[10px] bg-red-50 text-red-700 border-red-200">
+                                  <TrendingDown className="h-2.5 w-2.5 mr-0.5" />
+                                  {DIMENSION_LABELS[d.dimKey] || d.dimKey} {d.delta.toFixed(0)}
+                                </Badge>
+                              ))}
+                              {!assessment.topImproved?.length && !assessment.topDeclined?.length && (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       );

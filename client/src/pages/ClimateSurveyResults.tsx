@@ -5,7 +5,8 @@ import { trpc } from "@/lib/trpc";
 import { useTenant } from "@/contexts/TenantContext";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, BarChart3, CheckCircle2, Loader2, FileDown } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Users, BarChart3, CheckCircle2, Loader2, FileDown, Target } from "lucide-react";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import {
   BarChart,
@@ -69,6 +70,29 @@ export default function ClimateSurveyResults() {
   const riskDistribution = (results as any)?.riskDistribution ?? { low: 0, medium: 0, high: 0, critical: 0 };
   const inviteStatus = (results as any)?.inviteStatus ?? { total: 0, sent: 0, completed: 0, expired: 0 };
   const responseDistribution = results?.responseDistribution ?? {};
+  const dimensionScores = (results as any)?.dimensionScores ?? {};
+  const dimensionData = Object.entries(dimensionScores)
+    .map(([name, data]: [string, any]) => ({
+      name,
+      score: data.avg ?? 0,
+      questions: data.questions ?? 0,
+      responses: data.count ?? 0,
+    }))
+    .sort((a, b) => a.score - b.score);
+
+  const getDimensionColor = (score: number) => {
+    if (score >= 70) return "#22c55e";
+    if (score >= 50) return "#eab308";
+    if (score >= 30) return "#f97316";
+    return "#ef4444";
+  };
+
+  const getDimensionRisk = (score: number) => {
+    if (score >= 70) return { label: "Bom", class: "bg-green-100 text-green-800" };
+    if (score >= 50) return { label: "Atenção", class: "bg-yellow-100 text-yellow-800" };
+    if (score >= 30) return { label: "Risco", class: "bg-orange-100 text-orange-800" };
+    return { label: "Crítico", class: "bg-red-100 text-red-800" };
+  };
   const questionAverages = Object.entries(responseDistribution).map(([label, val]: [string, any]) => ({
     label,
     average: val.average ?? 0,
@@ -172,6 +196,65 @@ export default function ClimateSurveyResults() {
                       <Bar dataKey="media" name="Media" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Dimension Scores */}
+            {dimensionData.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5" />
+                    Scores por Dimensão
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {/* Bar chart */}
+                    <div>
+                      <ResponsiveContainer width="100%" height={Math.max(250, dimensionData.length * 40)}>
+                        <BarChart
+                          data={dimensionData}
+                          layout="vertical"
+                          margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis type="number" domain={[0, 100]} />
+                          <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 11 }} />
+                          <Tooltip formatter={(value: number) => [`${value}%`, "Score"]} />
+                          <Bar dataKey="score" name="Score (0-100)" radius={[0, 4, 4, 0]}>
+                            {dimensionData.map((entry, index) => (
+                              <Cell key={`dim-${index}`} fill={getDimensionColor(entry.score)} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {/* Dimension detail cards */}
+                    <div className="space-y-2">
+                      {dimensionData.map((dim) => {
+                        const risk = getDimensionRisk(dim.score);
+                        return (
+                          <div key={dim.name} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{dim.name}</p>
+                              <p className="text-xs text-muted-foreground">{dim.questions} perguntas</p>
+                            </div>
+                            <div className="flex items-center gap-2 ml-2">
+                              <span className="text-lg font-bold" style={{ color: getDimensionColor(dim.score) }}>
+                                {dim.score}%
+                              </span>
+                              <Badge variant="outline" className={`text-[10px] ${risk.class}`}>
+                                {risk.label}
+                              </Badge>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             )}

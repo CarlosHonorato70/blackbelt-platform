@@ -445,6 +445,72 @@ export const climateSurveysRouter = router({
         expired: allInvites.filter((i) => i.status === "expired" || (i.expiresAt && new Date() > i.expiresAt && i.status !== "completed")).length,
       };
 
+      // ── Dimension-level scoring ────────────────────────────────────
+      // Map each question to its dimension from the survey definition
+      const [survey] = await db
+        .select({ questions: psychosocialSurveys.questions })
+        .from(psychosocialSurveys)
+        .where(eq(psychosocialSurveys.id, input.surveyId))
+        .limit(1);
+
+      const dimensionScores: Record<string, { sum: number; count: number; avg: number; questions: number }> = {};
+
+      if (survey?.questions && Array.isArray(survey.questions)) {
+        const questions = survey.questions as Array<{
+          id?: string;
+          text?: string;
+          dimension?: string;
+          reverse?: boolean;
+        }>;
+
+        // Build question index → dimension map
+        const qDimensionMap: Record<string, { dimension: string; reverse: boolean }> = {};
+        questions.forEach((q, idx) => {
+          const key = q.id || `q${idx}`;
+          qDimensionMap[key] = {
+            dimension: q.dimension || "Geral",
+            reverse: q.reverse || false,
+          };
+        });
+
+        // Aggregate all responses by dimension
+        for (const response of responses) {
+          if (!response.responses || typeof response.responses !== "object") continue;
+          const respObj = response.responses as Record<string, any>;
+
+          // Responses may be keyed by question index (q0, q1...) or by question ID
+          for (const [key, rawValue] of Object.entries(respObj)) {
+            const value = Number(rawValue) || 0;
+            if (value === 0) continue;
+
+            const qInfo = qDimensionMap[key] || qDimensionMap[`q${key}`];
+            const dimension = qInfo?.dimension || "Geral";
+            // Reverse scoring: invert on 1-5 scale (1→5, 2→4, 3→3, 4→2, 5→1)
+            const finalValue = qInfo?.reverse ? (6 - value) : value;
+
+            if (!dimensionScores[dimension]) {
+              dimensionScores[dimension] = { sum: 0, count: 0, avg: 0, questions: 0 };
+            }
+            dimensionScores[dimension].sum += finalValue;
+            dimensionScores[dimension].count += 1;
+          }
+        }
+
+        // Count unique questions per dimension
+        for (const q of questions) {
+          const dim = q.dimension || "Geral";
+          if (!dimensionScores[dim]) {
+            dimensionScores[dim] = { sum: 0, count: 0, avg: 0, questions: 0 };
+          }
+          dimensionScores[dim].questions += 1;
+        }
+
+        // Compute averages (normalize to 0-100 scale from 1-5)
+        for (const dim of Object.values(dimensionScores)) {
+          dim.avg = dim.count > 0 ? Math.round(((dim.sum / dim.count - 1) / 4) * 100) : 0;
+        }
+      }
+
       return {
         totalResponses,
         averageScore,
@@ -452,6 +518,7 @@ export const climateSurveysRouter = router({
         riskDistribution,
         responseDistribution,
         inviteStatus,
+        dimensionScores,
       };
     }),
 });
