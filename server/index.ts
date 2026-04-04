@@ -157,11 +157,6 @@ app.use("/api", speedLimiter);
 app.use("/api/trpc/auth.", authLimiter);
 
 // ============================================
-// STRIPE WEBHOOK - precisa do raw body ANTES do express.json()
-// ============================================
-app.use("/api/webhooks/stripe", express.raw({ type: "application/json" }));
-
-// ============================================
 // BODY PARSING & COOKIES
 // ============================================
 app.use(express.json({ limit: "2mb" }));

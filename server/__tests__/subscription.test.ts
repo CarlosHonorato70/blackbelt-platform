@@ -79,7 +79,7 @@ describe("Payment Configuration", () => {
       latinAmericanCountries.forEach((country) => {
         const result = getPreferredGateway(country);
         // Will be null if no gateway is configured, which is expected in tests
-        expect(result === null || result === "mercado_pago" || result === "stripe").toBe(true);
+        expect(result === null || result === "mercado_pago" || result === "asaas").toBe(true);
       });
     });
   });

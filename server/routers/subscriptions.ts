@@ -332,9 +332,8 @@ export const subscriptionsRouter = router({
   updatePaymentMethod: protectedProcedure
     .input(
       z.object({
-        stripeCustomerId: z.string().optional(),
-        stripeSubscriptionId: z.string().optional(),
-        mercadoPagoSubscriptionId: z.string().optional(),
+        asaasCustomerId: z.string().optional(),
+        asaasSubscriptionId: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {

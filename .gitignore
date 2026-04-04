@@ -144,3 +144,8 @@ docker/backups/
 server/certs/
 *.p12
 *.pfx
+
+# Test artifacts
+test-pdfs-technova/
+fix-accents.mjs
+test-e2e-technova.mjs

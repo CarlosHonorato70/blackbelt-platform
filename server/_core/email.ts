@@ -170,7 +170,7 @@ async function sendViaBrevoApi(options: SendEmailOptions): Promise<boolean> {
       method: "POST",
       headers: {
         "api-key": apiKey,
-        "Content-Type": "application/json",
+        "Content-Type": "application/json; charset=utf-8",
         "Accept": "application/json",
       },
       body,
