@@ -30,6 +30,9 @@ import {
   financialParameters,
   actionPlans,
   mentalHealthIndicators,
+  resultDisseminations,
+  copsoqAssessments,
+  copsoqResponses,
 } from "../../drizzle/schema_nr01";
 import { tenants } from "../../drizzle/schema";
 import { interventionPrograms } from "../../drizzle/schema_nr01";
@@ -1303,5 +1306,293 @@ export const nr01PdfExportRouter = router({
       }, branding, undefined, ctx.tenantId);
 
       return { filename: `pgr-consolidado-${companyName.replace(/\s+/g, "-").toLowerCase()}.pdf`, data: buffer.toString("base64") };
+    }),
+
+  // ══════════════════════════════════════════════════════════════════════
+  // GRO — Gerenciamento de Riscos Ocupacionais (NR-01 seção 1.5)
+  // ══════════════════════════════════════════════════════════════════════
+  exportGro: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .mutation(async ({ ctx }) => {
+      const db = await requireDb();
+      const tid = ctx.tenantId!;
+
+      // ── Dados da empresa ──────────────────────────────────────────
+      const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tid)).limit(1);
+      const companyName = tenant?.name || "Empresa";
+      const companyCnpj = (tenant as any)?.cnpj || "";
+
+      // ── Dados paralelos ───────────────────────────────────────────
+      const [
+        assessmentList, planList, pcmso, reports, milestones, checklist,
+        programs, disseminations, indicators,
+      ] = await Promise.all([
+        db.select().from(riskAssessments).where(eq(riskAssessments.tenantId, tid)).orderBy(desc(riskAssessments.createdAt)),
+        db.select().from(actionPlans).where(eq(actionPlans.tenantId, tid)).orderBy(desc(actionPlans.createdAt)),
+        db.select().from(pcmsoRecommendations).where(eq(pcmsoRecommendations.tenantId, tid)),
+        db.select().from(copsoqReports).where(eq(copsoqReports.tenantId, tid)).orderBy(desc(copsoqReports.createdAt)).limit(1),
+        db.select().from(complianceMilestones).where(eq(complianceMilestones.tenantId, tid)).orderBy(complianceMilestones.targetDate),
+        db.select().from(complianceChecklist).where(eq(complianceChecklist.tenantId, tid)),
+        db.select().from(interventionPrograms).where(eq(interventionPrograms.tenantId, tid)),
+        db.select().from(resultDisseminations).where(eq(resultDisseminations.tenantId, tid)),
+        db.select().from(mentalHealthIndicators).where(eq(mentalHealthIndicators.tenantId, tid)),
+      ]);
+
+      const latestAssessment = assessmentList[0];
+      let riskItems: any[] = [];
+      if (latestAssessment) {
+        riskItems = await db.select().from(riskAssessmentItems).where(eq(riskAssessmentItems.assessmentId, latestAssessment.id));
+      }
+      const latestReport = reports[0];
+      const completedPlans = planList.filter(p => p.status === "completed");
+      const compliantItems = checklist.filter(c => c.status === "compliant");
+      const complianceScore = checklist.length > 0 ? Math.round((compliantItems.length / checklist.length) * 100) : 0;
+
+      // ── Completude do GRO ─────────────────────────────────────────
+      const groSections = [
+        { label: "Identificação de Perigos", ok: riskItems.length > 0 },
+        { label: "Avaliação de Riscos", ok: !!latestReport },
+        { label: "Medidas de Controle", ok: planList.length > 0 },
+        { label: "Comunicação", ok: disseminations.length > 0 },
+        { label: "Monitoramento", ok: milestones.length > 0 || indicators.length > 0 },
+        { label: "Integração PCMSO", ok: pcmso.length > 0 },
+        { label: "Capacitação", ok: programs.length > 0 },
+        { label: "Conformidade NR-01", ok: complianceScore >= 60 },
+      ];
+      const groCompleteness = Math.round((groSections.filter(s => s.ok).length / groSections.length) * 100);
+
+      // ══════════════════════════════════════════════════════════════
+      // CONSTRUIR PDF GRO
+      // ══════════════════════════════════════════════════════════════
+      const sections: PdfSection[] = [];
+
+      // ── CAPA ──────────────────────────────────────────────────────
+      sections.push({ type: "title", content: "GRO — GERENCIAMENTO DE RISCOS OCUPACIONAIS" });
+      sections.push({ type: "subtitle", content: "Riscos Psicossociais — NR-01 (Portaria MTE nº 1.419/2024)" });
+      sections.push({ type: "text", content: `Empresa: ${companyName}` });
+      if (companyCnpj) sections.push({ type: "text", content: `CNPJ: ${companyCnpj}` });
+      sections.push({ type: "text", content: `Data de elaboração: ${fmtDate(new Date())}` });
+      sections.push({ type: "text", content: `Completude do GRO: ${groCompleteness}%` });
+      sections.push({ type: "divider" });
+
+      // ── RESUMO EXECUTIVO ──────────────────────────────────────────
+      sections.push({ type: "subtitle", content: "Resumo Executivo" });
+      sections.push({ type: "kpis", kpis: [
+        { label: "Completude GRO", value: `${groCompleteness}%`, color: groCompleteness >= 80 ? "#10b981" : groCompleteness >= 50 ? "#f59e0b" : "#ef4444" },
+        { label: "Riscos Identificados", value: String(riskItems.length), color: "#1a365d" },
+        { label: "Planos de Ação", value: `${completedPlans.length}/${planList.length}`, color: "#10b981" },
+        { label: "Conformidade", value: `${complianceScore}%`, color: complianceScore >= 80 ? "#10b981" : "#f59e0b" },
+      ]});
+
+      // Status de cada seção do GRO
+      sections.push({ type: "table", columns: [
+        { header: "Seção do GRO", width: 250 },
+        { header: "Status", width: 100, align: "center" },
+      ], rows: groSections.map(s => ({
+        cells: [s.label, s.ok ? "COMPLETO" : "PENDENTE"],
+        accentColor: s.ok ? "#10b981" : "#ef4444",
+      }))});
+      sections.push({ type: "spacer" });
+
+      // ── SEÇÃO 1: IDENTIFICAÇÃO DE PERIGOS (NR-01 1.5.3.1-1.5.3.3) ─
+      sections.push({ type: "subtitle", content: "1. Identificação de Perigos e Fatores de Risco (NR-01 §1.5.3)" });
+      sections.push({ type: "text", content: "Levantamento dos fatores de risco psicossociais conforme Guia MTE — 13 tipos de perigo oficiais." });
+
+      if (riskItems.length > 0) {
+        const MTE_LABELS: Record<string, string> = {
+          mte_01: "Metas excessivas", mte_02: "Jornada extensa", mte_03: "Falta de autonomia",
+          mte_04: "Sobrecarga mental", mte_05: "Assédio moral", mte_06: "Assédio sexual",
+          mte_07: "Violência", mte_08: "Insegurança", mte_09: "Conflitos interpessoais",
+          mte_10: "Falta de suporte", mte_11: "Falta de reconhecimento", mte_12: "Desequilíbrio trabalho-vida",
+          mte_13: "Comunicação ineficiente",
+        };
+        sections.push({ type: "table", columns: [
+          { header: "Fator de Risco", width: 150 },
+          { header: "Tipo MTE", width: 100, align: "center" },
+          { header: "Severidade", width: 70, align: "center" },
+          { header: "Probabilidade", width: 80, align: "center" },
+          { header: "Nível", width: 60, align: "center" },
+        ], rows: riskItems.map(item => ({
+          cells: [
+            item.riskFactorId || "—",
+            item.mteHazardType ? (MTE_LABELS[item.mteHazardType] || item.mteHazardType) : "—",
+            SEVERITY_LABELS[item.severity] || item.severity,
+            PROBABILITY_LABELS[item.probability] || item.probability,
+            RISK_LABELS[item.riskLevel] || item.riskLevel,
+          ],
+          accentColor: RISK_COLORS[item.riskLevel],
+        }))});
+      } else {
+        sections.push({ type: "text", content: "⚠ Nenhum fator de risco identificado. Execute o inventário de riscos." });
+      }
+      sections.push({ type: "spacer" });
+
+      // ── SEÇÃO 2: AVALIAÇÃO (NR-01 1.5.3.4-1.5.3.6) ───────────────
+      sections.push({ type: "subtitle", content: "2. Avaliação dos Riscos (NR-01 §1.5.3.4)" });
+      sections.push({ type: "text", content: "Metodologia: COPSOQ-II (Copenhagen Psychosocial Questionnaire) — 76 questões, 12 dimensões." });
+
+      if (latestReport) {
+        const dims = latestReport as any;
+        sections.push({ type: "kpis", kpis: [
+          { label: "Respondentes", value: String(dims.totalResponses || 0), color: "#1a365d" },
+          { label: "Risco Baixo", value: String(dims.lowRiskCount || 0), color: "#10b981" },
+          { label: "Risco Alto", value: String(dims.highRiskCount || 0), color: "#f97316" },
+          { label: "Risco Crítico", value: String(dims.criticalRiskCount || 0), color: "#ef4444" },
+        ]});
+      } else {
+        sections.push({ type: "text", content: "⚠ Nenhum relatório COPSOQ-II disponível." });
+      }
+      sections.push({ type: "spacer" });
+
+      // ── SEÇÃO 3: MEDIDAS DE CONTROLE (NR-01 1.5.4) ────────────────
+      sections.push({ type: "subtitle", content: "3. Medidas de Prevenção e Controle (NR-01 §1.5.4)" });
+      sections.push({ type: "text", content: "Plano de ação com hierarquia de controles: eliminação > substituição > engenharia > administrativo > EPI." });
+
+      if (planList.length > 0) {
+        sections.push({ type: "kpis", kpis: [
+          { label: "Total de Ações", value: String(planList.length), color: "#1a365d" },
+          { label: "Concluídas", value: String(completedPlans.length), color: "#10b981" },
+          { label: "Em Andamento", value: String(planList.filter(p => p.status === "in_progress").length), color: "#3b82f6" },
+          { label: "Pendentes", value: String(planList.filter(p => p.status === "pending").length), color: "#f59e0b" },
+        ]});
+        sections.push({ type: "table", columns: [
+          { header: "Ação", width: 180 },
+          { header: "Tipo", width: 80, align: "center" },
+          { header: "Prioridade", width: 70, align: "center" },
+          { header: "Prazo", width: 80, align: "center" },
+          { header: "Status", width: 80, align: "center" },
+        ], rows: planList.slice(0, 20).map(p => ({
+          cells: [
+            p.title.slice(0, 50) + (p.title.length > 50 ? "..." : ""),
+            p.actionType || "—",
+            PRIORITY_LABELS[p.priority || "medium"] || "—",
+            fmtDate(p.deadline),
+            p.status === "completed" ? "Concluído" : p.status === "in_progress" ? "Em andamento" : "Pendente",
+          ],
+          accentColor: p.status === "completed" ? "#10b981" : p.status === "in_progress" ? "#3b82f6" : "#f59e0b",
+        }))});
+      } else {
+        sections.push({ type: "text", content: "⚠ Nenhum plano de ação cadastrado." });
+      }
+      sections.push({ type: "spacer" });
+
+      // ── SEÇÃO 4: COMUNICAÇÃO (NR-01 1.5.3.7) ──────────────────────
+      sections.push({ type: "subtitle", content: "4. Comunicação e Participação dos Trabalhadores (NR-01 §1.5.3.7)" });
+      if (disseminations.length > 0) {
+        const totalRecipients = disseminations.reduce((sum, d) => sum + (d.recipientCount || 0), 0);
+        sections.push({ type: "kpis", kpis: [
+          { label: "Disseminações", value: String(disseminations.length), color: "#1a365d" },
+          { label: "Total Destinatários", value: String(totalRecipients), color: "#10b981" },
+        ]});
+        sections.push({ type: "table", columns: [
+          { header: "Método", width: 100 },
+          { header: "Destinatários", width: 100, align: "center" },
+          { header: "Data", width: 100, align: "center" },
+          { header: "Observações", width: 200 },
+        ], rows: disseminations.map(d => ({
+          cells: [
+            d.method || "—",
+            String(d.recipientCount || 0),
+            fmtDate(d.sentAt),
+            (d.notes || "").slice(0, 60) + ((d.notes || "").length > 60 ? "..." : ""),
+          ],
+        }))});
+      } else {
+        sections.push({ type: "text", content: "⚠ Nenhuma devolutiva registrada. A NR-01 exige comunicação dos resultados aos trabalhadores." });
+      }
+      sections.push({ type: "spacer" });
+
+      // ── SEÇÃO 5: MONITORAMENTO (NR-01 1.5.5) ──────────────────────
+      sections.push({ type: "subtitle", content: "5. Monitoramento e Acompanhamento (NR-01 §1.5.5)" });
+      if (milestones.length > 0) {
+        const completedMs = milestones.filter(m => m.status === "completed");
+        sections.push({ type: "text", content: `Progresso: ${completedMs.length} de ${milestones.length} etapas concluídas.` });
+        sections.push({ type: "table", columns: [
+          { header: "Etapa", width: 200 },
+          { header: "Prazo", width: 90, align: "center" },
+          { header: "Status", width: 90, align: "center" },
+        ], rows: milestones.slice(0, 15).map(m => ({
+          cells: [
+            m.title,
+            fmtDate(m.targetDate),
+            m.status === "completed" ? "Concluído" : m.status === "overdue" ? "ATRASADO" : "Pendente",
+          ],
+          accentColor: m.status === "completed" ? "#10b981" : m.status === "overdue" ? "#ef4444" : "#f59e0b",
+        }))});
+      } else {
+        sections.push({ type: "text", content: "⚠ Nenhum cronograma de monitoramento definido." });
+      }
+      sections.push({ type: "spacer" });
+
+      // ── SEÇÃO 6: PCMSO ────────────────────────────────────────────
+      sections.push({ type: "subtitle", content: "6. Integração com PCMSO (NR-07)" });
+      if (pcmso.length > 0) {
+        sections.push({ type: "text", content: `${pcmso.length} recomendação(ões) de saúde integradas.` });
+      } else {
+        sections.push({ type: "text", content: "⚠ Nenhuma recomendação PCMSO registrada." });
+      }
+      sections.push({ type: "spacer" });
+
+      // ── SEÇÃO 7: CAPACITAÇÃO ──────────────────────────────────────
+      sections.push({ type: "subtitle", content: "7. Programa de Capacitação (NR-01 §1.5.6)" });
+      if (programs.length > 0) {
+        sections.push({ type: "text", content: `${programs.length} programa(s) de treinamento cadastrado(s).` });
+      } else {
+        sections.push({ type: "text", content: "⚠ Nenhum programa de treinamento cadastrado." });
+      }
+      sections.push({ type: "spacer" });
+
+      // ── SEÇÃO 8: CONFORMIDADE ─────────────────────────────────────
+      sections.push({ type: "subtitle", content: "8. Checklist de Conformidade NR-01 (§1.5.7)" });
+      sections.push({ type: "kpis", kpis: [
+        { label: "Total Requisitos", value: String(checklist.length), color: "#1a365d" },
+        { label: "Conformes", value: String(compliantItems.length), color: "#10b981" },
+        { label: "Score", value: `${complianceScore}%`, color: complianceScore >= 80 ? "#10b981" : "#ef4444" },
+      ]});
+      sections.push({ type: "spacer" });
+
+      // ── BASE LEGAL ────────────────────────────────────────────────
+      sections.push({ type: "divider" });
+      sections.push({ type: "subtitle", content: "Base Legal e Normativa" });
+      sections.push({ type: "list", items: [
+        "NR-01 — Disposições Gerais e Gerenciamento de Riscos Ocupacionais (Portaria MTE nº 1.419/2024)",
+        "NR-07 — Programa de Controle Médico de Saúde Ocupacional (PCMSO)",
+        "NR-17 — Ergonomia e Condições de Trabalho",
+        "Guia MTE — Fatores de Riscos Psicossociais Relacionados ao Trabalho (2024)",
+        "COPSOQ-II — Copenhagen Psychosocial Questionnaire (metodologia validada)",
+      ]});
+      sections.push({ type: "spacer" });
+      sections.push({ type: "signature", signatureName: ctx.user?.name || "Responsável Técnico", signatureRole: "Consultor SST", signatureRegistry: ctx.user?.email || "CREA/CRP" });
+
+      // ── GERAR PDF ─────────────────────────────────────────────────
+      const buffer = await generateGenericReportPdf({
+        reportTitle: "GRO — Gerenciamento de Riscos Ocupacionais",
+        reportSubtitle: `${companyName} — NR-01 Conforme Portaria MTE nº 1.419/2024`,
+        referenceText: "Documento gerado automaticamente pela BlackBelt Platform",
+        companyName,
+        date: fmtDate(new Date()),
+        sections,
+      }, branding, undefined, ctx.tenantId);
+
+      // ── Registrar documento de compliance ─────────────────────────
+      const { nanoid } = await import("nanoid");
+      await db.insert(complianceDocuments).values({
+        id: `cd_gro_${nanoid(12)}`,
+        tenantId: tid,
+        documentType: "gro",
+        title: `GRO — Gerenciamento de Riscos Ocupacionais`,
+        description: `Completude: ${groCompleteness}%. ${riskItems.length} riscos, ${planList.length} ações, conformidade ${complianceScore}%.`,
+        version: "1.0",
+        validFrom: new Date(),
+        status: "draft",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      return {
+        filename: `gro-${companyName.replace(/\s+/g, "-").toLowerCase()}.pdf`,
+        data: buffer.toString("base64"),
+        groCompleteness,
+      };
     }),
 });

@@ -17,15 +17,18 @@ import {
 } from "@/components/ui/dialog";
 import { useTenant } from "@/contexts/TenantContext";
 import { trpc } from "@/lib/trpc";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertCircle,
   CheckCircle2,
   Download,
   Eye,
   FileText,
+  Loader2,
   Plus,
   AlertTriangle,
   ArrowLeft,
+  ScrollText,
 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -36,6 +39,7 @@ import {
 } from "@/lib/exportUtils";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { usePdfExport } from "@/hooks/usePdfExport";
 
 export default function ComplianceReports() {
   const navigate = useNavigate();
@@ -43,6 +47,13 @@ export default function ComplianceReports() {
   const { data: user } = trpc.auth.me.useQuery();
   const effectiveId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
+  const { exportPdf, isExporting } = usePdfExport();
+  const exportGroMutation = trpc.nr01Pdf.exportGro.useMutation({
+    onSuccess: (data: any) => {
+      toast.success(`GRO gerado! Completude: ${data.groCompleteness}%`);
+    },
+    onError: (err: any) => toast.error(err.message || "Erro ao gerar GRO"),
+  });
 
   if (!effectiveId) {
     return (
@@ -249,6 +260,71 @@ export default function ComplianceReports() {
                 <p className="text-sm text-blue-800">Conformidade Legal</p>
                 <p className="text-3xl font-bold text-blue-900">✓</p>
                 <p className="text-xs text-blue-700">Dentro do prazo</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* GRO Status Card */}
+        <Card className="border-purple-200 bg-purple-50/50">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <ScrollText className="h-6 w-6 text-purple-700" />
+                <div>
+                  <CardTitle className="text-purple-900">GRO — Gerenciamento de Riscos Ocupacionais</CardTitle>
+                  <CardDescription className="text-purple-700">
+                    Documento consolidado obrigatório conforme NR-01 seção 1.5
+                  </CardDescription>
+                </div>
+              </div>
+              <Button
+                className="bg-purple-600 hover:bg-purple-700"
+                disabled={exportGroMutation.isPending || isExporting}
+                onClick={() => exportPdf(() => exportGroMutation.mutateAsync({ tenantId: tenantId ?? "" }))}
+              >
+                {exportGroMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                Gerar GRO (PDF)
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-4 gap-3 text-sm">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-300">1</Badge>
+                <span>Identificação de Perigos</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-300">2</Badge>
+                <span>Avaliação de Riscos</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-300">3</Badge>
+                <span>Medidas de Controle</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-300">4</Badge>
+                <span>Comunicação</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-300">5</Badge>
+                <span>Monitoramento</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-300">6</Badge>
+                <span>Integração PCMSO</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-300">7</Badge>
+                <span>Capacitação</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-300">8</Badge>
+                <span>Checklist NR-01</span>
               </div>
             </div>
           </CardContent>

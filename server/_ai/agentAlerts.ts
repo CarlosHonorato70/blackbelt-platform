@@ -30,7 +30,8 @@ export type AlertType =
   | "document_missing"
   | "certification_ready"
   | "proposal_approved"
-  | "copsoq_responses_ready";
+  | "copsoq_responses_ready"
+  | "phase_transition";
 
 interface AlertDef {
   type: AlertType;
@@ -217,4 +218,50 @@ export async function scanTenantAlerts(tenantId: string, companyId?: string): Pr
   }
 
   return newAlerts;
+}
+
+/**
+ * Creates a phase transition alert when the NR-01 workflow auto-advances.
+ */
+export async function createPhaseTransitionAlert(
+  tenantId: string,
+  fromPhase: string,
+  toPhase: string,
+  fromName: string,
+  toName: string,
+  progress: number,
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  try {
+    // Check if a transition alert for this exact transition already exists
+    const [existing] = await db.select().from(agentAlerts).where(
+      and(
+        eq(agentAlerts.tenantId, tenantId),
+        eq(agentAlerts.alertType, "phase_transition"),
+        eq(agentAlerts.dismissed, false),
+        sql`JSON_EXTRACT(${agentAlerts.metadata}, '$.toPhase') = ${toPhase}`
+      )
+    ).limit(1);
+
+    if (existing) return; // Already notified about this transition
+
+    await db.insert(agentAlerts).values({
+      id: nanoid(),
+      tenantId,
+      companyId: null,
+      alertType: "phase_transition",
+      severity: "info",
+      title: `Fase concluída: ${fromName}`,
+      message: `A fase "${fromName}" foi concluída com sucesso! A próxima fase é "${toName}". Progresso geral: ${progress}%.`,
+      metadata: { fromPhase, toPhase, fromName, toName, progress },
+      dismissed: false,
+      createdAt: new Date(),
+    });
+
+    log.info("Phase transition alert created", { tenantId, fromPhase, toPhase, progress });
+  } catch (error) {
+    log.error("Error creating phase transition alert", { error: String(error), tenantId });
+  }
 }

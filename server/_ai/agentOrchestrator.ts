@@ -266,6 +266,7 @@ function generateSuggestedActions(
       if (!state.hasPcmso) {
         actions.push({ actionType: "generate_pcmso", label: "Gerar Recomendações PCMSO", description: "Integrar riscos ao PCMSO", priority: "high" });
       }
+      actions.push({ actionType: "generate_gro", label: "Gerar Documento GRO", description: "Gerenciamento de Riscos Ocupacionais consolidado (NR-01 §1.5)", priority: "high" });
       actions.push({ actionType: "generate_pdf", label: "Gerar Documentação PDF", description: "Exportar relatórios e laudos em PDF", priority: "medium" });
       break;
     case "CERTIFICACAO":
@@ -318,6 +319,59 @@ function generateAlerts(
   }
 
   return alerts;
+}
+
+// ============================================================================
+// AUTO-TRANSITION: Detect phase completion and advance automatically
+// ============================================================================
+
+export interface PhaseTransition {
+  fromPhase: NR01Phase;
+  toPhase: NR01Phase;
+  fromName: string;
+  toName: string;
+  progress: number;
+}
+
+/**
+ * Checks if any phase just completed and returns transitions to apply.
+ * Call this after any significant action (assessment created, report generated, etc.)
+ */
+export async function checkAutoTransitions(tenantId: string): Promise<PhaseTransition[]> {
+  try {
+    const status = await getNR01Status(tenantId);
+    const transitions: PhaseTransition[] = [];
+
+    // Find the first incomplete phase
+    const firstIncomplete = status.phases.findIndex(p => p.status !== "completed");
+    if (firstIncomplete <= 0) return transitions; // nothing to transition or at start
+
+    // Check if the phase before the first incomplete was recently completed
+    // (i.e., status changed from in_progress to completed)
+    for (let i = 0; i < firstIncomplete; i++) {
+      const phase = status.phases[i];
+      if (phase.status === "completed" && phase.progress === 100) {
+        const nextPhase = status.phases[i + 1];
+        if (nextPhase && nextPhase.status !== "completed") {
+          // Only report transition if next phase just started (was not_started or has low progress)
+          if (nextPhase.status === "not_started" || nextPhase.progress === 0) {
+            transitions.push({
+              fromPhase: phase.phase,
+              toPhase: nextPhase.phase,
+              fromName: phase.name,
+              toName: nextPhase.name,
+              progress: status.overallProgress,
+            });
+          }
+        }
+      }
+    }
+
+    return transitions;
+  } catch (error) {
+    log.error("Error checking auto-transitions", { error: String(error), tenantId });
+    return [];
+  }
 }
 
 // Get strategy recommendation based on company profile

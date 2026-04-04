@@ -7,8 +7,8 @@ import { getDb } from "../db";
 import { agentConversations, agentMessages, agentActions, agentAlerts } from "../../drizzle/schema_agent";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { invokeLLM } from "../_core/llm";
-import { getNR01Status, getCompanyStrategy } from "../_ai/agentOrchestrator";
-import { scanTenantAlerts } from "../_ai/agentAlerts";
+import { getNR01Status, getCompanyStrategy, checkAutoTransitions } from "../_ai/agentOrchestrator";
+import { scanTenantAlerts, createPhaseTransitionAlert } from "../_ai/agentAlerts";
 import { buildAgentSystemPrompt, buildContextMessage } from "../_ai/prompts/agent-system";
 import { processCNPJForAgent, formatCNPJ, sectorLabel, isHighRiskSector } from "../_core/cnpjLookup";
 import { tenants, proposals, proposalItems, proposalPayments, clients, people } from "../../drizzle/schema";
@@ -16,6 +16,21 @@ import { complianceChecklist, complianceMilestones } from "../../drizzle/schema_
 import { executeCreateAssessment, executeGenerateInventoryAndPlan, executeCreateTraining, executeCompleteChecklist } from "../_ai/agentExecutor";
 import { log } from "../_core/logger";
 import * as dbOps from "../db";
+
+// ============================================================================
+// AUTO-TRANSITION HELPER
+// ============================================================================
+
+async function checkAutoTransitionsAndNotify(tenantId: string): Promise<void> {
+  try {
+    const transitions = await checkAutoTransitions(tenantId);
+    for (const t of transitions) {
+      await createPhaseTransitionAlert(tenantId, t.fromPhase, t.toPhase, t.fromName, t.toName, t.progress);
+    }
+  } catch {
+    // Silent — background task
+  }
+}
 
 // ============================================================================
 // ACTION EXECUTOR: Actually creates company and sets up NR-01 process
@@ -2834,8 +2849,9 @@ ${extractHeadcount(input.content) ? `Funcionários informados: ${extractHeadcoun
         .set({ updatedAt: new Date() })
         .where(eq(agentConversations.id, input.conversationId));
 
-      // Scan for alerts in the background
+      // Scan for alerts and check auto-transitions in the background
       scanTenantAlerts(ctx.tenantId!, input.companyId).catch(() => {});
+      checkAutoTransitionsAndNotify(targetTenantId).catch(() => {});
 
       return {
         userMessage: { id: userMsgId, role: "user", content: input.content },
