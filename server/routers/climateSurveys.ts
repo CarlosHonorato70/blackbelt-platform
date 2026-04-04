@@ -9,6 +9,7 @@ import {
   surveyInvites,
 } from "../../drizzle/schema_nr01";
 import { eq, and, desc, sql } from "drizzle-orm";
+import { sendBulkClimateSurveyInvites } from "../_core/email";
 
 export const climateSurveysRouter = router({
   // Listar pesquisas de clima por tenant
@@ -189,6 +190,14 @@ export const climateSurveysRouter = router({
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30);
 
+      // Buscar título da pesquisa para o email
+      const [survey] = await db
+        .select({ title: psychosocialSurveys.title })
+        .from(psychosocialSurveys)
+        .where(eq(psychosocialSurveys.id, input.surveyId))
+        .limit(1);
+      const surveyTitle = survey?.title || "Pesquisa de Clima Organizacional";
+
       const createdInvites = [];
 
       for (const invite of input.invites) {
@@ -208,7 +217,24 @@ export const climateSurveysRouter = router({
           createdAt: new Date(),
         });
 
-        createdInvites.push({ id, email: invite.email, token });
+        createdInvites.push({ id, email: invite.email, name: invite.name, token });
+      }
+
+      // Enviar emails com link da pesquisa
+      try {
+        const emailResult = await sendBulkClimateSurveyInvites(
+          createdInvites.map(inv => ({
+            respondentEmail: inv.email,
+            respondentName: inv.name,
+            surveyTitle,
+            inviteToken: inv.token,
+            expiresIn: 30,
+            tenantId: ctx.tenantId!,
+          }))
+        );
+        console.log(`[ClimateSurvey] Emails enviados: ${emailResult.success} sucesso, ${emailResult.failed} falhas`);
+      } catch (err) {
+        console.error("[ClimateSurvey] Erro ao enviar emails:", err);
       }
 
       return {

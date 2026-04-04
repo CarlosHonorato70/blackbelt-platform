@@ -383,6 +383,131 @@ export async function sendBulkCopsoqInvites(
 }
 
 /**
+ * Envia convite individual para pesquisa de clima organizacional
+ */
+export async function sendClimateSurveyInvite(params: {
+  respondentEmail: string;
+  respondentName: string;
+  surveyTitle: string;
+  inviteToken: string;
+  expiresIn: number;
+  tenantId?: string;
+}): Promise<boolean> {
+  const { respondentEmail, respondentName, surveyTitle, inviteToken, expiresIn, tenantId } = params;
+
+  const inviteUrl = `${process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:3000"}/clima/respond/${inviteToken}`;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 28px;">Pesquisa de Clima Organizacional</h1>
+        <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Sua opinião é importante para nós</p>
+      </div>
+
+      <div style="background: white; padding: 40px 20px; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="margin: 0 0 20px 0; font-size: 16px;">
+          Olá <strong>${respondentName}</strong>,
+        </p>
+
+        <p style="margin: 0 0 20px 0; font-size: 14px; color: #666;">
+          Você foi convidado para participar da pesquisa de clima organizacional <strong>"${escapeHtml(surveyTitle)}"</strong>.
+        </p>
+
+        <p style="margin: 0 0 20px 0; font-size: 14px; color: #666;">
+          Esta pesquisa é confidencial e nos ajudará a entender sua percepção sobre o ambiente de trabalho para implementar melhorias.
+        </p>
+
+        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 30px 0;">
+          <p style="margin: 0 0 15px 0; font-size: 14px; font-weight: bold;">Como participar:</p>
+          <ol style="margin: 0; padding-left: 20px; font-size: 14px; color: #666;">
+            <li style="margin: 8px 0;">Clique no botão abaixo para acessar a pesquisa</li>
+            <li style="margin: 8px 0;">Responda todas as questões com sinceridade</li>
+            <li style="margin: 8px 0;">Suas respostas serão mantidas em sigilo</li>
+            <li style="margin: 8px 0;">O tempo médio para conclusão é de 5-10 minutos</li>
+          </ol>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${inviteUrl}" style="background: #06b6d4; color: white; padding: 12px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
+            Responder Pesquisa
+          </a>
+        </div>
+
+        <p style="margin: 20px 0 0 0; font-size: 12px; color: #999; text-align: center;">
+          Este link expira em ${expiresIn} dias. Se você não conseguir acessar, entre em contato com o departamento de RH.
+        </p>
+      </div>
+
+      <div style="background: #fffbeb; padding: 20px; border: 1px solid #fbbf24; border-top: none;">
+        <table style="width: 100%;"><tr>
+          <td style="width: 40px; vertical-align: top; padding-right: 12px;">
+            <div style="width: 36px; height: 36px; background: #f59e0b; border-radius: 50%; text-align: center; line-height: 36px; color: white; font-size: 18px;">&#128737;</div>
+          </td>
+          <td>
+            <p style="margin: 0 0 4px 0; font-weight: bold; color: #92400e; font-size: 14px;">Canal de Denúncia Confidencial</p>
+            <p style="margin: 0 0 10px 0; color: #78350f; font-size: 12px;">Se você presenciou ou sofreu assédio, discriminação, violência ou outra situação inadequada, utilize nosso canal seguro.</p>
+            <a href="${process.env.FRONTEND_URL || "http://localhost:3000"}/denuncia/${tenantId || inviteToken}" style="background: #d97706; color: white; padding: 8px 20px; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block;">Fazer Denúncia Anônima</a>
+            <p style="margin: 8px 0 0 0; font-size: 11px; color: #a16207;">Sua identidade será totalmente preservada. Protegido pela LGPD.</p>
+          </td>
+        </tr></table>
+      </div>
+
+      <div style="background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; font-size: 12px; color: #666; text-align: center;">
+        <p style="margin: 0;">
+          Black Belt Consultoria | Plataforma de Gestão de Riscos Psicossociais
+        </p>
+      </div>
+    </div>
+  `;
+
+  return sendEmail({
+    to: respondentEmail,
+    subject: `Pesquisa de Clima: ${surveyTitle}`,
+    html,
+    text: `Você foi convidado para responder a pesquisa de clima "${escapeHtml(surveyTitle)}". Acesse: ${inviteUrl}`,
+  });
+}
+
+/**
+ * Envia convites de pesquisa de clima em lote.
+ */
+export async function sendBulkClimateSurveyInvites(
+  invites: Array<{
+    respondentEmail: string;
+    respondentName: string;
+    surveyTitle: string;
+    inviteToken: string;
+    expiresIn: number;
+    tenantId?: string;
+  }>
+): Promise<{ success: number; failed: number }> {
+  let success = 0;
+  let failed = 0;
+
+  const BATCH_SIZE = 5;
+  for (let i = 0; i < invites.length; i += BATCH_SIZE) {
+    const batch = invites.slice(i, i + BATCH_SIZE);
+    const results = await Promise.allSettled(
+      batch.map(invite => sendClimateSurveyInvite(invite))
+    );
+
+    for (const result of results) {
+      if (result.status === "fulfilled" && result.value) {
+        success++;
+      } else {
+        failed++;
+      }
+    }
+
+    if (i + BATCH_SIZE < invites.length) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  }
+
+  return { success, failed };
+}
+
+/**
  * Envia email de confirmação de resposta
  */
 export async function sendResponseConfirmation(params: {
