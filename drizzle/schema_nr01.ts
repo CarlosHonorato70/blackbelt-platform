@@ -426,6 +426,22 @@ export type InsertCopsoqResponse = typeof copsoqResponses.$inferInsert;
 export type CopsoqReport = typeof copsoqReports.$inferSelect;
 export type InsertCopsoqReport = typeof copsoqReports.$inferInsert;
 
+// Registro de devolutivas de resultados aos trabalhadores (NR-01 item 1.5.3.7)
+export const resultDisseminations = mysqlTable("result_disseminations", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  assessmentId: varchar("assessmentId", { length: 64 }),
+  method: mysqlEnum("method", ["email", "pdf", "meeting", "intranet", "other"]).notNull(),
+  recipientCount: int("recipientCount").notNull(),
+  sentAt: timestamp("sentAt").defaultNow(),
+  sentBy: varchar("sentBy", { length: 255 }),
+  evidenceUrl: varchar("evidenceUrl", { length: 500 }),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_dissemination_tenant").on(table.tenantId),
+}));
+
 // Tabela para gerenciar convites de avaliação COPSOQ-II
 export const copsoqInvites = mysqlTable("copsoq_invites", {
   id: varchar("id", { length: 64 }).primaryKey(),

@@ -10,9 +10,12 @@ import {
   riskAssessments,
   riskAssessmentItems,
   actionPlans,
+  resultDisseminations,
+  complianceChecklist,
 } from "../../drizzle/schema_nr01";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { sendEmail } from "../_core/email";
 
 export const psychosocialDashboardRouter = router({
   // Resumo geral do dashboard psicossocial
@@ -430,5 +433,211 @@ export const psychosocialDashboardRouter = router({
       });
 
       return { id, updated: false };
+    }),
+
+  // Segmentação demográfica das respostas COPSOQ-II
+  getDemographicBreakdown: tenantProcedure
+    .input(z.object({
+      tenantId: z.string().optional(),
+      assessmentId: z.string().optional(),
+      groupBy: z.enum(["ageGroup", "gender", "education", "yearsInCompany"]).default("ageGroup"),
+    }))
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) return [];
+
+      const conditions = [eq(copsoqResponses.tenantId, ctx.tenantId!)];
+      if (input.assessmentId) {
+        conditions.push(eq(copsoqResponses.assessmentId, input.assessmentId));
+      }
+
+      const responses = await db
+        .select()
+        .from(copsoqResponses)
+        .where(and(...conditions));
+
+      // Agrupar por campo demográfico
+      const groups: Record<string, typeof responses> = {};
+      for (const r of responses) {
+        const key = (r as any)[input.groupBy] || "Não informado";
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(r);
+      }
+
+      return Object.entries(groups).map(([groupValue, groupResponses]) => {
+        const count = groupResponses.length;
+        const avg = (field: keyof typeof groupResponses[0]) => {
+          const vals = groupResponses.map((r) => (r as any)[field]).filter((v: any) => v != null);
+          if (vals.length === 0) return 0;
+          return Math.round(vals.reduce((a: number, b: number) => a + b, 0) / vals.length);
+        };
+
+        return {
+          group: groupValue,
+          count,
+          dimensions: {
+            demand: avg("demandScore"),
+            control: avg("controlScore"),
+            support: avg("supportScore"),
+            leadership: avg("leadershipScore"),
+            community: avg("communityScore"),
+            meaning: avg("meaningScore"),
+            trust: avg("trustScore"),
+            justice: avg("justiceScore"),
+            insecurity: avg("insecurityScore"),
+            mentalHealth: avg("mentalHealthScore"),
+            burnout: avg("burnoutScore"),
+            violence: avg("violenceScore"),
+          },
+        };
+      });
+    }),
+
+  // Disseminar resultados aos trabalhadores (NR-01 item 1.5.3.7)
+  disseminateResults: tenantProcedure
+    .input(z.object({
+      tenantId: z.string().optional(),
+      assessmentId: z.string().optional(),
+      emails: z.array(z.string().email()),
+      method: z.enum(["email", "pdf", "meeting", "intranet", "other"]).default("email"),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Buscar último relatório COPSOQ
+      const [latestReport] = await db
+        .select()
+        .from(copsoqReports)
+        .where(eq(copsoqReports.tenantId, ctx.tenantId!))
+        .orderBy(desc(copsoqReports.generatedAt))
+        .limit(1);
+
+      if (!latestReport) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Nenhum relatório COPSOQ-II encontrado para disseminar." });
+      }
+
+      // Montar resumo anonimizado para os trabalhadores
+      const dims = latestReport as any;
+      const dimLines = [
+        `Demanda de Trabalho: ${dims.averageDemandScore ?? "—"}/100`,
+        `Controle/Autonomia: ${dims.averageControlScore ?? "—"}/100`,
+        `Apoio Social: ${dims.averageSupportScore ?? "—"}/100`,
+        `Liderança: ${dims.averageLeadershipScore ?? "—"}/100`,
+        `Comunidade: ${dims.averageCommunityScore ?? "—"}/100`,
+        `Significado do Trabalho: ${dims.averageMeaningScore ?? "—"}/100`,
+        `Confiança: ${dims.averageTrustScore ?? "—"}/100`,
+        `Justiça: ${dims.averageJusticeScore ?? "—"}/100`,
+        `Insegurança: ${dims.averageInsecurityScore ?? "—"}/100`,
+        `Saúde Mental: ${dims.averageMentalHealthScore ?? "—"}/100`,
+        `Burnout: ${dims.averageBurnoutScore ?? "—"}/100`,
+        `Violência e Assédio: ${dims.averageViolenceScore ?? "—"}/100`,
+      ].join("<br>");
+
+      const total = (latestReport.lowRiskCount || 0) + (latestReport.mediumRiskCount || 0) +
+        (latestReport.highRiskCount || 0) + (latestReport.criticalRiskCount || 0);
+
+      const htmlBody = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #1a365d;">Resultados da Avaliação Psicossocial — COPSOQ-II</h2>
+          <p>Prezado(a) colaborador(a),</p>
+          <p>Conforme exigido pela NR-01 (item 1.5.3.7), compartilhamos os resultados agregados da avaliação psicossocial realizada em nossa organização.</p>
+          <p><strong>Total de respondentes:</strong> ${latestReport.totalRespondents || 0} | <strong>Taxa de resposta:</strong> ${latestReport.responseRate || 0}%</p>
+          <h3 style="color: #1a365d;">Scores por Dimensão (média geral, escala 0-100)</h3>
+          <div style="background: #f8fafc; padding: 16px; border-radius: 8px; font-size: 14px; line-height: 1.8;">
+            ${dimLines}
+          </div>
+          <h3 style="color: #1a365d;">Distribuição de Risco</h3>
+          <p>
+            🟢 Baixo: ${latestReport.lowRiskCount || 0} |
+            🟡 Médio: ${latestReport.mediumRiskCount || 0} |
+            🟠 Alto: ${latestReport.highRiskCount || 0} |
+            🔴 Crítico: ${latestReport.criticalRiskCount || 0}
+          </p>
+          <p style="font-size: 12px; color: #64748b;">
+            <em>Nota: Todos os dados são agregados e anonimizados. Nenhuma resposta individual é identificável.
+            Este relatório é parte do Programa de Gerenciamento de Riscos (PGR) conforme NR-01.</em>
+          </p>
+          <hr style="border: none; border-top: 1px solid #e2e8f0;">
+          <p style="font-size: 12px; color: #94a3b8;">Enviado via BlackBelt Platform — Gestão de Riscos Psicossociais</p>
+        </div>
+      `;
+
+      // Enviar emails em lotes
+      let sentCount = 0;
+      let failedCount = 0;
+      for (const email of input.emails) {
+        try {
+          const sent = await sendEmail({
+            to: email,
+            subject: "Resultados da Avaliação Psicossocial — COPSOQ-II (NR-01)",
+            html: htmlBody,
+          });
+          if (sent) sentCount++;
+          else failedCount++;
+        } catch {
+          failedCount++;
+        }
+        // Small delay to avoid rate limiting
+        if (input.emails.length > 5) {
+          await new Promise((r) => setTimeout(r, 200));
+        }
+      }
+
+      // Registrar a disseminação
+      const dissId = nanoid();
+      await db.insert(resultDisseminations).values({
+        id: dissId,
+        tenantId: ctx.tenantId!,
+        assessmentId: input.assessmentId || latestReport.assessmentId,
+        method: input.method,
+        recipientCount: sentCount,
+        sentAt: new Date(),
+        sentBy: (ctx as any).user?.id || "system",
+        notes: input.notes || `${sentCount} emails enviados, ${failedCount} falhas`,
+      });
+
+      // Auto-marcar NR01-1.5.3.7 como conforme
+      const [checklistItem] = await db
+        .select()
+        .from(complianceChecklist)
+        .where(and(
+          eq(complianceChecklist.tenantId, ctx.tenantId!),
+          eq(complianceChecklist.requirementCode, "NR01-1.5.3.7"),
+        ))
+        .limit(1);
+
+      if (checklistItem && checklistItem.status !== "compliant") {
+        await db.update(complianceChecklist)
+          .set({
+            status: "compliant",
+            notes: `Devolutiva enviada em ${new Date().toLocaleDateString("pt-BR")} para ${sentCount} trabalhadores via ${input.method}.`,
+            verifiedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(complianceChecklist.id, checklistItem.id));
+      }
+
+      return {
+        disseminationId: dissId,
+        sentCount,
+        failedCount,
+        checklistUpdated: !!checklistItem && checklistItem.status !== "compliant",
+      };
+    }),
+
+  // Listar histórico de disseminações
+  listDisseminations: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return [];
+
+      return db
+        .select()
+        .from(resultDisseminations)
+        .where(eq(resultDisseminations.tenantId, ctx.tenantId!))
+        .orderBy(desc(resultDisseminations.sentAt));
     }),
 });
