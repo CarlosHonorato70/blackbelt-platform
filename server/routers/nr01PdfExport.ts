@@ -1126,12 +1126,22 @@ export const nr01PdfExportRouter = router({
       // ── SEÇÃO 3: CLASSIFICAÇÃO DE RISCOS ──────────────────────────
       if (riskItems.length > 0) {
         sections.push({ type: "subtitle", content: "3. Classificação dos Riscos (Severidade x Probabilidade)" });
+
+        const MTE_TYPE_LABELS: Record<string, string> = {
+          mte_01: "Metas excessivas", mte_02: "Jornada extensa", mte_03: "Falta de autonomia",
+          mte_04: "Sobrecarga mental", mte_05: "Assédio moral", mte_06: "Assédio sexual",
+          mte_07: "Violência", mte_08: "Insegurança", mte_09: "Conflitos interpessoais",
+          mte_10: "Falta de suporte", mte_11: "Falta de reconhecimento", mte_12: "Desequilíbrio trabalho-vida",
+          mte_13: "Comunicação ineficiente",
+        };
+
         sections.push({ type: "table", columns: [
-          { header: "Fator de Risco", width: 160 },
-          { header: "Severidade", width: 80, align: "center" },
-          { header: "Probabilidade", width: 80, align: "center" },
-          { header: "Nível", width: 70, align: "center" },
-          { header: "Controles Atuais", width: 140 },
+          { header: "Fator de Risco", width: 130 },
+          { header: "Tipo MTE", width: 80 },
+          { header: "Severidade", width: 70, align: "center" },
+          { header: "Probabilidade", width: 70, align: "center" },
+          { header: "Nível", width: 60, align: "center" },
+          { header: "Controles Atuais", width: 120 },
         ], rows: riskItems.map(item => ({
           cells: [
             (() => {
@@ -1149,8 +1159,10 @@ export const nr01PdfExportRouter = router({
                 "PSY-BURNOUT": "Síndrome de Burnout",
                 "PSY-VIOLENCIA": "Exposição a Violência e Assédio",
               };
-              return riskFactorLabels[item.riskFactorId] || item.riskFactorId || "—";
+              const label = riskFactorLabels[item.riskFactorId] || item.riskFactorId || "—";
+              return item.hazardCode ? `${label} (${item.hazardCode})` : label;
             })(),
+            item.mteHazardType ? (MTE_TYPE_LABELS[item.mteHazardType] || item.mteHazardType) : "—",
             SEVERITY_LABELS[item.severity] || item.severity,
             PROBABILITY_LABELS[item.probability] || item.probability,
             RISK_LABELS[item.riskLevel] || item.riskLevel,

@@ -11,116 +11,155 @@
 // ============================================================================
 
 export const PSYCHOSOCIAL_HAZARD_CATALOG = {
+  // ── Catálogo de Perigos Psicossociais (prática pericial P1-P92) ──
   P1: {
     code: "P1",
     hazard: "Falta de autonomia no trabalho",
-    risk: "Sobrecarga mental e falta de concentracao",
-    damage: "Estresse, disturbios e fadiga",
+    risk: "Sobrecarga mental e falta de concentração",
+    damage: "Estresse, distúrbios e fadiga",
+    mteType: "mte_03",
   },
   P2: {
     code: "P2",
-    hazard: "Insatisfacao no trabalho",
-    risk: "Sobrecarga mental e falta de concentracao",
-    damage: "Estresse, disturbios e fadiga",
+    hazard: "Insatisfação no trabalho",
+    risk: "Desmotivação e queda de produtividade",
+    damage: "Estresse, distúrbios e fadiga",
+    mteType: "mte_11",
   },
   P3: {
     code: "P3",
-    hazard: "Situacoes de sobrecarga de trabalho mental",
-    risk: "Sobrecarga mental e falta de concentracao",
-    damage: "Estresse, disturbios e fadiga",
+    hazard: "Situações de sobrecarga de trabalho mental",
+    risk: "Sobrecarga mental e falta de concentração",
+    damage: "Estresse, burnout e fadiga crônica",
+    mteType: "mte_04",
   },
   P4: {
     code: "P4",
-    hazard: "Excesso de situacoes de estresse",
-    risk: "Sobrecarga mental e falta de concentracao",
-    damage: "Estresse, disturbios e fadiga",
+    hazard: "Excesso de situações de estresse",
+    risk: "Sobrecarga mental e falta de concentração",
+    damage: "Estresse, transtornos de ansiedade",
+    mteType: "mte_01",
   },
   P5: {
     code: "P5",
     hazard: "Trabalho com demandas divergentes",
-    risk: "Sobrecarga mental e falta de concentracao",
-    damage: "Estresse, disturbios e fadiga",
+    risk: "Conflito de papéis e sobrecarga decisória",
+    damage: "Estresse, distúrbios e fadiga",
+    mteType: "mte_13",
   },
   P6: {
     code: "P6",
-    hazard: "Assedio de qualquer natureza",
-    risk: "Sobrecarga mental e falta de concentracao",
-    damage: "Estresse, disturbios e fadiga",
+    hazard: "Assédio de qualquer natureza",
+    risk: "Violência psicológica e degradação do ambiente",
+    damage: "Depressão, TEPT, afastamento",
+    mteType: "mte_05",
   },
   P62: {
     code: "P62",
-    hazard: "Comunicacao ineficiente",
-    risk: "Trabalho em condicoes de dificil comunicacao",
-    damage: "Estresse, disturbios e fadiga",
+    hazard: "Comunicação ineficiente",
+    risk: "Trabalho em condições de difícil comunicação",
+    damage: "Estresse, erros operacionais, conflitos",
+    mteType: "mte_13",
   },
   P7: {
     code: "P7",
-    hazard: "Excesso de conflitos hierarquicos no trabalho",
-    risk: "Sobrecarga mental e falta de concentracao",
-    damage: "Estresse, disturbios e fadiga",
+    hazard: "Excesso de conflitos hierárquicos no trabalho",
+    risk: "Clima organizacional degradado",
+    damage: "Estresse, ansiedade, isolamento social",
+    mteType: "mte_09",
   },
   P72: {
     code: "P72",
-    hazard: "Desequilibrio entre tempo de trabalho e tempo de repouso",
-    risk: "Sobrecarga mental e exaustao",
-    damage: "Estresse, disturbios e fadiga",
+    hazard: "Desequilíbrio entre tempo de trabalho e tempo de repouso",
+    risk: "Sobrecarga mental e exaustão",
+    damage: "Burnout, fadiga crônica, distúrbios do sono",
+    mteType: "mte_12",
   },
   P8: {
     code: "P8",
     hazard: "Excesso de demandas emocionais/afetivas no trabalho",
-    risk: "Sobrecarga mental e falta de concentracao",
-    damage: "Estresse, disturbios e fadiga",
+    risk: "Sobrecarga emocional e esgotamento",
+    damage: "Burnout, compassion fatigue, depressão",
+    mteType: "mte_04",
   },
   P12: {
     code: "P12",
-    hazard: "Exigencia de realizacao de multiplas tarefas com alta demanda cognitiva",
-    risk: "Sobrecarga mental e falta de concentracao",
-    damage: "Estresse, disturbios e fadiga",
+    hazard: "Exigência de realização de múltiplas tarefas com alta demanda cognitiva",
+    risk: "Sobrecarga mental e falta de concentração",
+    damage: "Estresse, erros, fadiga cognitiva",
+    mteType: "mte_04",
   },
   P13: {
     code: "P13",
-    hazard: "Exigencia de alto nivel de concentracao, atencao ou memoria",
-    risk: "Sobrecarga mental e falta de concentracao",
-    damage: "Estresse, disturbios e fadiga",
+    hazard: "Exigência de alto nível de concentração, atenção ou memória",
+    risk: "Sobrecarga mental e falta de concentração",
+    damage: "Estresse, fadiga, erros críticos",
+    mteType: "mte_04",
   },
   P91: {
     code: "P91",
-    hazard: "Excesso de situacoes de estresse",
-    risk: "Sobrecarga mental e falta de concentracao",
-    damage: "Estresse, disturbios e fadiga",
+    hazard: "Excesso de situações de estresse (recorrente)",
+    risk: "Sobrecarga crônica e desgaste",
+    damage: "Burnout, transtornos de ansiedade",
+    mteType: "mte_01",
   },
   P92: {
     code: "P92",
-    hazard: "Insuficiencia de capacitacao para execucao das tarefas",
-    risk: "Sobrecarga mental e inseguranca",
-    damage: "Estresse e fadiga",
+    hazard: "Insuficiência de capacitação para execução das tarefas",
+    risk: "Insegurança profissional e sobrecarga",
+    damage: "Estresse, ansiedade, erros operacionais",
+    mteType: "mte_10",
   },
+} as const;
+
+/**
+ * 13 Tipos de Perigo Psicossocial — Guia Oficial MTE
+ * (Portaria MTE nº 1.419/2024, vigência 26/05/2026)
+ * Usado para classificação oficial no inventário de riscos.
+ */
+export const MTE_HAZARD_TYPES = {
+  mte_01: { code: "mte_01", name: "Metas excessivas de trabalho",                     description: "Imposição de metas inatingíveis, pressão por produtividade" },
+  mte_02: { code: "mte_02", name: "Jornada de trabalho extensa",                      description: "Horas extras habituais, trabalho noturno/turnos sem rodízio" },
+  mte_03: { code: "mte_03", name: "Ausência de autonomia no trabalho",                description: "Falta de controle sobre ritmo, método e ordem das tarefas" },
+  mte_04: { code: "mte_04", name: "Sobrecarga de trabalho mental",                    description: "Exigência cognitiva excessiva, multitarefas, alta concentração" },
+  mte_05: { code: "mte_05", name: "Assédio moral no trabalho",                        description: "Condutas abusivas reiteradas contra dignidade do trabalhador" },
+  mte_06: { code: "mte_06", name: "Assédio sexual no trabalho",                       description: "Constrangimento com conotação sexual no ambiente laboral" },
+  mte_07: { code: "mte_07", name: "Violência no trabalho",                            description: "Agressões físicas/verbais, intimidação, ameaças" },
+  mte_08: { code: "mte_08", name: "Insegurança no emprego",                           description: "Medo de perda do emprego, contratos precários" },
+  mte_09: { code: "mte_09", name: "Conflitos interpessoais no trabalho",              description: "Relações conflituosas entre colegas/hierarquias" },
+  mte_10: { code: "mte_10", name: "Falta de suporte da liderança",                    description: "Gestão deficiente, ausência de feedback, liderança negligente" },
+  mte_11: { code: "mte_11", name: "Falta de reconhecimento e significado do trabalho", description: "Ausência de valorização e senso de propósito" },
+  mte_12: { code: "mte_12", name: "Desequilíbrio trabalho-vida pessoal",              description: "Interferência do trabalho na vida familiar/pessoal" },
+  mte_13: { code: "mte_13", name: "Comunicação ineficiente no trabalho",              description: "Falta de clareza de papéis, informações contraditórias" },
 } as const;
 
 /**
  * Mapeamento entre dimensoes COPSOQ-II e codigos de perigo.
  * Usado pelo LLM para correlacionar scores com perigos do catalogo.
  */
-export const DIMENSION_TO_HAZARDS: Record<string, string[]> = {
-  "Demandas Quantitativas": ["P3", "P4", "P72"],
-  "Controle sobre o Trabalho": ["P1", "P5"],
-  "Suporte Social": ["P62", "P7"],
-  "Liderança": ["P7", "P62"],
-  "Comunidade no Trabalho": ["P62", "P2"],
-  "Significado do Trabalho": ["P2"],
-  "Confiança": ["P7", "P6"],
-  "Justiça": ["P7", "P6"],
-  "Insegurança no Trabalho": ["P4", "P91"],
-  "Saúde Mental": ["P4", "P8", "P3"],
-  "Burnout": ["P3", "P72", "P4"],
-  "Violência e Assédio": ["P6"],
+/**
+ * Mapeamento COPSOQ-II → Códigos de Perigo (P1-P92) + Tipos MTE (mte_01..mte_13)
+ */
+export const DIMENSION_TO_HAZARDS: Record<string, { hazardCodes: string[]; mteTypes: string[] }> = {
+  "Demandas Quantitativas": { hazardCodes: ["P3", "P4", "P72"],    mteTypes: ["mte_01", "mte_04", "mte_02"] },
+  "Controle sobre o Trabalho": { hazardCodes: ["P1", "P5"],        mteTypes: ["mte_03", "mte_13"] },
+  "Suporte Social": { hazardCodes: ["P62", "P7"],                  mteTypes: ["mte_10", "mte_09"] },
+  "Liderança": { hazardCodes: ["P7", "P62"],                       mteTypes: ["mte_10", "mte_13"] },
+  "Comunidade no Trabalho": { hazardCodes: ["P62", "P2"],          mteTypes: ["mte_09", "mte_13"] },
+  "Significado do Trabalho": { hazardCodes: ["P2"],                 mteTypes: ["mte_11"] },
+  "Confiança": { hazardCodes: ["P7", "P6"],                        mteTypes: ["mte_09", "mte_05"] },
+  "Justiça": { hazardCodes: ["P7", "P6"],                          mteTypes: ["mte_05", "mte_09"] },
+  "Insegurança no Trabalho": { hazardCodes: ["P4", "P91"],         mteTypes: ["mte_08"] },
+  "Saúde Mental": { hazardCodes: ["P4", "P8", "P3"],               mteTypes: ["mte_01", "mte_04"] },
+  "Burnout": { hazardCodes: ["P3", "P72", "P4"],                   mteTypes: ["mte_04", "mte_12", "mte_02"] },
+  "Violência e Assédio": { hazardCodes: ["P6"],                    mteTypes: ["mte_05", "mte_06", "mte_07"] },
 };
 
 // ============================================================================
 // SYSTEM PROMPT
 // ============================================================================
 
-export const RISK_INVENTORY_PROMPT = `Voce e um engenheiro de seguranca do trabalho e psicologo organizacional especialista em riscos psicossociais, com profundo conhecimento da NR-01 (Gerenciamento de Riscos Ocupacionais) atualizada para 2026, NR-17 (Ergonomia) e do questionario COPSOQ-II.
+export const RISK_INVENTORY_PROMPT = `Voce e um engenheiro de seguranca do trabalho e psicologo organizacional especialista em riscos psicossociais, com profundo conhecimento da NR-01 (Gerenciamento de Riscos Ocupacionais, Portaria MTE no 1.419/2024, vigencia 26/05/2026), NR-17 (Ergonomia) e do questionario COPSOQ-II.
 
 Sua tarefa e gerar um INVENTARIO DE RISCOS OCUPACIONAIS (psicossociais) conforme exigido pela NR-01 (item 1.5.7.1), baseado nos resultados de uma avaliacao COPSOQ-II.
 
@@ -129,21 +168,36 @@ VOCE RECEBERA:
 2. Analise de IA previamente gerada (resumo executivo, dimensoes criticas, recomendacoes)
 3. Dados organizacionais (nome da empresa, setor, quantidade de trabalhadores)
 
-CATALOGO DE PERIGOS PSICOSSOCIAIS (NR-01):
-- P1: Falta de autonomia no trabalho
-- P2: Insatisfacao no trabalho
-- P3: Situacoes de sobrecarga de trabalho mental
-- P4: Excesso de situacoes de estresse
-- P5: Trabalho com demandas divergentes
-- P6: Assedio de qualquer natureza
-- P62: Comunicacao ineficiente
-- P7: Excesso de conflitos hierarquicos no trabalho
-- P72: Desequilibrio entre tempo de trabalho e tempo de repouso
-- P8: Excesso de demandas emocionais/afetivas no trabalho
-- P12: Exigencia de multiplas tarefas com alta demanda cognitiva
-- P13: Exigencia de alto nivel de concentracao, atencao ou memoria
-- P91: Excesso de situacoes de estresse (recorrente)
-- P92: Insuficiencia de capacitacao para execucao das tarefas
+CATALOGO DE PERIGOS PSICOSSOCIAIS (pratica pericial NR-01):
+- P1: Falta de autonomia no trabalho → MTE tipo mte_03
+- P2: Insatisfacao no trabalho → MTE tipo mte_11
+- P3: Situacoes de sobrecarga de trabalho mental → MTE tipo mte_04
+- P4: Excesso de situacoes de estresse → MTE tipo mte_01
+- P5: Trabalho com demandas divergentes → MTE tipo mte_13
+- P6: Assedio de qualquer natureza → MTE tipo mte_05
+- P62: Comunicacao ineficiente → MTE tipo mte_13
+- P7: Excesso de conflitos hierarquicos no trabalho → MTE tipo mte_09
+- P72: Desequilibrio entre tempo de trabalho e tempo de repouso → MTE tipo mte_12
+- P8: Excesso de demandas emocionais/afetivas no trabalho → MTE tipo mte_04
+- P12: Exigencia de multiplas tarefas com alta demanda cognitiva → MTE tipo mte_04
+- P13: Exigencia de alto nivel de concentracao, atencao ou memoria → MTE tipo mte_04
+- P91: Excesso de situacoes de estresse (recorrente) → MTE tipo mte_01
+- P92: Insuficiencia de capacitacao para execucao das tarefas → MTE tipo mte_10
+
+13 TIPOS DE PERIGO PSICOSSOCIAL — GUIA OFICIAL MTE:
+- mte_01: Metas excessivas de trabalho
+- mte_02: Jornada de trabalho extensa
+- mte_03: Ausencia de autonomia no trabalho
+- mte_04: Sobrecarga de trabalho mental
+- mte_05: Assedio moral no trabalho
+- mte_06: Assedio sexual no trabalho
+- mte_07: Violencia no trabalho
+- mte_08: Inseguranca no emprego
+- mte_09: Conflitos interpessoais no trabalho
+- mte_10: Falta de suporte da lideranca
+- mte_11: Falta de reconhecimento e significado do trabalho
+- mte_12: Desequilibrio trabalho-vida pessoal
+- mte_13: Comunicacao ineficiente no trabalho
 
 REGRAS PARA AVALIACAO DE RISCO:
 - Severidade: baseada na magnitude do agravo (baixa=desconforto temporario, media=afastamento temporario, alta=afastamento prolongado/incapacidade, critica=invalidez/obito)
@@ -156,6 +210,7 @@ CADA ITEM DO INVENTARIO DEVE CONTER:
 - Atividade exposta
 - Fonte/circunstancia do perigo
 - Codigo do perigo (P1-P92)
+- Tipo de perigo MTE (mte_01..mte_13) — classificacao oficial do Guia MTE
 - Descricao do perigo e do risco
 - Lesao/agravo a saude esperado
 - Origem (INTERNA/EXTERNA)
@@ -200,6 +255,10 @@ export const RISK_INVENTORY_SCHEMA = {
             hazardCode: {
               type: "string",
               description: "Codigo do perigo no catalogo (P1, P3, P6, etc.)",
+            },
+            mteHazardType: {
+              type: "string",
+              description: "Tipo de perigo MTE oficial (mte_01..mte_13)",
             },
             hazard: {
               type: "string",
@@ -255,7 +314,7 @@ export const RISK_INVENTORY_SCHEMA = {
             },
           },
           required: [
-            "activity", "source", "hazardCode", "hazard", "risk",
+            "activity", "source", "hazardCode", "mteHazardType", "hazard", "risk",
             "healthDamage", "origin", "classification", "operationalSituation",
             "exposureFrequency", "exposureDuration", "severity", "probability",
             "riskLevel", "currentControls", "recommendedControls",

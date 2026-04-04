@@ -42,6 +42,7 @@ export interface InventoryItem {
   activity: string;
   source: string;
   hazardCode: string;
+  mteHazardType: string;
   hazard: string;
   risk: string;
   healthDamage: string;
@@ -96,8 +97,10 @@ function formatScoresForPrompt(report: Record<string, unknown>): string {
   return Object.entries(dimensionColumns)
     .map(([col, label]) => {
       const value = typeof report[col] === "number" ? report[col] : 0;
-      const hazards = DIMENSION_TO_HAZARDS[label] || [];
-      return `- ${label}: ${value}/100 (perigos associados: ${hazards.join(", ")})`;
+      const mapping = DIMENSION_TO_HAZARDS[label];
+      const hazards = mapping ? mapping.hazardCodes : [];
+      const mteTypes = mapping ? mapping.mteTypes : [];
+      return `- ${label}: ${value}/100 (perigos: ${hazards.join(", ")} | MTE: ${mteTypes.join(", ")})`;
     })
     .join("\n");
 }
@@ -287,6 +290,7 @@ Gere o inventario de riscos psicossociais para esta organizacao, seguindo o cata
       observations: `${item.hazard} — ${item.risk}. Lesao/Agravo: ${item.healthDamage}. Controle recomendado: ${item.recommendedControls}`,
       aiGenerated: true,
       hazardCode: item.hazardCode,
+      mteHazardType: item.mteHazardType || null,
       createdAt: new Date(),
     });
   }

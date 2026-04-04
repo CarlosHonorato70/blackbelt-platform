@@ -279,13 +279,33 @@ export default function RiskAssessmentForm() {
                 2. Identificação de Fatores de Risco Psicossociais
               </CardTitle>
               <CardDescription>
-                Conforme Guia de Fatores de Riscos Psicossociais (MTE)
+                Conforme Guia de Fatores de Riscos Psicossociais (Portaria MTE nº 1.419/2024)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* MTE 13 Reference Guide */}
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                <p className="text-xs font-semibold text-purple-900 mb-2">13 Fatores de Risco Psicossocial — Guia Oficial MTE:</p>
+                <div className="grid md:grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-purple-800">
+                  <span>1. Metas excessivas de trabalho</span>
+                  <span>8. Insegurança no emprego</span>
+                  <span>2. Jornada de trabalho extensa</span>
+                  <span>9. Conflitos interpessoais</span>
+                  <span>3. Ausência de autonomia</span>
+                  <span>10. Falta de suporte da liderança</span>
+                  <span>4. Sobrecarga de trabalho mental</span>
+                  <span>11. Falta de reconhecimento</span>
+                  <span>5. Assédio moral no trabalho</span>
+                  <span>12. Desequilíbrio trabalho-vida</span>
+                  <span>6. Assédio sexual no trabalho</span>
+                  <span>13. Comunicação ineficiente</span>
+                  <span>7. Violência no trabalho</span>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="organizationalFactors">
-                  Fatores Organizacionais
+                  Fatores Organizacionais (MTE 1, 3, 10, 13)
                 </Label>
                 <Textarea
                   id="organizationalFactors"
@@ -302,7 +322,7 @@ export default function RiskAssessmentForm() {
 
               <div className="space-y-2">
                 <Label htmlFor="workloadFactors">
-                  Fatores de Carga de Trabalho
+                  Fatores de Carga de Trabalho (MTE 1, 2, 4, 12)
                 </Label>
                 <Textarea
                   id="workloadFactors"
@@ -319,7 +339,7 @@ export default function RiskAssessmentForm() {
 
               <div className="space-y-2">
                 <Label htmlFor="relationshipFactors">
-                  Fatores de Relacionamento
+                  Fatores de Relacionamento (MTE 8, 9, 11)
                 </Label>
                 <Textarea
                   id="relationshipFactors"
@@ -336,7 +356,7 @@ export default function RiskAssessmentForm() {
 
               <div className="space-y-2">
                 <Label htmlFor="violenceFactors">
-                  Fatores de Violência e Assédio
+                  Fatores de Violência e Assédio (MTE 5, 6, 7)
                 </Label>
                 <Textarea
                   id="violenceFactors"

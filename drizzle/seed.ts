@@ -26,7 +26,7 @@ import {
   services,
   pricingParameters,
 } from "./schema";
-import { benchmarkData } from "./schema_nr01";
+import { benchmarkData, riskCategories, riskFactors } from "./schema_nr01";
 import { seedPlans, seedFeatures, getPlanFeatureAssociations } from "../seed_plans";
 import crypto from "crypto";
 import "dotenv/config";
@@ -375,8 +375,49 @@ async function seed() {
     console.log(`  = Admin user already exists: ${ADMIN_EMAIL}`);
   }
 
-  // ── [9] Seed benchmark data (COPSOQ-II Brazilian references) ──
-  console.log("[9] Seeding COPSOQ-II benchmark data...");
+  // ── [9] Seed risk categories + MTE psychosocial hazard factors ──
+  console.log("[9] Seeding risk categories & MTE psychosocial factors...");
+  const existingCategories = await db.select().from(riskCategories).limit(1);
+  if (existingCategories.length === 0) {
+    // 5 tipos de risco conforme GRO/NR-01
+    const categories = [
+      { id: "cat_fisico",       name: "Físico",        description: "Ruído, vibração, temperaturas extremas, radiações, pressões anormais", order: 1 },
+      { id: "cat_quimico",      name: "Químico",       description: "Poeiras, fumos, névoas, gases, vapores, substâncias químicas", order: 2 },
+      { id: "cat_biologico",    name: "Biológico",     description: "Vírus, bactérias, fungos, parasitas, bacilos", order: 3 },
+      { id: "cat_ergonomico",   name: "Ergonômico",    description: "Postura inadequada, repetitividade, esforço físico, organização do trabalho", order: 4 },
+      { id: "cat_psicossocial", name: "Psicossocial",  description: "Fatores organizacionais e relacionais que afetam a saúde mental dos trabalhadores (NR-01 atualização 2024)", order: 5 },
+    ];
+    for (const cat of categories) {
+      await db.insert(riskCategories).values({ ...cat, createdAt: new Date() });
+    }
+    console.log(`  + ${categories.length} risk categories seeded`);
+
+    // 13 fatores de risco psicossocial conforme Guia MTE (Portaria MTE nº 1.419/2024)
+    const mteFactors = [
+      { id: "mte_01", categoryId: "cat_psicossocial", name: "Metas excessivas de trabalho",                     description: "Imposição de metas inatingíveis ou incompatíveis com a jornada, gerando pressão constante e ansiedade", referenceNorm: "NR-01 / Guia MTE", order: 1 },
+      { id: "mte_02", categoryId: "cat_psicossocial", name: "Jornada de trabalho extensa",                      description: "Jornadas prolongadas, horas extras habituais, trabalho noturno ou em turnos sem rodízio adequado", referenceNorm: "NR-01 / NR-17", order: 2 },
+      { id: "mte_03", categoryId: "cat_psicossocial", name: "Ausência de autonomia no trabalho",                description: "Falta de controle sobre ritmo, método e ordem de execução das tarefas", referenceNorm: "NR-01 / Guia MTE", order: 3 },
+      { id: "mte_04", categoryId: "cat_psicossocial", name: "Sobrecarga de trabalho mental",                    description: "Exigência cognitiva excessiva, multitarefas, alta demanda de concentração e memória", referenceNorm: "NR-01 / Guia MTE", order: 4 },
+      { id: "mte_05", categoryId: "cat_psicossocial", name: "Assédio moral no trabalho",                        description: "Condutas abusivas reiteradas que atentam contra a dignidade e integridade do trabalhador", referenceNorm: "NR-01 / Guia MTE", order: 5 },
+      { id: "mte_06", categoryId: "cat_psicossocial", name: "Assédio sexual no trabalho",                       description: "Constrangimento com conotação sexual, insinuações ou contato físico indesejado no ambiente de trabalho", referenceNorm: "NR-01 / Guia MTE", order: 6 },
+      { id: "mte_07", categoryId: "cat_psicossocial", name: "Violência no trabalho",                            description: "Agressões físicas ou verbais, intimidação, ameaças por parte de colegas, gestores ou terceiros", referenceNorm: "NR-01 / Guia MTE", order: 7 },
+      { id: "mte_08", categoryId: "cat_psicossocial", name: "Insegurança no emprego",                           description: "Medo de perda do emprego, contratos precários, instabilidade organizacional", referenceNorm: "NR-01 / Guia MTE", order: 8 },
+      { id: "mte_09", categoryId: "cat_psicossocial", name: "Conflitos interpessoais no trabalho",              description: "Relações conflituosas entre colegas, equipes ou hierarquias que prejudicam o ambiente laboral", referenceNorm: "NR-01 / Guia MTE", order: 9 },
+      { id: "mte_10", categoryId: "cat_psicossocial", name: "Falta de suporte da liderança",                    description: "Gestão deficiente, ausência de feedback, liderança autoritária ou negligente", referenceNorm: "NR-01 / Guia MTE", order: 10 },
+      { id: "mte_11", categoryId: "cat_psicossocial", name: "Falta de reconhecimento e significado do trabalho", description: "Ausência de valorização, feedback positivo ou senso de propósito nas atividades", referenceNorm: "NR-01 / Guia MTE", order: 11 },
+      { id: "mte_12", categoryId: "cat_psicossocial", name: "Desequilíbrio trabalho-vida pessoal",              description: "Interferência do trabalho na vida pessoal e familiar, indisponibilidade de descanso adequado", referenceNorm: "NR-01 / NR-17", order: 12 },
+      { id: "mte_13", categoryId: "cat_psicossocial", name: "Comunicação ineficiente no trabalho",              description: "Falta de clareza de papéis, comunicação deficiente, informações contraditórias ou insuficientes", referenceNorm: "NR-01 / Guia MTE", order: 13 },
+    ];
+    for (const factor of mteFactors) {
+      await db.insert(riskFactors).values({ ...factor, createdAt: new Date() });
+    }
+    console.log(`  + ${mteFactors.length} MTE psychosocial hazard factors seeded`);
+  } else {
+    console.log("  = Risk categories already exist");
+  }
+
+  // ── [10] Seed benchmark data (COPSOQ-II Brazilian references) ──
+  console.log("[10] Seeding COPSOQ-II benchmark data...");
   const existingBenchmarks = await db.select().from(benchmarkData).limit(1);
   if (existingBenchmarks.length === 0) {
     const benchmarks = [

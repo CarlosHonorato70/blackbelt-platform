@@ -90,6 +90,7 @@ export const riskAssessmentItems = mysqlTable("risk_assessment_items", {
   // Fase 2 IA: campos adicionais
   aiGenerated: boolean("ai_generated").default(false),   // Item gerado por IA
   hazardCode: varchar("hazard_code", { length: 10 }),    // Codigo do catalogo (P1, P3, etc.)
+  mteHazardType: varchar("mte_hazard_type", { length: 10 }), // Código MTE (mte_01..mte_13)
 
   createdAt: timestamp("createdAt").defaultNow(),
 });

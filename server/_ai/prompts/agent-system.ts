@@ -21,16 +21,23 @@ Documentos obrigatórios:
 1. **Inventário de Riscos** (1.5.3.2): Deve conter caracterização dos processos, ambientes, atividades; identificação dos perigos com descrição de fontes/circunstâncias; dados da avaliação dos riscos (nível de risco e classificação para medidas de prevenção)
 2. **Plano de Ação** (1.5.3.4): Metas, prioridades, cronograma, responsáveis; hierarquia de medidas: eliminação → substituição → controles de engenharia → medidas administrativas → EPI
 
-### Riscos Psicossociais no GRO (Atualização 2024)
-A partir de 26/05/2025, as organizações devem incluir **fatores de risco psicossocial** no inventário de riscos:
-- Demanda excessiva de trabalho, pressão por produtividade
-- Falta de autonomia e controle sobre o trabalho
-- Assédio moral e sexual, violência no trabalho
-- Relações interpessoais conflituosas
-- Insegurança no emprego
-- Falta de reconhecimento e significado do trabalho
-- Jornadas excessivas, trabalho noturno/turnos
-- Desequilíbrio trabalho-vida pessoal
+### Riscos Psicossociais no GRO (Portaria MTE nº 1.419/2024)
+A partir de 26/05/2026, as organizações devem incluir **fatores de risco psicossocial** no inventário de riscos.
+
+**13 Tipos de Perigo Psicossocial — Guia Oficial MTE:**
+1. **Metas excessivas de trabalho** — Imposição de metas inatingíveis, pressão por produtividade
+2. **Jornada de trabalho extensa** — Horas extras habituais, trabalho noturno/turnos sem rodízio
+3. **Ausência de autonomia no trabalho** — Falta de controle sobre ritmo, método e ordem das tarefas
+4. **Sobrecarga de trabalho mental** — Exigência cognitiva excessiva, multitarefas, alta demanda de concentração
+5. **Assédio moral no trabalho** — Condutas abusivas reiteradas contra dignidade do trabalhador
+6. **Assédio sexual no trabalho** — Constrangimento com conotação sexual no ambiente laboral
+7. **Violência no trabalho** — Agressões físicas/verbais, intimidação, ameaças
+8. **Insegurança no emprego** — Medo de perda do emprego, contratos precários
+9. **Conflitos interpessoais no trabalho** — Relações conflituosas entre colegas/hierarquias
+10. **Falta de suporte da liderança** — Gestão deficiente, ausência de feedback, liderança negligente
+11. **Falta de reconhecimento e significado do trabalho** — Ausência de valorização e propósito
+12. **Desequilíbrio trabalho-vida pessoal** — Interferência do trabalho na vida familiar/pessoal
+13. **Comunicação ineficiente no trabalho** — Falta de clareza de papéis, informações contraditórias
 
 ### Avaliação de Riscos Psicossociais
 Metodologias aceitas:
@@ -64,7 +71,7 @@ A avaliação deve ser anônima, confidencial, e cobrir no mínimo 70% dos traba
 - Código de agente nocivo para riscos psicossociais: a definir pelo eSocial
 
 ### Prazos e Penalidades
-- **26/05/2025**: Data limite para inclusão de riscos psicossociais no PGR
+- **26/05/2026**: Data limite para inclusão de riscos psicossociais no PGR
 - Multa por descumprimento: R$ 6.708,08 por trabalhador (NR-28, Anexo II)
 - Ação regressiva do INSS em caso de adoecimento por negligência
 - Responsabilidade civil e penal do empregador

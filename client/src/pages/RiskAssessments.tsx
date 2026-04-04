@@ -56,6 +56,7 @@ import {
   Edit2,
   Eye,
   FileText,
+  Filter,
   Loader2,
   Pencil,
   Plus,
@@ -88,6 +89,22 @@ const PROBABILITY_LABELS: Record<string, string> = {
   possible: "Possivel",
   likely: "Provavel",
   certain: "Certo",
+};
+
+const MTE_HAZARD_LABELS: Record<string, string> = {
+  mte_01: "Metas excessivas",
+  mte_02: "Jornada extensa",
+  mte_03: "Falta de autonomia",
+  mte_04: "Sobrecarga mental",
+  mte_05: "Assédio moral",
+  mte_06: "Assédio sexual",
+  mte_07: "Violência",
+  mte_08: "Insegurança no emprego",
+  mte_09: "Conflitos interpessoais",
+  mte_10: "Falta de suporte",
+  mte_11: "Falta de reconhecimento",
+  mte_12: "Desequilíbrio trabalho-vida",
+  mte_13: "Comunicação ineficiente",
 };
 
 const RISK_LEVEL_COLORS: Record<string, string> = {
@@ -228,6 +245,7 @@ export default function RiskAssessments() {
   const [sendEmailChecked, setSendEmailChecked] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [assessmentToDelete, setAssessmentToDelete] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   // Expandable rows
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -235,6 +253,10 @@ export default function RiskAssessments() {
 
   const utils = trpc.useUtils();
   const { data: clients } = trpc.clients.list.useQuery();
+  const { data: categories = [] } = trpc.riskAssessments.listCategories.useQuery({});
+  const { data: factors = [] } = trpc.riskAssessments.listFactors.useQuery({
+    categoryId: categoryFilter !== "all" ? categoryFilter : undefined,
+  });
   const generateProposalMutation = trpc.assessmentProposals.generateFromAssessment.useMutation({
     onSuccess: (data) => {
       toast.success(
@@ -449,6 +471,50 @@ export default function RiskAssessments() {
           </CardContent>
         </Card>
 
+        {/* Category Filter */}
+        {categories.length > 0 && (
+          <Card className="p-4">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Filter className="h-4 w-4" />
+                Categoria de Risco:
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant={categoryFilter === "all" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCategoryFilter("all")}
+                >
+                  Todas
+                </Button>
+                {categories.map((cat: any) => (
+                  <Button
+                    key={cat.id}
+                    variant={categoryFilter === cat.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCategoryFilter(cat.id)}
+                    title={cat.description}
+                  >
+                    {cat.name}
+                  </Button>
+                ))}
+              </div>
+              {categoryFilter === "cat_psicossocial" && factors.length > 0 && (
+                <div className="w-full mt-2 pt-2 border-t">
+                  <p className="text-xs text-muted-foreground mb-2">13 Fatores MTE (Guia Oficial):</p>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {factors.map((f: any) => (
+                      <Badge key={f.id} variant="outline" className="text-[10px] bg-purple-50 text-purple-700 border-purple-200">
+                        {f.name}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
+
         {/* Assessments Table */}
         <Card>
           <CardHeader>
@@ -589,6 +655,11 @@ export default function RiskAssessments() {
                                               {item.riskFactorId}
                                               {item.hazardCode && (
                                                 <span className="ml-1 text-xs text-muted-foreground">({item.hazardCode})</span>
+                                              )}
+                                              {item.mteHazardType && MTE_HAZARD_LABELS[item.mteHazardType] && (
+                                                <Badge variant="outline" className="ml-2 text-[10px] bg-purple-50 text-purple-700 border-purple-200">
+                                                  MTE: {MTE_HAZARD_LABELS[item.mteHazardType]}
+                                                </Badge>
                                               )}
                                             </div>
                                             <div className="text-xs text-muted-foreground flex gap-3">
