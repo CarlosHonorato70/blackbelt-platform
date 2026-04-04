@@ -1,4 +1,4 @@
-# 🥋 Black Belt Platform - Plataforma Unificada de Gestão
+# Black Belt Platform - Plataforma de Conformidade NR-01
 
 [![GitHub](https://img.shields.io/badge/GitHub-CarlosHonorato70%2Fblackbelt--platform-blue?logo=github)](https://github.com/CarlosHonorato70/blackbelt-platform)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
@@ -8,633 +8,323 @@
 [![tRPC](https://img.shields.io/badge/tRPC-11-purple)](https://trpc.io/)
 [![MySQL](https://img.shields.io/badge/MySQL-8.0-blue?logo=mysql)](https://www.mysql.com/)
 
-## 📋 Visão Geral
+## Visao Geral
 
-**Black Belt Platform** é uma plataforma SaaS unificada que combina:
+**Black Belt Platform** e uma plataforma SaaS multi-tenant para gestao de riscos psicossociais e conformidade com a **NR-01** (Portaria MTE no 1.419/2024, vigencia 26/05/2026).
 
-1. **Gestão de Riscos Psicossociais (NR-01)** - Conformidade com Portaria MTE nº 1.419/2024
-2. **Sistema de Precificação Comercial** - Cálculo automático de propostas e orçamentos
-3. **Sistema de Assinaturas** - Modelo de monetização com planos Starter, Pro e Enterprise
+A plataforma automatiza todo o ciclo de conformidade: avaliacao COPSOQ-II, inventario de riscos, planos de acao, integracao PGR/PCMSO, exportacao eSocial, e geracao de 20+ documentos PDF — tudo orquestrado pelo **SamurAI**, agente de IA com 10 fases.
 
-A plataforma é **multi-tenant**, **type-safe**, e construída com as melhores práticas modernas de desenvolvimento web.
-
-> 🚀 **NOVO!** Quer fazer a plataforma rodar rapidamente? Veja o [**Guia Prático: Como Rodar**](COMO_RODAR.md)
-
-> 💰 **NOVIDADE!** Conheça nossos planos e preços: [**PRICING.md**](PRICING.md)
+**78 paginas** | **47 routers tRPC** | **85 tabelas MySQL** | **20+ PDFs** | **3 instrumentos validados**
 
 ---
 
-## 💎 Planos e Preços
+## Planos e Precos
 
-Modelo híbrido: mensalidade fixa + cobrança por convite COPSOQ excedente.
+Modelo hibrido: mensalidade fixa + cobranca por convite COPSOQ excedente.
 
-### 🎯 Starter - R$ 297/mês
-Para psicólogos e consultores autônomos (CPF)
-- 3 empresas/mês incluídas
-- 20 convites COPSOQ inclusos + R$ 12/excedente
-- SamurAI básico (cadastro + COPSOQ)
-- Relatórios padrão + Exportação PDF
-- Suporte por email
+| Plano | Preco | Empresas/mes | Convites COPSOQ | Excedente |
+|-------|-------|-------------|-----------------|-----------|
+| **Starter** (CPF) | R$ 297/mes | 3 | 20 inclusos | R$ 12/un |
+| **Professional** (CNPJ) | R$ 597/mes | 10 | 100 inclusos | R$ 10/un |
+| **Enterprise** (CNPJ) | R$ 997/mes | 30 | 500 inclusos | R$ 8/un |
 
-### 🚀 Professional - R$ 597/mês
-Para consultorias em crescimento (CNPJ)
-- 10 empresas/mês incluídas
-- 100 convites COPSOQ inclusos + R$ 10/excedente
-- SamurAI completo (10 fases)
-- Propostas comerciais automáticas + Benchmark setorial
-- Suporte prioritário
-
-### 🏆 Enterprise - R$ 997/mês
-Para grandes consultorias e redes (CNPJ)
-- 30 empresas/mês incluídas
-- 500 convites COPSOQ inclusos + R$ 8/excedente
-- Tudo do Professional + White-label + API access
-- Relatórios personalizados + Suporte dedicado
-
-**💳 Pagamento:** PIX, cartão de crédito ou créditos pré-pagos via Asaas
-
-📖 **Veja detalhes completos em:** [PRICING.md](PRICING.md)
+**Pagamento:** PIX, cartao de credito ou boleto via Asaas
 
 ---
 
-## 🎯 Funcionalidades Principais
+## Funcionalidades
 
-### 📊 Módulo de Conformidade NR-01
+### SamurAI — Agente de IA (10 Fases)
 
-- ✅ **Avaliações de Riscos Psicossociais** - Formulário completo com 30+ fatores de risco
-- ✅ **Matriz de Probabilidade × Gravidade** - Cálculo automático de níveis de risco
-- ✅ **Planos de Ação** - Rastreamento de ações corretivas
-- ✅ **Relatórios de Compliance** - Geração automática de relatórios
-- ✅ **Auditoria Completa** - Log de todas as ações com rastreabilidade
-- ✅ **Exportação LGPD** - Data Subject Requests (DSR)
+Agente inteligente que orquestra todo o processo de conformidade NR-01:
 
-### 💰 Módulo de Precificação
+1. **Cadastro** — Consulta CNPJ na Receita Federal e cadastra empresa
+2. **Diagnostico** — Analise inicial dos riscos
+3. **Avaliacao COPSOQ-II** — Envio de convites e coleta de respostas (76 questoes, 12 dimensoes)
+4. **Analise** — Processamento dos resultados com scoring por dimensao
+5. **Inventario de Riscos** — Geracao automatica com 13 tipos de perigo MTE
+6. **Plano de Acao** — Geracao com hierarquia de controle (eliminacao a EPI)
+7. **Treinamento** — Programa de capacitacao
+8. **Documentacao** — Geracao do GRO consolidado (8 secoes NR-01 §1.5)
+9. **Certificacao** — Checklist de conformidade e certificado
+10. **Monitoramento** — Acompanhamento continuo com alertas
 
-- ✅ **Gestão de Clientes** - CRUD de clientes para propostas
-- ✅ **Catálogo de Serviços** - Serviços oferecidos com preços base
-- ✅ **Parâmetros de Precificação** - Configuração de regimes tributários (MEI, SN, LP, Autônomo)
-- ✅ **Cálculo de Hora Técnica** - Cálculo automático com 4 regimes tributários
-- ✅ **Geração de Propostas** - Propostas comerciais com descontos e impostos
-- ✅ **Integração Avaliação → Proposta** - Recomendação automática de serviços
+- Auto-transicao de fases quando condicoes sao atendidas
+- 20+ documentos PDF gerados automaticamente
 
-### 💳 Módulo de Monetização (NOVO!)
+### Modulo de Conformidade NR-01
 
-- ✅ **Sistema de Assinaturas** - Planos Starter, Pro e Enterprise
-- ✅ **Gestão de Limites** - Controle automático de uso por plano
-- ✅ **Período de Teste** - Trial gratuito de 14-30 dias
-- ✅ **Gateway de Pagamento** - Suporte para Stripe e Mercado Pago
-- ✅ **Faturamento Automatizado** - Cobrança mensal ou anual
-- ✅ **Métricas de Uso** - Rastreamento de consumo por tenant
+- **Avaliacoes de Riscos** — 5 categorias GRO (Fisico, Quimico, Biologico, Ergonomico, Psicossocial) + 13 tipos de perigo MTE
+- **COPSOQ-II** — 76 questoes, 12 dimensoes, reverse scoring, convites por email com lembretes
+- **Inventario de Riscos** — Matriz probabilidade x gravidade, classificacao automatica
+- **Planos de Acao** — Hierarquia de controle, cronograma mensal, verificacao de eficacia, indicadores de efetividade
+- **GRO Consolidado** — Documento completo conforme NR-01 §1.5 (8 secoes obrigatorias)
+- **Checklist de Conformidade** — 35 itens (NR-01, NR-07, NR-09, NR-17, NR-35) com auto-seed
+- **Devolutiva aos Trabalhadores** — Disseminacao de resultados anonimizados por email
 
-### 🔐 Funcionalidades Transversais
+### Pesquisas de Clima Organizacional
 
-- ✅ **Autenticação OAuth 2.0** - Integração com Manus OAuth
-- ✅ **Multi-Tenant** - Isolamento completo de dados por empresa
-- ✅ **RBAC + ABAC** - Controle de acesso granular (Role + Attribute-based)
-- ✅ **Convites de Usuários** - Onboarding de novos usuários
-- ✅ **Perfis e Permissões** - Gestão de papéis e permissões
-- ✅ **Dashboard em Tempo Real** - Monitoramento de testes E2E
-- ✅ **Guia Interativo** - Tutorial com 12 passos
-- ✅ **Notificações** - Sistema de notificações em tempo real
+- **EACT** — 31 questoes, 3 dimensoes (Custo Afetivo, Custo Cognitivo, Custo Fisico)
+- **ITRA** — 32 questoes, 7 dimensoes
+- **QVT-Walton** — 35 questoes, 8 dimensoes
+- Scoring por dimensao com normalizacao 0-100
+- Graficos por dimensao com classificacao de risco (Bom/Atencao/Risco/Critico)
+
+### Dashboard Psicossocial
+
+- Scores por dimensao COPSOQ com grafico radar
+- Segmentacao por setor/departamento/demografia (genero, faixa etaria, escolaridade)
+- Tendencias multi-ciclo com deltas de melhoria/piora
+- Tabela historica com badges de tendencia
+- Compartilhamento de resultados (devolutiva NR-01 §1.5.3.7)
+
+### Integracao PGR/PCMSO (NR-07)
+
+- Recomendacoes medicas ocupacionais baseadas nos riscos identificados
+- Registro de resultados de exames ASO (admissional, periodico, retorno, demissional)
+- PGR consolidado em PDF
+- Campos: tipo de exame, resultado (apto/inapto/restricao), medico, CRM, proximo exame
+
+### eSocial
+
+- Geracao de XML: **S-2210** (CAT), **S-2220** (Monitoramento Saude), **S-2240** (Condicoes Ambientais)
+- Validacao de XML (tags obrigatorias, formato)
+- Envio via SOAP com certificado A1 (mTLS)
+- Auto-deteccao de S-2240 pendentes com alerta visual
+- Consulta de status de processamento
+
+### Benchmarks Setoriais
+
+- Comparacao com dados de mercado por setor (Saude, Educacao, Varejo, TI, etc.)
+- Taxas de burnout, assedio e afastamentos por saude mental por setor
+- Alerta automatico para empresas em setores com burnout >8%
+- Grafico radar comparativo (empresa vs. media do setor)
+
+### Geracoes de PDF (20+ tipos)
+
+| Documento | Descricao |
+|-----------|-----------|
+| Relatorio COPSOQ-II | Scores por dimensao, classificacao, recomendacoes |
+| Inventario de Riscos | Matriz completa com fatores MTE |
+| Plano de Acao | Acoes, prazos, responsaveis, cronograma |
+| GRO Consolidado | 8 secoes NR-01 §1.5 |
+| PGR Consolidado | Programa completo de prevencao |
+| Integracao PCMSO | Recomendacoes medicas |
+| Proposta Comercial | Servicos, valores, ROI |
+| Programa de Treinamento | Modulos, carga horaria |
+| Checklist de Conformidade | 35 itens com status |
+| Certificado NR-01 | Certificacao de conformidade |
+| Relatorio eSocial | Eventos gerados/enviados |
+| Benchmark Setorial | Comparacao com mercado |
+| Tendencias COPSOQ | Evolucao historica |
+| Resumo para Trabalhadores | Devolutiva anonimizada |
+| Pesquisa de Clima | Resultados EACT/ITRA/QVT |
+
+### Calculadora de Risco Financeiro
+
+- Custo de nao-conformidade (multas, litigacao, absenteismo)
+- ROI estimado da implementacao
+- Parametros configuraveis (salario medio, headcount, custos)
+
+### Suporte IA
+
+- Chatbot inteligente com LLM (Anthropic Claude / OpenAI)
+- Base de conhecimento com 12 topicos
+- Contexto conversacional (historico de mensagens)
+- Abertura automatica de tickets de suporte
+
+### Modulo de Precificacao
+
+- Catalogo de servicos personalizavel
+- Calculo de hora tecnica (4 regimes tributarios: MEI, SN, LP, Autonomo)
+- Geracao de propostas comerciais com descontos progressivos
+- Integracao avaliacao → proposta automatica
+
+### Modulo de Monetizacao
+
+- Planos Starter, Professional, Enterprise
+- Controle de limites por plano
+- Gateway Asaas (PIX, cartao, boleto)
+- Periodo de teste gratuito
+- Metricas de uso por tenant
+
+### Funcionalidades Transversais
+
+- **Autenticacao** — bcrypt-12, HMAC-signed session cookies, 2FA (TOTP)
+- **Multi-Tenant** — Isolamento completo por empresa (Row-Level Security)
+- **RBAC** — 4 roles, 20 permissoes, permittedProcedure("resource","action")
+- **Denuncias Anonimas** — Canal de escuta confidencial
+- **Treinamentos** — Modulos com progresso por colaborador
+- **Auditoria** — Log completo de acoes
+- **DSR/LGPD** — Exportacao de dados pessoais
 
 ---
 
-## 🏗️ Arquitetura
+## Arquitetura
 
-### Stack Tecnológico
+### Stack Tecnologico
 
-**Frontend:**
+**Frontend:** React 19 + TypeScript + Tailwind CSS 4 + shadcn/ui + Recharts + React Router DOM + TanStack Query
 
-- React 19 + TypeScript
-- Tailwind CSS 4
-- shadcn/ui (componentes)
-- Recharts (gráficos)
-- React Query (cache)
-- Wouter (roteamento)
+**Backend:** Express 4 + tRPC 11 + Drizzle ORM + Zod + SuperJSON
 
-**Backend:**
+**IA:** Anthropic Claude / OpenAI via invokeLLM + Prompts especializados (agent-system, copsoq-analysis, risk-inventory, gro-document, action-plan)
 
-- Express 4
-- tRPC 11 (type-safe RPC)
-- Drizzle ORM
-- Zod (validação)
-- SuperJSON (serialização)
+**Database:** MySQL 8.0 — 85 tabelas em 3 schemas (schema.ts, schema_nr01.ts, schema_agent.ts)
 
-**Database:**
+**DevOps:** Docker + Nginx + Let's Encrypt + GitHub Actions + DigitalOcean
 
-- MySQL 8.0+
-- 30+ tabelas
-- Row-Level Security (RLS)
-- Índices otimizados
-
-**DevOps:**
-
-- Node.js 22.13.0
-- pnpm (gerenciador de pacotes)
-- Docker (containerização)
-- GitHub Actions (CI/CD)
-
-### Diagrama de Arquitetura
+### Diagrama
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    FRONTEND (React 19)                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │  Dashboard   │  │  Avaliações  │  │ Precificação │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-└─────────────────────────────────────────────────────────────┘
-                            ↓ tRPC
-┌─────────────────────────────────────────────────────────────┐
-│                  BACKEND (Express + tRPC)                   │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │  Conformidade│  │ Precificação │  │  Segurança   │      │
-│  │    (NR-01)   │  │  Comercial   │  │   (OAuth)    │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-└─────────────────────────────────────────────────────────────┘
-                            ↓ SQL
-┌─────────────────────────────────────────────────────────────┐
-│              DATABASE (MySQL + Drizzle ORM)                 │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │  Conformidade│  │ Precificação │  │   Auditoria  │      │
-│  │   (NR-01)    │  │  Comercial   │  │   & Logs     │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                     FRONTEND (React 19)                         │
+│  78 paginas | shadcn/ui | Recharts | React Router DOM           │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │ tRPC (type-safe)
+┌───────────────────────────▼─────────────────────────────────────┐
+│                  BACKEND (Express + tRPC)                        │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐      │
+│  │ 47 Routers   │  │  _ai/ Module │  │  PDF Generation  │      │
+│  │ (NR-01, eSoc │  │  (SamurAI,   │  │  (20+ types)     │      │
+│  │  PCMSO, etc) │  │   LLM, NLP)  │  │                  │      │
+│  └──────────────┘  └──────────────┘  └──────────────────┘      │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │ Drizzle ORM
+┌───────────────────────────▼─────────────────────────────────────┐
+│              DATABASE (MySQL 8.0 — 85 tabelas)                  │
+│  schema.ts (47) | schema_nr01.ts (34) | schema_agent.ts (4)     │
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+### Modelo de Dados (principais)
+
+**Core:** users, roles, permissions, role_permissions, tenants, sectors, people
+
+**NR-01:** risk_categories, risk_factors, risk_assessments, risk_assessment_items, action_plans, copsoq_assessments, copsoq_responses, copsoq_reports, copsoq_invites, compliance_checklist, compliance_documents, compliance_certificates, pcmso_recommendations, pcmso_exam_results, benchmark_data, esocial_exports, result_disseminations
+
+**Agent:** agent_conversations, agent_messages, agent_alerts, agent_actions
+
+**Precificacao:** clients, services, pricing_parameters, proposals, proposal_items
 
 ---
 
-## 📁 Estrutura do Projeto
+## Quick Start
 
-```
-blackbelt-platform/
-├── client/                          # Frontend (React 19)
-│   ├── src/
-│   │   ├── pages/                   # Páginas da aplicação
-│   │   │   ├── Dashboard.tsx        # Dashboard principal
-│   │   │   ├── Tenants.tsx          # Gestão de empresas
-│   │   │   ├── RiskAssessments.tsx  # Avaliações NR-01
-│   │   │   ├── ComplianceReports.tsx# Relatórios
-│   │   │   ├── AuditLogs.tsx        # Auditoria
-│   │   │   ├── TestDashboard.tsx    # Dashboard de testes E2E
-│   │   │   └── ...
-│   │   ├── components/              # Componentes reutilizáveis
-│   │   │   ├── DashboardLayout.tsx  # Layout com sidebar
-│   │   │   ├── TenantSelectionModal.tsx
-│   │   │   └── ui/                  # shadcn/ui components
-│   │   ├── lib/
-│   │   │   ├── trpc.ts              # Cliente tRPC
-│   │   │   └── exportUtils.ts       # Utilitários de exportação
-│   │   ├── App.tsx                  # Roteamento
-│   │   └── index.css                # Estilos globais
-│   └── public/                      # Assets estáticos
-│
-├── server/                          # Backend (Express + tRPC)
-│   ├── routers/
-│   │   ├── pricing.ts               # Router de precificação
-│   │   ├── tenants.ts               # Router de empresas
-│   │   ├── riskAssessments.ts       # Router de avaliações
-│   │   └── ...
-│   ├── db.ts                        # Database helpers
-│   ├── routers.ts                   # Agregador de routers
-│   └── _core/
-│       ├── context.ts               # Contexto tRPC
-│       ├── trpc.ts                  # Configuração tRPC
-│       └── ...
-│
-├── drizzle/                         # Schema e migrations
-│   ├── schema.ts                    # 30+ tabelas
-│   └── migrations/                  # Histórico de migrations
-│
-├── shared/                          # Código compartilhado
-│   └── const.ts                     # Constantes globais
-│
-├── DOCUMENTACAO_TECNICA.md          # Documentação técnica
-├── CODIGO_CONSOLIDADO.md            # Código consolidado
-├── DFD_ARQUITETURA.md               # Diagramas de fluxo
-├── PLANO_TESTES_E2E.md              # Plano de testes
-├── PROJETO_PLATAFORMA_UNIFICADA.md  # Projeto estratégico
-└── package.json                     # Dependências
-```
-
----
-
-## 🚀 Quick Start
-
-### Pré-requisitos
+### Pre-requisitos
 
 - Node.js 22.13.0+
 - pnpm 9.0+
 - MySQL 8.0+
-- Git
 
-### Instalação Rápida
+### Instalacao
 
 ```bash
-# Clone o repositório
 git clone https://github.com/CarlosHonorato70/blackbelt-platform.git
 cd blackbelt-platform
 
-# Verificar pré-requisitos (opcional)
-./verificar-requisitos.sh
-
-# Opção 1: Setup com Docker (Recomendado - MySQL automático)
+# Docker (recomendado)
 ./setup-docker.sh
 
-# Opção 2: Setup Tradicional (MySQL local)
-./setup.sh
-
-# Opção 3: Setup Manual
-pnpm install                    # Instalar dependências
-cp .env.example .env            # Copiar configuração
-# Edite .env com suas credenciais
-pnpm db:push                    # Executar migrations
-pnpm dev                        # Iniciar servidor
-```
-
-A aplicação estará disponível em `http://localhost:3000`
-
-📖 **Para instruções detalhadas, consulte:**
-
-- [**DOCKER_SETUP.md**](DOCKER_SETUP.md) - 🐳 **Guia Docker Desktop** (recomendado, MySQL automático)
-- [**DOCKER_QUICK_REFERENCE.md**](DOCKER_QUICK_REFERENCE.md) - ⚡ **Referência rápida Docker** (comandos úteis)
-- [**COMO_RODAR.md**](COMO_RODAR.md) - 🚀 **Guia prático tradicional** (MySQL local)
-- [SETUP_GUIDE.md](SETUP_GUIDE.md) - Guia completo de instalação passo a passo
-- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Solução de problemas comuns
-
----
-
-## 📚 Documentação
-
-A documentação completa está disponível nos seguintes arquivos:
-
-### 📖 Documentação Geral
-
-| Arquivo                             | Descrição                                     |
-| ----------------------------------- | --------------------------------------------- |
-| **COMO_RODAR.md**                   | 🚀 **Guia prático: Como fazer a plataforma rodar** |
-| **SETUP_GUIDE.md**                  | 📖 Guia completo de instalação e configuração |
-| **TROUBLESHOOTING.md**              | 🔧 Solução de problemas e debugging           |
-
-### 💰 Documentação Comercial (NOVO!)
-
-| Arquivo                             | Descrição                                     |
-| ----------------------------------- | --------------------------------------------- |
-| **PRICING.md**                      | 💎 **Planos, preços e funcionalidades** (NOVO!) |
-| **LICENSE**                         | 📄 Licença MIT + opções comerciais            |
-| **TERMS_OF_SERVICE.md**             | 📋 Termos de serviço e condições de uso       |
-| **PRIVACY_POLICY.md**               | 🔒 Política de privacidade (LGPD compliant)   |
-
-### 🧪 Testes e Qualidade
-
-| Arquivo                             | Descrição                                     |
-| ----------------------------------- | --------------------------------------------- |
-| **TESTING.md**                      | 🧪 Documentação completa de testes (173 testes) |
-| **TESTING_QUICKSTART.md**           | ⚡ Guia rápido de testes                      |
-| **PLANO_TESTES_E2E.md**             | Plano de testes E2E com 21 casos de teste     |
-
-### 🏗️ Documentação Técnica
-
-| Arquivo                             | Descrição                                     |
-| ----------------------------------- | --------------------------------------------- |
-| **DOCUMENTACAO_TECNICA.md**         | Documentação técnica completa (30+ páginas)   |
-| **CODIGO_CONSOLIDADO.md**           | Código-fonte consolidado com anotações        |
-| **DFD_ARQUITETURA.md**              | 16 diagramas de fluxo de dados                |
-| **PROJETO_PLATAFORMA_UNIFICADA.md** | Projeto estratégico de integração             |
-| **CODIGO_FONTE_EMPRESAS.md**        | Análise detalhada da página de Empresas       |
-
----
-
-## 🔐 Segurança
-
-### Autenticação
-
-- **OAuth 2.0** com Manus
-- **JWT Session Cookies** com assinatura segura
-- **Proteção CSRF** automática
-
-### Autorização
-
-- **RBAC** (Role-Based Access Control)
-- **ABAC** (Attribute-Based Access Control)
-- **protectedProcedure** para endpoints privados
-
-### Isolamento Multi-Tenant
-
-- **Row-Level Security (RLS)** em todas as queries
-- **Tenant ID** obrigatório em todas as tabelas
-- **Validação de tenant** em cada requisição
-
-### Conformidade
-
-- **LGPD** - Data Subject Requests (DSR)
-- **NR-01** - Portaria MTE nº 1.419/2024
-- **Auditoria Completa** - Log de todas as ações
-
----
-
-## 📊 Modelo de Dados
-
-### Tabelas Principais
-
-**Core:**
-
-- `users` - Usuários do sistema
-- `roles` - Papéis (admin, consultant, etc)
-- `permissions` - Permissões granulares
-
-**Multi-Tenant:**
-
-- `tenants` - Empresas clientes
-- `sectors` - Setores das empresas
-- `people` - Colaboradores
-
-**Conformidade NR-01:**
-
-- `riskAssessments` - Avaliações de risco
-- `riskFactors` - Fatores de risco
-- `complianceReports` - Relatórios de compliance
-
-**Precificação:**
-
-- `clients` - Clientes para propostas
-- `services` - Serviços oferecidos
-- `pricingParameters` - Parâmetros de precificação
-- `proposals` - Propostas comerciais
-- `proposalItems` - Itens das propostas
-
-**Auditoria:**
-
-- `auditLogs` - Log de todas as ações
-- `dataConsents` - Consentimentos LGPD
-
----
-
-## 🧪 Testes
-
-### Executar Testes Unitários
-
-```bash
-# Executar todos os testes
-pnpm test
-
-# Executar em modo watch
-pnpm test --watch
-
-# Executar com cobertura
-pnpm test --coverage
-```
-
-### Suite de Testes Disponível
-
-A plataforma conta com **113 testes automatizados** cobrindo:
-
-- ✅ **Cálculos de Precificação** (23 testes)
-  - Cálculo de hora técnica (4 regimes tributários)
-  - Aplicação de descontos por volume
-  - Totais de propostas
-  - Validações financeiras
-
-- ✅ **Validação de Dados** (57 testes)
-  - CNPJ, email, telefone
-  - Status e enums
-  - Preços e quantidades
-  - Datas e endereços
-
-- ✅ **Lógica de Negócio** (33 testes)
-  - Gestão de tenants, setores, pessoas
-  - Isolamento multi-tenant
-  - Cálculo de nível de risco
-  - Recomendação de serviços
-
-📚 **Documentação Completa**: Ver [TESTING.md](TESTING.md) e [TESTING_QUICKSTART.md](TESTING_QUICKSTART.md)
-
-### Executar Testes E2E (Futuro)
-
-```bash
-# Instalar Playwright
-pnpm add -D @playwright/test
-
-# Executar testes
-npx playwright test
-
-# Visualizar relatório
-npx playwright show-report
-```
-
-### Cobertura de Testes
-
-- **113 testes unitários** cobrindo funcionalidades críticas
-- **100% taxa de sucesso** nos testes atuais
-- **Testes de integração** multi-tenant
-- **Validação de segurança** via CodeQL
-
----
-
-## 📈 Performance
-
-### Métricas de Sucesso
-
-| Métrica               | Meta   | Status |
-| --------------------- | ------ | ------ |
-| Cobertura de Código   | 80%+   | ✅     |
-| Testes Passando       | 100%   | ✅     |
-| Disponibilidade       | 99.9%  | ✅     |
-| Tempo de Resposta P95 | < 1s   | ✅     |
-| Taxa de Erro          | < 0.1% | ✅     |
-
-### Otimizações
-
-- React Query cache para reduzir requisições
-- Índices otimizados no banco de dados
-- Lazy loading de componentes
-- Code splitting automático
-- Compressão de assets
-
----
-
-## 🔄 Fluxos de Negócio
-
-### Fluxo 1: Avaliação → Proposta → Implementação
-
-```
-1. Criar Avaliação NR-01
-   ↓
-2. Adicionar Fatores de Risco
-   ↓
-3. Calcular Nível de Risco
-   ↓
-4. Gerar Proposta Automática
-   ↓
-5. Enviar para Cliente
-   ↓
-6. Rastrear Aceitação
-   ↓
-7. Implementar Serviços
-   ↓
-8. Acompanhamento Contínuo
-```
-
-### Fluxo 2: Precificação Comercial
-
-```
-1. Selecionar Cliente
-   ↓
-2. Escolher Serviços
-   ↓
-3. Definir Quantidade/Duração
-   ↓
-4. Calcular Hora Técnica (com regime tributário)
-   ↓
-5. Aplicar Descontos
-   ↓
-6. Calcular Impostos
-   ↓
-7. Gerar Proposta PDF
-   ↓
-8. Enviar por Email
-```
-
----
-
-## 🛠️ Desenvolvimento
-
-### Comandos Úteis
-
-```bash
-# Instalar dependências
+# Ou manual
 pnpm install
-
-# Iniciar servidor de desenvolvimento
-pnpm dev
-
-# Build para produção
-pnpm build
-
-# Executar servidor de produção
-pnpm start
-
-# Executar migrations
+cp .env.example .env    # Edite com suas credenciais
 pnpm db:push
-
-# Gerar tipos do banco
-pnpm db:generate
-
-# Linting
-pnpm lint
-
-# Formatação de código
-pnpm format
+pnpm dev
 ```
 
-### Variáveis de Ambiente
+Acesse `http://localhost:3000`
+
+### Variaveis de Ambiente
 
 ```env
-# Database
 DATABASE_URL=mysql://user:password@localhost:3306/blackbelt
-
-# OAuth
-VITE_APP_ID=your_app_id
-OAUTH_SERVER_URL=https://api.manus.im
-VITE_OAUTH_PORTAL_URL=https://portal.manus.im
-
-# JWT
-JWT_SECRET=your_secret_key
-
-# App Config
-VITE_APP_TITLE=Black Belt Platform
-VITE_APP_LOGO=https://...
+SESSION_SECRET=your_session_secret
+ANTHROPIC_API_KEY=sk-ant-...    # Para SamurAI
+BREVO_SMTP_KEY=...              # Para emails
+ASAAS_API_KEY=...               # Para pagamentos
 ```
 
 ---
 
-## 📝 Roadmap
+## Documentacao
 
-### Fase 1 ✅ (Concluída)
+| Arquivo | Descricao |
+|---------|-----------|
+| [COMO_RODAR.md](COMO_RODAR.md) | Guia pratico de setup |
+| [USER_GUIDE.md](USER_GUIDE.md) | Guia do usuario |
+| [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) | Guia do desenvolvedor |
+| [API_DOCUMENTATION.md](API_DOCUMENTATION.md) | Documentacao da API tRPC |
+| [DOCUMENTACAO_TECNICA.md](DOCUMENTACAO_TECNICA.md) | Documentacao tecnica completa |
+| [REQUISITOS_NR01.md](REQUISITOS_NR01.md) | Requisitos de conformidade NR-01 |
+| [PRICING.md](PRICING.md) | Planos e precos |
+| [TESTING.md](TESTING.md) | Guia de testes |
+| [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) | Guia de deploy |
 
-- [x] Gestão de Riscos NR-01
-- [x] Sistema de Precificação
-- [x] Multi-tenant
-- [x] Autenticação OAuth
-- [x] Sistema de Assinaturas (Starter, Pro, Enterprise)
-- [x] Licenciamento e Termos Comerciais
+---
 
-### Fase 2 📋 (Em Progresso)
+## Roadmap
 
-- [x] Gestão de Limites por Plano
-- [ ] Integração Stripe/Mercado Pago (estrutura pronta)
-- [ ] Dashboard de Testes E2E
-- [ ] Integração Avaliação → Proposta
-- [ ] Exportação de Propostas (PDF)
-- [ ] Notificações em Tempo Real
+### Concluido
 
-### Fase 3 🔮 (Planejado)
+- [x] Gestao de Riscos NR-01 com 5 categorias GRO + 13 tipos MTE
+- [x] COPSOQ-II (76q, 12 dimensoes, reverse scoring)
+- [x] SamurAI — Agente IA com 10 fases + auto-transicao
+- [x] 20+ documentos PDF (GRO, PGR, COPSOQ, inventario, etc.)
+- [x] Dashboard psicossocial com segmentacao e tendencias
+- [x] Pesquisas de clima (EACT, ITRA, QVT-Walton)
+- [x] Integracao eSocial (S-2210, S-2220, S-2240)
+- [x] Integracao PGR/PCMSO com exames ASO
+- [x] Benchmarks setoriais (burnout, assedio, afastamentos)
+- [x] Checklist de conformidade (35 itens, 5 NRs)
+- [x] Planos de acao com verificacao de eficacia
+- [x] Suporte IA com LLM
+- [x] Gateway Asaas (PIX, cartao, boleto)
+- [x] Multi-tenant com RBAC + 2FA
+- [x] Calculadora de risco financeiro
 
-- [ ] Webhooks para eventos de pagamento
-- [ ] White-label (Enterprise)
+### Futuro
+
+- [ ] Testes E2E com Playwright
+- [ ] Internacionalizacao (i18n)
+- [ ] Notificacoes push (prazos, alertas)
+- [ ] Relatorio executivo one-pager
+- [ ] Integracao com calendario (Google/Outlook)
 - [ ] Mobile App (React Native)
-- [ ] API Pública (REST)
-- [ ] Integração com CRM (Pipedrive, HubSpot)
-- [ ] Analytics Avançado
-- [ ] Machine Learning (Previsão de Riscos)
+- [ ] API publica REST
+- [ ] White-label (Enterprise)
 
 ---
 
-## 🤝 Contribuindo
+## Comandos
 
-Contribuições são bem-vindas! Por favor:
-
-1. Fork o repositório
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
-
----
-
-## 📄 Licença
-
-Este projeto está licenciado sob a **Licença MIT** - veja o arquivo [LICENSE](LICENSE) para detalhes.
-
-### 💼 Licenciamento Comercial
-
-Para uso comercial, personalizações white-label ou suporte Enterprise, entre em contato:
-- 📧 Email: contato@blackbelt-consultoria.com
-- 📋 Veja: [TERMS_OF_SERVICE.md](TERMS_OF_SERVICE.md)
+```bash
+pnpm dev          # Servidor de desenvolvimento
+pnpm build        # Build para producao
+pnpm start        # Servidor de producao
+pnpm db:push      # Aplicar schema ao banco
+pnpm test         # Executar testes
+pnpm lint         # Linting
+pnpm type-check   # Verificacao de tipos
+```
 
 ---
 
-## 👥 Autores
+## Autores
 
-- **Carlos Honorato** - Fundador, 20 anos PRF/Exército, Faixa Preta 4º grau
-- **Thyberê Mendes** - Co-fundador, Gestão Ágil, Alta Performance
+- **Carlos Honorato** — Fundador, 20 anos PRF/Exercito, Faixa Preta 4o grau
+- **Thybere Mendes** — Co-fundador, Gestao Agil, Alta Performance
 
----
+## Contato
 
-## 📞 Contato
-
-- **Website:** [blackbelt-consultoria.com](https://blackbelt-consultoria.com)
-- **Email:** contato@blackbelt-consultoria.com
+- **Website:** [blackbeltconsultoria.com](https://blackbeltconsultoria.com)
+- **Email:** contato@blackbeltconsultoria.com
 - **GitHub:** [CarlosHonorato70](https://github.com/CarlosHonorato70)
 
 ---
 
-## 🙏 Agradecimentos
+**Desenvolvido pela Black Belt Consultoria**
 
-Agradecimentos especiais a:
-
-- Equipe Manus por infraestrutura e suporte
-- Comunidade React e Node.js
-- Todos os contribuidores
-
----
-
-**Desenvolvido com ❤️ pela Black Belt Consultoria**
-
-_Maestria se alcança através de técnica apurada, disciplina rigorosa e uma busca incansável por ir além do óbvio e reinventar._
-
----
-
-**Última atualização:** Dezembro 2025  
-**Versão:** 1.0.0  
-**Status:** Production Ready ✅  
-**Comercial:** Planos disponíveis - [Ver Preços](PRICING.md)
+**Ultima atualizacao:** Abril 2026
+**Versao:** 2.0.0
+**Status:** Production Ready

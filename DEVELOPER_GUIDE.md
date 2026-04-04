@@ -27,7 +27,7 @@ Black Belt Platform follows a modern **full-stack TypeScript** architecture:
 │  ┌──────────────────────────────────────┐   │
 │  │  UI Components (shadcn/ui)           │   │
 │  │  State Management (TanStack Query)   │   │
-│  │  Routing (wouter)                    │   │
+│  │  Routing (React Router DOM)           │   │
 │  └──────────────────────────────────────┘   │
 └─────────────────┬───────────────────────────┘
                   │ tRPC (Type-safe API)
@@ -73,26 +73,36 @@ Black Belt Platform follows a modern **full-stack TypeScript** architecture:
 - **shadcn/ui**: Component library (Radix UI + Tailwind)
 - **Tailwind CSS 4**: Styling
 - **Recharts**: Data visualization
-- **wouter**: Lightweight routing
+- **React Router DOM**: Client-side routing
 
 ### Backend
 
 - **Node.js 22**: Runtime
 - **Express 4**: Web server
 - **tRPC 11**: Type-safe API framework
-- **Drizzle ORM**: Type-safe database ORM
+- **Drizzle ORM**: Type-safe database ORM (3 schemas, 85 tables)
 - **MySQL 8**: Database
-- **Jose**: JWT handling
+- **bcrypt**: Password hashing (12 rounds)
 - **Helmet**: Security headers
 - **express-rate-limit**: Rate limiting
 - **cors**: CORS handling
 
+### IA Module (server/_ai/)
+
+- **invokeLLM**: Unified LLM interface (Anthropic Claude / OpenAI)
+- **agentOrchestrator.ts**: SamurAI 10-phase workflow + auto-transitions
+- **agentAlerts.ts**: Alert system (risk, deadline, compliance, phase_transition)
+- **Prompt templates**: agent-system.ts, copsoq-analysis.ts, risk-inventory.ts, gro-document.ts, action-plan-generator.ts
+- **nlp.ts**: Intent detection and entity extraction via LLM
+
 ### DevOps
 
-- **Docker**: Containerization
-- **GitHub Actions**: CI/CD
+- **Docker**: Containerization (app + mysql + nginx)
+- **Nginx**: Reverse proxy + SSL termination
+- **Let's Encrypt**: Auto-renewed SSL certificates
+- **GitHub Actions**: CI/CD pipeline
 - **Vitest**: Testing framework
-- **ESBuild**: Server bundling
+- **DigitalOcean**: Production hosting
 
 ---
 
@@ -125,29 +135,43 @@ blackbelt-platform/
 ├── server/                    # Backend application
 │   ├── _core/                # Core server setup
 │   │   ├── index.ts         # Server entry point
-│   │   ├── trpc.ts          # tRPC setup
-│   │   ├── context.ts       # Request context
-│   │   ├── security.ts      # Security middleware
-│   │   ├── email.ts         # Email service
-│   │   ├── oauth.ts         # OAuth integration
+│   │   ├── trpc.ts          # tRPC setup + procedure chain
+│   │   ├── context.ts       # Request context (tenantId)
+│   │   ├── security.ts      # CORS, rate limiting, CSP
+│   │   ├── email.ts         # Email service (Brevo SMTP)
+│   │   ├── llm.ts           # invokeLLM (Anthropic/OpenAI)
 │   │   └── vite.ts          # Vite dev server
-│   ├── routers/              # API routers
+│   ├── _ai/                  # AI module (SamurAI)
+│   │   ├── agentOrchestrator.ts  # 10-phase workflow
+│   │   ├── agentAlerts.ts        # Alert system
+│   │   ├── nlp.ts                # Intent/entity extraction
+│   │   └── prompts/              # LLM prompt templates
+│   │       ├── agent-system.ts
+│   │       ├── copsoq-analysis.ts
+│   │       ├── risk-inventory.ts
+│   │       ├── gro-document.ts
+│   │       └── action-plan-generator.ts
+│   ├── routers/              # 47 API routers
 │   │   ├── tenants.ts
-│   │   ├── sectors.ts
-│   │   ├── people.ts
 │   │   ├── riskAssessments.ts
 │   │   ├── copsoq.ts
-│   │   ├── clients.ts
-│   │   ├── services.ts
-│   │   ├── pricing.ts
-│   │   ├── proposals.ts
+│   │   ├── complianceChecklist.ts
+│   │   ├── esocialExport.ts
+│   │   ├── pcmsoIntegration.ts
+│   │   ├── climateSurveys.ts
+│   │   ├── psychosocialDashboard.ts
+│   │   ├── supportAgent.ts
+│   │   ├── nr01Pdf.ts
+│   │   ├── benchmark.ts
 │   │   └── ...
 │   ├── db.ts                 # Database functions
-│   ├── routers.ts            # Router aggregation
-│   └── schema/               # Database schemas
-│       ├── schema.ts         # Main schema
-│       ├── schema_nr01.ts    # NR-01 specific
-│       └── ...
+│   └── routers.ts            # Router aggregation
+│
+├── drizzle/                   # Database schemas & migrations
+│   ├── schema.ts             # Core (47 tables)
+│   ├── schema_nr01.ts        # NR-01 (34 tables)
+│   ├── schema_agent.ts       # Agent (4 tables)
+│   └── migrations/
 │
 ├── server/__tests__/          # Test files
 │   ├── business-logic.test.ts
@@ -158,9 +182,6 @@ blackbelt-platform/
 │
 ├── shared/                    # Shared code
 │   └── types/                # Shared types
-│
-├── drizzle/                   # Database migrations
-│   └── migrations/
 │
 ├── docker/                    # Docker configs
 │   └── mysql/
@@ -293,20 +314,41 @@ export default function MyComponent() {
 }
 ```
 
-### tRPC Patterns
+### tRPC Procedure Chain
+
+The platform uses a layered procedure chain for authorization:
+
+```
+publicProcedure      → No auth required
+  └─ protectedProcedure  → Requires valid session
+       └─ tenantProcedure    → Requires tenantId in context
+            └─ subscribedProcedure → Requires active subscription
+                 └─ adminProcedure      → Requires admin role
+```
+
+**RBAC** with `permittedProcedure`:
+
+```typescript
+// Only users with "riskAssessments:write" permission can access
+export const createAssessment = permittedProcedure("riskAssessments", "write")
+  .input(z.object({ ... }))
+  .mutation(async ({ input, ctx }) => { ... });
+```
+
+Admin role bypasses all permission checks. 4 roles, 20 permissions, 40 role-permission associations seeded automatically.
+
+### tRPC Router Example
 
 ```typescript
 // Router definition
-export const myRouter = t.router({
-  // Query: GET data
-  list: t.procedure
+export const myRouter = router({
+  list: tenantProcedure
     .input(z.object({ page: z.number() }))
     .query(async ({ input, ctx }) => {
-      // ...
+      // ctx.tenantId automatically available
     }),
-  
-  // Mutation: CHANGE data
-  create: t.procedure
+
+  create: tenantProcedure
     .input(z.object({ name: z.string() }))
     .mutation(async ({ input, ctx }) => {
       // ...

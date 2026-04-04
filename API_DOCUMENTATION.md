@@ -1,4 +1,4 @@
-# 📚 API Documentation - Black Belt Platform
+# API Documentation - Black Belt Platform
 
 ## Overview
 
@@ -7,11 +7,29 @@ The Black Belt Platform uses [tRPC](https://trpc.io/) for type-safe API communic
 ## Base URL
 
 - **Development**: `http://localhost:3000/api/trpc`
-- **Production**: `https://your-domain.com/api/trpc`
+- **Production**: `https://blackbeltconsultoria.com/api/trpc`
 
-## Authentication
+## Autenticacao
 
-All API calls require authentication via OAuth 2.0 tokens. The token is automatically managed by the client library and passed in HTTP-only cookies.
+A plataforma utiliza **bcrypt-12 password hashing + HMAC-signed session cookies + 2FA opcional (TOTP)**. O cookie de sessao e gerenciado automaticamente pelo cliente e enviado como HTTP-only cookie.
+
+### Cadeia de Procedures (Middleware)
+
+```
+public -> protected -> tenant -> subscribed -> admin
+```
+
+- **public**: Sem autenticacao (ex: submissao de pesquisa via token)
+- **protected**: Requer sessao autenticada
+- **tenant**: Requer selecao de tenant ativo
+- **subscribed**: Requer plano ativo (assinatura vigente)
+- **admin**: Requer role admin (bypassa todas as permissoes RBAC)
+
+### Wire Format
+
+- Formato: **Raw JSON (non-batch)**
+- Mutations: `POST /api/trpc/<router>.<procedure>` com body `{...}`
+- Queries: `GET /api/trpc/<router>.<procedure>?input=<urlencoded>`
 
 ## Rate Limiting
 
@@ -468,6 +486,365 @@ const link = await trpc.assessmentProposals.getByAssessment.query({
 });
 // Returns: { proposalId, riskLevel, recommendedServices }
 ```
+
+---
+
+### 11. Agent Router
+
+Agente de IA conversacional para analise de riscos psicossociais.
+
+#### `agent.sendMessage`
+Envia mensagem para o agente de IA.
+
+**Type**: Mutation
+**Auth**: Required (subscribed)
+
+```typescript
+await trpc.agent.sendMessage.mutate({
+  conversationId: "conv-123",
+  content: "Analise os resultados do COPSOQ do setor Administrativo",
+  tenantId: "tenant-456"
+});
+```
+
+#### `agent.getConversation`
+Retorna uma conversa com historico de mensagens.
+
+**Type**: Query
+**Auth**: Required
+
+#### `agent.listConversations`
+Lista todas as conversas do tenant.
+
+**Type**: Query
+**Auth**: Required
+
+#### `agent.executeAction`
+Executa uma acao sugerida pelo agente (ex: gerar plano de acao, exportar PDF).
+
+**Type**: Mutation
+**Auth**: Required
+
+---
+
+### 12. Climate Surveys Router
+
+Pesquisas de clima organizacional (EACT, ITRA, QVT-Walton e customizadas).
+
+#### `climateSurveys.create`
+Cria uma nova pesquisa de clima.
+
+**Type**: Mutation
+**Auth**: Required (subscribed)
+
+```typescript
+const survey = await trpc.climateSurveys.create.mutate({
+  title: "Pesquisa de Clima Q1 2026",
+  instrument: "eact", // "eact" | "itra" | "qvt_walton" | "custom"
+  sectorId: "sector-123" // opcional
+});
+```
+
+#### `climateSurveys.list`
+Lista pesquisas de clima do tenant.
+
+**Type**: Query
+**Auth**: Required
+
+#### `climateSurveys.getResults`
+Retorna resultados agregados da pesquisa.
+
+**Type**: Query
+**Auth**: Required
+
+```typescript
+const results = await trpc.climateSurveys.getResults.query({
+  surveyId: "survey-123"
+});
+// Returns:
+// {
+//   dimensionScores: { [dimension: string]: number },
+//   responseDistribution: { [score: number]: number },
+//   averageScore: number,
+//   completionRate: number,
+//   riskDistribution: { low: number, medium: number, high: number },
+//   inviteStatus: { sent: number, completed: number, pending: number }
+// }
+```
+
+---
+
+### 13. Psychosocial Dashboard Router
+
+Dashboard analitico para dados psicossociais.
+
+#### `psychosocialDashboard.getDimensionScores`
+Retorna scores por dimensao COPSOQ.
+
+**Type**: Query
+**Auth**: Required (subscribed)
+
+#### `psychosocialDashboard.getSectorComparison`
+Compara indicadores entre setores do tenant.
+
+**Type**: Query
+**Auth**: Required
+
+#### `psychosocialDashboard.getHistoricalTrends`
+Retorna evolucao historica dos indicadores.
+
+**Type**: Query
+**Auth**: Required
+
+#### `psychosocialDashboard.getDemographicBreakdown`
+Retorna quebra demografica (faixa etaria, genero, tempo de empresa).
+
+**Type**: Query
+**Auth**: Required
+
+---
+
+### 14. Risk Assessments Router (Estendido)
+
+Alem das operacoes basicas (list, create, getById, addItem), o router inclui:
+
+#### `riskAssessments.listActionPlans`
+Lista planos de acao vinculados a avaliacoes.
+
+**Type**: Query
+**Auth**: Required
+
+#### `riskAssessments.createActionPlan`
+Cria plano de acao manual.
+
+**Type**: Mutation
+**Auth**: Required
+
+#### `riskAssessments.updateActionPlan`
+Atualiza plano de acao com metodo de verificacao e indicador de eficacia.
+
+**Type**: Mutation
+**Auth**: Required
+
+```typescript
+await trpc.riskAssessments.updateActionPlan.mutate({
+  id: "plan-123",
+  status: "in_progress",
+  verificationMethod: "Entrevista com gestores + analise de indicadores",
+  effectivenessIndicator: "Reducao de 20% no absenteismo em 6 meses"
+});
+```
+
+#### `riskAssessments.generateActionPlans`
+Gera planos de acao automaticamente usando IA.
+
+**Type**: Mutation
+**Auth**: Required (subscribed)
+
+```typescript
+const plans = await trpc.riskAssessments.generateActionPlans.mutate({
+  assessmentId: "assessment-123"
+});
+// Retorna planos gerados por IA com base nos riscos identificados
+```
+
+---
+
+### 15. Compliance Checklist Router
+
+Checklist de conformidade NR-01 com 35 itens.
+
+#### `complianceChecklist.list`
+Lista itens do checklist. No primeiro acesso, auto-seeds 35 itens padrao.
+
+**Type**: Query
+**Auth**: Required (subscribed)
+
+```typescript
+const items = await trpc.complianceChecklist.list.query();
+// Returns: ChecklistItem[] (35 itens com status e evidencias)
+```
+
+#### `complianceChecklist.updateStatus`
+Atualiza status de um item do checklist.
+
+**Type**: Mutation
+**Auth**: Required
+
+```typescript
+await trpc.complianceChecklist.updateStatus.mutate({
+  id: "item-123",
+  status: "completed",
+  evidence: "Documento GRO atualizado em 2026-03-15"
+});
+```
+
+---
+
+### 16. eSocial Export Router
+
+Exportacao de eventos para o eSocial (S-2210, S-2220, S-2240).
+
+#### `esocialExport.list`
+Lista exportacoes do tenant.
+
+**Type**: Query
+**Auth**: Required (subscribed)
+
+#### `esocialExport.generateXml`
+Gera XML do evento eSocial (S-2210/S-2220/S-2240).
+
+**Type**: Mutation
+**Auth**: Required
+
+```typescript
+const xml = await trpc.esocialExport.generateXml.mutate({
+  eventType: "S-2240", // "S-2210" | "S-2220" | "S-2240"
+  referenceDate: "2026-03-01",
+  personIds: ["person-1", "person-2"]
+});
+```
+
+#### `esocialExport.validate`
+Valida XML contra schema XSD do eSocial.
+
+**Type**: Mutation
+**Auth**: Required
+
+#### `esocialExport.submit`
+Envia XML para o eSocial via SOAP com mTLS (certificado A1).
+
+**Type**: Mutation
+**Auth**: Required
+
+#### `esocialExport.checkPendingS2240`
+Verifica eventos S-2240 pendentes de envio.
+
+**Type**: Query
+**Auth**: Required
+
+#### `esocialExport.download`
+Baixa XML ou recibo de envio.
+
+**Type**: Query
+**Auth**: Required
+
+---
+
+### 17. NR-01 PDF Router
+
+Geracao de relatorios PDF para conformidade NR-01.
+
+Todos os endpoints retornam `{ filename: string, data: string }` onde `data` e o conteudo em base64.
+
+#### Endpoints disponiveis:
+
+| Procedure | Descricao |
+|-----------|-----------|
+| `nr01Pdf.exportGro` | Documento GRO (Gerenciamento de Riscos Ocupacionais) |
+| `nr01Pdf.exportCopsoqReport` | Relatorio COPSOQ com analise por dimensao |
+| `nr01Pdf.exportConsolidatedPgr` | PGR consolidado (Programa de Gerenciamento de Riscos) |
+| `nr01Pdf.exportPcmsoIntegration` | Integracao PCMSO com dados psicossociais |
+| `nr01Pdf.exportClimateSurvey` | Relatorio de pesquisa de clima |
+| `nr01Pdf.exportAssessmentTrends` | Tendencias de avaliacoes ao longo do tempo |
+| `nr01Pdf.exportBenchmarkComparison` | Comparacao com benchmarks do setor |
+
+```typescript
+const pdf = await trpc.nr01Pdf.exportGro.query({ assessmentId: "assessment-123" });
+// Returns: { filename: "GRO_2026-04-04.pdf", data: "<base64>" }
+```
+
+---
+
+### 18. PCMSO Integration Router
+
+Integracao com PCMSO (Programa de Controle Medico de Saude Ocupacional).
+
+#### `pcmsoIntegration.list`
+Lista integracoes PCMSO do tenant.
+
+**Type**: Query
+**Auth**: Required (subscribed)
+
+#### `pcmsoIntegration.generate`
+Gera documento de integracao PCMSO.
+
+**Type**: Mutation
+**Auth**: Required
+
+#### `pcmsoIntegration.listExamResults`
+Lista resultados de exames ocupacionais.
+
+**Type**: Query
+**Auth**: Required
+
+#### `pcmsoIntegration.createExamResult`
+Registra resultado de exame ocupacional.
+
+**Type**: Mutation
+**Auth**: Required
+
+#### `pcmsoIntegration.deleteExamResult`
+Remove resultado de exame ocupacional.
+
+**Type**: Mutation
+**Auth**: Required
+
+---
+
+### 19. Benchmark Router
+
+Benchmarks setoriais para comparacao de indicadores.
+
+#### `benchmark.list`
+Lista benchmarks disponiveis.
+
+**Type**: Query
+**Auth**: Required (subscribed)
+
+```typescript
+const benchmarks = await trpc.benchmark.list.query();
+// Returns: Benchmark[]
+// Nota: burnoutRate, harassmentRate e mentalLeaveRate sao retornados
+// como inteiros x100 (ex: 1250 = 12.50%)
+```
+
+---
+
+### 20. Support Agent Router
+
+Agente de suporte LLM-powered para atendimento ao usuario.
+
+#### `supportAgent.getOrCreateConversation`
+Obtem conversa existente ou cria nova.
+
+**Type**: Mutation
+**Auth**: Required
+
+#### `supportAgent.sendMessage`
+Envia mensagem para o agente de suporte (processada por LLM).
+
+**Type**: Mutation
+**Auth**: Required
+
+```typescript
+const response = await trpc.supportAgent.sendMessage.mutate({
+  conversationId: "conv-123",
+  content: "Como exportar o relatorio GRO?"
+});
+```
+
+#### `supportAgent.getHistory`
+Retorna historico da conversa.
+
+**Type**: Query
+**Auth**: Required
+
+#### `supportAgent.newConversation`
+Inicia nova conversa descartando a anterior.
+
+**Type**: Mutation
+**Auth**: Required
 
 ---
 

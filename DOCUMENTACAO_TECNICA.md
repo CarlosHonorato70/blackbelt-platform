@@ -2,9 +2,10 @@
 
 ## Plataforma de Gestão de Riscos Psicossociais e Desenvolvimento Humano
 
-**Versão:** 1.0.0  
-**Data de Criação:** Novembro 2025  
-**Status:** Pronto para Produção  
+**Versao:** 2.0.0
+**Data de Criacao:** Novembro 2025
+**Ultima Atualizacao:** Abril 2026
+**Status:** Pronto para Producao
 **Ambiente:** Multi-Tenant com Row-Level Security (RLS)
 
 ---
@@ -54,45 +55,52 @@ A **Black Belt Platform** é uma solução **SaaS multi-tenant** desenvolvida pa
 ### Padrão Arquitetural: Monolítico Escalável
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    FRONTEND (React 19)                       │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │ Pages (Empresas, Setores, Colaboradores, etc.)      │   │
-│  │ Components (shadcn/ui + Tailwind CSS)               │   │
-│  │ Contexts (TenantContext, ThemeContext)              │   │
-│  │ Hooks (useAuth, useTenant)                          │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-                            ↓ (tRPC)
-┌─────────────────────────────────────────────────────────────┐
-│                  BACKEND (Express + tRPC)                    │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │ Routers (tRPC procedures)                           │   │
-│  │ ├─ auth.me, auth.logout                            │   │
-│  │ ├─ tenants.list, tenants.create                    │   │
-│  │ ├─ sectors.list, sectors.create                    │   │
-│  │ ├─ people.list, people.create                      │   │
-│  │ ├─ riskAssessments.*                               │   │
-│  │ ├─ complianceReports.*                             │   │
-│  │ ├─ auditLogs.list                                  │   │
-│  │ └─ system.notifyOwner                              │   │
-│  ├─ Database Helpers (db.ts)                          │   │
-│  ├─ OAuth Handler (/api/oauth/callback)               │   │
-│  ├─ Storage Helpers (S3 integration)                  │   │
-│  └─ LLM Integration (image generation, etc.)          │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-                            ↓ (SQL)
-┌─────────────────────────────────────────────────────────────┐
-│           DATABASE (MySQL/TiDB + Drizzle ORM)               │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │ Core: users, roles, permissions                      │   │
-│  │ Multi-Tenant: tenants, sectors, people              │   │
-│  │ Business: riskAssessments, complianceReports        │   │
-│  │ Audit: auditLogs, dataConsents                      │   │
-│  │ Config: tenantSettings, userInvites                 │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                     FRONTEND (React 19)                       │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ 48 Pages (Dashboard, Empresas, Setores, COPSOQ, etc.) │  │
+│  │ Components (shadcn/ui + Tailwind CSS)                  │  │
+│  │ Contexts (TenantContext, ThemeContext)                  │  │
+│  │ Hooks (useAuth, useTenant)                             │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+                             | (tRPC)
+┌──────────────────────────────────────────────────────────────┐
+│                   BACKEND (Express + tRPC)                    │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ 47 Routers (tRPC procedures)                           │  │
+│  │ |-- auth, tenants, sectors, people                     │  │
+│  │ |-- riskAssessments, copsoq, climateSurveys            │  │
+│  │ |-- complianceChecklist, esocialExport                 │  │
+│  │ |-- psychosocialDashboard, benchmark                   │  │
+│  │ |-- agent, supportAgent                                │  │
+│  │ |-- nr01Pdf, pcmsoIntegration                          │  │
+│  │ |-- proposals, clients, services, pricingParameters    │  │
+│  │ +-- auditLogs, system, subscriptions, tickets ...      │  │
+│  ├────────────────────────────────────────────────────────┤  │
+│  │ Modulo IA (server/_ai/)                                │  │
+│  │ |-- agentOrchestrator.ts (10 fases + auto-transicoes)  │  │
+│  │ |-- agentAlerts.ts, actionPlanGenerator.ts, nlp.ts     │  │
+│  │ +-- prompts/ (agent-system, copsoq-analysis, etc.)     │  │
+│  ├────────────────────────────────────────────────────────┤  │
+│  │ Core (server/_core/)                                   │  │
+│  │ |-- llm.ts (invokeLLM - OpenAI)                        │  │
+│  │ |-- cookies.ts (HMAC sessions)                         │  │
+│  │ +-- context.ts, env.ts, notification.ts                │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+                             | (SQL)
+┌──────────────────────────────────────────────────────────────┐
+│            DATABASE (MySQL 8 + Drizzle ORM)                   │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ 85 tabelas em 3 schemas:                               │  │
+│  │ schema.ts (47) - core, tenants, people, pricing, audit │  │
+│  │ schema_nr01.ts (34) - risk, COPSOQ, action plans,      │  │
+│  │   compliance, eSocial, benchmarks, pcmso_exam_results  │  │
+│  │ schema_agent.ts (4) - conversations, messages,          │  │
+│  │   alerts, actions                                       │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ### Estratégia Multi-Tenant: Row-Level Security (RLS)
@@ -135,7 +143,7 @@ WHERE tenantId = ? AND id = ?;
 | **TypeScript**    | 5.9.3    | Type safety                 |
 | **Tailwind CSS**  | 4.1.14   | Styling utilitário          |
 | **shadcn/ui**     | Latest   | Componentes acessíveis      |
-| **Wouter**        | 3.3.5    | Roteamento SPA              |
+| **React Router DOM** | 7.x  | Roteamento SPA              |
 | **React Query**   | 5.90.2   | State management (via tRPC) |
 | **Recharts**      | 2.15.2   | Gráficos de dados           |
 | **Framer Motion** | 12.23.22 | Animações                   |
@@ -220,19 +228,31 @@ blackbelt-platform/
 │   │   ├── index.ts                 # Servidor Express
 │   │   ├── context.ts               # tRPC context builder
 │   │   ├── trpc.ts                  # tRPC instance
-│   │   ├── cookies.ts               # Session management
+│   │   ├── cookies.ts               # Session management (HMAC)
 │   │   ├── env.ts                   # Environment variables
 │   │   ├── notification.ts          # Owner notifications
-│   │   ├── llm.ts                   # LLM integration
+│   │   ├── llm.ts                   # invokeLLM (OpenAI)
 │   │   ├── imageService.ts          # Image generation
 │   │   └── systemRouter.ts          # System procedures
+│   ├── _ai/                         # Modulo de IA
+│   │   ├── prompts/                 # System prompts
+│   │   │   ├── agent-system.ts      # Prompt do agente principal
+│   │   │   ├── copsoq-analysis.ts   # Analise COPSOQ
+│   │   │   ├── risk-inventory.ts    # Inventario de riscos
+│   │   │   └── gro-document.ts      # Documento GRO
+│   │   ├── agentOrchestrator.ts     # 10 fases + auto-transicoes
+│   │   ├── agentAlerts.ts           # Alertas do agente
+│   │   ├── actionPlanGenerator.ts   # Gerador de planos de acao
+│   │   └── nlp.ts                   # Processamento de linguagem natural
 │   ├── db.ts                        # Database helpers
-│   ├── routers.ts                   # tRPC procedure definitions
+│   ├── routers.ts                   # tRPC procedure definitions (47 routers)
 │   └── storage.ts                   # S3 storage helpers
 │
-├── drizzle/                         # Database schema
-│   ├── schema.ts                    # Schema definitions
-│   ├── schema_nr01.ts               # NR-01 specific tables
+├── drizzle/                         # Database schema (85 tabelas)
+│   ├── schema.ts                    # 47 tabelas (core, tenants, people, pricing, audit)
+│   ├── schema_nr01.ts               # 34 tabelas (risk, COPSOQ, action plans, compliance, eSocial, benchmarks, pcmso)
+│   ├── schema_agent.ts              # 4 tabelas (conversations, messages, alerts, actions)
+│   ├── seed.ts                      # Seed data (8 etapas)
 │   └── migrations/                  # SQL migrations
 │
 ├── shared/                          # Código compartilhado
@@ -254,20 +274,23 @@ blackbelt-platform/
 
 ## ✨ Funcionalidades Implementadas
 
-### 1. **Autenticação e Autorização**
+### 1. **Autenticacao e Autorizacao**
 
-#### OAuth 2.0 (Manus)
+#### Autenticacao Local (bcrypt-12 + HMAC sessions + 2FA)
 
 ```typescript
 // Fluxo de login
-1. Usuário clica "Sign In"
-2. Redirecionado para /api/oauth/callback
-3. Manus valida credenciais
-4. Session cookie criado (JWT)
-5. Usuário autenticado
+1. Usuario insere email/senha na pagina de login
+2. Backend valida senha com bcrypt-12
+3. Se 2FA habilitado, solicita codigo TOTP
+4. Session cookie HMAC-signed criado
+5. Usuario autenticado
+
+// Cadeia de procedures (middleware)
+public -> protected -> tenant -> subscribed -> admin
 ```
 
-#### Contexto de Autenticação
+#### Contexto de Autenticacao
 
 ```typescript
 // useAuth() hook
@@ -743,6 +766,135 @@ Funcionalidades:
 └─────────────────────────────────────────────────────────────┘
 ```
 
+### Schemas do Banco de Dados (85 tabelas)
+
+#### schema.ts (47 tabelas - Core)
+
+Tabelas de infraestrutura da plataforma:
+- **Core:** users, roles, permissions, role_permissions, user_roles
+- **Multi-Tenant:** tenants, tenant_settings, sectors, people
+- **Pricing:** plans, features, plan_features, subscriptions, invoices
+- **CRM:** clients, services, pricing_parameters, proposals, proposal_items, assessment_proposals
+- **Audit:** audit_logs, data_consents
+- **Auth:** user_invites, password_reset_tokens, two_factor_secrets
+- **Support:** tickets, ticket_messages
+- **Upload:** uploads, storage_quotas
+
+#### schema_nr01.ts (34 tabelas - NR-01)
+
+Tabelas especificas para gestao de riscos psicossociais:
+- **Risk:** risk_assessments, risk_items, risk_factors, risk_factor_categories
+- **COPSOQ:** copsoq_assessments, copsoq_invites, copsoq_responses, copsoq_dimensions
+- **Climate Surveys:** climate_surveys, climate_survey_invites, climate_survey_responses, climate_survey_instruments
+- **Action Plans:** action_plans, action_plan_items, action_plan_reviews
+- **Compliance:** compliance_checklist_items, compliance_reports
+- **eSocial:** esocial_exports, esocial_events, esocial_certificates
+- **Dashboard:** psychosocial_metrics, dimension_scores, sector_comparisons
+- **Benchmarks:** benchmarks, benchmark_sectors
+- **PCMSO:** pcmso_integrations, pcmso_exam_results
+- **PDF:** pdf_exports, pdf_templates
+
+#### schema_agent.ts (4 tabelas - Agente IA)
+
+Tabelas para o agente conversacional:
+- **agent_conversations:** Conversas entre usuario e agente
+- **agent_messages:** Mensagens com role (user/assistant/system)
+- **agent_alerts:** Alertas gerados pelo monitoramento
+- **agent_actions:** Acoes executadas pelo agente
+
+---
+
+### Routers por Dominio (47 routers)
+
+| Dominio | Routers |
+|---------|---------|
+| **Autenticacao** | auth, twoFactor |
+| **Multi-Tenant** | tenants, sectors, people, tenantSettings |
+| **Avaliacoes** | riskAssessments, copsoq, climateSurveys |
+| **Compliance** | complianceChecklist, complianceReports |
+| **Dashboard** | psychosocialDashboard, benchmark |
+| **eSocial** | esocialExport |
+| **IA** | agent, supportAgent |
+| **PDF/Relatorios** | nr01Pdf, pcmsoIntegration |
+| **CRM/Precificacao** | clients, services, pricingParameters, proposals, assessmentProposals |
+| **Assinatura** | subscriptions, plans, features |
+| **Pagamentos** | asaasPayments, asaasWebhook |
+| **Admin** | adminSubscriptions, impersonation, metrics |
+| **Suporte** | tickets |
+| **Auditoria** | auditLogs |
+| **Sistema** | system, uploads, userInvites, rolesPermissions |
+
+---
+
+### Geracao de PDF
+
+O modulo `nr01Pdf` gera relatorios PDF usando um sistema de secoes tipadas:
+
+```typescript
+type PdfSectionType =
+  | "title"      // Titulo principal
+  | "subtitle"   // Subtitulo
+  | "text"       // Paragrafo de texto
+  | "kpis"       // Indicadores-chave (cards)
+  | "table"      // Tabela de dados
+  | "list"       // Lista com bullets
+  | "divider"    // Separador horizontal
+  | "spacer"     // Espaco vertical
+  | "signature"; // Bloco de assinatura
+```
+
+Relatorios disponiveis: GRO, COPSOQ, PGR Consolidado, Integracao PCMSO, Pesquisa de Clima, Tendencias de Avaliacoes, Comparacao com Benchmarks.
+
+Todos retornam `{ filename: string, data: string }` com conteudo base64.
+
+---
+
+### Integracao eSocial
+
+Exportacao de eventos trabalhistas para o eSocial do governo federal:
+
+- **Eventos suportados:** S-2210 (CAT), S-2220 (ASO), S-2240 (Condicoes Ambientais)
+- **Protocolo:** SOAP sobre HTTPS
+- **Autenticacao:** mTLS com certificado digital A1 (e-CNPJ)
+- **Fluxo:** Gerar XML -> Validar contra XSD -> Assinar digitalmente -> Enviar -> Receber recibo
+- **Tabela de controle:** esocial_exports (status: pending/validated/submitted/accepted/rejected)
+
+---
+
+### Modulo de IA (server/_ai/)
+
+#### Agente Orquestrador (agentOrchestrator.ts)
+
+O agente opera em 10 fases com transicoes automaticas:
+
+1. **greeting** - Saudacao e contextualizacao
+2. **data_collection** - Coleta de dados do tenant
+3. **copsoq_analysis** - Analise dos resultados COPSOQ
+4. **risk_identification** - Identificacao de fatores de risco
+5. **risk_evaluation** - Avaliacao de probabilidade x gravidade
+6. **action_planning** - Geracao de planos de acao (IA)
+7. **compliance_check** - Verificacao de conformidade NR-01
+8. **report_generation** - Geracao de relatorios PDF
+9. **monitoring** - Monitoramento continuo de indicadores
+10. **review** - Revisao e ajuste de planos
+
+#### Prompts (server/_ai/prompts/)
+
+- **agent-system.ts** - Prompt base do agente com contexto NR-01
+- **copsoq-analysis.ts** - Analise estatistica de dimensoes COPSOQ
+- **risk-inventory.ts** - Inventario de riscos psicossociais
+- **gro-document.ts** - Geracao do documento GRO
+
+#### Componentes auxiliares
+
+- **actionPlanGenerator.ts** - Gera planos de acao baseados em evidencias
+- **agentAlerts.ts** - Sistema de alertas para indicadores criticos
+- **nlp.ts** - Processamento de linguagem natural para classificacao
+
+Toda comunicacao com LLM passa por `server/_core/llm.ts` (invokeLLM via OpenAI API).
+
+---
+
 ### Tabelas NR-01 (Schema Separado)
 
 ```typescript
@@ -783,34 +935,38 @@ export const riskAssessments = mysqlTable("risk_assessments", {
 
 ## 🔄 Fluxos de Negócio
 
-### 1. Fluxo de Autenticação
+### 1. Fluxo de Autenticacao
 
 ```
 ┌─────────────┐
-│   Usuário   │
+│   Usuario   │
 └──────┬──────┘
-       │ Clica "Sign In"
-       ▼
+       │ Acessa /login
+       v
 ┌──────────────────────────┐
-│ Página de Login (Manus)  │
+│ Pagina de Login           │
 └──────┬───────────────────┘
        │ Insere email/senha
-       ▼
+       v
 ┌──────────────────────────┐
-│ Validação Manus OAuth    │
+│ Backend: bcrypt-12 verify │
 └──────┬───────────────────┘
-       │ Credenciais válidas
-       ▼
+       │ Se 2FA habilitado
+       v
 ┌──────────────────────────┐
-│ Callback /api/oauth      │
-│ - Cria session cookie    │
-│ - JWT assinado           │
+│ Validacao TOTP (opcional) │
+└──────┬───────────────────┘
+       │ Credenciais validas
+       v
+┌──────────────────────────┐
+│ Session cookie HMAC-signed│
+│ - HttpOnly + Secure       │
 └──────┬───────────────────┘
        │ Redirect para /
-       ▼
+       v
 ┌──────────────────────────┐
-│ Dashboard Autenticado    │
-│ - Exibe modal de empresa │
+│ Dashboard Autenticado     │
+│ - Exibe modal de empresa  │
 └──────────────────────────┘
 ```
 
@@ -950,12 +1106,13 @@ Qualquer ação (CREATE, UPDATE, DELETE)
 
 ### 1. Autenticação e Autorização
 
-#### OAuth 2.0
+#### Autenticacao Local
 
-- ✅ Integração com Manus OAuth
-- ✅ Session cookies com JWT
-- ✅ Expiração automática de sessão
-- ✅ Refresh tokens (se necessário)
+- bcrypt-12 para hash de senhas
+- Session cookies HMAC-signed (HttpOnly, Secure)
+- 2FA opcional via TOTP
+- Expiracao automatica de sessao
+- Campo passwordChangedAt para invalidacao de tokens
 
 #### RBAC (Role-Based Access Control)
 
@@ -1212,7 +1369,7 @@ const complianceChecklist = {
 - Node.js 22.13.0+
 - pnpm 10.4.1+
 - MySQL 8.0+
-- Conta Manus para OAuth
+- Chave OpenAI (para modulo IA)
 
 ### Variáveis de Ambiente
 
@@ -1367,15 +1524,15 @@ jobs:
 
 ## 📊 Estatísticas do Projeto
 
-| Métrica                       | Valor              |
+| Metrica                       | Valor              |
 | ----------------------------- | ------------------ |
-| **Linhas de Código**          | ~15,000+           |
-| **Componentes React**         | 50+                |
-| **Páginas**                   | 10                 |
-| **Tabelas de Banco de Dados** | 20+                |
-| **Procedures tRPC**           | 100+               |
-| **Testes Unitários**          | Em desenvolvimento |
-| **Cobertura de Testes**       | 60%+               |
+| **Linhas de Codigo**          | ~50,000+           |
+| **Componentes React**         | 100+               |
+| **Paginas**                   | 48                 |
+| **Tabelas de Banco de Dados** | 85 (3 schemas)     |
+| **Routers tRPC**              | 47                 |
+| **Procedures tRPC**           | 200+               |
+| **Testes E2E**                | 91/91 (100%)       |
 | **Performance (Lighthouse)**  | 90+                |
 | **Acessibilidade (WCAG)**     | AA                 |
 
@@ -1402,15 +1559,17 @@ echo $DATABASE_URL
 mysql -u user -p -h host -D blackbelt
 ```
 
-### Erro de autenticação OAuth
+### Erro de autenticacao
 
 ```bash
-# Verificar variáveis
-echo $VITE_APP_ID
-echo $OAUTH_SERVER_URL
+# Verificar variaveis de sessao
+echo $SESSION_SECRET
 
 # Verificar logs
 tail -f logs/app.log
+
+# Verificar se bcrypt esta funcionando
+node -e "const b=require('bcrypt'); b.hash('test',12).then(h=>console.log(h))"
 ```
 
 ### Exportação não funciona
@@ -1441,6 +1600,6 @@ MIT License - Veja LICENSE.md para detalhes
 
 ---
 
-**Documentação Criada em:** Novembro 2025  
-**Última Atualização:** Novembro 2025  
-**Versão:** 1.0.0
+**Documentacao Criada em:** Novembro 2025
+**Ultima Atualizacao:** Abril 2026
+**Versao:** 2.0.0
