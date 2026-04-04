@@ -56,14 +56,15 @@ const NR01_REQUIREMENTS = [
 
 async function ensureChecklistSeeded(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, tenantId: string) {
   const existing = await db
-    .select({ id: complianceChecklist.id })
+    .select({ id: complianceChecklist.id, requirementCode: complianceChecklist.requirementCode })
     .from(complianceChecklist)
-    .where(eq(complianceChecklist.tenantId, tenantId))
-    .limit(1);
+    .where(eq(complianceChecklist.tenantId, tenantId));
 
-  if (existing.length > 0) return;
+  const existingCodes = new Set(existing.map(e => e.requirementCode));
 
+  // Seed missing items (supports adding new requirements to existing tenants)
   for (const req of NR01_REQUIREMENTS) {
+    if (existingCodes.has(req.code)) continue;
     await db.insert(complianceChecklist).values({
       id: nanoid(),
       tenantId,
