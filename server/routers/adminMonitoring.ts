@@ -297,7 +297,7 @@ export async function runSamurAIHealthCheck(): Promise<{
     const conversations = await db
       .select({ id: agentConversations.id, tenantId: agentConversations.tenantId, companyId: agentConversations.companyId, phase: agentConversations.phase, updatedAt: agentConversations.updatedAt })
       .from(agentConversations)
-      .where(sql`${agentConversations.companyId} IS NOT NULL AND ${agentConversations.companyId} NOT IN ('monitoring-agent', 'support-agent')`);
+      .where(sql`${agentConversations.companyId} IS NOT NULL AND ${agentConversations.companyId} NOT IN ('monitoring-agent', 'support-agent', 'support')`);
 
     const totalFlows = conversations.length;
     const completedFlows = conversations.filter(c => c.phase === "completed").length;
