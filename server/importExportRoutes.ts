@@ -13,6 +13,7 @@ import { getUserById, getDb } from "./db";
 import { log } from "./_core/logger";
 import { tenants, sectors, people } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
+import { checkSubscriptionLimits } from "./_core/subscriptionMiddleware";
 
 // Multer configured for in-memory file handling (max 5MB)
 // Supports: XLSX, XLS, CSV, ODS, TSV
@@ -355,6 +356,12 @@ export function registerImportExportRoutes(app: Express) {
       try {
         const auth = await authenticateRequest(req, res);
         if (!auth) return;
+
+        // Verificar limite de storage do plano
+        const storageCheck = await checkSubscriptionLimits(auth.tenantId, "storage");
+        if (!storageCheck.withinLimit) {
+          return res.status(403).json({ error: "Limite de armazenamento do plano atingido. Faça upgrade para continuar." });
+        }
 
         const { companyId } = req.params;
         const db = await getDb();

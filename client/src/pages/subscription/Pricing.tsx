@@ -65,9 +65,9 @@ export default function Pricing() {
       "30 empresas/mês incluídas",
       "500 convites COPSOQ inclusos/mês",
       "Tudo do Professional",
-      "White-label (sua marca) + API access",
+      "White-label (logo e cores) + API access",
       "Relatórios personalizados",
-      "Suporte dedicado",
+      "Suporte dedicado (canal exclusivo)",
       "R$ 8,00/convite COPSOQ excedente",
     ],
   };
@@ -177,10 +177,10 @@ export default function Pricing() {
                     { name: "Plano de Ação", starter: true, pro: true, enterprise: true },
                     { name: "Benchmark Setorial", starter: false, pro: true, enterprise: true },
                     { name: "PDF Export", starter: true, pro: true, enterprise: true },
-                    { name: "White-label", starter: false, pro: false, enterprise: true },
+                    { name: "White-label (logo e cores)", starter: false, pro: false, enterprise: true },
                     { name: "API Access", starter: false, pro: false, enterprise: true },
                     { name: "Relatórios Personalizados", starter: false, pro: false, enterprise: true },
-                    { name: "Suporte", starter: "Email", pro: "Prioritário", enterprise: "Dedicado" },
+                    { name: "Suporte", starter: "Email", pro: "Prioritário", enterprise: "Dedicado (canal exclusivo)" },
                   ].map((feature, index) => (
                     <tr key={index} className="border-b last:border-b-0">
                       <td className="p-4 font-medium">{feature.name}</td>

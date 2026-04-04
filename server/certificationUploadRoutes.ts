@@ -21,6 +21,7 @@ import { getUserById, getDb } from "./db";
 import { log } from "./_core/logger";
 import { consultantCertifications } from "../drizzle/schema";
 import { storagePut } from "./storage";
+import { checkSubscriptionLimits } from "./_core/subscriptionMiddleware";
 
 // Encryption for certificate passwords (AES-256-GCM)
 const CERT_ENC_KEY = process.env.CERT_ENCRYPTION_KEY || process.env.COOKIE_SECRET || "blackbelt-default-enc-key-change-me";
@@ -142,6 +143,12 @@ export function registerCertificationUploadRoutes(app: Express) {
       try {
         const auth = await authenticateRequest(req, res);
         if (!auth) return;
+
+        // Verificar limite de storage do plano
+        const storageCheck = await checkSubscriptionLimits(auth.tenantId, "storage");
+        if (!storageCheck.withinLimit) {
+          return res.status(403).json({ error: "Limite de armazenamento do plano atingido. Faça upgrade para continuar." });
+        }
 
         const file = req.file;
         if (!file) {

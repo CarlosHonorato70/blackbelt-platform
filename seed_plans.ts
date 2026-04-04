@@ -212,7 +212,7 @@ export const seedFeatures = [
     id: nanoid(),
     name: "white_label",
     displayName: "White-label",
-    description: "Personalização completa com sua marca",
+    description: "Personalização de logo, cores e tema com sua marca",
     category: "customization" as const,
     isActive: true,
   },
@@ -222,7 +222,7 @@ export const seedFeatures = [
     displayName: "Domínio Personalizado",
     description: "Use seu próprio domínio (ex: gestao.suaempresa.com)",
     category: "customization" as const,
-    isActive: true,
+    isActive: false, // Em desenvolvimento
   },
   {
     id: nanoid(),
@@ -262,7 +262,7 @@ export const seedFeatures = [
     id: nanoid(),
     name: "dedicated_support",
     displayName: "Suporte Dedicado",
-    description: "Gerente de conta dedicado 24/7",
+    description: "Atendimento prioritário com canal exclusivo",
     category: "support" as const,
     isActive: true,
   },
