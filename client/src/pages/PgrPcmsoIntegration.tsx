@@ -21,6 +21,8 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -40,6 +42,7 @@ import {
   Stethoscope,
   FileDown,
   ArrowLeft,
+  ClipboardCheck,
 } from "lucide-react";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { useNavigate } from "react-router-dom";
@@ -71,6 +74,18 @@ export default function PgrPcmsoIntegration() {
 
   const [editItem, setEditItem] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [examDialogOpen, setExamDialogOpen] = useState(false);
+  const [examForm, setExamForm] = useState({
+    employeeName: "",
+    examType: "periodico" as string,
+    examDate: "",
+    result: "apto" as string,
+    restrictions: "",
+    observations: "",
+    doctorName: "",
+    doctorCrm: "",
+    nextExamDate: "",
+  });
 
   if (!tenantId) {
     return (
@@ -101,6 +116,22 @@ export default function PgrPcmsoIntegration() {
   });
 
   const recommendations = listQuery.data ?? [];
+
+  const examResultsQuery = trpc.pcmsoIntegration.listExamResults.useQuery({ tenantId });
+  const examResults = examResultsQuery.data ?? [];
+  const utils = trpc.useUtils();
+  const createExamMutation = trpc.pcmsoIntegration.createExamResult.useMutation({
+    onSuccess: () => {
+      toast.success("Resultado de exame registrado!");
+      setExamDialogOpen(false);
+      setExamForm({ employeeName: "", examType: "periodico", examDate: "", result: "apto", restrictions: "", observations: "", doctorName: "", doctorCrm: "", nextExamDate: "" });
+      utils.pcmsoIntegration.listExamResults.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+  const deleteExamMutation = trpc.pcmsoIntegration.deleteExamResult.useMutation({
+    onSuccess: () => { toast.success("Registro removido!"); utils.pcmsoIntegration.listExamResults.invalidate(); },
+  });
 
   function handleGenerate() {
     // Use the latest risk assessment ID if available; fall back to empty string
@@ -241,6 +272,161 @@ export default function PgrPcmsoIntegration() {
             )}
           </CardContent>
         </Card>
+
+        {/* Exam Results Section */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <ClipboardCheck className="h-5 w-5" />
+                Resultados de Exames PCMSO
+              </CardTitle>
+              <Button size="sm" onClick={() => setExamDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Registrar Exame
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {examResultsQuery.isLoading ? (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : examResults.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <ClipboardCheck className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                <p className="font-medium">Nenhum resultado de exame registrado</p>
+                <p className="text-sm mt-1">Clique em "Registrar Exame" para adicionar resultados.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Colaborador</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Resultado</TableHead>
+                    <TableHead>Médico</TableHead>
+                    <TableHead>Próximo Exame</TableHead>
+                    <TableHead className="text-right">A��ões</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {examResults.map((exam: any) => (
+                    <TableRow key={exam.id}>
+                      <TableCell className="font-medium">{exam.employeeName}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {{ admissional: "Admissional", periodico: "Periódico", retorno: "Retorno", mudanca_funcao: "Mudança de Função", demissional: "Demissional" }[exam.examType as string] ?? exam.examType}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{exam.examDate ? new Date(exam.examDate).toLocaleDateString("pt-BR") : "—"}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={exam.result === "apto" ? "bg-green-100 text-green-800" : exam.result === "inapto" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}>
+                          {{ apto: "Apto", inapto: "Inapto", apto_restricao: "Apto c/ Restrição" }[exam.result as string] ?? exam.result}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm">{exam.doctorName || "—"}{exam.doctorCrm ? ` (CRM ${exam.doctorCrm})` : ""}</TableCell>
+                      <TableCell>{exam.nextExamDate ? new Date(exam.nextExamDate).toLocaleDateString("pt-BR") : "—"}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => deleteExamMutation.mutate({ id: exam.id })}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Create Exam Dialog */}
+        <Dialog open={examDialogOpen} onOpenChange={setExamDialogOpen}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Registrar Resultado de Exame</DialogTitle>
+              <DialogDescription>Registre o resultado de um exame médico ocupacional (ASO)</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label>Nome do Colaborador *</Label>
+                <Input value={examForm.employeeName} onChange={(e) => setExamForm(p => ({ ...p, employeeName: e.target.value }))} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Tipo de Exame</Label>
+                  <Select value={examForm.examType} onValueChange={(v) => setExamForm(p => ({ ...p, examType: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admissional">Admissional</SelectItem>
+                      <SelectItem value="periodico">Periódico</SelectItem>
+                      <SelectItem value="retorno">Retorno ao Trabalho</SelectItem>
+                      <SelectItem value="mudanca_funcao">Mudança de Função</SelectItem>
+                      <SelectItem value="demissional">Demissional</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Data do Exame *</Label>
+                  <Input type="date" value={examForm.examDate} onChange={(e) => setExamForm(p => ({ ...p, examDate: e.target.value }))} />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label>Resultado</Label>
+                <Select value={examForm.result} onValueChange={(v) => setExamForm(p => ({ ...p, result: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="apto">Apto</SelectItem>
+                    <SelectItem value="inapto">Inapto</SelectItem>
+                    <SelectItem value="apto_restricao">Apto com Restrição</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Restrições</Label>
+                <Textarea rows={2} placeholder="Descreva as restrições, se houver..." value={examForm.restrictions} onChange={(e) => setExamForm(p => ({ ...p, restrictions: e.target.value }))} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Observações</Label>
+                <Textarea rows={2} value={examForm.observations} onChange={(e) => setExamForm(p => ({ ...p, observations: e.target.value }))} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Médico Responsável</Label>
+                  <Input value={examForm.doctorName} onChange={(e) => setExamForm(p => ({ ...p, doctorName: e.target.value }))} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>CRM</Label>
+                  <Input value={examForm.doctorCrm} onChange={(e) => setExamForm(p => ({ ...p, doctorCrm: e.target.value }))} />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label>Data do Próximo Exame</Label>
+                <Input type="date" value={examForm.nextExamDate} onChange={(e) => setExamForm(p => ({ ...p, nextExamDate: e.target.value }))} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setExamDialogOpen(false)}>Cancelar</Button>
+              <Button
+                disabled={createExamMutation.isPending || !examForm.employeeName.trim() || !examForm.examDate}
+                onClick={() => createExamMutation.mutate({
+                  employeeName: examForm.employeeName,
+                  examType: examForm.examType as any,
+                  examDate: new Date(examForm.examDate),
+                  result: examForm.result as any,
+                  restrictions: examForm.restrictions || undefined,
+                  observations: examForm.observations || undefined,
+                  doctorName: examForm.doctorName || undefined,
+                  doctorCrm: examForm.doctorCrm || undefined,
+                  nextExamDate: examForm.nextExamDate ? new Date(examForm.nextExamDate) : undefined,
+                })}
+              >
+                {createExamMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Salvando...</> : "Registrar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Edit Dialog */}
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>

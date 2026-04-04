@@ -146,6 +146,12 @@ export default function EsocialExport() {
     toast.success("XML copiado para a área de transferência!");
   };
 
+  const pendingS2240Query = trpc.esocialExport.checkPendingS2240.useQuery(
+    { tenantId: tenantId! },
+    { enabled: !!tenantId }
+  );
+  const pendingS2240 = pendingS2240Query.data;
+
   const exports = (exportsQuery.data || []) as any[];
   const riskAssessments = (riskAssessmentsQuery.data || []) as any[];
 
@@ -172,6 +178,35 @@ export default function EsocialExport() {
             {isExporting ? "Exportando..." : "Exportar PDF"}
           </Button>
         </div>
+
+        {pendingS2240?.pending && (
+          <Card className="border-amber-300 bg-amber-50">
+            <CardContent className="p-4 flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="font-medium text-amber-900">S-2240 pendente de geração</p>
+                <p className="text-sm text-amber-700">
+                  {pendingS2240.assessments.length} avaliação(ões) de risco concluída(s) sem evento S-2240 correspondente:{" "}
+                  {pendingS2240.assessments.map((a: any) => a.title || a.id).join(", ")}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-amber-400 text-amber-800 hover:bg-amber-100"
+                onClick={() => {
+                  const first = pendingS2240.assessments[0];
+                  if (first) {
+                    setEventType("S-2240");
+                    setRiskAssessmentId(first.id);
+                  }
+                }}
+              >
+                Gerar S-2240
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

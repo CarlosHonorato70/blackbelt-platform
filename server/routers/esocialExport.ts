@@ -629,6 +629,69 @@ ${agNocEntries}
       }
     }),
 
+  // Auto-detect when S-2240 should be generated
+  // Checks if there are risk assessments with items that haven't been reported to eSocial yet
+  checkPendingS2240: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return { pending: false, assessments: [] };
+
+      // Find completed risk assessments
+      const assessments = await db.select({
+        id: riskAssessments.id,
+        title: riskAssessments.title,
+        status: riskAssessments.status,
+        updatedAt: riskAssessments.updatedAt,
+      })
+        .from(riskAssessments)
+        .where(and(
+          eq(riskAssessments.tenantId, ctx.tenantId!),
+          eq(riskAssessments.status, "completed"),
+        ))
+        .orderBy(desc(riskAssessments.updatedAt));
+
+      if (assessments.length === 0) return { pending: false, assessments: [] };
+
+      // Find existing S-2240 exports for this tenant
+      const existingExports = await db.select({
+        referenceId: esocialExports.referenceId,
+        status: esocialExports.status,
+      })
+        .from(esocialExports)
+        .where(and(
+          eq(esocialExports.tenantId, ctx.tenantId!),
+          eq(esocialExports.eventType, "S-2240"),
+        ));
+
+      const exportedIds = new Set(existingExports
+        .filter(e => e.status !== "rejected")
+        .map(e => e.referenceId));
+
+      // Find assessments that have items but no S-2240 export
+      const pendingAssessments = [];
+      for (const assessment of assessments) {
+        if (exportedIds.has(assessment.id)) continue;
+
+        const [itemCount] = await db.select({ count: sql<number>`count(*)` })
+          .from(riskAssessmentItems)
+          .where(eq(riskAssessmentItems.assessmentId, assessment.id));
+
+        if ((itemCount?.count ?? 0) > 0) {
+          pendingAssessments.push({
+            id: assessment.id,
+            title: assessment.title,
+            updatedAt: assessment.updatedAt,
+          });
+        }
+      }
+
+      return {
+        pending: pendingAssessments.length > 0,
+        assessments: pendingAssessments,
+      };
+    }),
+
   // Download do XML
   download: tenantProcedure
     .input(z.object({ id: z.string() }))

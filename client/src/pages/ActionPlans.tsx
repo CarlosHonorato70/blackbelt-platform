@@ -96,6 +96,8 @@ const defaultEditForm = {
   monthlySchedule: null as boolean[] | null,
   kpiIndicator: "",
   expectedImpact: "",
+  verificationMethod: "",
+  effectivenessIndicator: "",
 };
 
 export default function ActionPlans() {
@@ -179,6 +181,8 @@ export default function ActionPlans() {
       monthlySchedule: plan.monthlySchedule ?? null,
       kpiIndicator: plan.kpiIndicator || "",
       expectedImpact: plan.expectedImpact || "",
+      verificationMethod: plan.verificationMethod || "",
+      effectivenessIndicator: plan.effectivenessIndicator || "",
     });
     setEditDialogOpen(true);
   };
@@ -194,6 +198,8 @@ export default function ActionPlans() {
       status: editForm.status as any,
       deadline: editForm.deadline ? new Date(editForm.deadline) : undefined,
       budget: editForm.budget ? Math.round(parseFloat(editForm.budget) * 100) : undefined,
+      verificationMethod: editForm.verificationMethod || undefined,
+      effectivenessIndicator: editForm.effectivenessIndicator || undefined,
     });
   };
 
@@ -631,6 +637,28 @@ export default function ActionPlans() {
                 <p className="text-sm text-muted-foreground bg-muted rounded p-2">{editForm.expectedImpact}</p>
               </div>
             )}
+
+            {/* Verificação de Eficácia (NR-01 §1.5.6) */}
+            <div className="grid gap-2">
+              <Label htmlFor="edit-verification">Método de Verificação</Label>
+              <Textarea
+                id="edit-verification"
+                rows={2}
+                placeholder="Ex: Reaplicação do COPSOQ-II após 90 dias, auditoria interna..."
+                value={editForm.verificationMethod}
+                onChange={(e) => setEditForm((p) => ({ ...p, verificationMethod: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-effectiveness">Indicador de Efetividade</Label>
+              <Textarea
+                id="edit-effectiveness"
+                rows={2}
+                placeholder="Ex: Redução de 20% no score de demanda, absenteísmo < 3%..."
+                value={editForm.effectivenessIndicator}
+                onChange={(e) => setEditForm((p) => ({ ...p, effectivenessIndicator: e.target.value }))}
+              />
+            </div>
           </div>
 
           <DialogFooter>

@@ -833,6 +833,28 @@ export const financialParameters = mysqlTable("financial_parameters", {
 });
 
 // ============================================================================
+// PCMSO Exam Results — Resultados de exames médicos ocupacionais (NR-07)
+// ============================================================================
+
+export const pcmsoExamResults = mysqlTable("pcmso_exam_results", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull(),
+  employeeName: varchar("employeeName", { length: 255 }).notNull(),
+  examType: varchar("examType", { length: 100 }).notNull(), // admissional, periodico, retorno, mudanca_funcao, demissional
+  examDate: timestamp("examDate").notNull(),
+  result: varchar("result", { length: 50 }).notNull(), // apto, inapto, apto_restricao
+  restrictions: text("restrictions"),
+  observations: text("observations"),
+  doctorName: varchar("doctorName", { length: 255 }),
+  doctorCrm: varchar("doctorCrm", { length: 30 }),
+  nextExamDate: timestamp("nextExamDate"),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
+}, (table) => [
+  index("pcmso_exam_tenant_idx").on(table.tenantId),
+]);
+
+// ============================================================================
 // Type exports
 // ============================================================================
 
@@ -862,3 +884,4 @@ export type ErgonomicAssessment = typeof ergonomicAssessments.$inferSelect;
 export type ErgonomicItem = typeof ergonomicItems.$inferSelect;
 export type EsocialExport = typeof esocialExports.$inferSelect;
 export type FinancialParameter = typeof financialParameters.$inferSelect;
+export type PcmsoExamResult = typeof pcmsoExamResults.$inferSelect;

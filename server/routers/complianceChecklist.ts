@@ -40,6 +40,18 @@ const NR01_REQUIREMENTS = [
   // NR-17 Ergonomia
   { code: "NR17-17.1.1", text: "AEP realizada com fatores organizacionais", category: "NR-17 Ergonomia" },
   { code: "NR17-17.1.2", text: "AET quando requerida pela AEP", category: "NR-17 Ergonomia" },
+  // NR-09 Agentes Químicos, Físicos e Biológicos
+  { code: "NR09-9.3.1", text: "Avaliação de agentes físicos (ruído, calor, vibração) no ambiente de trabalho", category: "NR-09 Avaliação de Exposições" },
+  { code: "NR09-9.3.2", text: "Avaliação de agentes químicos (poeira, fumos, vapores) com limites de tolerância", category: "NR-09 Avaliação de Exposições" },
+  { code: "NR09-9.3.3", text: "Avaliação de agentes biológicos conforme classificação de risco", category: "NR-09 Avaliação de Exposições" },
+  { code: "NR09-9.4.1", text: "Medidas de prevenção integradas ao PGR para agentes ambientais", category: "NR-09 Avaliação de Exposições" },
+  { code: "NR09-9.4.2", text: "Monitoramento periódico da exposição ocupacional", category: "NR-09 Avaliação de Exposições" },
+  // NR-35 Trabalho em Altura
+  { code: "NR35-35.3.1", text: "Análise de risco para atividades em altura (acima de 2m)", category: "NR-35 Trabalho em Altura" },
+  { code: "NR35-35.3.2", text: "Procedimento operacional para trabalho em altura documentado", category: "NR-35 Trabalho em Altura" },
+  { code: "NR35-35.4.1", text: "Capacitação e treinamento periódico para trabalho em altura (8h teórica + 8h prática)", category: "NR-35 Trabalho em Altura" },
+  { code: "NR35-35.4.2", text: "Aptidão médica (ASO) específica para trabalho em altura", category: "NR-35 Trabalho em Altura" },
+  { code: "NR35-35.5.1", text: "Equipamentos de proteção contra queda (EPI/EPC) inspecionados e em conformidade", category: "NR-35 Trabalho em Altura" },
 ];
 
 async function ensureChecklistSeeded(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, tenantId: string) {

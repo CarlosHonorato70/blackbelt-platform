@@ -12,6 +12,7 @@ import { eq, and, desc } from "drizzle-orm";
 import { agentConversations, agentMessages } from "../../drizzle/schema_agent";
 import { supportTickets } from "../../drizzle/schema";
 import { log } from "../_core/logger";
+import { invokeLLM } from "../_core/llm";
 
 // ============================================================================
 // Knowledge Base — FAQ patterns with keyword matching
@@ -106,32 +107,28 @@ const SUPPORT_KB: KBEntry[] = [
 ];
 
 // ============================================================================
-// Helper: Find best matching KB entry
+// Helper: Build KB context string for LLM
 // ============================================================================
 
-function findAnswer(userMessage: string): KBEntry | null {
-  const normalized = userMessage.toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Remove accents
-
-  let bestMatch: KBEntry | null = null;
-  let bestScore = 0;
-
-  for (const entry of SUPPORT_KB) {
-    let score = 0;
-    for (const keyword of entry.keywords) {
-      const normalizedKeyword = keyword.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      if (normalized.includes(normalizedKeyword)) {
-        score += normalizedKeyword.length; // Longer matches score higher
-      }
-    }
-    if (score > bestScore) {
-      bestScore = score;
-      bestMatch = entry;
-    }
-  }
-
-  return bestScore >= 3 ? bestMatch : null; // Minimum threshold
+function buildKBContext(): string {
+  return SUPPORT_KB.map((entry, i) =>
+    `[${i + 1}] Tópico: ${entry.keywords.join(", ")}\nResposta: ${entry.answer}${entry.action ? `\nAção: ${entry.action.type} → ${entry.action.label} (${entry.action.path || ""})` : ""}`
+  ).join("\n\n");
 }
+
+const SUPPORT_SYSTEM_PROMPT = `Você é o assistente de suporte da BlackBelt Platform, uma plataforma SaaS de gestão de riscos psicossociais e conformidade NR-01.
+
+Regras:
+- Responda SEMPRE em português do Brasil
+- Use markdown para formatação (negrito, listas)
+- Seja conciso e direto, mas amigável
+- Se a pergunta não estiver coberta pela base de conhecimento, oriente o usuário a abrir um ticket de suporte dizendo "abrir ticket"
+- NUNCA invente informações que não estejam na base de conhecimento
+- Se a resposta envolver navegação, inclua o caminho entre parênteses, ex: (**Colaboradores** no menu)
+- Não repita a pergunta do usuário na resposta
+
+Base de conhecimento:
+${buildKBContext()}`;
 
 // ============================================================================
 // Check if user wants to open a ticket
@@ -281,19 +278,45 @@ export const supportAgentRouter = router({
         responseContent = `✅ **Ticket aberto!**\n\n📋 **ID:** ${ticketId.substring(0, 8)}...\n📝 **Sobre:** ${description.substring(0, 100)}\n\nNossa equipe respondera em breve.`;
         actions = [{ type: "navigate", label: "Ver Meus Tickets", path: "/support-tickets" }];
       }
-      // Try FAQ matching
+      // Use LLM for FAQ answering
       else {
-        const match = findAnswer(userMsg);
-        if (match) {
-          responseContent = match.answer;
-          if (match.action) {
-            actions = [match.action];
+        try {
+          // Get recent conversation history for context
+          const recentMessages = await db.select()
+            .from(agentMessages)
+            .where(eq(agentMessages.conversationId, input.conversationId))
+            .orderBy(desc(agentMessages.createdAt))
+            .limit(6);
+
+          const chatHistory = recentMessages
+            .reverse()
+            .filter(m => m.id !== userMsgId)
+            .map(m => ({ role: m.role as "user" | "assistant", content: m.content }));
+
+          chatHistory.push({ role: "user", content: userMsg });
+
+          const llmResult = await invokeLLM({
+            messages: [
+              { role: "system", content: SUPPORT_SYSTEM_PROMPT },
+              ...chatHistory,
+            ],
+          });
+
+          const rawContent = llmResult.choices?.[0]?.message?.content;
+          const llmText = typeof rawContent === "string" ? rawContent : "";
+          responseContent = llmText || "Desculpe, não consegui processar sua pergunta. Tente novamente ou diga **\"abrir ticket\"** para suporte humano.";
+
+          // Try to detect navigation suggestions in the response
+          for (const entry of SUPPORT_KB) {
+            if (entry.action && entry.keywords.some(kw => userMsg.toLowerCase().includes(kw))) {
+              actions = [entry.action];
+              break;
+            }
           }
-        } else {
-          responseContent = "Nao encontrei uma resposta especifica para sua duvida. 🤔\n\nVoce pode:\n- Reformular a pergunta usando termos como **COPSOQ**, **planilha**, **PDF**, **empresa**, **senha**, etc.\n- Dizer **\"abrir ticket\"** para que nossa equipe analise sua duvida\n\nDeseja que eu abra um ticket de suporte?";
-          actions = [
-            { type: "action", label: "Abrir Ticket" },
-          ];
+        } catch (err) {
+          log.error(`[Support Agent] LLM error: ${err instanceof Error ? err.message : String(err)}`);
+          responseContent = "Desculpe, estou com dificuldade para processar sua pergunta no momento. Tente novamente ou diga **\"abrir ticket\"** para suporte humano.";
+          actions = [{ type: "action", label: "Abrir Ticket" }];
         }
       }
 

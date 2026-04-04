@@ -5,6 +5,7 @@ import { tenantProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   pcmsoRecommendations,
+  pcmsoExamResults,
   riskAssessmentItems,
   riskFactors,
 } from "../../drizzle/schema_nr01";
@@ -171,6 +172,56 @@ export const pcmsoIntegrationRouter = router({
         .delete(pcmsoRecommendations)
         .where(and(eq(pcmsoRecommendations.id, input.id), eq(pcmsoRecommendations.tenantId, ctx.tenantId!)));
 
+      return { success: true };
+    }),
+
+  // ── PCMSO Exam Results ────────────────────────────────────────────────
+
+  listExamResults: tenantProcedure
+    .input(z.object({ tenantId: z.string().optional() }))
+    .query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return [];
+      return db.select().from(pcmsoExamResults)
+        .where(eq(pcmsoExamResults.tenantId, ctx.tenantId!))
+        .orderBy(desc(pcmsoExamResults.examDate));
+    }),
+
+  createExamResult: tenantProcedure
+    .input(z.object({
+      employeeName: z.string().min(1),
+      examType: z.enum(["admissional", "periodico", "retorno", "mudanca_funcao", "demissional"]),
+      examDate: z.coerce.date(),
+      result: z.enum(["apto", "inapto", "apto_restricao"]),
+      restrictions: z.string().optional(),
+      observations: z.string().optional(),
+      doctorName: z.string().optional(),
+      doctorCrm: z.string().optional(),
+      nextExamDate: z.coerce.date().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const id = nanoid();
+      await db.insert(pcmsoExamResults).values({
+        id,
+        tenantId: ctx.tenantId!,
+        ...input,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      return { id };
+    }),
+
+  deleteExamResult: tenantProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      await db.delete(pcmsoExamResults)
+        .where(and(eq(pcmsoExamResults.id, input.id), eq(pcmsoExamResults.tenantId, ctx.tenantId!)));
       return { success: true };
     }),
 });

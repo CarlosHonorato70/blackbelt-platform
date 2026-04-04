@@ -530,6 +530,8 @@ export const riskAssessmentsRouter = router({
         status: z.enum(["pending", "in_progress", "completed", "cancelled"]).optional(),
         deadline: z.coerce.date().optional(),
         budget: z.number().optional(),
+        verificationMethod: z.string().optional(),
+        effectivenessIndicator: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -553,6 +555,8 @@ export const riskAssessmentsRouter = router({
       }
       if (data.deadline !== undefined) updateData.deadline = data.deadline;
       if (data.budget !== undefined) updateData.budget = data.budget;
+      if (data.verificationMethod !== undefined) updateData.verificationMethod = data.verificationMethod;
+      if (data.effectivenessIndicator !== undefined) updateData.effectivenessIndicator = data.effectivenessIndicator;
 
       await db.update(actionPlans).set(updateData).where(
         and(eq(actionPlans.id, id), eq(actionPlans.tenantId, ctx.tenantId!))
