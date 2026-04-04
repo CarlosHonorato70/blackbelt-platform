@@ -39,6 +39,7 @@ const SEVERITY_LABELS: Record<string, string> = { low: "Leve", medium: "Moderada
 const PROBABILITY_LABELS: Record<string, string> = { rare: "Rara", unlikely: "Improvável", possible: "Possível", likely: "Provável", certain: "Certa" };
 const RISK_LABELS: Record<string, string> = { low: "Baixo", medium: "Médio", high: "Alto", critical: "Crítico" };
 const RISK_COLORS: Record<string, string> = { low: "#10b981", medium: "#f59e0b", high: "#f97316", critical: "#ef4444" };
+const PRIORITY_LABELS: Record<string, string> = { low: "Baixa", medium: "Média", high: "Alta", urgent: "Urgente", critical: "Crítica" };
 
 const branding: PdfBranding = { companyName: "Black Belt Platform", primaryColor: "#1a365d" };
 
@@ -1179,7 +1180,7 @@ export const nr01PdfExportRouter = router({
         ], rows: plans.map(p => ({
           cells: [
             p.title,
-            (p.priority || "—").charAt(0).toUpperCase() + (p.priority || "").slice(1),
+            PRIORITY_LABELS[p.priority || "medium"] || p.priority || "—",
             p.status === "completed" ? "Concluído" : p.status === "in_progress" ? "Em andamento" : "Pendente",
             fmtDate(p.deadline),
             (p.description || "").slice(0, 60) + ((p.description || "").length > 60 ? "..." : ""),
@@ -1224,7 +1225,7 @@ export const nr01PdfExportRouter = router({
           cells: [
             (r as any).examType || "—",
             (r as any).frequency || "—",
-            (r as any).priority || "—",
+            PRIORITY_LABELS[(r as any).priority || "medium"] || (r as any).priority || "—",
             (r as any).targetPopulation || "—",
             ((r as any).medicalBasis || "").slice(0, 50) + (((r as any).medicalBasis || "").length > 50 ? "..." : ""),
           ],

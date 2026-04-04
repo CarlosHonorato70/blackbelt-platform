@@ -232,7 +232,7 @@ export const companiesRouter = router({
           { code: "NR01-1.5.3.2", text: "Avaliação de riscos psicossociais com metodologia validada", category: "GRO - Gerenciamento de Riscos" },
           { code: "NR01-1.5.3.3", text: "Classificação de riscos por severidade e probabilidade", category: "GRO - Gerenciamento de Riscos" },
           { code: "NR01-1.5.4.1", text: "Plano de ação com medidas preventivas para riscos psicossociais", category: "GRO - Gerenciamento de Riscos" },
-          { code: "NR01-1.5.4.2", text: "Hierarquia de controles aplicada (eliminação→PPE)", category: "GRO - Gerenciamento de Riscos" },
+          { code: "NR01-1.5.4.2", text: "Hierarquia de controles aplicada (eliminação a EPI)", category: "GRO - Gerenciamento de Riscos" },
           { code: "NR01-1.5.4.3", text: "Responsáveis e prazos definidos para cada ação", category: "GRO - Gerenciamento de Riscos" },
           { code: "NR01-1.5.7.1", text: "PGR atualizado com seção de riscos psicossociais", category: "Documentação" },
           { code: "NR01-1.5.7.2", text: "Laudo técnico assinado por profissional habilitado", category: "Documentação" },
