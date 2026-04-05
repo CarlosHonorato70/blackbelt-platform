@@ -2266,8 +2266,27 @@ async function generateFallbackResponse(
   }
 
   // ── 3. Execute/Continue: auto-detect next phase and execute ──
-  if (isContinue && memory.cnpj) {
-    const existingCompany = await findCompanyByCNPJ();
+  // Try to find company by CNPJ from memory, OR fall back to company context (from conversation's companyId or parent tenant)
+  if (isContinue) {
+    let existingCompany = memory.cnpj ? await findCompanyByCNPJ() : null;
+
+    // Fallback: if no CNPJ in memory, find company from parent tenant's child companies
+    if (!existingCompany && !memory.cnpj) {
+      const db3 = await getDb();
+      if (db3) {
+        const { tenants: tenantsTable } = await import("../../drizzle/schema");
+        const childCompanies = await db3.select().from(tenantsTable)
+          .where(and(eq(tenantsTable.parentTenantId, tenantId), eq(tenantsTable.tenantType, "company")))
+          .orderBy(desc(tenantsTable.createdAt))
+          .limit(1);
+        if (childCompanies.length > 0) {
+          existingCompany = childCompanies[0];
+          // Also populate memory.cnpj for downstream use
+          if (existingCompany.cnpj) memory.cnpj = existingCompany.cnpj.replace(/\D/g, "");
+        }
+      }
+    }
+
     if (existingCompany) {
       const nextPhase = await getNextPhase(existingCompany.id);
       log.info(`[Agent] Auto-continue: nextPhase=${nextPhase}, company=${existingCompany.id}`);
@@ -2417,7 +2436,7 @@ async function generateFallbackResponse(
     }
 
     // Company not found but we have CNPJ — try to create it
-    if (memory.headcount) {
+    if (memory.headcount && memory.cnpj) {
       const result = await processCNPJForAgent(memory.cnpj, memory.headcount);
       if (result.found && result.active) {
         const data = result.data!;
