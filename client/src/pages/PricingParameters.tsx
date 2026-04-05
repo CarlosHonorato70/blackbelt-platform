@@ -10,9 +10,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 export default function PricingParameters() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     monthlyFixedCost: 0,
     laborCost: 0,
@@ -64,11 +67,16 @@ export default function PricingParameters() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Parâmetros de Precificação</h1>
-          <p className="text-gray-600">
-            Configure os parâmetros para cálculo de propostas
-          </p>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Parâmetros de Precificação</h1>
+            <p className="text-gray-600">
+              Configure os parâmetros para cálculo de propostas
+            </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

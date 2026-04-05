@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,6 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
   AlertCircle,
+  ArrowLeft,
   Mail,
   RotateCcw,
   CheckCircle2,
@@ -26,6 +28,7 @@ import {
 import { trpc } from "@/lib/trpc";
 
 export default function ReminderManagement() {
+  const navigate = useNavigate();
   const [selectedAssessment, setSelectedAssessment] = useState<string>("");
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
 
@@ -95,12 +98,17 @@ export default function ReminderManagement() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Gerenciamento de Lembretes</h1>
-        <p className="text-gray-600 mt-2">
-          Acompanhe e gerencie lembretes automáticos para colaboradores que
-          ainda não responderam
-        </p>
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold">Gerenciamento de Lembretes</h1>
+          <p className="text-gray-600 mt-2">
+            Acompanhe e gerencie lembretes automáticos para colaboradores que
+            ainda não responderam
+          </p>
+        </div>
       </div>
 
       {/* Seleção de Avaliação */}

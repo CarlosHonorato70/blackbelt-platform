@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
-import { Building2, Users, CreditCard, AlertTriangle, Eye, DollarSign, Ticket, ShieldCheck, Mail, MailX, TrendingDown, TrendingUp } from "lucide-react";
+import { Building2, Users, CreditCard, AlertTriangle, Eye, DollarSign, Ticket, ShieldCheck, Mail, MailX, TrendingDown, TrendingUp, ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -47,9 +47,14 @@ export default function AdminMetricsDashboard() {
   return (
     <DashboardLayout>
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Painel Administrativo</h1>
-        <p className="text-muted-foreground">Visão consolidada de todos os tenants</p>
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold">Painel Administrativo</h1>
+          <p className="text-muted-foreground">Visão consolidada de todos os tenants</p>
+        </div>
       </div>
 
       {/* Overview Cards */}

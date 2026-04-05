@@ -49,6 +49,7 @@ import { useTenant } from "@/contexts/TenantContext";
 import { trpc } from "@/lib/trpc";
 import {
   AlertCircle,
+  ArrowLeft,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -408,13 +409,18 @@ export default function RiskAssessments() {
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Avaliacoes de Riscos Psicossociais
-            </h1>
-            <p className="text-muted-foreground">
-              Gestão de riscos conforme NR-01 (Portaria MTE no 1.419/2024)
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">
+                Avaliacoes de Riscos Psicossociais
+              </h1>
+              <p className="text-muted-foreground">
+                Gestão de riscos conforme NR-01 (Portaria MTE no 1.419/2024)
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">

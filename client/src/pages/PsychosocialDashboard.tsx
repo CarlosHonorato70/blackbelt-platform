@@ -41,6 +41,7 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import {
+  ArrowLeft,
   Users,
   BarChart3,
   AlertTriangle,
@@ -51,6 +52,7 @@ import {
   Building2,
   UserCheck,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -91,6 +93,7 @@ function getDimensionBg(score: number): string {
 }
 
 export default function PsychosocialDashboard() {
+  const navigate = useNavigate();
   usePageMeta({ title: "Dashboard de Indicadores Psicossociais" });
   const { selectedTenant } = useTenant();
   const { data: user } = trpc.auth.me.useQuery();
@@ -190,11 +193,16 @@ export default function PsychosocialDashboard() {
     <DashboardLayout>
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Dashboard de Indicadores Psicossociais</h1>
-            <p className="text-muted-foreground">
-              Visão geral dos resultados COPSOQ e indicadores de saúde organizacional
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">Dashboard de Indicadores Psicossociais</h1>
+              <p className="text-muted-foreground">
+                Visão geral dos resultados COPSOQ e indicadores de saúde organizacional
+              </p>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button

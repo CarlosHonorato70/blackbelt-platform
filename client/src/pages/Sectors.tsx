@@ -37,13 +37,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useTenant } from "@/contexts/TenantContext";
 import { trpc } from "@/lib/trpc";
-import { AlertCircle, Edit2, Plus, Trash2, UserSquare2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, Edit2, Plus, Trash2, UserSquare2 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 type DialogMode = "closed" | "create" | "edit" | "delete";
 
 export default function Sectors() {
+  const navigate = useNavigate();
   const { selectedTenant } = useTenant();
   const { data: user } = trpc.auth.me.useQuery();
   const effectiveId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
@@ -140,12 +142,17 @@ export default function Sectors() {
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Setores</h1>
-            <p className="text-muted-foreground">
-              Gerencie os setores de{" "}
-              <span className="font-semibold">{typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.name ?? "sua empresa"}</span>
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Setores</h1>
+              <p className="text-muted-foreground">
+                Gerencie os setores de{" "}
+                <span className="font-semibold">{typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.name ?? "sua empresa"}</span>
+              </p>
+            </div>
           </div>
 
           <Button onClick={() => setDialogMode("create")}>

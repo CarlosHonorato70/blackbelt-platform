@@ -16,6 +16,7 @@ import { useTenant } from "@/contexts/TenantContext";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { toast } from "sonner";
 import {
+  ArrowLeft,
   Clock,
   Play,
   CheckCircle2,
@@ -26,6 +27,7 @@ import {
   Calendar,
   FileDown,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { usePdfExport } from "@/hooks/usePdfExport";
 
 const STATUS_CONFIG: Record<string, { label: string; icon: any; color: string; badgeClass: string }> = {
@@ -56,6 +58,7 @@ const STATUS_CONFIG: Record<string, { label: string; icon: any; color: string; b
 };
 
 export default function ComplianceTimeline() {
+  const navigate = useNavigate();
   usePageMeta({ title: "Cronograma NR-01" });
   const { selectedTenant } = useTenant();
   const { data: user } = trpc.auth.me.useQuery();
@@ -120,8 +123,10 @@ export default function ComplianceTimeline() {
     <DashboardLayout>
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <CalendarClock className="h-8 w-8 text-primary" />
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
             <div>
               <h1 className="text-2xl font-bold">Cronograma NR-01</h1>
               <p className="text-muted-foreground">

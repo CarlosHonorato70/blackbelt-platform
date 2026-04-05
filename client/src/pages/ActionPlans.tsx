@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  ArrowLeft,
   ClipboardList,
   Plus,
   Loader2,
@@ -47,6 +48,7 @@ import {
   RotateCcw,
   XCircle,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { trpc } from "@/lib/trpc";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
@@ -101,6 +103,7 @@ const defaultEditForm = {
 };
 
 export default function ActionPlans() {
+  const navigate = useNavigate();
   const { selectedTenant } = useTenant();
   const { data: user } = trpc.auth.me.useQuery();
   const effectiveId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
@@ -230,14 +233,19 @@ export default function ActionPlans() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <ClipboardList className="w-8 h-8" />
-            Planos de Ação
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Gerencie as ações de mitigação de riscos psicossociais
-          </p>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-3">
+              <ClipboardList className="w-8 h-8" />
+              Planos de Ação
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Gerencie as ações de mitigação de riscos psicossociais
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleExportPdf} disabled={plans.length === 0}>

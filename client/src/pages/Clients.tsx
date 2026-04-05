@@ -46,7 +46,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit2, Trash2, Search, Building2 } from "lucide-react";
+import { Plus, Edit2, Trash2, Search, Building2, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 type DialogMode = "closed" | "create" | "edit" | "delete";
@@ -59,6 +60,7 @@ const sizeLabels: Record<string, string> = {
 };
 
 export default function Clients() {
+  const navigate = useNavigate();
   const [dialogMode, setDialogMode] = useState<DialogMode>("closed");
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -194,11 +196,16 @@ export default function Clients() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">Clientes</h1>
-            <p className="text-muted-foreground">
-              Gerencie sua base de clientes para propostas comerciais
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold">Clientes</h1>
+              <p className="text-muted-foreground">
+                Gerencie sua base de clientes para propostas comerciais
+              </p>
+            </div>
           </div>
           <Button onClick={openCreate}>
             <Plus className="mr-2 h-4 w-4" />

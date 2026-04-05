@@ -20,6 +20,7 @@ import { useTenant } from "@/contexts/TenantContext";
 import { trpc } from "@/lib/trpc";
 import {
   AlertCircle,
+  ArrowLeft,
   Download,
   Edit,
   Eye,
@@ -30,6 +31,7 @@ import {
   User,
   X,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import {
   exportToJSON,
@@ -41,6 +43,7 @@ import {
 import { SecurityDashboardContent } from "@/pages/SecurityDashboard";
 
 export default function AuditLogs() {
+  const navigate = useNavigate();
   const { selectedTenant } = useTenant();
   const [filters, setFilters] = useState({
     action: "todos",
@@ -164,14 +167,19 @@ export default function AuditLogs() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Auditoria e Segurança</h1>
-          <p className="text-muted-foreground">
-            Logs de auditoria e painel de segurança -{" "}
-            {typeof selectedTenant === "string"
-              ? selectedTenant
-              : selectedTenant?.name}
-          </p>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Auditoria e Segurança</h1>
+            <p className="text-muted-foreground">
+              Logs de auditoria e painel de segurança -{" "}
+              {typeof selectedTenant === "string"
+                ? selectedTenant
+                : selectedTenant?.name}
+            </p>
+          </div>
         </div>
 
         <Tabs defaultValue="auditoria" className="space-y-6">

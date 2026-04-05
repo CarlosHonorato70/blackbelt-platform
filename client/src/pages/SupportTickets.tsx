@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import { LifeBuoy, Plus, MessageSquare, Send } from "lucide-react";
+import { LifeBuoy, Plus, MessageSquare, Send, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -18,6 +19,7 @@ const priorityLabels: Record<string, string> = { low: "Baixa", medium: "Media", 
 const priorityColors: Record<string, string> = { low: "bg-gray-100 text-gray-800", medium: "bg-blue-100 text-blue-800", high: "bg-orange-100 text-orange-800", critical: "bg-red-100 text-red-800" };
 
 export default function SupportTickets() {
+  const navigate = useNavigate();
   const [showCreate, setShowCreate] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
@@ -46,7 +48,12 @@ export default function SupportTickets() {
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <div><h1 className="text-3xl font-bold">Suporte</h1><p className="text-muted-foreground">Abra e acompanhe seus tickets de suporte</p></div>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div><h1 className="text-3xl font-bold">Suporte</h1><p className="text-muted-foreground">Abra e acompanhe seus tickets de suporte</p></div>
+          </div>
           <Button onClick={() => setShowCreate(true)}><Plus className="mr-2 h-4 w-4" />Novo Ticket</Button>
         </div>
 

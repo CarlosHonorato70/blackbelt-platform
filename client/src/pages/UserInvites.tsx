@@ -28,6 +28,7 @@ import { trpc } from "@/lib/trpc";
 import { useTenant } from "@/contexts/TenantContext";
 import {
   AlertCircle,
+  ArrowLeft,
   Copy,
   Loader2,
   Mail,
@@ -38,6 +39,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 const statusMap: Record<string, string> = {
@@ -62,6 +64,7 @@ function getExpiresIn(expiresAt: Date | string | null): string {
 }
 
 export default function UserInvites() {
+  const navigate = useNavigate();
   const { selectedTenant } = useTenant();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -203,16 +206,21 @@ export default function UserInvites() {
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Convites de Usuários
-            </h1>
-            <p className="text-muted-foreground">
-              Gerencie convites para colaboradores -{" "}
-              {typeof selectedTenant === "string"
-                ? selectedTenant
-                : selectedTenant?.name}
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">
+                Convites de Usuários
+              </h1>
+              <p className="text-muted-foreground">
+                Gerencie convites para colaboradores -{" "}
+                {typeof selectedTenant === "string"
+                  ? selectedTenant
+                  : selectedTenant?.name}
+              </p>
+            </div>
           </div>
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

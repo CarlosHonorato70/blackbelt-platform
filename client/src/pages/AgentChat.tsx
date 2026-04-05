@@ -9,12 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Bot, User, AlertTriangle, CheckCircle2, Clock, Brain, RefreshCw, MessageSquare, X, Plus, Trash2, FileDown, Save, Pencil } from "lucide-react";
+import { ArrowLeft, Send, Bot, User, AlertTriangle, CheckCircle2, Clock, Brain, RefreshCw, MessageSquare, X, Plus, Trash2, FileDown, Save, Pencil } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
 function AgentChatPage() {
   usePageMeta({ title: "SamurAI — Assistente NR-01" });
+  const navigate = useNavigate();
   const { toast } = useToast();
 
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -301,6 +303,9 @@ function AgentChatPage() {
         <div className="flex flex-1 flex-col min-w-0">
           {/* Chat Header — fixed outside scroll */}
           <div className="flex items-center gap-2 bg-card border rounded-t-lg py-3 px-4 z-10 flex-shrink-0">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
             <Brain className="h-5 w-5 text-primary" />
             <h3 className="text-lg font-semibold">SamurAI</h3>
             <div className="ml-auto flex items-center gap-2">

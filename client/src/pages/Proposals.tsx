@@ -47,7 +47,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit2, Trash2, Search, FileText, X, Download, DollarSign, Settings, CheckCircle2 } from "lucide-react";
+import { Plus, Edit2, Trash2, Search, FileText, X, Download, DollarSign, Settings, CheckCircle2, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 type DialogMode = "closed" | "create" | "edit" | "delete";
@@ -191,6 +192,7 @@ interface EditableItem {
 }
 
 export default function Proposals() {
+  const navigate = useNavigate();
   const [dialogMode, setDialogMode] = useState<DialogMode>("closed");
   const [selectedProposalId, setSelectedProposalId] = useState<string | null>(
     null
@@ -761,11 +763,16 @@ export default function Proposals() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">Propostas</h1>
-            <p className="text-muted-foreground">
-              Crie e gerencie propostas comerciais
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold">Propostas</h1>
+              <p className="text-muted-foreground">
+                Crie e gerencie propostas comerciais
+              </p>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={openSettingsDialog}>

@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  ArrowLeft,
   Loader2,
   Users,
   HardDrive,
@@ -139,11 +140,16 @@ export default function SubscriptionDashboard() {
 
   return (
     <div className="container mx-auto py-12 px-4">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Minha Assinatura</h1>
-        <p className="text-muted-foreground">
-          Gerencie sua assinatura e acompanhe o uso
-        </p>
+      <div className="mb-8 flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Minha Assinatura</h1>
+          <p className="text-muted-foreground">
+            Gerencie sua assinatura e acompanhe o uso
+          </p>
+        </div>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-8">

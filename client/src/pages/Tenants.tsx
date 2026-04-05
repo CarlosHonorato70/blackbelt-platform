@@ -42,7 +42,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { trpc } from "@/lib/trpc";
-import { Building2, Edit2, Eye, Plus, Search, Trash2 } from "lucide-react";
+import { Building2, Edit2, Eye, Plus, Search, Trash2, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -50,6 +51,7 @@ import { toast } from "sonner";
 type DialogMode = "closed" | "create" | "edit" | "delete";
 
 export default function Tenants() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dialogMode, setDialogMode] = useState<DialogMode>("closed");
@@ -141,11 +143,16 @@ export default function Tenants() {
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Empresas</h1>
-            <p className="text-muted-foreground">
-              Gerencie as empresas clientes da plataforma
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Empresas</h1>
+              <p className="text-muted-foreground">
+                Gerencie as empresas clientes da plataforma
+              </p>
+            </div>
           </div>
 
           <Button onClick={() => setDialogMode("create")}>

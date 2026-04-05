@@ -28,6 +28,7 @@ import {
 import { useTenant } from "@/contexts/TenantContext";
 import {
   AlertCircle,
+  ArrowLeft,
   CheckCircle2,
   Clock,
   Download,
@@ -42,9 +43,11 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 export default function DataExport() {
+  const navigate = useNavigate();
   const { selectedTenant } = useTenant();
   const { data: user } = trpc.auth.me.useQuery();
   const effectiveId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
@@ -193,16 +196,21 @@ export default function DataExport() {
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Exportação de Dados (LGPD)
-            </h1>
-            <p className="text-muted-foreground">
-              Gerencie solicitações de Direitos do Titular de Dados -{" "}
-              {typeof selectedTenant === "string"
-                ? selectedTenant
-                : selectedTenant?.name}
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">
+                Exportação de Dados (LGPD)
+              </h1>
+              <p className="text-muted-foreground">
+                Gerencie solicitações de Direitos do Titular de Dados -{" "}
+                {typeof selectedTenant === "string"
+                  ? selectedTenant
+                  : selectedTenant?.name}
+              </p>
+            </div>
           </div>
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

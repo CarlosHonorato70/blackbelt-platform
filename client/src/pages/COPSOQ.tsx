@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import {
   AlertCircle,
+  ArrowLeft,
   CheckCircle,
   AlertTriangle,
   XCircle,
@@ -174,11 +175,16 @@ export default function COPSOQ() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Avaliação COPSOQ-II</h1>
-        <p className="text-gray-600 mt-2">
-          Formulário de Avaliação de Riscos Psicossociais - 76 Questões
-        </p>
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold">Avaliação COPSOQ-II</h1>
+          <p className="text-gray-600 mt-2">
+            Formulário de Avaliação de Riscos Psicossociais - 76 Questões
+          </p>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

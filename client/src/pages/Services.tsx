@@ -48,7 +48,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Edit2, Trash2, Search, ShoppingCart } from "lucide-react";
+import { Plus, Edit2, Trash2, Search, ShoppingCart, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 type DialogMode = "closed" | "create" | "edit" | "delete";
@@ -61,6 +62,7 @@ const unitLabels: Record<string, string> = {
 };
 
 export default function Services() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [dialogMode, setDialogMode] = useState<DialogMode>("closed");
@@ -237,13 +239,18 @@ export default function Services() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold">Serviços e Preços</h1>
-          <p className="text-muted-foreground">
-            {isAdmin
-              ? "Serviços padrão da plataforma — consultorias recebem uma cópia editável automaticamente"
-              : "Gerencie o catálogo de serviços e parâmetros de precificação"}
-          </p>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Serviços e Preços</h1>
+            <p className="text-muted-foreground">
+              {isAdmin
+                ? "Serviços padrão da plataforma — consultorias recebem uma cópia editável automaticamente"
+                : "Gerencie o catálogo de serviços e parâmetros de precificação"}
+            </p>
+          </div>
         </div>
 
         {isAdmin && (

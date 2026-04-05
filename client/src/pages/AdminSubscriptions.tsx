@@ -10,9 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { trpc } from "@/lib/trpc";
-import { Search, Calendar, Zap, Percent, ArrowUpDown } from "lucide-react";
+import { Search, Calendar, Zap, Percent, ArrowUpDown, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function AdminSubscriptions() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [tenantId, setTenantId] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -65,9 +67,14 @@ export default function AdminSubscriptions() {
   return (
     <DashboardLayout>
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Gerenciar Assinaturas</h1>
-        <p className="text-muted-foreground">Ajuste manual de assinaturas dos tenants</p>
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold">Gerenciar Assinaturas</h1>
+          <p className="text-muted-foreground">Ajuste manual de assinaturas dos tenants</p>
+        </div>
       </div>
 
       <Card>

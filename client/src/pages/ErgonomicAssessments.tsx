@@ -38,6 +38,7 @@ import {
   Plus,
   Activity,
   FileDown,
+  ArrowLeft,
 } from "lucide-react";
 import { usePdfExport } from "@/hooks/usePdfExport";
 
@@ -118,14 +119,19 @@ export default function ErgonomicAssessments() {
     <DashboardLayout>
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Activity className="h-6 w-6" />
-              Avaliações Ergonômicas
-            </h1>
-            <p className="text-muted-foreground">
-              Gerencie avaliações ergonômicas dos postos de trabalho
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <Activity className="h-6 w-6" />
+                Avaliações Ergonômicas
+              </h1>
+              <p className="text-muted-foreground">
+                Gerencie avaliações ergonômicas dos postos de trabalho
+              </p>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button

@@ -25,7 +25,9 @@ import {
   Loader2,
   AlertTriangle,
   FileDown,
+  ArrowLeft,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { usePdfExport } from "@/hooks/usePdfExport";
 
 function formatBRL(value: number): string {
@@ -62,6 +64,7 @@ const BAR_COLORS = ["#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6"];
 
 export default function FinancialRiskCalculator() {
   usePageMeta({ title: "Calculadora de Risco Financeiro" });
+  const navigate = useNavigate();
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
   const { exportPdf, isExporting } = usePdfExport();
@@ -145,8 +148,10 @@ export default function FinancialRiskCalculator() {
     <DashboardLayout>
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Calculator className="h-8 w-8 text-primary" />
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
             <div>
               <h1 className="text-2xl font-bold">Calculadora de Risco Financeiro</h1>
               <p className="text-muted-foreground">

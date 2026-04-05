@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { trpc } from "@/lib/trpc";
-import { Activity, Database, HardDrive, AlertTriangle, CheckCircle, XCircle, RefreshCw, Server, Clock, Send, Bot, User, MessageSquare, GitBranch, ShieldAlert, Code2 } from "lucide-react";
+import { Activity, Database, HardDrive, AlertTriangle, CheckCircle, XCircle, RefreshCw, Server, Clock, Send, Bot, User, MessageSquare, GitBranch, ShieldAlert, Code2, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import Markdown from "react-markdown";
@@ -40,6 +41,7 @@ function StatusIcon({ status }: { status: string }) {
 type ChatMessage = { id: string; role: string; content: string };
 
 export default function AdminMonitoring() {
+  const navigate = useNavigate();
   const [isRunning, setIsRunning] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -132,14 +134,19 @@ export default function AdminMonitoring() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Activity className="h-6 w-6" />
-            Monitoramento da Plataforma
-          </h1>
-          <p className="text-muted-foreground">
-            Status em tempo real e historico de verificacoes
-          </p>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Activity className="h-6 w-6" />
+              Monitoramento da Plataforma
+            </h1>
+            <p className="text-muted-foreground">
+              Status em tempo real e historico de verificacoes
+            </p>
+          </div>
         </div>
         <Button
           onClick={() => { setIsRunning(true); runCheckMutation.mutate({}); }}

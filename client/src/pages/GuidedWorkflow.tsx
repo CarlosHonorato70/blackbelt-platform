@@ -27,6 +27,7 @@ import {
   Brain,
   GraduationCap,
   BarChart3,
+  ArrowLeft,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -296,14 +297,19 @@ export default function GuidedWorkflow() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Fluxo de Trabalho Guiado
-          </h1>
-          <p className="text-muted-foreground">
-            Siga os passos abaixo para completar a conformidade NR-01 de{" "}
-            <span className="font-semibold">{typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.name ?? "sua empresa"}</span>
-          </p>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Fluxo de Trabalho Guiado
+            </h1>
+            <p className="text-muted-foreground">
+              Siga os passos abaixo para completar a conformidade NR-01 de{" "}
+              <span className="font-semibold">{typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.name ?? "sua empresa"}</span>
+            </p>
+          </div>
         </div>
 
         {/* Progress Bar */}

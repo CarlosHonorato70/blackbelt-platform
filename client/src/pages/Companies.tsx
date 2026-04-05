@@ -35,8 +35,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { trpc } from "@/lib/trpc";
-import { Building2, Edit2, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowLeft, Building2, Edit2, Plus, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 
@@ -71,6 +72,7 @@ const emptyForm: CompanyFormData = {
 };
 
 export default function Companies() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [dialogMode, setDialogMode] = useState<DialogMode>("closed");
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
@@ -165,14 +167,19 @@ export default function Companies() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-              <Building2 className="h-6 w-6 text-primary" />
-              Minhas Empresas
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Gerencie as empresas clientes vinculadas à sua consultoria
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                <Building2 className="h-6 w-6 text-primary" />
+                Minhas Empresas
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Gerencie as empresas clientes vinculadas à sua consultoria
+              </p>
+            </div>
           </div>
           <Button onClick={handleCreate} className="gap-2">
             <Plus className="h-4 w-4" />

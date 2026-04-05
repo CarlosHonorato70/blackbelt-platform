@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { trpc } from "@/lib/trpc";
-import { Shield, Download, Trash2, FileText, Loader2 } from "lucide-react";
+import { Shield, Download, Trash2, FileText, Loader2, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const statusColors: Record<string, string> = {
   pendente: "bg-yellow-100 text-yellow-800",
@@ -23,6 +24,7 @@ const typeLabels: Record<string, string> = {
 };
 
 export default function AdminDsrManagement() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [exportResult, setExportResult] = useState<any>(null);
@@ -67,11 +69,16 @@ export default function AdminDsrManagement() {
   return (
     <DashboardLayout>
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Shield className="h-6 w-6" /> Gerenciar DSR (LGPD)
-        </h1>
-        <p className="text-muted-foreground">Processar solicitações de direitos do titular de dados</p>
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Shield className="h-6 w-6" /> Gerenciar DSR (LGPD)
+          </h1>
+          <p className="text-muted-foreground">Processar solicitações de direitos do titular de dados</p>
+        </div>
       </div>
 
       <Card>

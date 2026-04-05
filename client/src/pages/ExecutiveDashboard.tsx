@@ -3,6 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+  ArrowLeft,
   TrendingUp,
   TrendingDown,
   Users,
@@ -35,8 +36,11 @@ import {
   Radar
 } from 'recharts';
 import { trpc } from '@/lib/trpc';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 export default function ExecutiveDashboard() {
+  const navigate = useNavigate();
   const { data, isLoading, error } = trpc.adminMetrics.executiveDashboard.useQuery();
 
   if (isLoading) {
@@ -100,11 +104,16 @@ export default function ExecutiveDashboard() {
     <DashboardLayout>
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Painel Executivo</h1>
-        <p className="text-muted-foreground mt-1">
-          Visao consolidada da sua consultoria
-        </p>
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold">Painel Executivo</h1>
+          <p className="text-muted-foreground mt-1">
+            Visao consolidada da sua consultoria
+          </p>
+        </div>
       </div>
 
       {/* KPIs Primarios */}

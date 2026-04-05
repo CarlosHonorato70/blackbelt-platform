@@ -25,6 +25,7 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import {
+  ArrowLeft,
   Plus,
   GraduationCap,
   Loader2,
@@ -128,11 +129,16 @@ export default function TrainingPrograms() {
     <DashboardLayout>
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Programas de Treinamento</h1>
-            <p className="text-muted-foreground">
-              Gerencie treinamentos, workshops e programas de lideranca
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Programas de Treinamento</h1>
+              <p className="text-muted-foreground">
+                Gerencie treinamentos, workshops e programas de lideranca
+              </p>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button

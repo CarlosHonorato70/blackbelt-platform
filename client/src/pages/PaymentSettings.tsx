@@ -13,9 +13,11 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, QrCode, Banknote, FileText, Info } from "lucide-react";
+import { Loader2, QrCode, Banknote, FileText, Info, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function PaymentSettings() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [pixKey, setPixKey] = useState("");
   const [bankDetails, setBankDetails] = useState("");
@@ -56,11 +58,16 @@ export default function PaymentSettings() {
 
   return (
     <div className="max-w-2xl mx-auto py-8 px-4 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Configurações de Pagamento</h1>
-        <p className="text-muted-foreground mt-1">
-          Estas informações são enviadas automaticamente por email quando uma empresa aprova uma proposta final.
-        </p>
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Configurações de Pagamento</h1>
+          <p className="text-muted-foreground mt-1">
+            Estas informações são enviadas automaticamente por email quando uma empresa aprova uma proposta final.
+          </p>
+        </div>
       </div>
 
       <Alert>

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { trpc } from "@/lib/trpc";
-import { Headphones, Send, Bot, User, Plus, MessageSquare, ExternalLink } from "lucide-react";
+import { ArrowLeft, Headphones, Send, Bot, User, Plus, MessageSquare, ExternalLink } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
@@ -107,6 +107,9 @@ export default function SupportChat() {
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
             <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <Headphones className="h-5 w-5 text-primary" />
               </div>

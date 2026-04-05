@@ -16,10 +16,12 @@ import { trpc } from "@/lib/trpc";
 import { useTenant } from "@/contexts/TenantContext";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { toast } from "sonner";
-import { ShieldAlert, Loader2, CheckCircle2, Copy } from "lucide-react";
+import { ShieldAlert, Loader2, CheckCircle2, Copy, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function AnonymousReport() {
   usePageMeta({ title: "Canal de Denúncias" });
+  const navigate = useNavigate();
   const { selectedTenant } = useTenant();
   const { data: user } = trpc.auth.me.useQuery();
   const tenantId = (typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id) || user?.tenantId;
@@ -128,10 +130,17 @@ export default function AnonymousReport() {
             <div className="mx-auto mb-2">
               <ShieldAlert className="h-10 w-10 text-primary" />
             </div>
-            <CardTitle className="text-xl">Canal de Denúncias</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Registre situacoes de risco psicossocial de forma segura e confidencial.
-            </p>
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <CardTitle className="text-xl">Canal de Denúncias</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Registre situacoes de risco psicossocial de forma segura e confidencial.
+                </p>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">

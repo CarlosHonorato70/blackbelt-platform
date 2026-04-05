@@ -12,7 +12,7 @@ import { PricingCard } from "@/components/subscription/PricingCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Check, X, Sparkles, Shield, Building2 } from "lucide-react";
+import { ArrowLeft, Loader2, Check, X, Sparkles, Shield, Building2 } from "lucide-react";
 
 export default function Pricing() {
   const navigate = useNavigate();
@@ -90,14 +90,21 @@ export default function Pricing() {
     <div className="container mx-auto py-12 px-4">
       {/* Header */}
       <div className="text-center mb-12">
+        <div className="flex items-center gap-4 justify-center mb-6">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-4xl font-bold mb-4">Escolha o Plano Ideal</h1>
+            <p className="text-xl text-muted-foreground mb-8">
+              Gestão completa de riscos psicossociais com IA. Convites COPSOQ inclusos em todos os planos.
+            </p>
+          </div>
+        </div>
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 text-amber-400 text-sm font-medium mb-6">
           <Sparkles className="h-4 w-4" />
           Powered by SamurAI — Inteligência Artificial
         </div>
-        <h1 className="text-4xl font-bold mb-4">Escolha o Plano Ideal</h1>
-        <p className="text-xl text-muted-foreground mb-8">
-          Gestão completa de riscos psicossociais com IA. Convites COPSOQ inclusos em todos os planos.
-        </p>
 
         {/* Billing Cycle Toggle */}
         <div className="flex justify-center mb-8">

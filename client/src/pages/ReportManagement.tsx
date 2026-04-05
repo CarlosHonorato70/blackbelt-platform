@@ -40,7 +40,9 @@ import {
   Clock,
   FileText,
   FileDown,
+  ArrowLeft,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { usePdfExport } from "@/hooks/usePdfExport";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -87,6 +89,7 @@ const SEVERITY_LABELS: Record<string, string> = {
 
 export default function ReportManagement() {
   usePageMeta({ title: "Gestão de Denúncias" });
+  const navigate = useNavigate();
   const { exportPdf, isExporting } = usePdfExport();
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
@@ -167,11 +170,16 @@ export default function ReportManagement() {
     <DashboardLayout>
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Gestão de Denúncias</h1>
-            <p className="text-muted-foreground">
-              Acompanhe e gerencie denuncias do canal anonimo
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Gestão de Denúncias</h1>
+              <p className="text-muted-foreground">
+                Acompanhe e gerencie denuncias do canal anonimo
+              </p>
+            </div>
           </div>
           <Button
             variant="outline"

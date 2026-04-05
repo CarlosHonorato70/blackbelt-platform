@@ -22,6 +22,7 @@ import { useTenant } from "@/contexts/TenantContext";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { toast } from "sonner";
 import {
+  ArrowLeft,
   Bell,
   BellRing,
   CheckCircle,
@@ -31,6 +32,7 @@ import {
   AlertTriangle,
   FileDown,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { usePdfExport } from "@/hooks/usePdfExport";
 
 const ENTITY_TYPE_LABELS: Record<string, string> = {
@@ -57,6 +59,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
 };
 
 export default function DeadlineAlerts() {
+  const navigate = useNavigate();
   usePageMeta({ title: "Alertas de Prazos" });
   const { exportPdf, isExporting } = usePdfExport();
   const { selectedTenant } = useTenant();
@@ -115,14 +118,19 @@ export default function DeadlineAlerts() {
     <DashboardLayout>
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <BellRing className="h-6 w-6" />
-              Alertas de Prazos
-            </h1>
-            <p className="text-muted-foreground">
-              Gerencie alertas e notificações de prazos importantes
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <BellRing className="h-6 w-6" />
+                Alertas de Prazos
+              </h1>
+              <p className="text-muted-foreground">
+                Gerencie alertas e notificações de prazos importantes
+              </p>
+            </div>
           </div>
           <div className="flex gap-2">
           <Button

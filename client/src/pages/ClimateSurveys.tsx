@@ -31,7 +31,7 @@ import { trpc } from "@/lib/trpc";
 import { useTenant } from "@/contexts/TenantContext";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { toast } from "sonner";
-import { Plus, ClipboardList, Loader2, BarChart2, FileDown, BookOpen, CheckCircle2 } from "lucide-react";
+import { Plus, ClipboardList, Loader2, BarChart2, FileDown, BookOpen, CheckCircle2, ArrowLeft } from "lucide-react";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { useNavigate } from "react-router-dom";
 
@@ -349,11 +349,16 @@ export default function ClimateSurveys() {
     <DashboardLayout>
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Pesquisas de Clima</h1>
-            <p className="text-muted-foreground">
-              Gerencie pesquisas de clima, estresse, burnout e engajamento
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Pesquisas de Clima</h1>
+              <p className="text-muted-foreground">
+                Gerencie pesquisas de clima, estresse, burnout e engajamento
+              </p>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button

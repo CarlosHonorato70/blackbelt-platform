@@ -39,7 +39,9 @@ import {
   FileDown,
   Send,
   RefreshCw,
+  ArrowLeft,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { usePdfExport } from "@/hooks/usePdfExport";
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
@@ -58,6 +60,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
 
 export default function EsocialExport() {
   usePageMeta({ title: "Exportação eSocial" });
+  const navigate = useNavigate();
   const { exportPdf, isExporting } = usePdfExport();
   const { selectedTenant } = useTenant();
   const tenantId = typeof selectedTenant === "string" ? selectedTenant : selectedTenant?.id;
@@ -159,14 +162,19 @@ export default function EsocialExport() {
     <DashboardLayout>
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <FileCode className="h-6 w-6" />
-              Exportação eSocial
-            </h1>
-            <p className="text-muted-foreground">
-              Gere, valide e envie eventos XML diretamente ao portal eSocial
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <FileCode className="h-6 w-6" />
+                Exportação eSocial
+              </h1>
+              <p className="text-muted-foreground">
+                Gere, valide e envie eventos XML diretamente ao portal eSocial
+              </p>
+            </div>
           </div>
           <Button
             variant="outline"

@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
+  ArrowLeft,
   ChevronDown,
   BookOpen,
   MessageCircle,
@@ -285,17 +287,23 @@ const contactInfo = [
 ];
 
 export default function Help() {
+  const navigate = useNavigate();
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
 
   return (
     <DashboardLayout>
       <div className="space-y-8">
         {/* Header */}
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold">Ajuda e Suporte</h1>
-          <p className="text-muted-foreground">
-            Guia rápido e recursos para ajudá-lo a usar a plataforma Black Belt
-          </p>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Ajuda e Suporte</h1>
+            <p className="text-muted-foreground">
+              Guia rápido e recursos para ajudá-lo a usar a plataforma Black Belt
+            </p>
+          </div>
         </div>
 
         {/* Tabs */}

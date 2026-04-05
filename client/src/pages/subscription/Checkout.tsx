@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Loader2, CreditCard, QrCode, FileText, CheckCircle2, Shield, Sparkles, Copy, ExternalLink, User } from "lucide-react";
+import { Loader2, CreditCard, QrCode, FileText, CheckCircle2, Shield, Sparkles, Copy, ExternalLink, User, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Checkout() {
@@ -282,11 +282,16 @@ export default function Checkout() {
 
   return (
     <div className="container mx-auto py-12 px-4 max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Assinar Plano</h1>
-        <p className="text-muted-foreground">
-          Complete os detalhes para ativar seu plano
-        </p>
+      <div className="flex items-center gap-4 mb-8">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Assinar Plano</h1>
+          <p className="text-muted-foreground">
+            Complete os detalhes para ativar seu plano
+          </p>
+        </div>
       </div>
 
       <div className="grid md:grid-cols-3 gap-8">

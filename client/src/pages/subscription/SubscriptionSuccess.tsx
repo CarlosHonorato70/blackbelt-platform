@@ -8,7 +8,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, ArrowLeft } from "lucide-react";
 
 export default function SubscriptionSuccess() {
   const navigate = useNavigate();
@@ -19,6 +19,10 @@ export default function SubscriptionSuccess() {
 
   return (
     <div className="container mx-auto py-12 px-4 max-w-2xl">
+      <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="mb-4">
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Voltar ao Dashboard
+      </Button>
       <Card>
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">

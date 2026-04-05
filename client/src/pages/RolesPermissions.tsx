@@ -21,6 +21,7 @@ import { trpc } from "@/lib/trpc";
 import { useTenant } from "@/contexts/TenantContext";
 import {
   AlertCircle,
+  ArrowLeft,
   CheckCircle2,
   Edit2,
   Loader2,
@@ -29,10 +30,12 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "sonner";
 
 export default function RolesPermissions() {
+  const navigate = useNavigate();
   const { selectedTenant } = useTenant();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
@@ -140,16 +143,21 @@ export default function RolesPermissions() {
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Perfis e Permissões
-            </h1>
-            <p className="text-muted-foreground">
-              Gerencie roles e controle de acesso -{" "}
-              {typeof selectedTenant === "string"
-                ? selectedTenant
-                : selectedTenant?.name}
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">
+                Perfis e Permissões
+              </h1>
+              <p className="text-muted-foreground">
+                Gerencie roles e controle de acesso -{" "}
+                {typeof selectedTenant === "string"
+                  ? selectedTenant
+                  : selectedTenant?.name}
+              </p>
+            </div>
           </div>
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

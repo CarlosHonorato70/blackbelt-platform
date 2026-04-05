@@ -46,13 +46,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTenant } from "@/contexts/TenantContext";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { AlertCircle, Download, Edit2, Plus, Trash2, Upload, Users, UserSquare2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, Download, Edit2, Plus, Trash2, Upload, Users, UserSquare2 } from "lucide-react";
 import { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 type DialogMode = "closed" | "create" | "edit" | "delete";
 
 export default function People() {
+  const navigate = useNavigate();
   const { selectedTenant } = useTenant();
   const { user } = useAuth();
   // For company users, selectedTenant may be null — use user's own tenantId
@@ -311,12 +313,17 @@ export default function People() {
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Colaboradores e Setores</h1>
-            <p className="text-muted-foreground">
-              Gerencie os colaboradores e setores de{" "}
-              <span className="font-semibold">{effectiveCompanyName}</span>
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Colaboradores e Setores</h1>
+              <p className="text-muted-foreground">
+                Gerencie os colaboradores e setores de{" "}
+                <span className="font-semibold">{effectiveCompanyName}</span>
+              </p>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleDownloadTemplate}>
