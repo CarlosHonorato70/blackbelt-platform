@@ -1081,3 +1081,233 @@ Dúvidas? contato@blackbeltconsultoria.com
     text: textContent,
   });
 }
+
+// ============================================================================
+// PHASE 10: Envio do certificado de conformidade NR-01
+// ============================================================================
+
+/**
+ * Envia email com certificado de conformidade NR-01 para a empresa
+ */
+export async function sendCertificateEmail(params: {
+  companyEmail: string;
+  companyName: string;
+  certNumber: string;
+  complianceScore: number;
+  validUntil: Date;
+  issuedAt: Date;
+}): Promise<boolean> {
+  const { companyEmail, companyName, certNumber, complianceScore, validUntil, issuedAt } = params;
+
+  const formatDate = (d: Date) => d.toLocaleDateString("pt-BR");
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #065f46 0%, #047857 50%, #10b981 100%); color: white; padding: 50px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <div style="font-size: 48px; margin-bottom: 10px;">🏆</div>
+        <h1 style="margin: 0; font-size: 28px;">Certificado de Conformidade NR-01</h1>
+        <p style="margin: 10px 0 0; font-size: 16px; opacity: 0.9;">Parabéns! Sua empresa está em conformidade.</p>
+      </div>
+
+      <div style="background: white; padding: 40px 20px; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="margin: 0 0 20px 0; font-size: 16px;">
+          Prezado(a) responsável da <strong>${escapeHtml(companyName)}</strong>,
+        </p>
+
+        <p style="margin: 0 0 20px 0; font-size: 14px; color: #666;">
+          Temos o prazer de informar que sua empresa concluiu com sucesso todo o processo de conformidade com a Norma Regulamentadora NR-01, abrangendo a gestão de riscos psicossociais no ambiente de trabalho.
+        </p>
+
+        <div style="background: #f0fdf4; border: 2px solid #10b981; border-radius: 12px; padding: 30px; margin: 30px 0; text-align: center;">
+          <h2 style="margin: 0 0 15px 0; color: #065f46; font-size: 20px;">Dados do Certificado</h2>
+          <table style="width: 100%; max-width: 400px; margin: 0 auto; text-align: left;">
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-size: 14px;">Número:</td>
+              <td style="padding: 8px 0; font-weight: bold; color: #065f46; font-size: 14px;">${certNumber}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-size: 14px;">Score de Conformidade:</td>
+              <td style="padding: 8px 0; font-weight: bold; color: #065f46; font-size: 14px;">${complianceScore}%</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-size: 14px;">Data de Emissão:</td>
+              <td style="padding: 8px 0; font-weight: bold; color: #065f46; font-size: 14px;">${formatDate(issuedAt)}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-size: 14px;">Válido até:</td>
+              <td style="padding: 8px 0; font-weight: bold; color: #065f46; font-size: 14px;">${formatDate(validUntil)}</td>
+            </tr>
+          </table>
+        </div>
+
+        <h3 style="color: #065f46; margin: 25px 0 10px;">O que foi avaliado:</h3>
+        <ul style="color: #4a5568; line-height: 2; font-size: 14px;">
+          <li>Avaliação COPSOQ-II (76 questões, 12 dimensões psicossociais)</li>
+          <li>Inventário de Riscos Psicossociais (GRO)</li>
+          <li>Plano de Ação com medidas de controle</li>
+          <li>Checklist de Conformidade NR-01 (35 itens)</li>
+          <li>Integração PGR/PCMSO</li>
+        </ul>
+
+        <div style="background: #fef3c7; padding: 20px; border-left: 4px solid #f59e0b; margin: 25px 0; border-radius: 6px;">
+          <p style="margin: 0; font-size: 14px; color: #92400e;">
+            <strong>Importante:</strong> O certificado tem validade de 1 ano. Recomendamos iniciar uma nova avaliação antes do vencimento para manter a conformidade contínua.
+          </p>
+        </div>
+
+        <p style="margin: 20px 0; font-size: 14px; color: #666;">
+          O certificado completo em PDF pode ser baixado diretamente na plataforma BlackBelt, na seção <strong>Certificações</strong>.
+        </p>
+      </div>
+
+      <div style="background: #f9fafb; padding: 25px 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; text-align: center;">
+        <p style="margin: 0; font-size: 12px; color: #666;">
+          Black Belt Consultoria | Conformidade NR-01<br>
+          <a href="mailto:contato@blackbeltconsultoria.com" style="color: #10b981; text-decoration: none;">contato@blackbeltconsultoria.com</a>
+        </p>
+      </div>
+    </div>
+  `;
+
+  const textContent = `
+Certificado de Conformidade NR-01
+
+Prezado(a) responsável da ${companyName},
+
+Sua empresa concluiu com sucesso o processo de conformidade NR-01!
+
+DADOS DO CERTIFICADO:
+- Número: ${certNumber}
+- Score: ${complianceScore}%
+- Emissão: ${formatDate(issuedAt)}
+- Válido até: ${formatDate(validUntil)}
+
+O certificado PDF pode ser baixado na plataforma BlackBelt, seção Certificações.
+
+Validade: 1 ano. Recomendamos renovação antes do vencimento.
+
+Black Belt Consultoria
+contato@blackbeltconsultoria.com
+  `.trim();
+
+  return sendEmail({
+    to: companyEmail,
+    subject: `🏆 Certificado NR-01 Emitido — ${companyName}`,
+    html,
+    text: textContent,
+  });
+}
+
+// ============================================================================
+// PHASE 9: Envio de devolutiva com resultados consolidados
+// ============================================================================
+
+/**
+ * Envia email de devolutiva com resumo dos resultados para a empresa
+ */
+export async function sendDevolutivaEmail(params: {
+  companyEmail: string;
+  companyName: string;
+  overallRisk: string;
+  totalRespondents: number;
+  responseRate: number;
+  criticalDimensions: string[];
+  positiveDimensions: string[];
+}): Promise<boolean> {
+  const { companyEmail, companyName, overallRisk, totalRespondents, responseRate, criticalDimensions, positiveDimensions } = params;
+
+  const riskColorMap: Record<string, { bg: string; text: string; label: string }> = {
+    low: { bg: "#f0fdf4", text: "#166534", label: "Baixo" },
+    medium: { bg: "#fefce8", text: "#854d0e", label: "Moderado" },
+    high: { bg: "#fef2f2", text: "#991b1b", label: "Alto" },
+    critical: { bg: "#fef2f2", text: "#7f1d1d", label: "Crítico" },
+  };
+  const risk = riskColorMap[overallRisk] || riskColorMap.medium;
+
+  const criticalHtml = criticalDimensions.length > 0
+    ? criticalDimensions.map(d => `<li style="color: #991b1b;">${escapeHtml(d)}</li>`).join("")
+    : `<li style="color: #666;">Nenhuma dimensão em nível crítico</li>`;
+
+  const positiveHtml = positiveDimensions.length > 0
+    ? positiveDimensions.map(d => `<li style="color: #166534;">${escapeHtml(d)}</li>`).join("")
+    : `<li style="color: #666;">—</li>`;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); color: white; padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 24px;">Devolutiva — Resultados NR-01</h1>
+        <p style="margin: 10px 0 0; font-size: 16px; opacity: 0.9;">${escapeHtml(companyName)}</p>
+      </div>
+
+      <div style="background: white; padding: 40px 20px; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="margin: 0 0 20px 0; font-size: 16px;">
+          Prezado(a) responsável,
+        </p>
+
+        <p style="margin: 0 0 20px 0; font-size: 14px; color: #666;">
+          Segue o resumo consolidado da avaliação de riscos psicossociais realizada em sua empresa conforme a NR-01.
+        </p>
+
+        <div style="display: flex; gap: 15px; margin: 25px 0; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 140px; background: ${risk.bg}; border-radius: 8px; padding: 20px; text-align: center;">
+            <p style="margin: 0; font-size: 12px; color: ${risk.text}; text-transform: uppercase;">Risco Geral</p>
+            <p style="margin: 5px 0 0; font-size: 24px; font-weight: bold; color: ${risk.text};">${risk.label}</p>
+          </div>
+          <div style="flex: 1; min-width: 140px; background: #eff6ff; border-radius: 8px; padding: 20px; text-align: center;">
+            <p style="margin: 0; font-size: 12px; color: #1e40af; text-transform: uppercase;">Respondentes</p>
+            <p style="margin: 5px 0 0; font-size: 24px; font-weight: bold; color: #1e40af;">${totalRespondents}</p>
+          </div>
+          <div style="flex: 1; min-width: 140px; background: #f5f3ff; border-radius: 8px; padding: 20px; text-align: center;">
+            <p style="margin: 0; font-size: 12px; color: #6d28d9; text-transform: uppercase;">Taxa de Resposta</p>
+            <p style="margin: 5px 0 0; font-size: 24px; font-weight: bold; color: #6d28d9;">${responseRate}%</p>
+          </div>
+        </div>
+
+        <h3 style="color: #991b1b; margin: 25px 0 10px;">Dimensões que Requerem Atenção:</h3>
+        <ul style="line-height: 2; font-size: 14px;">${criticalHtml}</ul>
+
+        <h3 style="color: #166534; margin: 25px 0 10px;">Pontos Fortes Identificados:</h3>
+        <ul style="line-height: 2; font-size: 14px;">${positiveHtml}</ul>
+
+        <div style="background: #eff6ff; padding: 20px; border-left: 4px solid #3b82f6; margin: 25px 0; border-radius: 6px;">
+          <p style="margin: 0; font-size: 14px; color: #1e40af;">
+            <strong>Próximos passos:</strong> O relatório completo, o inventário de riscos e o plano de ação estão disponíveis na plataforma BlackBelt. Acesse para revisar as recomendações detalhadas.
+          </p>
+        </div>
+      </div>
+
+      <div style="background: #f9fafb; padding: 25px 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; text-align: center;">
+        <p style="margin: 0; font-size: 12px; color: #666;">
+          Black Belt Consultoria | Conformidade NR-01<br>
+          <a href="mailto:contato@blackbeltconsultoria.com" style="color: #3b82f6; text-decoration: none;">contato@blackbeltconsultoria.com</a>
+        </p>
+      </div>
+    </div>
+  `;
+
+  const textContent = `
+Devolutiva — Resultados NR-01
+${companyName}
+
+Resumo da avaliação de riscos psicossociais:
+
+- Risco Geral: ${risk.label}
+- Respondentes: ${totalRespondents}
+- Taxa de Resposta: ${responseRate}%
+
+Dimensões críticas: ${criticalDimensions.join(", ") || "Nenhuma"}
+Pontos fortes: ${positiveDimensions.join(", ") || "—"}
+
+O relatório completo está disponível na plataforma BlackBelt.
+
+Black Belt Consultoria
+contato@blackbeltconsultoria.com
+  `.trim();
+
+  return sendEmail({
+    to: companyEmail,
+    subject: `Devolutiva NR-01 — Resultados de ${companyName}`,
+    html,
+    text: textContent,
+  });
+}

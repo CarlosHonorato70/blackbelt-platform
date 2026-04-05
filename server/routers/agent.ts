@@ -2850,8 +2850,12 @@ ${extractHeadcount(input.content) ? `Funcionários informados: ${extractHeadcoun
         .where(eq(agentConversations.id, input.conversationId));
 
       // Scan for alerts and check auto-transitions in the background
-      scanTenantAlerts(ctx.tenantId!, input.companyId).catch(() => {});
-      checkAutoTransitionsAndNotify(targetTenantId).catch(() => {});
+      scanTenantAlerts(ctx.tenantId!, input.companyId).catch((err) => {
+        log.warn("[Agent] Background alert scan failed", { tenantId: ctx.tenantId, error: String(err) });
+      });
+      checkAutoTransitionsAndNotify(targetTenantId).catch((err) => {
+        log.warn("[Agent] Background auto-transition check failed", { tenantId: targetTenantId, error: String(err) });
+      });
 
       return {
         userMessage: { id: userMsgId, role: "user", content: input.content },

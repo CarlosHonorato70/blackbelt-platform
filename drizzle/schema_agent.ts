@@ -16,6 +16,8 @@ export const agentConversations = mysqlTable("agent_conversations", {
   updatedAt: timestamp("updatedAt").defaultNow(),
 }, (table) => [
   index("idx_agent_conv_tenant").on(table.tenantId),
+  index("idx_agent_conv_user").on(table.userId),
+  index("idx_agent_conv_company").on(table.companyId),
 ]);
 
 // Agent messages
@@ -31,6 +33,7 @@ export const agentMessages = mysqlTable("agent_messages", {
   createdAt: timestamp("createdAt").defaultNow(),
 }, (table) => [
   index("idx_agent_msg_conv").on(table.conversationId),
+  index("idx_agent_msg_conv_created").on(table.conversationId, table.createdAt),
 ]);
 
 // Agent executed actions
@@ -49,6 +52,9 @@ export const agentActions = mysqlTable("agent_actions", {
   createdAt: timestamp("createdAt").defaultNow(),
 }, (table) => [
   index("idx_agent_action_tenant").on(table.tenantId),
+  index("idx_agent_action_status").on(table.status),
+  index("idx_agent_action_conv").on(table.conversationId),
+  index("idx_agent_action_tenant_status").on(table.tenantId, table.status, table.createdAt),
 ]);
 
 // Agent proactive alerts
@@ -67,4 +73,5 @@ export const agentAlerts = mysqlTable("agent_alerts", {
 }, (table) => [
   index("idx_agent_alert_tenant").on(table.tenantId),
   index("idx_agent_alert_type").on(table.alertType),
+  index("idx_agent_alert_dismissed").on(table.tenantId, table.dismissed, table.createdAt),
 ]);

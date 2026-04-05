@@ -16,6 +16,7 @@ import {
 } from "../../drizzle/schema_nr01";
 import { agentActions } from "../../drizzle/schema_agent";
 import { log } from "../_core/logger";
+import { sendCertificateEmail, sendDevolutivaEmail } from "../_core/email";
 
 // ============================================================================
 // STEP 2: Create COPSOQ-II Assessment + Simulate Employee Responses (actual headcount)
@@ -935,6 +936,19 @@ export async function executeCompleteChecklist(
       output: { score, certNumber, updated, total },
       startedAt: new Date(), completedAt: new Date(),
     });
+
+    // Send certificate email to the company (fire-and-forget)
+    const tenant = await db.select().from(tenants).where(eq(tenants.id, tenantId)).then(r => r[0]);
+    if (tenant?.contactEmail) {
+      sendCertificateEmail({
+        companyEmail: tenant.contactEmail,
+        companyName: tenant.name || "Empresa",
+        certNumber,
+        complianceScore: score,
+        validUntil,
+        issuedAt: new Date(),
+      }).catch((err) => log.warn("[Certificate] Failed to send certificate email", { error: String(err) }));
+    }
 
     return {
       success: true, score, certNumber,

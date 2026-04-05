@@ -11,8 +11,8 @@ import {
   copsoqReports,
   copsoqInvites,
 } from "../../drizzle/schema_nr01";
-import { subscriptions, plans, copsoqBillingEvents, tenantCredits, creditTransactions, pendingCopsoqPayments } from "../../drizzle/schema";
-import { sendBulkCopsoqInvites, sendEmail } from "../_core/email";
+import { subscriptions, plans, copsoqBillingEvents, tenantCredits, creditTransactions, pendingCopsoqPayments, people, tenants } from "../../drizzle/schema";
+import { sendBulkCopsoqInvites, sendEmail, sendResponseConfirmation, sendDevolutivaEmail } from "../_core/email";
 import { calculateDimensionScores, classifyOverallRisk } from "../_core/copsoqScoring";
 import { log } from "../_core/logger";
 import { updateAsaasSubscriptionValue } from "./asaas";
@@ -129,6 +129,31 @@ export const assessmentsRouter = router({
         overallRiskLevel,
         completedAt: new Date(),
       });
+
+      // Mark the COPSOQ invite as completed (if exists)
+      const invite = await db.select().from(copsoqInvites).where(
+        and(
+          eq(copsoqInvites.assessmentId, input.assessmentId),
+          eq(copsoqInvites.tenantId, ctx.tenantId!),
+        )
+      ).then(rows => rows.find(r => r.status !== "completed"));
+
+      if (invite) {
+        await db.update(copsoqInvites)
+          .set({ status: "completed", completedAt: new Date(), updatedAt: new Date() })
+          .where(eq(copsoqInvites.id, invite.id));
+      }
+
+      // Send response confirmation email (fire-and-forget)
+      const person = await db.select().from(people).where(eq(people.id, input.personId)).then(r => r[0]);
+      const assessment = await db.select().from(copsoqAssessments).where(eq(copsoqAssessments.id, input.assessmentId)).then(r => r[0]);
+      if (person?.email && assessment) {
+        sendResponseConfirmation({
+          respondentEmail: person.email,
+          respondentName: person.name || "Colaborador(a)",
+          assessmentTitle: assessment.title || "Avaliação COPSOQ-II",
+        }).catch((err) => log.warn("[COPSOQ] Failed to send response confirmation", { error: String(err) }));
+      }
 
       return { responseId, overallRiskLevel, scores: dimensionScores };
     }),
@@ -268,6 +293,32 @@ export const assessmentsRouter = router({
         criticalRiskCount,
         generatedAt: new Date(),
       });
+
+      // Send devolutiva email to company (fire-and-forget)
+      const tenant = await db.select().from(tenants).where(eq(tenants.id, ctx.tenantId!)).then(r => r[0]);
+      if (tenant?.contactEmail) {
+        const dimScores: Record<string, number> = {
+          "Demanda de Trabalho": avgDemandScore, "Controle sobre o Trabalho": avgControlScore,
+          "Apoio Social": avgSupportScore, "Liderança": avgLeadershipScore,
+          "Comunidade": avgCommunityScore, "Significado": avgMeaningScore,
+          "Confiança": avgTrustScore, "Justiça": avgJusticeScore,
+          "Insegurança": avgInsecurityScore, "Saúde Mental": avgMentalHealthScore,
+          "Burnout": avgBurnoutScore, "Violência": avgViolenceScore,
+        };
+        const criticalDims = Object.entries(dimScores).filter(([, v]) => v >= 70).map(([k]) => k);
+        const positiveDims = Object.entries(dimScores).filter(([, v]) => v <= 30).map(([k]) => k);
+        const majorRisk = criticalRiskCount > 0 ? "critical" : highRiskCount > 0 ? "high" : mediumRiskCount > 0 ? "medium" : "low";
+
+        sendDevolutivaEmail({
+          companyEmail: tenant.contactEmail,
+          companyName: tenant.name || "Empresa",
+          overallRisk: majorRisk,
+          totalRespondents,
+          responseRate: 100,
+          criticalDimensions: criticalDims,
+          positiveDimensions: positiveDims,
+        }).catch((err) => log.warn("[Devolutiva] Failed to send devolutiva email", { error: String(err) }));
+      }
 
       return { reportId };
     }),
