@@ -6,11 +6,20 @@ import {
   BookOpen,
   MessageCircle,
   FileText,
-  Video,
   Mail,
   Phone,
+  Download,
+  Loader2,
+  Brain,
+  Shield,
+  ClipboardCheck,
+  BarChart3,
+  FileCheck,
+  Users,
+  HeadphonesIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -31,179 +40,152 @@ interface GuideItem {
 
 const guideItems: GuideItem[] = [
   {
-    id: "dashboard",
-    title: "Dashboard",
-    description: "Visão geral da plataforma",
-    icon: <BookOpen className="w-5 h-5" />,
-    content: `O Dashboard é a página inicial da plataforma onde você pode visualizar:
+    id: "samurai",
+    title: "SamurAI — Agente de IA",
+    description: "Conduza todo o processo NR-01 com inteligência artificial",
+    icon: <Brain className="w-5 h-5" />,
+    content: `O SamurAI é o agente de IA que guia você por 10 fases automatizadas:
 
-• **KPIs Principais**: Empresas atendidas, colaboradores cadastrados, avaliações NR-01 e programas ativos
-• **Serviços Oferecidos**: Cards com descrição dos 4 principais serviços da Black Belt
-• **Conformidade NR-01**: Informações sobre a Portaria MTE nº 1.419/2024
-• **Filosofia Black Belt**: Dados dos fundadores e metodologia
+1. Onboarding — Cadastro da empresa (CNPJ automático)
+2. Diagnóstico — Análise do perfil e estratégia
+3. Configuração — Personalização da metodologia COPSOQ
+4. Avaliação — Aplicação do COPSOQ-II (76 questões)
+5. Análise — Identificação de dimensões críticas por IA
+6. Inventário — Riscos psicossociais (13 tipos MTE)
+7. Plano de Ação — Medidas com hierarquia de controles
+8. Treinamento — Programas de capacitação
+9. Documentação — PGR, PCMSO, laudos e relatórios
+10. Certificação — Certificado NR-01 (score >= 80%)
 
-Use o Dashboard como ponto de partida para navegar pela plataforma.`,
-  },
-  {
-    id: "empresas",
-    title: "Gestão de Empresas",
-    description: "Cadastre e gerencie empresas clientes",
-    icon: <BookOpen className="w-5 h-5" />,
-    content: `Na seção Empresas você pode:
-
-• **Listar Empresas**: Visualize todas as empresas cadastradas
-• **Criar Nova Empresa**: Clique em "Nova Empresa" e preencha os dados
-• **Buscar**: Use o campo de busca para encontrar por nome ou CNPJ
-• **Filtrar**: Use o dropdown de status (Ativo, Inativo, Suspenso)
-• **Editar/Deletar**: Clique no menu de ações (3 pontos) para editar ou deletar
-
-Campos obrigatórios: Nome da empresa e CNPJ`,
+Como usar: Menu > SamurAI > Informe o CNPJ e siga as orientações.`,
   },
   {
     id: "avaliacoes",
-    title: "Avaliações NR-01",
-    description: "Crie e gerencie avaliações de riscos",
-    icon: <BookOpen className="w-5 h-5" />,
-    content: `As Avaliações NR-01 permitem:
+    title: "Avaliações de Riscos NR-01",
+    description: "Inventário de riscos psicossociais com classificação GRO",
+    icon: <Shield className="w-5 h-5" />,
+    content: `O módulo de avaliações cria inventários de riscos conforme §1.5.7 da NR-01:
 
-• **Listar Avaliações**: Veja todas as avaliações cadastradas
-• **Criar Avaliação**: Clique em "Nova Avaliação" para iniciar
-• **Preencher Formulário**: Complete todos os campos obrigatórios
-• **Definir Riscos**: Selecione fatores de risco e sua probabilidade/gravidade
-• **Gerar Plano de Ação**: Crie ações para mitigar riscos identificados
-• **Exportar**: Exporte em JSON, Excel ou Texto
+• 13 tipos de perigos psicossociais (classificação MTE)
+• Matriz de risco 5x5 (severidade x probabilidade)
+• 5 categorias GRO: Trivial, Tolerável, Moderado, Substancial, Intolerável
+• Controles existentes e recomendados
+• Geração automática via SamurAI ou manual
 
-Status: Rascunho, Em Andamento, Concluída
-Nível de Risco: Baixo, Médio, Alto, Crítico`,
+Acesse: Menu > Inventário de Riscos`,
   },
   {
-    id: "relatorios",
-    title: "Relatórios Compliance",
-    description: "Gere relatórios de conformidade",
+    id: "copsoq",
+    title: "COPSOQ-II — Questionário Psicossocial",
+    description: "76 questões em 12 dimensões psicossociais",
+    icon: <ClipboardCheck className="w-5 h-5" />,
+    content: `O COPSOQ-II avalia 12 dimensões psicossociais:
+
+• Exigências Quantitativas e Cognitivas
+• Ritmo e Exigências Emocionais
+• Influência e Desenvolvimento Profissional
+• Significado e Compromisso com o Trabalho
+• Previsibilidade e Transparência
+• Apoio Social e Comunidade
+
+Os colaboradores respondem por link anônimo (email).
+Após 70% de adesão, a análise é gerada automaticamente.`,
+  },
+  {
+    id: "dashboard",
+    title: "Dashboard Psicossocial",
+    description: "Visualização consolidada dos resultados",
+    icon: <BarChart3 className="w-5 h-5" />,
+    content: `O Dashboard oferece visão consolidada das avaliações:
+
+• Gráfico radar por dimensão psicossocial
+• Segmentação por setor e demografia
+• Tendências multi-ciclo (evolução ao longo do tempo)
+• Benchmarks setoriais (burnout, assédio, afastamentos)
+• Pesquisas de clima: EACT, ITRA, QVT-Walton
+
+Acesse: Menu > Indicadores`,
+  },
+  {
+    id: "documentos",
+    title: "Documentos e PDFs",
+    description: "20+ documentos com assinatura digital ICP-Brasil",
     icon: <FileText className="w-5 h-5" />,
-    content: `Os Relatórios Compliance incluem:
+    content: `A plataforma gera 20+ tipos de PDF com assinatura digital:
 
-• **Relatórios Automáticos**: Gerados a partir das avaliações NR-01
-• **Conformidade Legal**: Verificação com Portaria MTE nº 1.419/2024
-• **Recomendações**: Sugestões para melhorias
-• **Histórico**: Acompanhe relatórios anteriores
-• **Exportar**: Exporte em PDF, Excel ou Word
+• Relatório COPSOQ-II (análise das 12 dimensões)
+• Inventário de Riscos (perigos com classificação GRO)
+• Plano de Ação (medidas com cronograma)
+• PGR Consolidado e Relatório GRO
+• PCMSO Integrado (recomendações médicas)
+• Laudo Técnico de Riscos Psicossociais
+• Certificado de Conformidade NR-01
+• Propostas Comerciais
+• Relatórios de Clima (EACT, ITRA, QVT)
 
-Use relatórios para apresentar à gestão e órgãos reguladores.`,
-  },
-  {
-    id: "usuarios",
-    title: "Convites de Usuários",
-    description: "Convide novos usuários para a plataforma",
-    icon: <BookOpen className="w-5 h-5" />,
-    content: `Para convidar novos usuários:
-
-• **Criar Convite**: Clique em "Novo Convite"
-• **Email**: Insira o email do usuário
-• **Perfil**: Selecione o perfil (Admin, Consultor, Visualizador)
-• **Expiração**: Defina quantos dias o convite é válido
-• **Enviar**: O usuário receberá um email com link de aceitação
-
-O convite expira automaticamente após o período definido.`,
-  },
-  {
-    id: "perfis",
-    title: "Perfis e Permissões",
-    description: "Configure controle de acesso",
-    icon: <BookOpen className="w-5 h-5" />,
-    content: `Gerencie perfis e permissões:
-
-• **Perfis**: Admin, Consultor, Visualizador, Customizado
-• **Permissões**: Defina quem pode fazer o quê
-• **Roles**: Associe usuários a perfis
-• **Escopo**: Global ou por empresa (tenant)
-
-Exemplo de permissões:
-- Admin: Acesso total
-- Consultor: Criar/editar avaliações
-- Visualizador: Apenas leitura`,
-  },
-  {
-    id: "auditoria",
-    title: "Auditoria",
-    description: "Acompanhe todas as ações na plataforma",
-    icon: <BookOpen className="w-5 h-5" />,
-    content: `A Auditoria registra:
-
-• **Quem**: Qual usuário realizou a ação
-• **O Quê**: Qual ação foi realizada (criar, editar, deletar)
-• **Quando**: Data e hora exata
-• **Onde**: Qual recurso foi afetado
-• **Valores**: Antes e depois da mudança
-
-Use auditoria para rastreabilidade e conformidade LGPD.`,
-  },
-  {
-    id: "exportacao",
-    title: "Exportação LGPD",
-    description: "Exporte dados para conformidade LGPD",
-    icon: <BookOpen className="w-5 h-5" />,
-    content: `A Exportação LGPD permite:
-
-• **Solicitar Dados**: Crie uma solicitação de acesso aos dados
-• **Formato**: JSON, CSV ou XML
-• **Incluir**: Dados pessoais, histórico, auditoria
-• **Download**: Baixe os dados em arquivo compactado
-• **Deletar**: Solicite a exclusão de dados (direito ao esquecimento)
-
-Conforme Lei Geral de Proteção de Dados (LGPD).`,
+Todos assinados digitalmente com certificado A1.`,
   },
   {
     id: "certificacoes",
-    title: "Certificações e Assinatura Digital",
-    description: "Gerencie certificados profissionais e configure assinatura digital A1/ICP-Brasil",
-    icon: <FileText className="w-5 h-5" />,
-    content: `A seção Certificações Profissionais permite gerenciar documentos e ativar assinatura digital:
+    title: "Assinatura Digital (3 passos)",
+    description: "Configure a assinatura ICP-Brasil em 1 minuto",
+    icon: <FileCheck className="w-5 h-5" />,
+    content: `Para ativar a assinatura digital nos PDFs:
 
-**Upload de Certificações:**
-• **Tipos aceitos**: CRP, CREA, CRM, ISO 45001, ISO 9001, NR, MBA, Especializações e Certificado Digital A1
-• **Formatos**: PDF, JPG, PNG, P12/PFX (máx. 10MB)
-• **Campos**: Nome, tipo, registro, emissor, validade e observações
-• **Alertas**: Notificação automática para certificados vencidos ou a vencer (30 dias)
+1. Acesse Menu > Certificações > Nova Certificação
+2. Arraste seu arquivo .p12 ou .pfx (certificado A1)
+3. Informe a senha e clique "Ativar Assinatura Digital"
 
-**Assinatura Digital com Certificado A1 (ICP-Brasil):**
-• **Upload do .p12**: Selecione o arquivo .p12 ou .pfx do certificado A1
-• **Senha**: Informe a senha do certificado (armazenada com criptografia AES-256-GCM)
-• **Validação automática**: A plataforma valida o certificado (senha, chave privada, validade)
-• **Extração**: Nome da organização (CN) e data de validade são extraídos automaticamente
-• **Ativação**: O certificado é configurado como certificado de assinatura ativa
-• **Assinatura automática**: Todos os PDFs NR-01 gerados passam a ser assinados digitalmente
+O sistema extrai automaticamente nome, emissor e validade.
+Todos os PDFs passam a ter assinatura ICP-Brasil.
+Padrão: adbe.pkcs7.detached (Adobe Reader compatível).
 
-**Como ativar:**
-1. Acesse Menu > Certificações Profissionais
-2. Clique em "Nova Certificação"
-3. Selecione seu arquivo .p12 (certificado A1)
-4. Preencha a senha do certificado
-5. Clique em "Enviar Certificação"
-6. O badge "Assinatura Digital" confirma a ativação
-
-**Padrão da assinatura**: adbe.pkcs7.detached (compatível com Adobe Reader e validadores ICP-Brasil)
-
-**Observações:**
-• Cada consultoria pode ter apenas um certificado de assinatura ativo por vez
-• Ao enviar um novo .p12, o anterior é desativado automaticamente
-• Se a consultoria não tiver certificado A1, os PDFs são assinados com o certificado global da plataforma`,
+Certificados profissionais (CRP, CREA, CRM) também podem ser cadastrados.`,
   },
   {
-    id: "precificacao",
-    title: "Sistema de Precificação",
-    description: "Crie propostas comerciais",
+    id: "esocial",
+    title: "eSocial e Integrações",
+    description: "XMLs S-2210, S-2220, S-2240 e integração PGR/PCMSO",
     icon: <BookOpen className="w-5 h-5" />,
-    content: `O Sistema de Precificação permite:
+    content: `Módulo eSocial para eventos SST:
 
-• **Clientes**: Cadastre clientes para propostas
-• **Serviços**: Defina serviços e valores
-• **Propostas**: Crie propostas comerciais
-• **Cálculo**: Hora técnica com 4 regimes tributários
-• **Desconto**: Aplique descontos e impostos
-• **Exportar**: Exporte proposta em PDF
+• S-2210: Comunicação de Acidente de Trabalho (CAT)
+• S-2220: Monitoramento da Saúde (ASO)
+• S-2240: Condições Ambientais — Agentes Nocivos
 
-Regimes: MEI, Simples Nacional, Lucro Presumido, Autônomo`,
+Integração PGR/PCMSO: vincule riscos psicossociais aos programas de saúde ocupacional com recomendações médicas e exames ASO.
+
+Acesse: Menu > Exportação eSocial`,
+  },
+  {
+    id: "usuarios",
+    title: "Gestão de Usuários e Acessos",
+    description: "Convites, perfis e permissões RBAC",
+    icon: <Users className="w-5 h-5" />,
+    content: `4 perfis de acesso com RBAC granular:
+
+• Admin: Acesso total, gestão de tenants
+• Consultor: Empresas, avaliações, propostas, documentos
+• Admin da Empresa: Visualiza dados da própria empresa
+• Visualizador: Somente leitura
+
+Convide usuários por email com perfil e prazo definidos.
+Auditoria registra todas as ações com rastreabilidade LGPD.`,
+  },
+  {
+    id: "suporte",
+    title: "Suporte e Canal de Denúncia",
+    description: "Chatbot IA, tickets e canal anônimo",
+    icon: <HeadphonesIcon className="w-5 h-5" />,
+    content: `Canais de suporte disponíveis:
+
+• Suporte IA: Chatbot com base de conhecimento NR-01
+• Tickets: Sistema de suporte com acompanhamento
+• Canal de Denúncia: Reporte anônimo de assédio/discriminação
+  - Colaboradores recebem código para acompanhar
+  - Consultores gerenciam no painel dedicado
+
+Acesse: Menu > Suporte IA ou Ajuda`,
   },
 ];
 
@@ -289,22 +271,72 @@ const contactInfo = [
 export default function Help() {
   const navigate = useNavigate();
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadGuide = async () => {
+    setDownloading(true);
+    try {
+      const res = await fetch("/api/user-guide/download", { credentials: "include" });
+      if (!res.ok) throw new Error("Erro ao gerar PDF");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Guia_de_Uso_BlackBelt_Platform.pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Guia baixado com sucesso!");
+    } catch {
+      toast.error("Erro ao baixar o guia. Tente novamente.");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <DashboardLayout>
       <div className="space-y-8">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Ajuda e Suporte</h1>
-            <p className="text-muted-foreground">
-              Guia rápido e recursos para ajudá-lo a usar a plataforma Black Belt
-            </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold">Ajuda e Suporte</h1>
+              <p className="text-muted-foreground">
+                Guia rápido e recursos para ajudá-lo a usar a plataforma
+              </p>
+            </div>
           </div>
+          <Button onClick={handleDownloadGuide} disabled={downloading} size="lg">
+            {downloading ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Gerando PDF...</>
+            ) : (
+              <><Download className="h-4 w-4 mr-2" />Baixar Guia Completo</>
+            )}
+          </Button>
         </div>
+
+        {/* Download Card */}
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="flex items-center justify-between py-4">
+            <div className="flex items-center gap-3">
+              <FileText className="h-8 w-8 text-primary" />
+              <div>
+                <p className="font-semibold">Guia de Uso Completo — PDF</p>
+                <p className="text-sm text-muted-foreground">
+                  Manual com 17 seções: SamurAI, COPSOQ-II, avaliações, documentos, assinatura digital e mais.
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" onClick={handleDownloadGuide} disabled={downloading}>
+              {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* Tabs */}
         <Tabs defaultValue="guide" className="w-full">
