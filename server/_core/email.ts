@@ -1311,3 +1311,195 @@ contato@blackbeltconsultoria.com
     text: textContent,
   });
 }
+
+// ============================================================================
+// PHASE 5 (ANÁLISE): Devolutiva agregada para colaboradores
+// ============================================================================
+
+/**
+ * Envia email de devolutiva com resultados AGREGADOS para um colaborador.
+ * Não inclui dados individuais — apenas o panorama geral da empresa,
+ * conforme exigência NR-01 e LGPD (anonimato).
+ */
+export async function sendEmployeeDevolutivaEmail(params: {
+  respondentEmail: string;
+  respondentName: string;
+  companyName: string;
+  assessmentTitle: string;
+  overallRisk: string;
+  totalRespondents: number;
+  responseRate: number;
+  criticalDimensions: string[];
+  positiveDimensions: string[];
+  actionPlanSummary?: string;
+}): Promise<boolean> {
+  const {
+    respondentEmail, respondentName, companyName, assessmentTitle,
+    overallRisk, totalRespondents, responseRate,
+    criticalDimensions, positiveDimensions, actionPlanSummary,
+  } = params;
+
+  const riskColorMap: Record<string, { bg: string; text: string; label: string; icon: string }> = {
+    low: { bg: "#f0fdf4", text: "#166534", label: "Baixo", icon: "✅" },
+    medium: { bg: "#fefce8", text: "#854d0e", label: "Moderado", icon: "⚠️" },
+    high: { bg: "#fef2f2", text: "#991b1b", label: "Alto", icon: "🔴" },
+    critical: { bg: "#fef2f2", text: "#7f1d1d", label: "Crítico", icon: "🚨" },
+  };
+  const risk = riskColorMap[overallRisk] || riskColorMap.medium;
+
+  const criticalHtml = criticalDimensions.length > 0
+    ? criticalDimensions.map(d => `<li style="padding: 4px 0; color: #991b1b;">${escapeHtml(d)}</li>`).join("")
+    : `<li style="padding: 4px 0; color: #666;">Nenhuma dimensão em nível crítico</li>`;
+
+  const positiveHtml = positiveDimensions.length > 0
+    ? positiveDimensions.map(d => `<li style="padding: 4px 0; color: #166534;">${escapeHtml(d)}</li>`).join("")
+    : `<li style="padding: 4px 0; color: #666;">—</li>`;
+
+  const actionPlanBlock = actionPlanSummary
+    ? `<div style="background: #eff6ff; padding: 20px; border-left: 4px solid #3b82f6; margin: 25px 0; border-radius: 6px;">
+        <h3 style="margin: 0 0 10px; color: #1e40af; font-size: 16px;">Ações Planejadas pela Empresa</h3>
+        <p style="margin: 0; font-size: 14px; color: #1e3a5f;">${escapeHtml(actionPlanSummary).replace(/\n/g, "<br>")}</p>
+      </div>`
+    : "";
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #1e3a5f 0%, #3b82f6 100%); color: white; padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 24px;">Devolutiva — Resultados da Pesquisa</h1>
+        <p style="margin: 10px 0 0; font-size: 16px; opacity: 0.9;">${escapeHtml(companyName)}</p>
+      </div>
+
+      <div style="background: white; padding: 40px 20px; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="margin: 0 0 20px 0; font-size: 16px;">
+          Olá <strong>${escapeHtml(respondentName)}</strong>,
+        </p>
+
+        <p style="margin: 0 0 15px 0; font-size: 14px; color: #666;">
+          Agradecemos sua participação na avaliação <strong>"${escapeHtml(assessmentTitle)}"</strong>.
+          Conforme compromisso de transparência, compartilhamos os resultados <strong>agregados</strong> da pesquisa.
+        </p>
+
+        <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0; font-size: 13px; color: #6b7280; border: 1px dashed #d1d5db;">
+          <strong>Nota sobre privacidade:</strong> Os resultados abaixo são <strong>coletivos</strong>.
+          Suas respostas individuais permanecem <strong>anônimas e confidenciais</strong>, conforme a LGPD.
+        </div>
+
+        <div style="display: flex; gap: 12px; margin: 25px 0; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 130px; background: ${risk.bg}; border-radius: 8px; padding: 18px; text-align: center;">
+            <p style="margin: 0; font-size: 11px; color: ${risk.text}; text-transform: uppercase; letter-spacing: 0.5px;">Risco Geral</p>
+            <p style="margin: 5px 0 0; font-size: 22px; font-weight: bold; color: ${risk.text};">${risk.icon} ${risk.label}</p>
+          </div>
+          <div style="flex: 1; min-width: 130px; background: #eff6ff; border-radius: 8px; padding: 18px; text-align: center;">
+            <p style="margin: 0; font-size: 11px; color: #1e40af; text-transform: uppercase; letter-spacing: 0.5px;">Participantes</p>
+            <p style="margin: 5px 0 0; font-size: 22px; font-weight: bold; color: #1e40af;">${totalRespondents}</p>
+          </div>
+          <div style="flex: 1; min-width: 130px; background: #f5f3ff; border-radius: 8px; padding: 18px; text-align: center;">
+            <p style="margin: 0; font-size: 11px; color: #6d28d9; text-transform: uppercase; letter-spacing: 0.5px;">Taxa de Adesão</p>
+            <p style="margin: 5px 0 0; font-size: 22px; font-weight: bold; color: #6d28d9;">${responseRate}%</p>
+          </div>
+        </div>
+
+        <h3 style="color: #991b1b; margin: 25px 0 8px; font-size: 15px;">Dimensões que Requerem Atenção:</h3>
+        <ul style="line-height: 1.8; font-size: 14px; margin: 0; padding-left: 20px;">${criticalHtml}</ul>
+
+        <h3 style="color: #166534; margin: 25px 0 8px; font-size: 15px;">Pontos Fortes Identificados:</h3>
+        <ul style="line-height: 1.8; font-size: 14px; margin: 0; padding-left: 20px;">${positiveHtml}</ul>
+
+        ${actionPlanBlock}
+
+        <div style="background: #f0fdf4; padding: 20px; border-left: 4px solid #10b981; margin: 25px 0; border-radius: 6px;">
+          <p style="margin: 0; font-size: 14px; color: #065f46;">
+            <strong>Sua participação faz a diferença!</strong> Com base nesses resultados, a empresa implementará
+            medidas para melhorar o ambiente de trabalho. Caso precise de suporte, procure o RH ou o canal de denúncias confidencial.
+          </p>
+        </div>
+      </div>
+
+      <div style="background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; text-align: center;">
+        <p style="margin: 0; font-size: 12px; color: #666;">
+          ${escapeHtml(companyName)} | Pesquisa de Riscos Psicossociais — NR-01<br>
+          <span style="color: #9ca3af;">Enviado pela plataforma BlackBelt Consultoria</span>
+        </p>
+      </div>
+    </div>
+  `;
+
+  const textContent = `
+Devolutiva — Resultados da Pesquisa
+${companyName}
+
+Olá ${respondentName},
+
+Agradecemos sua participação na avaliação "${assessmentTitle}".
+
+RESULTADOS AGREGADOS (suas respostas individuais são anônimas):
+
+- Risco Geral: ${risk.label}
+- Participantes: ${totalRespondents}
+- Taxa de Adesão: ${responseRate}%
+
+Dimensões críticas: ${criticalDimensions.join(", ") || "Nenhuma"}
+Pontos fortes: ${positiveDimensions.join(", ") || "—"}
+
+${actionPlanSummary ? `Ações planejadas: ${actionPlanSummary}` : ""}
+
+Sua participação faz a diferença! A empresa implementará medidas com base nesses resultados.
+
+${companyName} — Pesquisa NR-01
+  `.trim();
+
+  return sendEmail({
+    to: respondentEmail,
+    subject: `Resultados da Pesquisa NR-01 — ${companyName}`,
+    html,
+    text: textContent,
+  });
+}
+
+/**
+ * Envia devolutiva em lote para todos os colaboradores que responderam.
+ * Mesma lógica de batching do COPSOQ invites (5 por batch, 500ms delay).
+ */
+export async function sendBulkEmployeeDevolutiva(
+  respondents: Array<{ email: string; name: string }>,
+  sharedData: {
+    companyName: string;
+    assessmentTitle: string;
+    overallRisk: string;
+    totalRespondents: number;
+    responseRate: number;
+    criticalDimensions: string[];
+    positiveDimensions: string[];
+    actionPlanSummary?: string;
+  }
+): Promise<{ success: number; failed: number }> {
+  let success = 0;
+  let failed = 0;
+  const BATCH_SIZE = 5;
+
+  for (let i = 0; i < respondents.length; i += BATCH_SIZE) {
+    const batch = respondents.slice(i, i + BATCH_SIZE);
+
+    const results = await Promise.allSettled(
+      batch.map((r) =>
+        sendEmployeeDevolutivaEmail({
+          respondentEmail: r.email,
+          respondentName: r.name || "Colaborador(a)",
+          ...sharedData,
+        })
+      )
+    );
+
+    for (const result of results) {
+      if (result.status === "fulfilled" && result.value) success++;
+      else failed++;
+    }
+
+    if (i + BATCH_SIZE < respondents.length) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  }
+
+  log.info(`[Devolutiva] Bulk employee devolutiva: ${success} sent, ${failed} failed`);
+  return { success, failed };
+}

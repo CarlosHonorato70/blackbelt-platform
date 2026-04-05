@@ -12,7 +12,7 @@ import {
   copsoqInvites,
 } from "../../drizzle/schema_nr01";
 import { subscriptions, plans, copsoqBillingEvents, tenantCredits, creditTransactions, pendingCopsoqPayments, people, tenants } from "../../drizzle/schema";
-import { sendBulkCopsoqInvites, sendEmail, sendResponseConfirmation, sendDevolutivaEmail } from "../_core/email";
+import { sendBulkCopsoqInvites, sendEmail, sendResponseConfirmation, sendDevolutivaEmail, sendBulkEmployeeDevolutiva } from "../_core/email";
 import { calculateDimensionScores, classifyOverallRisk } from "../_core/copsoqScoring";
 import { log } from "../_core/logger";
 import { updateAsaasSubscriptionValue } from "./asaas";
@@ -317,7 +317,36 @@ export const assessmentsRouter = router({
           responseRate: 100,
           criticalDimensions: criticalDims,
           positiveDimensions: positiveDims,
-        }).catch((err) => log.warn("[Devolutiva] Failed to send devolutiva email", { error: String(err) }));
+        }).catch((err) => log.warn("[Devolutiva] Failed to send devolutiva email to company", { error: String(err) }));
+
+        // Send aggregated devolutiva to all employees who responded (NR-01 requirement)
+        const respondentPeople = await db
+          .select({ email: people.email, name: people.name })
+          .from(copsoqResponses)
+          .innerJoin(people, eq(copsoqResponses.personId, people.id))
+          .where(and(
+            eq(copsoqResponses.assessmentId, input.assessmentId),
+            eq(copsoqResponses.tenantId, ctx.tenantId!),
+          ));
+
+        const respondentsWithEmail = respondentPeople.filter(r => r.email);
+        if (respondentsWithEmail.length > 0) {
+          const assessment = await db.select().from(copsoqAssessments)
+            .where(eq(copsoqAssessments.id, input.assessmentId)).then(r => r[0]);
+
+          sendBulkEmployeeDevolutiva(
+            respondentsWithEmail.map(r => ({ email: r.email!, name: r.name || "Colaborador(a)" })),
+            {
+              companyName: tenant.name || "Empresa",
+              assessmentTitle: assessment?.title || "Avaliação COPSOQ-II",
+              overallRisk: majorRisk,
+              totalRespondents,
+              responseRate: 100,
+              criticalDimensions: criticalDims,
+              positiveDimensions: positiveDims,
+            }
+          ).catch((err) => log.warn("[Devolutiva] Failed to send employee devolutiva", { error: String(err) }));
+        }
       }
 
       return { reportId };

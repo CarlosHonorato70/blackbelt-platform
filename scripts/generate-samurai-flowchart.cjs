@@ -95,17 +95,20 @@ const phases = [
   {
     num: 5,
     name: "ANALISE",
-    title: "Analise por IA",
+    title: "Analise por IA e Devolutiva",
     color: "DC143C",
     steps: [
       "IA (Gemini 2.5 Flash) processa todas as respostas",
       "Calcula scores das 12 dimensoes psicossociais",
-      "Identifica dimensoes criticas (score < 30)",
+      "Identifica dimensoes criticas (score >= 70)",
       "Gera relatorio com recomendacoes priorizadas",
-      "Fallback: analise baseada em regras se IA indisponivel",
+      "Envia devolutiva agregada p/ empresa e colaboradores",
     ],
-    emails: [],
-    output: "Relatorio COPSOQ-II com analise dimensional",
+    emails: [
+      { from: "Sistema", to: "Empresa", desc: "Devolutiva com resultados agregados, dimensoes criticas e pontos fortes" },
+      { from: "Sistema", to: "Colaboradores", desc: "Devolutiva coletiva (anonima) com panorama geral e acoes planejadas (NR-01/LGPD)" },
+    ],
+    output: "Relatorio COPSOQ-II + devolutiva enviada",
     trigger: ">= 70% de respostas recebidas",
   },
   {
