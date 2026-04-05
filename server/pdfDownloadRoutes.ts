@@ -32,7 +32,7 @@ import {
   trainingModules,
   trainingProgress,
 } from "../drizzle/schema_nr01";
-import { tenants, proposals, proposalItems, people } from "../drizzle/schema";
+import { tenants, proposals, proposalPayments, proposalItems, people } from "../drizzle/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 
 const branding: PdfBranding = { companyName: "Black Belt Platform", primaryColor: "#1a365d" };
@@ -785,11 +785,14 @@ export function registerPdfDownloadRoutes(app: Express) {
         return res.status(403).json({ error: "Sem permissão para acessar esta empresa" });
       }
 
-      // Payment check: company users can only download if payment is complete
+      // Payment check: company users can only download if proposal approved + 1st installment (40%) paid
       // Consultants (parent tenant) always have access
       const isCompanyUser = auth.tenantId === companyId;
       if (isCompanyUser && type !== "proposta") {
-        const [finalProposal] = await db.select({ paymentStatus: proposals.paymentStatus })
+        const [finalProposal] = await db.select({
+          id: proposals.id,
+          paymentStatus: proposals.paymentStatus,
+        })
           .from(proposals)
           .where(and(
             eq(proposals.clientId, companyId),
@@ -799,12 +802,32 @@ export function registerPdfDownloadRoutes(app: Express) {
           .orderBy(desc(proposals.createdAt))
           .limit(1);
 
-        if (finalProposal && finalProposal.paymentStatus !== "paid") {
-          return res.status(402).json({
-            error: "Aguardando confirmação de pagamento",
-            paymentStatus: finalProposal.paymentStatus || "pending",
-            message: "Os documentos serão liberados após a confirmação do pagamento pela consultoria.",
+        if (!finalProposal) {
+          return res.status(403).json({
+            error: "Proposta final não aprovada",
+            message: "Os documentos NR-01 serão liberados após a aprovação da proposta final.",
           });
+        }
+
+        // If not fully paid, check if 1st installment (40%) is paid
+        if (finalProposal.paymentStatus !== "paid") {
+          const [firstInstallment] = await db.select({
+            status: proposalPayments.status,
+          })
+            .from(proposalPayments)
+            .where(and(
+              eq(proposalPayments.proposalId, finalProposal.id),
+              eq(proposalPayments.installment, 1)
+            ))
+            .limit(1);
+
+          if (!firstInstallment || firstInstallment.status !== "paid") {
+            return res.status(402).json({
+              error: "Aguardando pagamento da 1ª parcela",
+              paymentStatus: finalProposal.paymentStatus || "pending",
+              message: "Os documentos serão liberados após o pagamento da 1ª parcela (40%).",
+            });
+          }
         }
       }
 

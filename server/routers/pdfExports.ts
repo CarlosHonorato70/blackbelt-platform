@@ -34,6 +34,7 @@ import {
   sendAssessmentEmail,
   isEmailConfigured,
 } from "../_core/emailService";
+import { requirePdfAccess } from "../_core/pdfAccessGuard";
 
 // Validation schemas
 const pdfBrandingSchema = z.object({
@@ -395,6 +396,7 @@ export const pdfExportsRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
       if (!ctx.user?.tenantId) throw new TRPCError({ code: "UNAUTHORIZED", message: "Tenant ID required" });
+      await requirePdfAccess(ctx.user.tenantId, db);
 
       // Fetch tenant info
       const [tenant] = await db
@@ -546,6 +548,7 @@ export const pdfExportsRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
       if (!ctx.user?.tenantId) throw new TRPCError({ code: "UNAUTHORIZED", message: "Tenant ID required" });
+      await requirePdfAccess(ctx.user.tenantId, db);
 
       // Fetch tenant info
       const [tenant] = await db

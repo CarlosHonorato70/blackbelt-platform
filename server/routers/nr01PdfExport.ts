@@ -37,6 +37,7 @@ import {
 import { tenants } from "../../drizzle/schema";
 import { interventionPrograms } from "../../drizzle/schema_nr01";
 import { eq, and, desc, sql } from "drizzle-orm";
+import { requirePdfAccess } from "../_core/pdfAccessGuard";
 
 const SEVERITY_LABELS: Record<string, string> = { low: "Leve", medium: "Moderada", high: "Grave", critical: "Gravíssima" };
 const PROBABILITY_LABELS: Record<string, string> = { rare: "Rara", unlikely: "Improvável", possible: "Possível", likely: "Provável", certain: "Certa" };
@@ -67,6 +68,7 @@ export const nr01PdfExportRouter = router({
     .input(z.object({ tenantId: z.string().optional(), assessmentId: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
+      await requirePdfAccess(ctx.tenantId!, db);
       const assessments = await db.select().from(riskAssessments)
         .where(input.assessmentId
           ? and(eq(riskAssessments.tenantId, ctx.tenantId!), eq(riskAssessments.id, input.assessmentId))
@@ -126,6 +128,7 @@ export const nr01PdfExportRouter = router({
     .input(z.object({ tenantId: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
+      await requirePdfAccess(ctx.tenantId!, db);
       const recs = await db.select().from(pcmsoRecommendations)
         .where(eq(pcmsoRecommendations.tenantId, ctx.tenantId!));
 
@@ -158,6 +161,7 @@ export const nr01PdfExportRouter = router({
     .input(z.object({ tenantId: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
+      await requirePdfAccess(ctx.tenantId!, db);
       const [report] = await db.select().from(copsoqReports)
         .where(eq(copsoqReports.tenantId, ctx.tenantId!))
         .orderBy(desc(copsoqReports.generatedAt)).limit(1);
@@ -221,6 +225,7 @@ export const nr01PdfExportRouter = router({
     .input(z.object({ tenantId: z.string().optional(), periods: z.number().default(6) }))
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
+      await requirePdfAccess(ctx.tenantId!, db);
       const reports = await db.select().from(copsoqReports)
         .where(eq(copsoqReports.tenantId, ctx.tenantId!))
         .orderBy(desc(copsoqReports.generatedAt)).limit(input.periods);
@@ -264,6 +269,7 @@ export const nr01PdfExportRouter = router({
     .input(z.object({ tenantId: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
+      await requirePdfAccess(ctx.tenantId!, db);
       const [params] = await db.select().from(financialParameters)
         .where(eq(financialParameters.tenantId, ctx.tenantId!)).limit(1);
 
@@ -336,6 +342,7 @@ export const nr01PdfExportRouter = router({
     .input(z.object({ tenantId: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
+      await requirePdfAccess(ctx.tenantId!, db);
       const milestones = await db.select().from(complianceMilestones)
         .where(eq(complianceMilestones.tenantId, ctx.tenantId!))
         .orderBy(complianceMilestones.order);
@@ -381,6 +388,7 @@ export const nr01PdfExportRouter = router({
     .input(z.object({ tenantId: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
+      await requirePdfAccess(ctx.tenantId!, db);
       const items = await db.select().from(complianceChecklist)
         .where(eq(complianceChecklist.tenantId, ctx.tenantId!));
 
@@ -426,6 +434,7 @@ export const nr01PdfExportRouter = router({
     .input(z.object({ tenantId: z.string().optional(), certificateId: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
+      await requirePdfAccess(ctx.tenantId!, db);
       const certs = await db.select().from(complianceCertificates)
         .where(input.certificateId
           ? and(eq(complianceCertificates.tenantId, ctx.tenantId!), eq(complianceCertificates.id, input.certificateId))
@@ -488,6 +497,7 @@ export const nr01PdfExportRouter = router({
     .input(z.object({ tenantId: z.string().optional(), documentId: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
+      await requirePdfAccess(ctx.tenantId!, db);
       const docs = await db.select().from(complianceDocuments)
         .where(input.documentId
           ? and(eq(complianceDocuments.tenantId, ctx.tenantId!), eq(complianceDocuments.id, input.documentId))
@@ -550,6 +560,7 @@ export const nr01PdfExportRouter = router({
     .input(z.object({ tenantId: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
+      await requirePdfAccess(ctx.tenantId!, db);
       const benchmarks = await db.select().from(benchmarkData);
       const [report] = await db.select().from(copsoqReports)
         .where(eq(copsoqReports.tenantId, ctx.tenantId!))
@@ -613,6 +624,7 @@ export const nr01PdfExportRouter = router({
     .input(z.object({ tenantId: z.string().optional(), surveyId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
+      await requirePdfAccess(ctx.tenantId!, db);
       const [survey] = await db.select().from(psychosocialSurveys)
         .where(and(eq(psychosocialSurveys.tenantId, ctx.tenantId!), eq(psychosocialSurveys.id, input.surveyId)));
 
@@ -660,6 +672,7 @@ export const nr01PdfExportRouter = router({
     .input(z.object({ tenantId: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
+      await requirePdfAccess(ctx.tenantId!, db);
       const modules = await db.select().from(trainingModules)
         .where(eq(trainingModules.tenantId, ctx.tenantId!));
 
@@ -712,6 +725,7 @@ export const nr01PdfExportRouter = router({
     .input(z.object({ tenantId: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
+      await requirePdfAccess(ctx.tenantId!, db);
       const reports = await db.select().from(anonymousReports)
         .where(eq(anonymousReports.tenantId, ctx.tenantId!));
 
@@ -768,6 +782,7 @@ export const nr01PdfExportRouter = router({
     .input(z.object({ tenantId: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
+      await requirePdfAccess(ctx.tenantId!, db);
       const alerts = await db.select().from(deadlineAlerts)
         .where(eq(deadlineAlerts.tenantId, ctx.tenantId!))
         .orderBy(deadlineAlerts.alertDate);
@@ -811,6 +826,7 @@ export const nr01PdfExportRouter = router({
     .input(z.object({ tenantId: z.string().optional(), assessmentId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
+      await requirePdfAccess(ctx.tenantId!, db);
       const [assessment] = await db.select().from(ergonomicAssessments)
         .where(and(eq(ergonomicAssessments.tenantId, ctx.tenantId!), eq(ergonomicAssessments.id, input.assessmentId)));
 
@@ -857,6 +873,7 @@ export const nr01PdfExportRouter = router({
     .input(z.object({ tenantId: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
+      await requirePdfAccess(ctx.tenantId!, db);
       const exports = await db.select().from(esocialExports)
         .where(eq(esocialExports.tenantId, ctx.tenantId!))
         .orderBy(desc(esocialExports.createdAt));
@@ -899,6 +916,7 @@ export const nr01PdfExportRouter = router({
     .input(z.object({ tenantId: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
+      await requirePdfAccess(ctx.tenantId!, db);
 
       // Dashboard summary
       const [latestReport] = await db.select().from(copsoqReports)
@@ -1001,6 +1019,7 @@ export const nr01PdfExportRouter = router({
     .input(z.object({ tenantId: z.string().optional() }))
     .mutation(async ({ ctx }) => {
       const db = await requireDb();
+      await requirePdfAccess(ctx.tenantId!, db);
       const tid = ctx.tenantId!;
 
       // ── 1. Dados da empresa ───────────────────────────────────────
@@ -1315,6 +1334,7 @@ export const nr01PdfExportRouter = router({
     .input(z.object({ tenantId: z.string().optional() }))
     .mutation(async ({ ctx }) => {
       const db = await requireDb();
+      await requirePdfAccess(ctx.tenantId!, db);
       const tid = ctx.tenantId!;
 
       // ── Dados da empresa ──────────────────────────────────────────
