@@ -395,7 +395,7 @@ export async function sendClimateSurveyInvite(params: {
 }): Promise<boolean> {
   const { respondentEmail, respondentName, surveyTitle, inviteToken, expiresIn, tenantId } = params;
 
-  const inviteUrl = `${process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:3000"}/clima/respond/${inviteToken}`;
+  const inviteUrl = `${process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:3000"}/survey/respond/${inviteToken}`;
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
