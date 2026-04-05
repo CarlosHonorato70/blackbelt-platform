@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
+import { useImpersonation } from "@/contexts/ImpersonationContext";
 import {
   Building2,
   Eye,
@@ -225,6 +226,7 @@ function DashboardLayoutContent({
     retry: false,
     enabled: !!user && user.role !== "admin",
   });
+  const { isImpersonating } = useImpersonation();
   const isAdmin = user?.role === "admin";
   const tenantInfoLoaded = tenantInfo !== undefined;
   const isCompanyUser = tenantInfoLoaded ? tenantInfo?.tenantType === "company" : !isAdmin;
@@ -448,10 +450,10 @@ function DashboardLayoutContent({
         )}
       </Sidebar>
 
-      <SidebarInset>
+      <SidebarInset className={isImpersonating ? "pt-10" : ""}>
         {/* === Mobile Header === */}
         {isMobile && (
-          <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
+          <div className={`flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky ${isImpersonating ? "top-10" : "top-0"} z-40`}>
             <div className="flex items-center gap-2">
               <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
               <div className="flex items-center gap-3">

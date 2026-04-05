@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Search, ShieldCheck, Clock, CheckCircle, AlertTriangle, Archive } from "lucide-react";
+import { Search, ShieldCheck, Clock, CheckCircle, AlertTriangle, Archive, ArrowLeft } from "lucide-react";
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: typeof Clock }> = {
   received: { label: "Recebida", color: "bg-blue-100 text-blue-800", icon: Clock },
@@ -57,7 +57,12 @@ export default function ComplaintTrack() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">
-      <div className="max-w-lg mx-auto pt-8">
+      <div className="max-w-lg mx-auto pt-4">
+        {/* Back */}
+        <button onClick={() => window.history.back()} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4">
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
+        </button>
         {/* Header */}
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">

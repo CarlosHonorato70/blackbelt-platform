@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { ShieldCheck, AlertTriangle, CheckCircle, Copy, Search } from "lucide-react";
+import { ShieldCheck, AlertTriangle, CheckCircle, Copy, Search, ArrowLeft } from "lucide-react";
 
 const categories = [
   { value: "assedio_moral", label: "Assédio Moral" },
@@ -108,8 +108,14 @@ export default function ComplaintPublic() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">
       <div className="max-w-lg mx-auto">
-        {/* Header */}
-        <div className="text-center mb-6 pt-8">
+        {/* Back + Header */}
+        <div className="pt-4">
+          <Link to="/denuncia/consulta" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="h-4 w-4" />
+            Consultar protocolo
+          </Link>
+        </div>
+        <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
             <ShieldCheck className="h-8 w-8 text-blue-600" />
           </div>

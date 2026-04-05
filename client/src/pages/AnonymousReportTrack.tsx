@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
   Card,
@@ -13,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { ArrowLeft } from "lucide-react";
 import {
   Search,
   Loader2,
@@ -43,6 +45,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 export default function AnonymousReportTrack() {
   usePageMeta({ title: "Rastrear Denúncia" });
+  const navigate = useNavigate();
   const [reportCode, setReportCode] = useState("");
   const [searchCode, setSearchCode] = useState("");
 
@@ -67,12 +70,16 @@ export default function AnonymousReportTrack() {
     <DashboardLayout>
       <div className="space-y-6 p-6">
         <div className="mx-auto max-w-2xl space-y-6">
-          <div className="text-center">
-            <ShieldAlert className="mx-auto h-12 w-12 text-primary mb-4" />
-            <h1 className="text-2xl font-bold">Rastrear Denúncia</h1>
-            <p className="text-muted-foreground mt-1">
-              Insira o código de rastreamento para acompanhar o status da sua denúncia
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">Rastrear Denúncia</h1>
+              <p className="text-muted-foreground mt-1">
+                Insira o código de rastreamento para acompanhar o status da sua denúncia
+              </p>
+            </div>
           </div>
 
           <Card>
