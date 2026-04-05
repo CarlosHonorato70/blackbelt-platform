@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +49,10 @@ import {
   Building2,
   AlertTriangle,
   ArrowLeft,
+  ShieldCheck,
+  Lock,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 const CERT_TYPES = [
@@ -99,6 +103,7 @@ export default function ConsultantCertifications() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Form state
   const [name, setName] = useState("");
@@ -110,6 +115,21 @@ export default function ConsultantCertifications() {
   const [notes, setNotes] = useState("");
   const [certPassword, setCertPassword] = useState("");
   const [file, setFile] = useState<File | null>(null);
+
+  // Smart detection: is the file a digital certificate?
+  const isDigitalCert = file ? (file.name.endsWith(".p12") || file.name.endsWith(".pfx")) : false;
+
+  const handleFileChange = useCallback((selectedFile: File | null) => {
+    setFile(selectedFile);
+    if (selectedFile) {
+      const ext = selectedFile.name.toLowerCase();
+      if (ext.endsWith(".p12") || ext.endsWith(".pfx")) {
+        // Auto-configure for A1 certificate
+        setCertType("A1_DIGITAL");
+        setName(selectedFile.name.replace(/\.(p12|pfx)$/i, "").replace(/[_]/g, " "));
+      }
+    }
+  }, []);
 
   const { data: certifications, isLoading } =
     trpc.consultantCertifications.list.useQuery();
@@ -152,35 +172,46 @@ export default function ConsultantCertifications() {
     setNotes("");
     setCertPassword("");
     setFile(null);
+    setShowAdvanced(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleUpload = async () => {
-    if (!file || !name || !certType) {
+    if (!file) {
+      toast({ title: "Selecione um arquivo", variant: "destructive" });
+      return;
+    }
+
+    const isP12 = file.name.endsWith(".p12") || file.name.endsWith(".pfx");
+
+    if (isP12 && !certPassword) {
       toast({
-        title: "Campos obrigatórios",
-        description: "Preencha o nome, tipo e selecione um arquivo.",
+        title: "Senha obrigatória",
+        description: "Informe a senha do certificado digital.",
         variant: "destructive",
       });
       return;
     }
 
-    const isP12 = file.name.endsWith(".p12") || file.name.endsWith(".pfx");
-    if (isP12 && !certPassword) {
+    if (!isP12 && (!name || !certType)) {
       toast({
-        title: "Senha obrigatória",
-        description: "Informe a senha do certificado .p12 para validação.",
+        title: "Campos obrigatórios",
+        description: "Preencha o nome e tipo da certificação.",
         variant: "destructive",
       });
       return;
     }
+
+    // For A1, use auto-generated name if user didn't change it
+    const uploadName = isP12 ? (name || "Certificado Digital A1") : name;
+    const uploadType = isP12 ? "A1_DIGITAL" : certType;
 
     setUploading(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("name", name);
-      formData.append("certType", certType);
+      formData.append("name", uploadName);
+      formData.append("certType", uploadType);
       if (registryNumber) formData.append("registryNumber", registryNumber);
       if (issuer) formData.append("issuer", issuer);
       if (issuedAt) formData.append("issuedAt", issuedAt);
@@ -262,161 +293,220 @@ export default function ConsultantCertifications() {
           <DialogContent className="sm:max-w-[550px]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Upload className="h-5 w-5" />
-                Adicionar Certificação
+                {isDigitalCert ? <ShieldCheck className="h-5 w-5 text-blue-600" /> : <Upload className="h-5 w-5" />}
+                {isDigitalCert ? "Configurar Assinatura Digital" : "Adicionar Certificação"}
               </DialogTitle>
               <DialogDescription>
-                Faça upload do documento da certificação. Aceita PDF, JPG, PNG,
-                P12/PFX (máx. 10MB). Certificados A1 (.p12) serão
-                configurados automaticamente para assinatura digital.
+                {isDigitalCert
+                  ? "Selecione o arquivo .p12 ou .pfx e informe a senha. O restante é configurado automaticamente."
+                  : "Selecione o arquivo e preencha os dados. Para certificados A1, basta arrastar o arquivo .p12/.pfx."
+                }
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 mt-2">
-              {/* File upload */}
-              <div>
-                <Label htmlFor="cert-file">
-                  Arquivo <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="cert-file"
+              {/* Step 1: File — always visible */}
+              <div
+                className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                  file ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-primary/50"
+                }`}
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const droppedFile = e.dataTransfer.files?.[0];
+                  if (droppedFile) {
+                    handleFileChange(droppedFile);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }
+                }}
+              >
+                <input
                   ref={fileInputRef}
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png,.webp,.p12,.pfx"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                  className="mt-1 cursor-pointer"
+                  onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
+                  className="absolute inset-0 opacity-0 cursor-pointer"
                 />
-                {file && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {file.name} ({formatFileSize(file.size)})
-                  </p>
-                )}
-                {file && (file.name.endsWith(".p12") || file.name.endsWith(".pfx")) && (
-                  <div className="mt-2 p-3 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
-                    <Label htmlFor="cert-password" className="text-blue-800 dark:text-blue-200 text-sm font-medium">
-                      Senha do Certificado A1 <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="cert-password"
-                      type="password"
-                      placeholder="Senha do arquivo .p12"
-                      value={certPassword}
-                      onChange={(e) => setCertPassword(e.target.value)}
-                      className="mt-1"
-                    />
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                      A senha é armazenada de forma criptografada. Este certificado será usado para assinar digitalmente todos os PDFs da sua consultoria.
-                    </p>
+                {file ? (
+                  <div className="flex items-center justify-center gap-3">
+                    {isDigitalCert ? <Lock className="h-8 w-8 text-blue-600" /> : <FileText className="h-8 w-8 text-primary" />}
+                    <div className="text-left">
+                      <p className="font-medium text-sm">{file.name}</p>
+                      <p className="text-xs text-muted-foreground">{formatFileSize(file.size)} — Clique para trocar</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <Upload className="h-10 w-10 mx-auto text-muted-foreground/50 mb-2" />
+                    <p className="text-sm font-medium">Arraste o arquivo aqui ou clique para selecionar</p>
+                    <p className="text-xs text-muted-foreground mt-1">PDF, JPG, PNG, P12 ou PFX (máx. 10MB)</p>
                   </div>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="cert-name">
-                    Nome <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="cert-name"
-                    placeholder="Ex: CRP Ativo - Dr. Silva"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="mt-1"
-                  />
+              {/* A1 DIGITAL: simplified — just password */}
+              {isDigitalCert && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 space-y-3">
+                    <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
+                      <ShieldCheck className="h-5 w-5" />
+                      <span className="font-medium text-sm">Certificado Digital A1 detectado</span>
+                    </div>
+                    <div>
+                      <Label htmlFor="cert-password" className="text-sm">
+                        Senha do certificado <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="cert-password"
+                        type="password"
+                        placeholder="Digite a senha do arquivo .p12 / .pfx"
+                        value={certPassword}
+                        onChange={(e) => setCertPassword(e.target.value)}
+                        className="mt-1"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="text-xs text-blue-600 dark:text-blue-400 space-y-1">
+                      <p>O nome, emissor e validade serão extraídos automaticamente do certificado.</p>
+                      <p>A senha é armazenada de forma criptografada (AES-256). Todos os PDFs da sua consultoria passarão a ter assinatura digital ICP-Brasil.</p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="cert-type">
-                    Tipo <span className="text-destructive">*</span>
-                  </Label>
-                  <Select value={certType} onValueChange={setCertType}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CERT_TYPES.map((t) => (
-                        <SelectItem key={t.value} value={t.value}>
-                          {t.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="cert-registry">Número de Registro</Label>
-                  <Input
-                    id="cert-registry"
-                    placeholder="Ex: CRP 06/12345"
-                    value={registryNumber}
-                    onChange={(e) => setRegistryNumber(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="cert-issuer">Órgão Emissor</Label>
-                  <Input
-                    id="cert-issuer"
-                    placeholder="Ex: CRP São Paulo"
-                    value={issuer}
-                    onChange={(e) => setIssuer(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-              </div>
+              {/* PROFESSIONAL CERT: type + name (simplified) */}
+              {file && !isDigitalCert && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="cert-type">
+                        Tipo <span className="text-destructive">*</span>
+                      </Label>
+                      <Select value={certType} onValueChange={setCertType}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Selecione..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CERT_TYPES.filter(t => t.value !== "A1_DIGITAL").map((t) => (
+                            <SelectItem key={t.value} value={t.value}>
+                              {t.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="cert-registry">Número de Registro</Label>
+                      <Input
+                        id="cert-registry"
+                        placeholder="Ex: CRP 06/12345"
+                        value={registryNumber}
+                        onChange={(e) => setRegistryNumber(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="cert-issued">Data de Emissão</Label>
-                  <Input
-                    id="cert-issued"
-                    type="date"
-                    value={issuedAt}
-                    onChange={(e) => setIssuedAt(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="cert-expires">Data de Validade</Label>
-                  <Input
-                    id="cert-expires"
-                    type="date"
-                    value={expiresAt}
-                    onChange={(e) => setExpiresAt(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-              </div>
+                  <div>
+                    <Label htmlFor="cert-name">
+                      Nome / Descrição <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="cert-name"
+                      placeholder="Ex: CRP Ativo - Dr. Silva"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
 
-              <div>
-                <Label htmlFor="cert-notes">Observações</Label>
-                <Textarea
-                  id="cert-notes"
-                  placeholder="Notas adicionais sobre esta certificação..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="mt-1"
-                  rows={2}
-                />
-              </div>
+                  {/* Collapsible advanced fields */}
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvanced(!showAdvanced)}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showAdvanced ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    Campos opcionais (emissor, datas, notas)
+                  </button>
 
-              <Button
-                onClick={handleUpload}
-                disabled={uploading || !file || !name || !certType}
-                className="w-full"
-              >
-                {uploading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Enviando...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Enviar Certificação
-                  </>
-                )}
-              </Button>
+                  {showAdvanced && (
+                    <div className="space-y-4 pt-1">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="cert-issuer">Órgão Emissor</Label>
+                          <Input
+                            id="cert-issuer"
+                            placeholder="Ex: CRP São Paulo"
+                            value={issuer}
+                            onChange={(e) => setIssuer(e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="cert-expires">Data de Validade</Label>
+                          <Input
+                            id="cert-expires"
+                            type="date"
+                            value={expiresAt}
+                            onChange={(e) => setExpiresAt(e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="cert-issued">Data de Emissão</Label>
+                          <Input
+                            id="cert-issued"
+                            type="date"
+                            value={issuedAt}
+                            onChange={(e) => setIssuedAt(e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="cert-notes-field">Observações</Label>
+                          <Input
+                            id="cert-notes-field"
+                            placeholder="Notas opcionais..."
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Submit button — only show after file is selected */}
+              {file && (
+                <Button
+                  onClick={handleUpload}
+                  disabled={uploading || !file || (!isDigitalCert && (!name || !certType)) || (isDigitalCert && !certPassword)}
+                  className="w-full"
+                  size="lg"
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {isDigitalCert ? "Validando certificado..." : "Enviando..."}
+                    </>
+                  ) : isDigitalCert ? (
+                    <>
+                      <ShieldCheck className="h-4 w-4 mr-2" />
+                      Ativar Assinatura Digital
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Enviar Certificação
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </DialogContent>
         </Dialog>
