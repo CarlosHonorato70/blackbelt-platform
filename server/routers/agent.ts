@@ -11,8 +11,10 @@ import { getNR01Status, getCompanyStrategy, checkAutoTransitions } from "../_ai/
 import { scanTenantAlerts, createPhaseTransitionAlert } from "../_ai/agentAlerts";
 import { buildAgentSystemPrompt, buildContextMessage } from "../_ai/prompts/agent-system";
 import { processCNPJForAgent, formatCNPJ, sectorLabel, isHighRiskSector } from "../_core/cnpjLookup";
-import { tenants, proposals, proposalItems, proposalPayments, clients, people } from "../../drizzle/schema";
+import { tenants, proposals, proposalItems, proposalPayments, clients, people, users } from "../../drizzle/schema";
 import { complianceChecklist, complianceMilestones } from "../../drizzle/schema_nr01";
+import bcrypt from "bcryptjs";
+import { sendWelcomeCompanyEmail } from "../_core/email";
 import { executeCreateAssessment, executeGenerateInventoryAndPlan, executeCreateTraining, executeCompleteChecklist } from "../_ai/agentExecutor";
 import { log } from "../_core/logger";
 import * as dbOps from "../db";
@@ -142,9 +144,68 @@ async function executeCreateCompany(
       startedAt: new Date(), completedAt: new Date(),
     });
 
+    // ── Create company user + send welcome email with credentials ──
+    let credentialsInfo = "";
+    const contactEmail = (params.contactEmail || "").trim().toLowerCase();
+    if (contactEmail) {
+      try {
+        // Generate temporary password
+        let tempPassword = "";
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+        for (let i = 0; i < 10; i++) tempPassword += chars[Math.floor(Math.random() * chars.length)];
+        tempPassword += "@1";
+
+        const hashedPassword = await bcrypt.hash(tempPassword, 12);
+
+        // Check if user with this email already exists
+        const [existingUser] = await db.select().from(users).where(eq(users.email, contactEmail)).limit(1);
+
+        if (existingUser) {
+          // Assign existing user to new tenant
+          await db.update(users).set({
+            tenantId: companyId,
+            name: params.name,
+            passwordHash: hashedPassword,
+            emailVerified: true,
+          }).where(eq(users.id, existingUser.id));
+          log.info(`[Agent] Existing user ${contactEmail} reassigned to tenant ${companyId}`);
+        } else {
+          // Create new user
+          await db.insert(users).values({
+            id: nanoid(),
+            email: contactEmail,
+            passwordHash: hashedPassword,
+            name: params.name,
+            tenantId: companyId,
+            role: "user",
+            emailVerified: true,
+            createdAt: new Date(),
+          });
+          log.info(`[Agent] Company user created: ${contactEmail} for tenant ${companyId}`);
+        }
+
+        // Send welcome email with login credentials
+        const frontendUrl = process.env.FRONTEND_URL || "https://blackbeltconsultoria.com";
+        sendWelcomeCompanyEmail({
+          companyEmail: contactEmail,
+          companyName: params.name || "Empresa",
+          tempPassword,
+          loginUrl: `${frontendUrl}/login`,
+        }).catch(err => log.error("[Agent] Welcome email failed", { error: String(err) }));
+
+        credentialsInfo = `\n\n📧 **Email de boas-vindas enviado** para ${contactEmail} com credenciais de acesso.`;
+        log.info(`[Agent] Welcome email sent to ${contactEmail}`);
+      } catch (userErr: any) {
+        log.error("[Agent] User creation failed during company setup", { error: userErr.message });
+        credentialsInfo = "\n\n⚠️ Não foi possível criar o acesso automaticamente. Crie o acesso manualmente na aba Minhas Empresas.";
+      }
+    } else {
+      credentialsInfo = "\n\n⚠️ Email de contato não informado. Cadastre manualmente o acesso da empresa.";
+    }
+
     return {
       success: true, companyId,
-      message: `Empresa **${params.name}** cadastrada com sucesso! Checklist NR-01 (${nr01Requirements.length} itens) e cronograma (${milestones.length} milestones) configurados automaticamente.`,
+      message: `Empresa **${params.name}** cadastrada com sucesso! Checklist NR-01 (${nr01Requirements.length} itens) e cronograma (${milestones.length} milestones) configurados automaticamente.${credentialsInfo}`,
     };
   } catch (error: any) {
     log.error("Agent create_company failed", { error: error.message, cnpj: formattedCnpj });
@@ -1828,8 +1889,16 @@ async function generateFallbackResponse(
         const employeeCount = peopleCount?.count || 0;
 
         if (employeeCount === 0) {
+          // Check if company actually has a user with credentials
+          const [companyUser] = await db2.select({ email: users.email }).from(users)
+            .where(eq(users.tenantId, existingCompany.id)).limit(1);
+
+          const credStatus = companyUser
+            ? `✅ **Empresa ${existingCompany.name} cadastrada.** Credenciais de acesso foram enviadas para **${companyUser.email}**.`
+            : `✅ **Empresa ${existingCompany.name} cadastrada.** ⚠️ Nenhum acesso criado ainda — informe o email de contato para enviar as credenciais.`;
+
           return {
-            content: `✅ **Proposta aprovada pela empresa ${existingCompany.name}!** Credenciais de acesso já foram enviadas.\n\n⚠️ **Aguardando cadastro de colaboradores.** A empresa precisa cadastrar os setores e colaboradores na plataforma antes de prosseguir.\n\n**Orientações para a empresa:**\n1. Acessar a plataforma com as credenciais recebidas por email\n2. No menu lateral, ir em **Colaboradores e Setores**\n3. Cadastrar setores e colaboradores (manualmente ou via planilha)\n\nQuando os colaboradores estiverem cadastrados, diga **"continuar"** para enviar o questionário COPSOQ-II.`,
+            content: `${credStatus}\n\n⚠️ **Aguardando cadastro de colaboradores.** A empresa precisa cadastrar os setores e colaboradores na plataforma antes de prosseguir.\n\n**Orientações para a empresa:**\n1. Acessar a plataforma com as credenciais recebidas por email\n2. No menu lateral, ir em **Colaboradores e Setores**\n3. Cadastrar setores e colaboradores (manualmente ou via planilha)\n\nQuando os colaboradores estiverem cadastrados, diga **"continuar"** para enviar o questionário COPSOQ-II.`,
             actions: [],
           };
         }
