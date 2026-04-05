@@ -66,32 +66,47 @@ export default function ClimateSurveyResults() {
 
   const totalResponses = results?.totalResponses ?? 0;
   const averageScore = results?.averageScore ?? 0;
+  const rawAverageScore = (results as any)?.rawAverageScore ?? 0;
   const completionRate = (results as any)?.completionRate ?? 0;
   const riskDistribution = (results as any)?.riskDistribution ?? { low: 0, medium: 0, high: 0, critical: 0 };
   const inviteStatus = (results as any)?.inviteStatus ?? { total: 0, sent: 0, completed: 0, expired: 0 };
   const responseDistribution = results?.responseDistribution ?? {};
   const dimensionScores = (results as any)?.dimensionScores ?? {};
+  const instrument: string = (results as any)?.instrument ?? "generic";
   const dimensionData = Object.entries(dimensionScores)
     .map(([name, data]: [string, any]) => ({
       name,
       score: data.avg ?? 0,
+      rawAvg: data.rawAvg ?? 0,
+      riskLabel: data.riskLabel ?? "",
       questions: data.questions ?? 0,
       responses: data.count ?? 0,
     }))
     .sort((a, b) => a.score - b.score);
+
+  // Metodologia por instrumento
+  const getMethodologyName = () => {
+    if (instrument === "eact") return "EACT — Mendes & Ferreira (2007)";
+    if (instrument === "itra") return "ITRA — Mendes & Ferreira (2007)";
+    if (instrument === "qvt-walton") return "QVT — Walton (1973)";
+    return "Escala Likert Normalizada";
+  };
+
+  const getRiskLabelStyle = (label: string) => {
+    const l = label.toLowerCase();
+    if (l === "satisfatório" || l === "muito satisfeito") return "bg-green-100 text-green-800";
+    if (l === "satisfeito") return "bg-emerald-100 text-emerald-800";
+    if (l === "crítico" || l === "moderado") return "bg-yellow-100 text-yellow-800";
+    if (l === "insatisfeito" || l === "alto") return "bg-orange-100 text-orange-800";
+    if (l === "grave" || l === "muito insatisfeito") return "bg-red-100 text-red-800";
+    return "bg-gray-100 text-gray-800";
+  };
 
   const getDimensionColor = (score: number) => {
     if (score >= 70) return "#22c55e";
     if (score >= 50) return "#eab308";
     if (score >= 30) return "#f97316";
     return "#ef4444";
-  };
-
-  const getDimensionRisk = (score: number) => {
-    if (score >= 70) return { label: "Bom", class: "bg-green-100 text-green-800" };
-    if (score >= 50) return { label: "Atenção", class: "bg-yellow-100 text-yellow-800" };
-    if (score >= 30) return { label: "Risco", class: "bg-orange-100 text-orange-800" };
-    return { label: "Crítico", class: "bg-red-100 text-red-800" };
   };
   const questionAverages = Object.entries(responseDistribution).map(([label, val]: [string, any]) => ({
     label,
@@ -150,17 +165,17 @@ export default function ClimateSurveyResults() {
               </Card>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Media Geral</CardTitle>
+                  <CardTitle className="text-sm font-medium">Média Geral</CardTitle>
                   <BarChart3 className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{averageScore.toFixed(1)}</div>
-                  <p className="text-xs text-muted-foreground">de 5.0</p>
+                  <div className="text-2xl font-bold">{rawAverageScore.toFixed(2)}</div>
+                  <p className="text-xs text-muted-foreground">de 5.0 (escala Likert)</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Taxa de Conclusao</CardTitle>
+                  <CardTitle className="text-sm font-medium">Taxa de Conclusão</CardTitle>
                   <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
@@ -172,7 +187,7 @@ export default function ClimateSurveyResults() {
             {questionAverages.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Media por Pergunta</CardTitle>
+                  <CardTitle>Média por Pergunta</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={400}>
@@ -234,25 +249,27 @@ export default function ClimateSurveyResults() {
 
                     {/* Dimension detail cards */}
                     <div className="space-y-2">
-                      {dimensionData.map((dim) => {
-                        const risk = getDimensionRisk(dim.score);
-                        return (
+                      {dimensionData.map((dim) => (
                           <div key={dim.name} className="flex items-center justify-between p-3 border rounded-lg">
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium truncate">{dim.name}</p>
-                              <p className="text-xs text-muted-foreground">{dim.questions} perguntas</p>
+                              <p className="text-xs text-muted-foreground">
+                                {dim.questions} perguntas · Média: {dim.rawAvg.toFixed(2)}
+                              </p>
                             </div>
                             <div className="flex items-center gap-2 ml-2">
                               <span className="text-lg font-bold" style={{ color: getDimensionColor(dim.score) }}>
-                                {dim.score}%
+                                {dim.rawAvg.toFixed(2)}
                               </span>
-                              <Badge variant="outline" className={`text-[10px] ${risk.class}`}>
-                                {risk.label}
+                              <Badge variant="outline" className={`text-[10px] ${getRiskLabelStyle(dim.riskLabel)}`}>
+                                {dim.riskLabel}
                               </Badge>
                             </div>
                           </div>
-                        );
-                      })}
+                      ))}
+                      <p className="text-[10px] text-muted-foreground mt-2 italic">
+                        Metodologia: {getMethodologyName()}
+                      </p>
                     </div>
                   </div>
                 </CardContent>

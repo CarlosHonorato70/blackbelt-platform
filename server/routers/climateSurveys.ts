@@ -508,12 +508,22 @@ export const climateSurveysRouter = router({
       // ── Dimension-level scoring ────────────────────────────────────
       // Map each question to its dimension from the survey definition
       const [survey] = await db
-        .select({ questions: psychosocialSurveys.questions })
+        .select({ questions: psychosocialSurveys.questions, surveyType: psychosocialSurveys.surveyType, title: psychosocialSurveys.title })
         .from(psychosocialSurveys)
         .where(eq(psychosocialSurveys.id, input.surveyId))
         .limit(1);
 
-      const dimensionScores: Record<string, { sum: number; count: number; avg: number; questions: number }> = {};
+      const surveyType = survey?.surveyType || "custom";
+      const surveyTitle = survey?.title || "";
+
+      // Detectar instrumento pela título ou tipo
+      let instrument: "eact" | "itra" | "qvt-walton" | "generic" = "generic";
+      const titleUpper = surveyTitle.toUpperCase();
+      if (titleUpper.includes("EACT")) instrument = "eact";
+      else if (titleUpper.includes("ITRA")) instrument = "itra";
+      else if (titleUpper.includes("QVT") || titleUpper.includes("WALTON")) instrument = "qvt-walton";
+
+      const dimensionScores: Record<string, { sum: number; count: number; avg: number; rawAvg: number; questions: number; riskLabel: string }> = {};
 
       if (survey?.questions && Array.isArray(survey.questions)) {
         const questions = survey.questions as Array<{
@@ -549,7 +559,7 @@ export const climateSurveysRouter = router({
             const finalValue = qInfo?.reverse ? (6 - value) : value;
 
             if (!dimensionScores[dimension]) {
-              dimensionScores[dimension] = { sum: 0, count: 0, avg: 0, questions: 0 };
+              dimensionScores[dimension] = { sum: 0, count: 0, avg: 0, rawAvg: 0, questions: 0, riskLabel: "" };
             }
             dimensionScores[dimension].sum += finalValue;
             dimensionScores[dimension].count += 1;
@@ -560,25 +570,86 @@ export const climateSurveysRouter = router({
         for (const q of questions) {
           const dim = q.dimension || "Geral";
           if (!dimensionScores[dim]) {
-            dimensionScores[dim] = { sum: 0, count: 0, avg: 0, questions: 0 };
+            dimensionScores[dim] = { sum: 0, count: 0, avg: 0, rawAvg: 0, questions: 0, riskLabel: "" };
           }
           dimensionScores[dim].questions += 1;
         }
 
-        // Compute averages (normalize to 0-100 scale from 1-5)
-        for (const dim of Object.values(dimensionScores)) {
-          dim.avg = dim.count > 0 ? Math.round(((dim.sum / dim.count - 1) / 4) * 100) : 0;
+        // Compute averages: raw mean (1-5) and normalized (0-100)
+        for (const [dimName, dim] of Object.entries(dimensionScores)) {
+          const rawMean = dim.count > 0 ? dim.sum / dim.count : 0;
+          dim.rawAvg = Math.round(rawMean * 100) / 100; // 1-5 scale with 2 decimals
+          dim.avg = dim.count > 0 ? Math.round(((rawMean - 1) / 4) * 100) : 0; // 0-100 normalized
+
+          // Classificação por metodologia do instrumento
+          if (instrument === "eact") {
+            // EACT — Mendes & Ferreira (2007): Contexto de Trabalho
+            // ≤ 2.29 Satisfatório | 2.30-3.69 Crítico | ≥ 3.70 Grave
+            if (rawMean <= 2.29) dim.riskLabel = "Satisfatório";
+            else if (rawMean <= 3.69) dim.riskLabel = "Crítico";
+            else dim.riskLabel = "Grave";
+          } else if (instrument === "itra") {
+            // ITRA — Mendes & Ferreira (2007)
+            // Custo Humano e Sofrimento: ≤ 2.29 Satisfatório | 2.30-3.69 Crítico | ≥ 3.70 Grave
+            // Prazer (Realização, Liberdade): invertido → ≥ 4.0 Satisfatório | 2.1-3.9 Crítico | ≤ 2.0 Grave
+            const dimUpper = dimName.toUpperCase();
+            const isPrazer = dimUpper.includes("PRAZER") || dimUpper.includes("REALIZAÇÃO") ||
+                             dimUpper.includes("REALIZACAO") || dimUpper.includes("LIBERDADE");
+            if (isPrazer) {
+              if (rawMean >= 4.0) dim.riskLabel = "Satisfatório";
+              else if (rawMean >= 2.1) dim.riskLabel = "Crítico";
+              else dim.riskLabel = "Grave";
+            } else {
+              if (rawMean <= 2.29) dim.riskLabel = "Satisfatório";
+              else if (rawMean <= 3.69) dim.riskLabel = "Crítico";
+              else dim.riskLabel = "Grave";
+            }
+          } else if (instrument === "qvt-walton") {
+            // QVT-Walton: escala de satisfação (quanto maior, melhor)
+            // ≥ 4.0 Muito Satisfeito | 3.0-3.99 Satisfeito | 2.0-2.99 Insatisfeito | < 2.0 Muito Insatisfeito
+            if (rawMean >= 4.0) dim.riskLabel = "Muito Satisfeito";
+            else if (rawMean >= 3.0) dim.riskLabel = "Satisfeito";
+            else if (rawMean >= 2.0) dim.riskLabel = "Insatisfeito";
+            else dim.riskLabel = "Muito Insatisfeito";
+          } else {
+            // Genérico: normalizado 0-100
+            if (dim.avg >= 70) dim.riskLabel = "Satisfatório";
+            else if (dim.avg >= 50) dim.riskLabel = "Moderado";
+            else if (dim.avg >= 30) dim.riskLabel = "Alto";
+            else dim.riskLabel = "Crítico";
+          }
+        }
+      }
+
+      // Calcular média geral bruta (1-5) a partir das respostas
+      let rawAverageScore = 0;
+      if (responses.length > 0) {
+        let allValues: number[] = [];
+        for (const response of responses) {
+          if (response.responses && typeof response.responses === "object") {
+            const respObj = response.responses as Record<string, any>;
+            for (const val of Object.values(respObj)) {
+              const v = Number(val);
+              if (v > 0) allValues.push(v);
+            }
+          }
+        }
+        if (allValues.length > 0) {
+          rawAverageScore = Math.round((allValues.reduce((a, b) => a + b, 0) / allValues.length) * 100) / 100;
         }
       }
 
       return {
         totalResponses,
         averageScore,
+        rawAverageScore,
         completionRate,
         riskDistribution,
         responseDistribution,
         inviteStatus,
         dimensionScores,
+        instrument,
+        surveyTitle,
       };
     }),
 });
