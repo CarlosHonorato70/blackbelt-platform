@@ -2889,8 +2889,13 @@ ${extractHeadcount(input.content) ? `Funcionários informados: ${extractHeadcoun
       const lastAssistantMsg = orderedHistory.filter(m => m.role === "assistant").pop();
       const lastHadActions = lastAssistantMsg?.metadata && typeof lastAssistantMsg.metadata === "object" && "actions" in (lastAssistantMsg.metadata as any) && ((lastAssistantMsg.metadata as any).actions?.length > 0);
 
-      // For direct commands and confirmations of pending actions, use programmatic flow
-      if (isExecuteCommand || (isAffirmative && lastHadActions)) {
+      // NR-01 flow keywords that MUST always use programmatic fallback (they need DB state)
+      const isNR01FlowCommand = /continuar|gerar relat[oó]rio|proposta aprovada|nova empresa|outro cliente|cadastrar|inventário|inventario|plano de a[cç][aã]o|treinamento|certificado|checklist/i.test(msgLower);
+      // Also detect CNPJ in current message — always use fallback for CNPJ lookup
+      const hasCNPJ = !!extractCNPJ(input.content);
+
+      // For direct commands, NR-01 flow keywords, CNPJ messages, and confirmations of pending actions, use programmatic flow
+      if (isExecuteCommand || isNR01FlowCommand || hasCNPJ || (isAffirmative && lastHadActions)) {
         const fallback = await generateFallbackResponse(input.content, company, status, orderedHistory, ctx.tenantId!, ctx.user!.id);
         assistantContent = fallback.content;
         actions = fallback.actions;
