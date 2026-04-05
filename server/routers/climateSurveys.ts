@@ -318,9 +318,9 @@ export const climateSurveysRouter = router({
       if (invite.expiresAt && new Date() > invite.expiresAt)
         throw new TRPCError({ code: "BAD_REQUEST", message: "Este convite expirou" });
 
-      // Buscar perguntas para scoring por dimensão com metodologia correta
+      // Buscar perguntas e título para scoring por dimensão com metodologia correta
       const [survey] = await db
-        .select({ questions: psychosocialSurveys.questions })
+        .select({ questions: psychosocialSurveys.questions, title: psychosocialSurveys.title })
         .from(psychosocialSurveys)
         .where(eq(psychosocialSurveys.id, invite.surveyId))
         .limit(1);
@@ -328,6 +328,12 @@ export const climateSurveysRouter = router({
       const questions = survey?.questions && Array.isArray(survey.questions)
         ? (survey.questions as Array<{ id?: string; dimension?: string; reverse?: boolean }>)
         : [];
+
+      // Detectar instrumento pelo título
+      const survTitle = (survey?.title || "").toUpperCase();
+      const isEACT = survTitle.includes("EACT") || survTitle.includes("CONTEXTO DE TRABALHO");
+      const isITRA = survTitle.includes("ITRA") || survTitle.includes("TRABALHO E RISCOS") || survTitle.includes("RISCOS DE ADOECIMENTO");
+      const isQVT = survTitle.includes("QVT") || survTitle.includes("WALTON") || survTitle.includes("QUALIDADE DE VIDA");
 
       // Calcular score usando média na escala 1-5, normalizado para 0-100
       let score = 0;
@@ -354,14 +360,28 @@ export const climateSurveysRouter = router({
           const mean = values.reduce((a, b) => a + b, 0) / values.length;
           // Normalizar de escala 1-5 para 0-100
           score = Math.round(((mean - 1) / 4) * 100);
-        }
 
-        // Classificação de risco baseada na metodologia EACT/ITRA/QVT
-        // Faixas padronizadas: ≥70 Satisfatório, 50-69 Moderado, 30-49 Alto, <30 Crítico
-        if (score < 30) riskLevel = "critical";
-        else if (score < 50) riskLevel = "high";
-        else if (score < 70) riskLevel = "medium";
-        else riskLevel = "low";
+          // Classificação de risco baseada na metodologia específica do instrumento
+          if (isEACT || isITRA) {
+            // EACT/ITRA — Mendes & Ferreira (2007): usa média bruta 1-5
+            // ≤ 2.29 Satisfatório (low) | 2.30-3.69 Crítico (medium) | ≥ 3.70 Grave (high)
+            if (mean <= 2.29) riskLevel = "low";
+            else if (mean <= 3.69) riskLevel = "medium";
+            else riskLevel = "high";
+          } else if (isQVT) {
+            // QVT-Walton: ≥ 4.0 Satisfeito (low) | 3.0-3.99 Moderado (medium) | 2.0-2.99 Insatisfeito (high) | < 2.0 Crítico (critical)
+            if (mean >= 4.0) riskLevel = "low";
+            else if (mean >= 3.0) riskLevel = "medium";
+            else if (mean >= 2.0) riskLevel = "high";
+            else riskLevel = "critical";
+          } else {
+            // Genérico: normalizado 0-100
+            if (score < 30) riskLevel = "critical";
+            else if (score < 50) riskLevel = "high";
+            else if (score < 70) riskLevel = "medium";
+            else riskLevel = "low";
+          }
+        }
       } catch { /* fallback to defaults */ }
 
       // Criar resposta
@@ -516,12 +536,12 @@ export const climateSurveysRouter = router({
       const surveyType = survey?.surveyType || "custom";
       const surveyTitle = survey?.title || "";
 
-      // Detectar instrumento pela título ou tipo
+      // Detectar instrumento pelo título ou tipo
       let instrument: "eact" | "itra" | "qvt-walton" | "generic" = "generic";
       const titleUpper = surveyTitle.toUpperCase();
-      if (titleUpper.includes("EACT")) instrument = "eact";
-      else if (titleUpper.includes("ITRA")) instrument = "itra";
-      else if (titleUpper.includes("QVT") || titleUpper.includes("WALTON")) instrument = "qvt-walton";
+      if (titleUpper.includes("EACT") || titleUpper.includes("CONTEXTO DE TRABALHO")) instrument = "eact";
+      else if (titleUpper.includes("ITRA") || titleUpper.includes("TRABALHO E RISCOS") || titleUpper.includes("RISCOS DE ADOECIMENTO")) instrument = "itra";
+      else if (titleUpper.includes("QVT") || titleUpper.includes("WALTON") || titleUpper.includes("QUALIDADE DE VIDA")) instrument = "qvt-walton";
 
       const dimensionScores: Record<string, { sum: number; count: number; avg: number; rawAvg: number; questions: number; riskLabel: string }> = {};
 
