@@ -441,7 +441,7 @@ export default function ClimateSurveys() {
         </Card>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className={dialogMode === "select" ? "max-w-3xl" : "max-w-lg"}>
+          <DialogContent className={dialogMode === "select" ? "max-w-3xl max-h-[85vh] overflow-y-auto" : "max-w-lg max-h-[85vh] overflow-y-auto"}>
             <DialogHeader>
               <DialogTitle>
                 {dialogMode === "select" ? "Escolha o Instrumento de Pesquisa" : "Configurar Pesquisa"}
