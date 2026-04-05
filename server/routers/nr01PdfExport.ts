@@ -464,7 +464,7 @@ export const nr01PdfExportRouter = router({
         { type: "spacer" },
         { type: "text", content: `Verificação online: https://blackbeltconsultoria.com/verify/${cert.certificateNumber}` },
         { type: "spacer" },
-        { type: "signature", signatureName: cert.issuedBy || ctx.user?.name || "Responsável Técnico", signatureRole: "Auditor de Conformidade NR-01" },
+        { type: "signature", signatureName: ctx.user?.professionalName || cert.issuedBy || ctx.user?.name || "Responsável Técnico", signatureRole: ctx.user?.professionalRole || "Auditor de Conformidade NR-01", signatureRegistry: ctx.user?.professionalRegistry || undefined },
       ];
 
       // Add tenant CNPJ if available
@@ -533,7 +533,7 @@ export const nr01PdfExportRouter = router({
 
       sections.push(
         { type: "spacer" },
-        { type: "signature", signatureName: doc.professionalName || "Responsável Técnico", signatureRole: "Profissional de SST", signatureRegistry: doc.professionalRegistry || undefined },
+        { type: "signature", signatureName: doc.professionalName || ctx.user?.professionalName || "Responsável Técnico", signatureRole: ctx.user?.professionalRole || "Profissional de SST", signatureRegistry: doc.professionalRegistry || ctx.user?.professionalRegistry || undefined },
       );
 
       const buffer = await generateGenericReportPdf({
@@ -1293,9 +1293,9 @@ export const nr01PdfExportRouter = router({
       sections.push({ type: "spacer" });
 
       // ── ASSINATURA ────────────────────────────────────────────────
-      sections.push({ type: "signature", signatureName: ctx.user?.name || "Responsável Técnico", signatureRole: "Consultor SST", signatureRegistry: ctx.user?.email || "CREA/CRP" });
+      sections.push({ type: "signature", signatureName: ctx.user?.professionalName || ctx.user?.name || "Responsável Técnico", signatureRole: ctx.user?.professionalRole || "Consultor SST", signatureRegistry: ctx.user?.professionalRegistry || undefined });
 
-      // ── GERAR PDF ─────────────────────────────────────────────────
+      // ── GERAR PDF ───���───────────────��─────────────────────────────
       const buffer = await generateGenericReportPdf({
         reportTitle: "PGR — Programa de Gerenciamento de Riscos Psicossociais",
         reportSubtitle: `${companyName} — NR-01 Conforme Portaria MTE 1.419/2024`,
@@ -1562,7 +1562,7 @@ export const nr01PdfExportRouter = router({
         "COPSOQ-II — Copenhagen Psychosocial Questionnaire (metodologia validada)",
       ]});
       sections.push({ type: "spacer" });
-      sections.push({ type: "signature", signatureName: ctx.user?.name || "Responsável Técnico", signatureRole: "Consultor SST", signatureRegistry: ctx.user?.email || "CREA/CRP" });
+      sections.push({ type: "signature", signatureName: ctx.user?.professionalName || ctx.user?.name || "Responsável Técnico", signatureRole: ctx.user?.professionalRole || "Consultor SST", signatureRegistry: ctx.user?.professionalRegistry || undefined });
 
       // ── GERAR PDF ─────────────────────────────────────────────────
       const buffer = await generateGenericReportPdf({
