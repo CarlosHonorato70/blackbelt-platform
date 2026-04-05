@@ -243,6 +243,52 @@ export const climateSurveysRouter = router({
       };
     }),
 
+  // Validar convite e retornar perguntas da pesquisa (público)
+  validateInvite: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const [invite] = await db
+        .select()
+        .from(surveyInvites)
+        .where(eq(surveyInvites.inviteToken, input.token));
+
+      if (!invite)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Convite não encontrado ou inválido" });
+
+      if (invite.status === "completed")
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Este convite já foi respondido" });
+
+      if (invite.expiresAt && new Date() > invite.expiresAt)
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Este convite expirou" });
+
+      // Retornar dados da pesquisa para o respondente
+      const [survey] = await db
+        .select({
+          id: psychosocialSurveys.id,
+          title: psychosocialSurveys.title,
+          description: psychosocialSurveys.description,
+          questions: psychosocialSurveys.questions,
+        })
+        .from(psychosocialSurveys)
+        .where(eq(psychosocialSurveys.id, invite.surveyId))
+        .limit(1);
+
+      if (!survey)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Pesquisa não encontrada" });
+
+      return {
+        surveyId: survey.id,
+        title: survey.title,
+        description: survey.description,
+        questions: survey.questions,
+        respondentName: invite.respondentName,
+      };
+    }),
+
   // Submeter resposta (público - sem autenticação)
   submitResponse: publicProcedure
     .input(
@@ -252,13 +298,10 @@ export const climateSurveysRouter = router({
         isAnonymous: z.boolean().optional(),
       })
     )
-    .query(async ({ input }) => {
+    .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database not available",
-        });
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       // Validar token do convite
       const [invite] = await db
@@ -266,38 +309,55 @@ export const climateSurveysRouter = router({
         .from(surveyInvites)
         .where(eq(surveyInvites.inviteToken, input.token));
 
-      if (!invite) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Convite não encontrado ou inválido",
-        });
-      }
+      if (!invite)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Convite não encontrado ou inválido" });
 
-      if (invite.status === "completed") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Este convite já foi respondido",
-        });
-      }
+      if (invite.status === "completed")
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Este convite já foi respondido" });
 
-      if (invite.expiresAt && new Date() > invite.expiresAt) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Este convite expirou",
-        });
-      }
+      if (invite.expiresAt && new Date() > invite.expiresAt)
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Este convite expirou" });
 
-      // Calcular score e riskLevel a partir das respostas
+      // Buscar perguntas para scoring por dimensão com metodologia correta
+      const [survey] = await db
+        .select({ questions: psychosocialSurveys.questions })
+        .from(psychosocialSurveys)
+        .where(eq(psychosocialSurveys.id, invite.surveyId))
+        .limit(1);
+
+      const questions = survey?.questions && Array.isArray(survey.questions)
+        ? (survey.questions as Array<{ id?: string; dimension?: string; reverse?: boolean }>)
+        : [];
+
+      // Calcular score usando média na escala 1-5, normalizado para 0-100
       let score = 0;
       let riskLevel: "low" | "medium" | "high" | "critical" = "low";
       try {
         const resp = input.responses;
-        const values = Array.isArray(resp)
-          ? resp.map((r: any) => Number(r.value || r.score || r) || 0)
-          : Object.values(resp as Record<string, any>).map((v: any) => Number(v) || 0);
-        if (values.length > 0) {
-          score = Math.round(values.reduce((a: number, b: number) => a + b, 0) / values.length);
+        const values: number[] = [];
+        const respObj = (typeof resp === "object" && !Array.isArray(resp))
+          ? resp as Record<string, any>
+          : {};
+
+        // Processar cada resposta, aplicando reverse scoring quando definido
+        for (const [key, rawValue] of Object.entries(respObj)) {
+          const value = Number(rawValue) || 0;
+          if (value === 0) continue;
+
+          const qIdx = parseInt(key.replace(/\D/g, ""), 10);
+          const qDef = questions[qIdx] || (questions.find(q => q.id === key));
+          const finalValue = qDef?.reverse ? (6 - value) : value;
+          values.push(finalValue);
         }
+
+        if (values.length > 0) {
+          const mean = values.reduce((a, b) => a + b, 0) / values.length;
+          // Normalizar de escala 1-5 para 0-100
+          score = Math.round(((mean - 1) / 4) * 100);
+        }
+
+        // Classificação de risco baseada na metodologia EACT/ITRA/QVT
+        // Faixas padronizadas: ≥70 Satisfatório, 50-69 Moderado, 30-49 Alto, <30 Crítico
         if (score < 30) riskLevel = "critical";
         else if (score < 50) riskLevel = "high";
         else if (score < 70) riskLevel = "medium";
@@ -310,7 +370,7 @@ export const climateSurveysRouter = router({
       await db.insert(surveyResponses).values({
         id: responseId,
         surveyId: invite.surveyId,
-        personId: invite.id, // Use invite ID as person reference
+        personId: invite.id,
         tenantId: invite.tenantId,
         responses: input.responses,
         score,

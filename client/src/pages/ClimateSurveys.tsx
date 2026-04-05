@@ -31,7 +31,7 @@ import { trpc } from "@/lib/trpc";
 import { useTenant } from "@/contexts/TenantContext";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { toast } from "sonner";
-import { Plus, ClipboardList, Loader2, BarChart2, FileDown, BookOpen, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Plus, ClipboardList, Loader2, BarChart2, FileDown, BookOpen, CheckCircle2, ArrowLeft, Mail, UserPlus, Trash2, Send } from "lucide-react";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { useNavigate } from "react-router-dom";
 
@@ -263,6 +263,14 @@ export default function ClimateSurveys() {
     questions: "",
   });
 
+  // ── Invite dialog state ──
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviteSurveyId, setInviteSurveyId] = useState("");
+  const [invitees, setInvitees] = useState<{ name: string; email: string }[]>([]);
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [bulkEmails, setBulkEmails] = useState("");
+
   if (!tenantId) {
     return (
       <DashboardLayout>
@@ -295,6 +303,112 @@ export default function ClimateSurveys() {
   });
 
   const exportClimateSurveyMutation = trpc.nr01Pdf.exportClimateSurvey.useMutation();
+
+  const sendInvitesMutation = trpc.climateSurveys.sendInvites.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.totalInvites} convite(s) enviado(s) com sucesso!`);
+      setInviteDialogOpen(false);
+      setInvitees([]);
+      setNewName("");
+      setNewEmail("");
+      setBulkEmails("");
+      refetch();
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Erro ao enviar convites");
+    },
+  });
+
+  const handleAddInvitee = () => {
+    if (!newEmail.trim() || !newName.trim()) {
+      toast.error("Informe nome e email do participante");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim())) {
+      toast.error("Email inválido");
+      return;
+    }
+    if (invitees.some(i => i.email.toLowerCase() === newEmail.trim().toLowerCase())) {
+      toast.error("Este email já foi adicionado");
+      return;
+    }
+    setInvitees([...invitees, { name: newName.trim(), email: newEmail.trim().toLowerCase() }]);
+    setNewName("");
+    setNewEmail("");
+  };
+
+  const handleParseBulk = () => {
+    if (!bulkEmails.trim()) return;
+    const lines = bulkEmails.trim().split(/\n/);
+    const parsed: { name: string; email: string }[] = [];
+    const existingEmails = new Set(invitees.map(i => i.email.toLowerCase()));
+    let skipped = 0;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+
+      // Aceita formatos: "nome;email", "nome,email", "nome email@x.com"
+      const parts = trimmed.split(/[;,\t]/).map(p => p.trim());
+      let name = "", email = "";
+
+      if (parts.length >= 2) {
+        // Se o primeiro campo tem @, inverte
+        if (parts[0].includes("@")) {
+          email = parts[0];
+          name = parts[1];
+        } else {
+          name = parts[0];
+          email = parts[1];
+        }
+      } else {
+        // Tenta extrair email do texto
+        const emailMatch = trimmed.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+        if (emailMatch) {
+          email = emailMatch[0];
+          name = trimmed.replace(email, "").trim() || email.split("@")[0];
+        }
+      }
+
+      if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        if (!existingEmails.has(email.toLowerCase())) {
+          parsed.push({ name, email: email.toLowerCase() });
+          existingEmails.add(email.toLowerCase());
+        } else {
+          skipped++;
+        }
+      }
+    }
+
+    if (parsed.length > 0) {
+      setInvitees([...invitees, ...parsed]);
+      setBulkEmails("");
+      toast.success(`${parsed.length} participante(s) adicionado(s)${skipped > 0 ? ` (${skipped} duplicado(s) ignorado(s))` : ""}`);
+    } else {
+      toast.error("Nenhum email válido encontrado. Use o formato: Nome;email@exemplo.com");
+    }
+  };
+
+  const handleSendInvites = () => {
+    if (invitees.length === 0) {
+      toast.error("Adicione pelo menos um participante");
+      return;
+    }
+    sendInvitesMutation.mutate({
+      surveyId: inviteSurveyId,
+      tenantId,
+      invites: invitees,
+    });
+  };
+
+  const handleOpenInviteDialog = (surveyId: string) => {
+    setInviteSurveyId(surveyId);
+    setInvitees([]);
+    setNewName("");
+    setNewEmail("");
+    setBulkEmails("");
+    setInviteDialogOpen(true);
+  };
 
   const resetForm = () => {
     setForm({ title: "", description: "", surveyType: "climate", questions: "" });
@@ -421,15 +535,25 @@ export default function ClimateSurveys() {
                             ? new Date(survey.createdAt).toLocaleDateString("pt-BR")
                             : "—"}
                         </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate(`/climate-surveys/${survey.id}/results`)}
-                          >
-                            <BarChart2 className="mr-1 h-4 w-4" />
-                            Resultados
-                          </Button>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenInviteDialog(survey.id)}
+                            >
+                              <Mail className="mr-1 h-4 w-4" />
+                              Enviar Convites
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate(`/climate-surveys/${survey.id}/results`)}
+                            >
+                              <BarChart2 className="mr-1 h-4 w-4" />
+                              Resultados
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -591,6 +715,114 @@ export default function ClimateSurveys() {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* ── Dialog de Envio de Convites ── */}
+        <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Send className="h-5 w-5" />
+                Enviar Convites da Pesquisa
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              {/* Entrada Individual */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Adicionar Participante</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Nome"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    className="flex-1"
+                    onKeyDown={(e) => e.key === "Enter" && handleAddInvitee()}
+                  />
+                  <Input
+                    placeholder="email@exemplo.com"
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    className="flex-1"
+                    onKeyDown={(e) => e.key === "Enter" && handleAddInvitee()}
+                  />
+                  <Button variant="outline" size="icon" onClick={handleAddInvitee}>
+                    <UserPlus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Entrada em Lote */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Adicionar em Lote</Label>
+                <Textarea
+                  placeholder={"Cole aqui a lista de participantes (um por linha):\nJoão Silva;joao@empresa.com\nMaria Santos;maria@empresa.com"}
+                  value={bulkEmails}
+                  onChange={(e) => setBulkEmails(e.target.value)}
+                  rows={4}
+                  className="font-mono text-sm"
+                />
+                <Button variant="outline" size="sm" onClick={handleParseBulk} disabled={!bulkEmails.trim()}>
+                  <Plus className="mr-1 h-4 w-4" />
+                  Importar Lista
+                </Button>
+              </div>
+
+              {/* Lista de Convidados */}
+              {invitees.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">
+                    Participantes ({invitees.length})
+                  </Label>
+                  <div className="border rounded-lg max-h-48 overflow-y-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead className="w-10"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {invitees.map((inv, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell className="py-1 text-sm">{inv.name}</TableCell>
+                            <TableCell className="py-1 text-sm text-muted-foreground">{inv.email}</TableCell>
+                            <TableCell className="py-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => setInvitees(invitees.filter((_, i) => i !== idx))}
+                              >
+                                <Trash2 className="h-3 w-3 text-destructive" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              {/* Botões */}
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleSendInvites}
+                  disabled={invitees.length === 0 || sendInvitesMutation.isPending}
+                >
+                  {sendInvitesMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <Mail className="mr-2 h-4 w-4" />
+                  Enviar {invitees.length > 0 ? `${invitees.length} Convite(s)` : "Convites"}
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

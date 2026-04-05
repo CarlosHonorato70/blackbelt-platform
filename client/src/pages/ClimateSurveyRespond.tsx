@@ -30,16 +30,16 @@ export default function ClimateSurveyRespond() {
   const [responses, setResponses] = useState<Record<number, number>>({});
   const [submitted, setSubmitted] = useState(false);
 
-  // submitResponse is a query (not mutation) on the server that also validates the token
-  const surveyQuery = (trpc.climateSurveys.submitResponse as any).useQuery(
-    { token: token ?? "", responses: {} },
+  // Validar convite e carregar perguntas (não altera dados)
+  const surveyQuery = trpc.climateSurveys.validateInvite.useQuery(
+    { token: token ?? "" },
     { enabled: !!token, retry: false }
   );
 
-  const submitMutation = (trpc.climateSurveys.submitResponse as any).useQuery(
-    { token: token ?? "", responses, isAnonymous: true },
-    { enabled: false, retry: false }
-  );
+  // Mutation para submeter respostas
+  const submitMutation = trpc.climateSurveys.submitResponse.useMutation({
+    onSuccess: () => setSubmitted(true),
+  });
 
   const handleResponse = (questionIndex: number, value: number) => {
     setResponses((prev) => ({ ...prev, [questionIndex]: value }));
@@ -47,7 +47,11 @@ export default function ClimateSurveyRespond() {
 
   const handleSubmit = () => {
     if (!token) return;
-    submitMutation.refetch().then(() => setSubmitted(true));
+    submitMutation.mutate({
+      token,
+      responses,
+      isAnonymous: true,
+    });
   };
 
   if (!token) {
@@ -72,12 +76,13 @@ export default function ClimateSurveyRespond() {
   }
 
   if (surveyQuery.isError || !surveyQuery.data) {
+    const errorMsg = (surveyQuery.error as any)?.message || "Link inválido ou expirado.";
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl">
           <CardContent className="p-8 text-center">
             <AlertTriangle className="mx-auto h-12 w-12 text-yellow-500 mb-4" />
-            <p className="text-lg text-muted-foreground">Link inválido ou expirado.</p>
+            <p className="text-lg text-muted-foreground">{errorMsg}</p>
           </CardContent>
         </Card>
       </div>
@@ -100,10 +105,10 @@ export default function ClimateSurveyRespond() {
     );
   }
 
-  const survey = surveyQuery.data as any;
-  const questions: { text: string }[] = Array.isArray(survey.questions)
+  const survey = surveyQuery.data;
+  const questions: { text: string; dimension?: string }[] = Array.isArray(survey.questions)
     ? survey.questions
-    : JSON.parse(survey.questions || "[]");
+    : JSON.parse((survey.questions as string) || "[]");
 
   const allAnswered = questions.length > 0 && Object.keys(responses).length === questions.length;
 
@@ -121,6 +126,11 @@ export default function ClimateSurveyRespond() {
                 {survey.description}
               </CardDescription>
             )}
+            {survey.respondentName && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Participante: {survey.respondentName}
+              </p>
+            )}
           </CardHeader>
         </Card>
 
@@ -130,6 +140,11 @@ export default function ClimateSurveyRespond() {
               <Label className="text-base font-medium mb-4 block">
                 {index + 1}. {question.text}
               </Label>
+              {question.dimension && (
+                <p className="text-xs text-muted-foreground mb-3">
+                  Dimensão: {question.dimension}
+                </p>
+              )}
               <div className="grid gap-2 sm:grid-cols-5">
                 {LIKERT_OPTIONS.map((option) => (
                   <label
@@ -178,7 +193,7 @@ export default function ClimateSurveyRespond() {
         {submitMutation.isError && (
           <Card className="border-red-200">
             <CardContent className="p-4 text-center text-red-600">
-              Erro ao enviar respostas. Tente novamente.
+              {(submitMutation.error as any)?.message || "Erro ao enviar respostas. Tente novamente."}
             </CardContent>
           </Card>
         )}
