@@ -145,9 +145,15 @@ async function executeCreateCompany(
     });
 
     // ── Create company user + send welcome email with credentials ──
+    // Send to BOTH: consultant-provided email (primary) AND Receita Federal email (if different)
     let credentialsInfo = "";
     const contactEmail = (params.contactEmail || "").trim().toLowerCase();
-    if (contactEmail) {
+    const receitaEmail = (params.receitaEmail || "").trim().toLowerCase();
+    const allEmails = new Set<string>();
+    if (contactEmail) allEmails.add(contactEmail);
+    if (receitaEmail && receitaEmail !== contactEmail) allEmails.add(receitaEmail);
+
+    if (allEmails.size > 0) {
       try {
         // Generate temporary password
         let tempPassword = "";
@@ -156,9 +162,14 @@ async function executeCreateCompany(
         tempPassword += "@1";
 
         const hashedPassword = await bcrypt.hash(tempPassword, 12);
+        const frontendUrl = process.env.FRONTEND_URL || "https://blackbeltconsultoria.com";
+        const sentTo: string[] = [];
+
+        // Create user with the PRIMARY email (consultant-provided or Receita)
+        const primaryEmail = contactEmail || receitaEmail;
 
         // Check if user with this email already exists
-        const [existingUser] = await db.select().from(users).where(eq(users.email, contactEmail)).limit(1);
+        const [existingUser] = await db.select().from(users).where(eq(users.email, primaryEmail)).limit(1);
 
         if (existingUser) {
           // Assign existing user to new tenant
@@ -168,12 +179,12 @@ async function executeCreateCompany(
             passwordHash: hashedPassword,
             emailVerified: true,
           }).where(eq(users.id, existingUser.id));
-          log.info(`[Agent] Existing user ${contactEmail} reassigned to tenant ${companyId}`);
+          log.info(`[Agent] Existing user ${primaryEmail} reassigned to tenant ${companyId}`);
         } else {
           // Create new user
           await db.insert(users).values({
             id: nanoid(),
-            email: contactEmail,
+            email: primaryEmail,
             passwordHash: hashedPassword,
             name: params.name,
             tenantId: companyId,
@@ -181,20 +192,26 @@ async function executeCreateCompany(
             emailVerified: true,
             createdAt: new Date(),
           });
-          log.info(`[Agent] Company user created: ${contactEmail} for tenant ${companyId}`);
+          log.info(`[Agent] Company user created: ${primaryEmail} for tenant ${companyId}`);
         }
 
-        // Send welcome email with login credentials
-        const frontendUrl = process.env.FRONTEND_URL || "https://blackbeltconsultoria.com";
-        sendWelcomeCompanyEmail({
-          companyEmail: contactEmail,
-          companyName: params.name || "Empresa",
-          tempPassword,
-          loginUrl: `${frontendUrl}/login`,
-        }).catch(err => log.error("[Agent] Welcome email failed", { error: String(err) }));
+        // Send welcome email to ALL emails (consultant-provided + Receita Federal)
+        for (const email of allEmails) {
+          sendWelcomeCompanyEmail({
+            companyEmail: email,
+            companyName: params.name || "Empresa",
+            tempPassword,
+            loginUrl: `${frontendUrl}/login`,
+          }).catch(err => log.error("[Agent] Welcome email failed", { error: String(err), email }));
+          sentTo.push(email);
+        }
 
-        credentialsInfo = `\n\n📧 **Email de boas-vindas enviado** para ${contactEmail} com credenciais de acesso.`;
-        log.info(`[Agent] Welcome email sent to ${contactEmail}`);
+        if (sentTo.length === 1) {
+          credentialsInfo = `\n\n📧 **Email de boas-vindas enviado** para ${sentTo[0]} com credenciais de acesso.`;
+        } else {
+          credentialsInfo = `\n\n📧 **Email de boas-vindas enviado** para ${sentTo.join(" e ")} com credenciais de acesso.`;
+        }
+        log.info(`[Agent] Welcome email sent to ${sentTo.join(", ")} for tenant ${companyId}`);
       } catch (userErr: any) {
         log.error("[Agent] User creation failed during company setup", { error: userErr.message });
         credentialsInfo = "\n\n⚠️ Não foi possível criar o acesso automaticamente. Crie o acesso manualmente na aba Minhas Empresas.";
@@ -1367,6 +1384,13 @@ async function generateFallbackResponse(
   // Build memory from conversation history
   const memory = extractContextFromHistory(conversationHistory);
 
+  // Belt-and-suspenders: also extract email directly from the CURRENT message
+  // (handles DB timing edge case where current message isn't yet in history)
+  const currentEmailMatch = userMessage.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+  if (currentEmailMatch) {
+    (memory as any).contactEmail = currentEmailMatch[0].toLowerCase();
+  }
+
   // Helper: find company by CNPJ in memory
   async function findCompanyByCNPJ(): Promise<any | null> {
     if (!memory.cnpj) return null;
@@ -2038,6 +2062,7 @@ async function generateFallbackResponse(
         neighborhood: data.bairro, city: data.municipio, state: data.uf,
         zipCode: data.cep, contactPhone: data.telefone,
         contactEmail: (memory as any).contactEmail || data.email,
+        receitaEmail: data.email,
       }, tenantId, userId);
 
       if (execResult.success) {
@@ -2223,6 +2248,7 @@ async function generateFallbackResponse(
         neighborhood: data.bairro, city: data.municipio, state: data.uf,
         zipCode: data.cep, contactPhone: data.telefone,
         contactEmail: (memory as any).contactEmail || data.email,
+        receitaEmail: data.email,
       }, tenantId, userId);
 
       const content = buildStrategyText(currentHeadcount, result.sector!, result.sectorName!, result.highRisk!) +
@@ -2400,7 +2426,9 @@ async function generateFallbackResponse(
           sector: result.sector, headcount: memory.headcount,
           street: data.logradouro, number: data.numero, complement: data.complemento,
           neighborhood: data.bairro, city: data.municipio, state: data.uf,
-          zipCode: data.cep, contactPhone: data.telefone, contactEmail: data.email,
+          zipCode: data.cep, contactPhone: data.telefone,
+          contactEmail: (memory as any).contactEmail || data.email,
+          receitaEmail: data.email,
         }, tenantId, userId);
         if (execResult.success) {
           return {
@@ -2628,6 +2656,8 @@ async function generateFallbackResponse(
             sector: result.sector, headcount: hc,
             street: data.logradouro, number: data.numero,
             city: data.municipio, state: data.uf, zipCode: data.cep,
+            contactEmail: (memory as any).contactEmail || data.email,
+            receitaEmail: data.email,
           }, tenantId, userId);
           const content = `Entendido: **${hc} funcionarios**.\n\n` +
             buildStrategyText(hc, result.sector!, result.sectorName!, result.highRisk!) +
